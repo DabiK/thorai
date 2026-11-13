@@ -12,6 +12,8 @@
   - 03 : accès des agents à Android ;
   - 04 : voix.
 
+- **13 novembre, ticket 01 bloqué** : socle Android livré et vérifié sur la Thor, sauf le test de l'écran du bas réellement éteint, qui demande l'utilisateur (voir le Rapport du ticket et l'ADR 02). Deux questions produit : R1 sur le bandeau de validation, et l'écran du bas quand Régie passe en arrière-plan.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

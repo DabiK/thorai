@@ -1,0 +1,86 @@
+package app.regie
+
+import android.app.ActivityOptions
+import android.content.Intent
+import android.os.Bundle
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import app.regie.display.ScreenMode
+import app.regie.ui.screens.OverviewTopScreen
+import kotlinx.coroutines.launch
+
+/** Écran du haut (display 0). Il lance l'écran du bas quand celui-ci est allumé. */
+class TopActivity : GamepadActivity() {
+
+    /** Cette instance s'est ouverte sur le mauvais écran et a passé la main à une autre. */
+    private var relaunched = false
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        container.displays.topScreenTarget(display.displayId)?.let { target ->
+            relaunchOn(target)
+            return
+        }
+        applyDebugExtras(intent)
+        container.topAlive.value = true
+
+        setScreen { overview, control ->
+            val mode by container.displays.mode.collectAsStateWithLifecycle()
+            OverviewTopScreen(overview, control, singleScreen = mode == ScreenMode.Single, callbacks = callbacks)
+        }
+
+        lifecycleScope.launch {
+            // Repris à chaque retour au premier plan et à chaque changement d'écran.
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                container.displays.mode.collect { mode ->
+                    if (mode is ScreenMode.Dual && !container.bottomStarted.value) launchBottom(mode.bottomDisplayId)
+                }
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        applyDebugExtras(intent)
+    }
+
+    override fun onDestroy() {
+        if (isFinishing && !relaunched) container.topAlive.value = false
+        super.onDestroy()
+    }
+
+    /**
+     * Ouverte sur un autre écran (lanceur de l'écran du bas, `am start --display 4`) :
+     * on se ferme d'abord, pour que `singleTask` ne nous retrouve pas, puis on se relance.
+     */
+    private fun relaunchOn(displayId: Int) {
+        relaunched = true
+        finish()
+        startActivity(
+            Intent(intent).setClass(this, TopActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            ActivityOptions.makeBasic().setLaunchDisplayId(displayId).toBundle(),
+        )
+    }
+
+    private fun launchBottom(displayId: Int) {
+        val options = ActivityOptions.makeBasic().setLaunchDisplayId(displayId)
+        startActivity(
+            Intent(this, BottomActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            options.toBundle(),
+        )
+    }
+
+    /** En debug seulement : `--ez force_single_screen true` force le mode un seul écran. */
+    private fun applyDebugExtras(intent: Intent) {
+        if (BuildConfig.DEBUG && intent.hasExtra(EXTRA_FORCE_SINGLE_SCREEN)) {
+            container.displays.forceSingleScreen(intent.getBooleanExtra(EXTRA_FORCE_SINGLE_SCREEN, false))
+        }
+    }
+
+    companion object {
+        const val EXTRA_FORCE_SINGLE_SCREEN = "force_single_screen"
+    }
+}

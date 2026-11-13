@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_name">Régie</string>
+
+    <plurals name="overview_session_count">
+        <item quantity="one">%d session</item>
+        <item quantity="many">%d sessions</item>
+        <item quantity="other">%d sessions</item>
+    </plurals>
+
+    <string name="agent_claude">Claude</string>
+    <string name="agent_codex">Codex</string>
+
+    <string name="status_running">En cours</string>
+    <string name="status_awaiting_approval">Attend ta validation</string>
+    <string name="status_done">Terminé</string>
+    <string name="status_paused">En pause</string>
+
+    <!-- « Étape 3 sur 5 » : rien ne s'accorde en nombre, d'où PluralsCandidate ignoré. -->
+    <string name="card_step" tools:ignore="PluralsCandidate">Étape %1$d sur %2$d</string>
+    <string name="card_step_with_label" tools:ignore="PluralsCandidate">Étape %1$d sur %2$d · %3$s</string>
+    <string name="card_step_short" tools:ignore="PluralsCandidate">étape %1$d sur %2$d</string>
+    <string name="card_wants_command">Veut lancer une commande :</string>
+    <string name="card_wants_file_change">Veut modifier un fichier :</string>
+    <string name="card_question">Te pose une question : %1$s</string>
+
+    <string name="banner_awaiting">%1$s attend ta validation</string>
+    <string name="banner_see">Voir</string>
+
+    <string name="mic_description">Maintenir pour dicter</string>
+    <string name="mic_hold_l2">Maintiens L2 et parle</string>
+    <string name="mic_r2_examples">R2 pour un ordre : « lance Claude sur atelier », « où en est Codex ? », « mets tout en pause »</string>
+    <string name="mic_l2_held">L2 maintenu</string>
+    <string name="mic_r2_held">R2 maintenu</string>
+
+    <string name="action_open">Ouvrir</string>
+    <string name="action_new_session">Nouvelle session</string>
+    <string name="action_speak_summary">Point à voix haute</string>
+</resources>
