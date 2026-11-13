@@ -1,6 +1,6 @@
 # 02 — Pont sur la Thor : sessions Claude et Codex exposées en WebSocket
 
-Statut : prêt
+Statut : fait (reste l'essai après redémarrage de la console, avec l'utilisateur)
 Bloqué par : rien
 Possède : `bridge/`, `thor/bridge/`, `docs/protocole-pont.md`, `docs/adr/02-*`
 
@@ -38,10 +38,36 @@ Faire tourner dans la Debian de la Thor un pont qui démarre, garde et expose le
 
 ## Critères d'acceptation
 
-- Depuis le Mac, un petit client de test (via `adb forward`) lance une session Claude et une session Codex sur un projet de démo dans `~/projects`. Il reçoit leurs événements, répond à une validation de chacun, se déconnecte, se reconnecte et rattrape les événements manqués.
-- Rien ne démarre au boot. Un RUN_COMMAND envoyé par adb, comme le fera l'app, démarre le pont ; un autre l'arrête. Après un redémarrage de la console puis un nouveau démarrage, l'historique est toujours listé.
-- Les tests unitaires du pont n'appellent pas les vrais agents. Un test de contrat, lancé à la demande sur la Thor, les appelle.
+- [x] Depuis le Mac, un petit client de test (via `adb forward`) lance une session Claude et une session Codex sur un projet de démo dans `~/projects`. Il reçoit leurs événements, répond à une validation de chacun, se déconnecte, se reconnecte et rattrape les événements manqués.
+- [ ] Rien ne démarre au boot. Un RUN_COMMAND envoyé par adb, comme le fera l'app, démarre le pont ; un autre l'arrête. Après un redémarrage de la console puis un nouveau démarrage, l'historique est toujours listé.
+- [x] Les tests unitaires du pont n'appellent pas les vrais agents. Un test de contrat, lancé à la demande sur la Thor, les appelle.
 
 ## Rapport
 
-(à remplir)
+13 novembre 2026.
+
+**Ce qui marche.** Le pont (`bridge/`, port 47600 sur 127.0.0.1, jeton en `Authorization: Bearer`) pilote Claude et Codex par ACP (ADR 02). Il tient plusieurs sessions des deux agents. Il journalise chaque événement avec un numéro global, synchronisé sur disque, et permet le rattrapage après une déconnexion ou un redémarrage du pont. Le contrat est dans `docs/protocole-pont.md`, les enregistrements réels dans `bridge/fixtures/bridge-ws/` (et les bruts ACP dans `bridge/fixtures/acp-raw/`).
+
+**Critères.**
+- [x] Client de démo (`thor/bridge/demo.sh`) : une session Claude et une Codex sur `~/projects/regie-demo`, une validation de chacune, déconnexion, rattrapage des numéros 619 à 658 sans trou ni doublon. Preuve : `artifacts/screenshots/02/demo-client.txt`.
+- [~] Rien au boot (aucun Termux:Boot). Démarrage et arrêt par RUN_COMMAND vérifiés, mais l'intent part de l'uid de Termux (`thor/bridge/run-command.sh start|stop`) : `adb shell am startservice …` est refusé à l'uid `shell` (« Requires permission com.termux.permission.RUN_COMMAND »). L'app, qui aura la permission, enverra le même intent. Historique listé après un arrêt et un redémarrage du pont, et après un pont tué (SIGKILL, relance par le superviseur en 2 s). **Pas vérifié : le redémarrage de la console** (interdit sans prévenir l'utilisateur). Le verrou d'état périmé après un redémarrage est géré (`boot_id` + ligne de commande) et testé.
+- [x] Tests unitaires sans vrai agent (81 tests, `npm run check`). Test de contrat `npm run test:contract`, lancé sur la Thor par `thor/bridge/contract-test.sh` : 4/4.
+
+**Porte de qualité.** `npm run check` : Biome, `tsc` strict, Vitest 9 fichiers, 81 tests, vert.
+
+**Relecture.** Trois tours. Corrigés : session utilisable avant son chargement et son mode (contournait « valider ») ; deux ponts sur le même état ; journal non synchronisé ; sortie Codex relayée en entier à chaque morceau (journal au carré) ; verrou périmé bloquant après redémarrage ; double `hello` ; interruption pendant un chargement ; commande RUN_COMMAND affichée fausse.
+
+**Pour l'utilisateur : vérifier l'historique après un redémarrage.**
+1. Redémarrer la console.
+2. Vérifier que rien n'a démarré : `adb -s THOR0000000001 shell ps -A | grep -c regie-bridge` doit donner 0.
+3. Démarrer le pont : `thor/bridge/run-command.sh start`.
+4. Lister l'historique : `thor/bridge/demo.sh --list`. Les sessions de `regie-demo` doivent apparaître.
+5. Arrêter : `thor/bridge/run-command.sh stop`.
+
+**Questions.**
+- ❓ Codex en mode « valider » demande une validation pour chaque commande, lectures comprises (pas de sandbox sous proot). Le pont doit-il accepter seul les commandes en lecture seule (`cat`, `rg`, `ls`) ?
+- ❓ Le journal garde tout, sur disque et en mémoire (une session Claude triviale pèse environ 150 Ko, surtout la liste des skills). Quelle durée de conservation ?
+- ❓ Créer une session avec une branche fait `git switch` dans la copie de travail partagée, même si une autre session travaille sur ce projet. Refuser, prévenir, ou passer par un worktree par session ?
+- ❓ La liste des skills de l'utilisateur (noms et descriptions) figure dans les fixtures commitées. Acceptable dans le dépôt privé, ou à masquer ?
+
+**Hors périmètre.** Une validation retirée par l'agent (`$/cancel_request`, hors `session/cancel`) reste « en attente » côté pont (constat de relecture non bloquant). Course théorique sur la reprise du verrou périmé par deux ponts sur deux ports différents. Les captures des écrans ne montrent rien du ticket (le pont n'a pas d'interface) : la preuve est `demo-client.txt`.

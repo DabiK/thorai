@@ -12,7 +12,8 @@
   - 03 : accès des agents à Android ;
   - 04 : voix.
 
-- **13 novembre, ticket 01 bloqué** : socle Android livré et vérifié sur la Thor, sauf le test de l'écran du bas réellement éteint, qui demande l'utilisateur (voir le Rapport du ticket et l'ADR 02). Deux questions produit : R1 sur le bandeau de validation, et l'écran du bas quand Régie passe en arrière-plan.
+- **13 novembre, ticket 01 fait** : socle Android livré et vérifié sur la Thor, y compris l'écran du bas éteint (ADR 05). R1 et l'écran du bas en arrière-plan tranchés par l'utilisateur.
+- **13 novembre, ticket 02 fait** : pont ACP (ADR 02), contrat `docs/protocole-pont.md`, fixtures réelles dans `bridge/fixtures/bridge-ws/`. Reste à vérifier avec l'utilisateur : l'historique après un redémarrage de la console (marche à suivre dans le rapport du ticket).
 
 ## Ordre des vagues
 
@@ -48,3 +49,7 @@
 
 - Nom définitif de l'app (« Régie » est un nom de travail).
 - Lecture à voix haute : automatique ou seulement à la demande ? Un réglage est prévu, la valeur par défaut reste à décider.
+- Ticket 02 : en mode « valider », Codex demande une validation même pour lire (pas de sandbox sous proot). Le pont doit-il accepter seul les lectures ?
+- Ticket 02 : durée de conservation du journal d'événements du pont.
+- Ticket 02 : une session créée avec une branche fait `git switch` dans la copie de travail partagée. Refuser si une session travaille sur le projet, prévenir, ou un worktree par session ?
+- Ticket 02 : la liste des skills de l'utilisateur apparaît dans les fixtures commitées. À masquer ?
