@@ -12,6 +12,8 @@
   - 03 : accès des agents à Android ;
   - 04 : voix.
 
+- **Ticket 03 bloqué** (13 novembre) : mobile-mcp déclaré aux deux agents sous `thor_android`, testé avec un échafaudage. Attend l'association du débogage sans fil par l'utilisateur (`thor/computer-use/README.md`) et deux réponses (ADR 03, « Questions ouvertes »).
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |
@@ -35,3 +37,5 @@
 
 - Nom définitif de l'app (« Régie » est un nom de travail).
 - Lecture à voix haute : automatique ou seulement à la demande ? Un réglage est prévu, la valeur par défaut reste à décider.
+- Ticket 03 : un agent peut toucher la bannière de Régie et valider seul. Interdire, ou soumettre les outils `thor_android` à validation ?
+- Ticket 03 : faire connaître `thor-screen` aux agents par leurs consignes globales, ou par le pont ?
