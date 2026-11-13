@@ -11,6 +11,11 @@ import type {
 /** Events kept in memory. Share one instance between two bridges to simulate a restart. */
 export class MemoryEventStore implements EventStore {
   readonly events: BridgeEvent[] = [];
+  readonly journalId: string;
+
+  constructor(journalId = 'memory-journal') {
+    this.journalId = journalId;
+  }
 
   readAll(): readonly BridgeEvent[] {
     return [...this.events];

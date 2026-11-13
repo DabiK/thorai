@@ -62,8 +62,6 @@ interface LiveSession {
   readonly compensations: SessionCompensations;
   /** `session/prompt` requests not answered yet: a message sent during a turn is queued. */
   inFlight: number;
-  /** While `session/load` replays the history, already in the journal. */
-  replaying: boolean;
 }
 
 interface PendingApproval {
@@ -96,6 +94,10 @@ export class Bridge {
   private readonly approvals = new Map<string, PendingApproval>();
   private readonly runtimes = new Map<AgentKind, AgentRuntime>();
   private readonly early = new Map<string, AcpUpdate[]>();
+  /** Sessions whose `session/load` is replaying the history, already in the journal. */
+  private readonly replaying = new Set<string>();
+  /** The last message sent to each session: the next one waits for it, order is kept. */
+  private readonly sending = new Map<string, Promise<unknown>>();
   private readonly turns = new Set<Promise<void>>();
   private stopping: Promise<void> | null = null;
 
@@ -123,6 +125,10 @@ export class Bridge {
 
   get lastSeq(): number {
     return this.journal.lastSeq;
+  }
+
+  get journalId(): string {
+    return this.journal.journalId;
   }
 
   /** Every event after `since`, then the live ones. Returns the unsubscribe function. */
@@ -180,7 +186,7 @@ export class Bridge {
     const connection = await this.connection(request.agent);
     const sessionId = await this.agentCall(request.agent, () => connection.newSession(project.cwd));
     const now = this.now();
-    const record: SessionRecord = {
+    let record: SessionRecord = {
       sessionId,
       agent: request.agent,
       project: project.name,
@@ -193,12 +199,19 @@ export class Bridge {
       updatedAt: now,
       lastError: null,
     };
+    // The session is known, live and usable only once its mode is forced: nothing reaches the
+    // agent before (Claude would run in the user's `auto`).
+    const failure = await this.applyMode(record, connection);
+    if (failure !== null) record = { ...record, status: 'failed', lastError: failure.message };
     this.records.set(sessionId, record);
-    const live = this.goLive(sessionId);
+    if (failure === null) this.goLive(sessionId);
     this.save();
     this.emitSession(sessionId);
-    await this.applyMode(record, connection);
-    this.flushEarly(sessionId, live);
+    if (failure !== null) {
+      this.early.delete(sessionId);
+      throw failure;
+    }
+    this.flushEarly(sessionId);
     if (request.prompt) this.startTurn(sessionId, connection, request.prompt, 'prompt');
     return this.summaryOf(this.recordOf(sessionId));
   }
@@ -214,7 +227,23 @@ export class Bridge {
    * Sends a message. During a turn, it is injected in the turn when the agent accepts it
    * (`_session/steering`), otherwise it waits for its turn.
    */
-  async prompt(sessionId: string, text: string): Promise<Delivery> {
+  prompt(sessionId: string, text: string): Promise<Delivery> {
+    this.assertRunning();
+    this.recordOf(sessionId);
+    const previous = this.sending.get(sessionId) ?? Promise.resolve();
+    const next = previous.then(
+      () => this.send(sessionId, text),
+      () => this.send(sessionId, text),
+    );
+    this.sending.set(sessionId, next);
+    const forget = () => {
+      if (this.sending.get(sessionId) === next) this.sending.delete(sessionId);
+    };
+    next.then(forget, forget);
+    return next;
+  }
+
+  private async send(sessionId: string, text: string): Promise<Delivery> {
     this.assertRunning();
     const record = this.recordOf(sessionId);
     const live = await this.ensureLive(sessionId);
@@ -330,33 +359,51 @@ export class Bridge {
     return loading;
   }
 
+  /**
+   * Loads a session into its agent, then forces its mode. It goes live only then: until both
+   * are done, no message reaches the agent and the session is not `active`.
+   */
   private async load(sessionId: string): Promise<LiveSession> {
     const record = this.recordOf(sessionId);
     const connection = await this.connection(record.agent);
-    const live = this.goLive(sessionId);
-    live.replaying = true;
+    this.early.delete(sessionId);
+    this.replaying.add(sessionId);
     try {
       await this.agentCall(record.agent, () => connection.loadSession(sessionId, record.cwd));
     } catch (error) {
-      this.goOffline(sessionId, 'failed', messageOf(error));
+      this.update(sessionId, { status: 'failed', lastError: messageOf(error) });
       throw error;
+    } finally {
+      this.replaying.delete(sessionId);
     }
-    live.replaying = false;
-    this.early.delete(sessionId);
-    await this.applyMode(record, connection);
+    const failure = await this.applyMode(record, connection);
+    if (failure !== null || this.stopping !== null) {
+      this.early.delete(sessionId);
+      if (failure === null) throw new BridgeError('shutting_down', 'Le pont s’arrête.');
+      this.update(sessionId, { status: 'failed', lastError: failure.message });
+      throw failure;
+    }
+    const live = this.goLive(sessionId);
     this.update(sessionId, { status: 'idle', lastError: null });
+    this.flushEarly(sessionId);
     return live;
   }
 
-  /** Forces the session mode: Claude starts in the user's `auto`, Codex in its process mode. */
-  private async applyMode(record: SessionRecord, connection: AgentConnection): Promise<void> {
+  /**
+   * Forces the session mode: Claude starts in the user's `auto`, Codex in its process mode.
+   * Returns the error when the agent refuses it.
+   */
+  private async applyMode(
+    record: SessionRecord,
+    connection: AgentConnection,
+  ): Promise<BridgeError | null> {
     const modeId = modeIdFor(record.agent, record.approvalMode);
     try {
       await connection.setMode(record.sessionId, modeId);
+      return null;
     } catch (error) {
       const message = `Mode ${modeId} refusé par ${AGENT_LABELS[record.agent]} : ${messageOf(error)}`;
-      this.goOffline(record.sessionId, 'failed', message);
-      throw new BridgeError('agent_failed', message);
+      return new BridgeError('agent_failed', message);
     }
   }
 
@@ -416,12 +463,14 @@ export class Bridge {
   private onUpdate(sessionId: string, update: AcpUpdate): void {
     const live = this.live.get(sessionId);
     if (live === undefined) {
+      // The replayed history is already in the journal. Anything else waits for the session
+      // to go live.
+      if (this.replaying.has(sessionId)) return;
       const early = this.early.get(sessionId) ?? [];
       if (early.length < EARLY_UPDATES_LIMIT) early.push(update);
       this.early.set(sessionId, early);
       return;
     }
-    if (live.replaying) return;
     const relayed = live.compensations.update(update);
     this.emit({ sessionId, type: 'session_update', data: relayed });
     if (update.sessionUpdate === 'session_info_update' && typeof update.title === 'string') {
@@ -429,16 +478,15 @@ export class Bridge {
     }
   }
 
-  private flushEarly(sessionId: string, live: LiveSession): void {
+  private flushEarly(sessionId: string): void {
     const early = this.early.get(sessionId);
     this.early.delete(sessionId);
-    if (live.replaying) return;
     for (const update of early ?? []) this.onUpdate(sessionId, update);
   }
 
   private onPermission(request: PermissionRequest): Promise<PermissionOutcome> {
     const live = this.live.get(request.sessionId);
-    if (live === undefined || live.replaying || this.stopping !== null) {
+    if (live === undefined || this.stopping !== null) {
       return Promise.resolve({ outcome: 'cancelled' });
     }
     const normalized = live.compensations.approval(request);
@@ -471,11 +519,7 @@ export class Bridge {
   }
 
   private goLive(sessionId: string): LiveSession {
-    const live: LiveSession = {
-      compensations: new SessionCompensations(),
-      inFlight: 0,
-      replaying: false,
-    };
+    const live: LiveSession = { compensations: new SessionCompensations(), inFlight: 0 };
     this.live.set(sessionId, live);
     return live;
   }

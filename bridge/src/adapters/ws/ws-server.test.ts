@@ -98,7 +98,7 @@ describe('the WebSocket server', () => {
   });
 
   it('listens on the loopback only', () => {
-    expect(HOST).toBe('127.0.0.1');
+    expect(server.address).toBe('127.0.0.1');
   });
 
   it('runs a session and its approval for a client', async () => {
@@ -159,6 +159,14 @@ describe('the WebSocket server', () => {
     expect(hello.result).toMatchObject({ resync: false, sessions: [expect.anything()] });
     expect(second.events.map((e) => e.type)).toContain('turn_end');
     await second.close();
+  });
+
+  it('tells a client of another journal to start again', async () => {
+    const client = new Client();
+    const hello = await client.call('hello', { since: 1, journal: 'an-old-journal' });
+
+    expect(hello.result).toMatchObject({ resync: true, journal: 'memory-journal' });
+    await client.close();
   });
 
   it('tells a client ahead of the journal to start again', async () => {

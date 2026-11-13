@@ -264,11 +264,11 @@ async function main() {
   await connection.close();
   await sleep(10_000);
 
-  say(`--- reconnexion avec since=${lastBefore} ---`);
+  say(`--- reconnexion avec since=${lastBefore}, journal ${String(hello.journal)} ---`);
   connection = new Connection();
   const beforeReconnect = events.length;
   handle(connection);
-  const again = await connection.call('hello', { since: lastBefore });
+  const again = await connection.call('hello', { since: lastBefore, journal: hello.journal });
   await sleep(500);
   const caughtUp = events.slice(beforeReconnect);
   const missed = caughtUp.filter((e) => e.seq <= (again.lastSeq as number));

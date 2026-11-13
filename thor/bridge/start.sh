@@ -9,9 +9,10 @@ supervisor_pid="$state/regie-bridge-supervisor.pid"
 log="$state/regie-bridge.log"
 port="${REGIE_BRIDGE_PORT:-47600}"
 
-# Two starts at once: only one goes on.
+# Starts and stops take turns (same lock as regie-bridge-stop): a start during a stop waits
+# for the bridge to be gone, then starts it again.
 exec 9>"$state/regie-bridge.lock"
-flock -n 9 || { echo "Démarrage déjà en cours."; exit 0; }
+flock -w 60 9 || { echo "Démarrage ou arrêt en cours depuis plus de 60 s."; exit 1; }
 
 running() {
   local pid

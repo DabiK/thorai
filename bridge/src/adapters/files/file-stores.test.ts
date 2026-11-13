@@ -1,4 +1,11 @@
-import { appendFileSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
+import {
+  appendFileSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -37,7 +44,31 @@ describe('FileEventStore', () => {
     const next = restarted.append({ sessionId: null, type: 'bridge', data: {} });
 
     expect(next.seq).toBe(2);
-    expect(readFileSync(join(dir, 'events.jsonl'), 'utf8').trim().split('\n')).toHaveLength(2);
+    // The journal name, then the two whole events.
+    expect(readFileSync(join(dir, 'events.jsonl'), 'utf8').trim().split('\n')).toHaveLength(3);
+  });
+
+  it('names the journal, keeps its name across restarts, and gives a new journal a new one', () => {
+    const ids = ['journal-a', 'journal-b'];
+    const next = () => ids.shift() ?? 'none';
+    expect(new FileEventStore(dir, next).journalId).toBe('journal-a');
+    expect(new FileEventStore(dir, next).journalId).toBe('journal-a');
+
+    rmSync(join(dir, 'events.jsonl'));
+    expect(new FileEventStore(dir, next).journalId).toBe('journal-b');
+  });
+
+  it('gives a name to a journal written without one, and keeps its events', () => {
+    writeFileSync(
+      join(dir, 'events.jsonl'),
+      '{"seq":1,"at":"x","sessionId":null,"type":"bridge","data":{}}\n',
+    );
+
+    const store = new FileEventStore(dir, () => 'journal-c');
+
+    expect(store.journalId).toBe('journal-c');
+    expect(store.readAll().map((e) => e.seq)).toEqual([1]);
+    expect(new FileEventStore(dir, () => 'other').journalId).toBe('journal-c');
   });
 
   it('keeps the file private', () => {

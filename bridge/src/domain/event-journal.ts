@@ -22,6 +22,10 @@ export class EventJournal {
     this.events = [...store.readAll()];
   }
 
+  get journalId(): string {
+    return this.store.journalId;
+  }
+
   get lastSeq(): number {
     return this.events.at(-1)?.seq ?? 0;
   }

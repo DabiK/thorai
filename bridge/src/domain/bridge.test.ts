@@ -489,6 +489,86 @@ describe('restart and history', () => {
   });
 });
 
+describe('a session goes live only once loaded and in its mode', () => {
+  const methods = () => world.claude.calls.map((call) => call.method);
+
+  it('keeps the order of two messages sent at once to a stopped session, after load and mode', async () => {
+    const { sessionId } = await world.bridge.createSession({
+      agent: 'claude',
+      project: 'regie-demo',
+      approvalMode: 'ask',
+    });
+    world.restart();
+    world.claude.history = [
+      { sessionUpdate: 'user_message_chunk', content: { type: 'text', text: 'ancien' } },
+    ];
+    world.claude.loadDelayMs = 30;
+    world.claude.calls.length = 0;
+    const lastBefore = world.bridge.lastSeq;
+
+    const first = world.bridge.prompt(sessionId, 'premier');
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    expect(world.bridge.listSessions()[0]?.active).toBe(false);
+    const second = world.bridge.prompt(sessionId, 'second');
+
+    await expect(first).resolves.toBe('prompt');
+    await expect(second).resolves.toBe('steering');
+    expect(methods()).toEqual(['loadSession', 'setMode', 'prompt', 'steer']);
+    world.claude.send(sessionId, {
+      sessionUpdate: 'agent_message_chunk',
+      content: { type: 'text', text: 'réponse' },
+    });
+    const after = world.received(lastBefore);
+    expect(
+      after.filter((e) => e.type === 'user_message').map((e) => (e.data as { text: string }).text),
+    ).toEqual(['premier', 'second']);
+    // The replayed history is not relayed; what the agent says afterwards is.
+    expect(after.filter((e) => e.type === 'session_update').map((e) => e.data)).toEqual([
+      { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: 'réponse' } },
+    ]);
+  });
+
+  it('sends nothing to a new session before its mode is forced, and relays what came meanwhile', async () => {
+    world.claude.setModeDelayMs = 30;
+    world.claude.onSetMode = [{ sessionUpdate: 'config_option_update', configOptions: [] }];
+
+    const creating = world.bridge.createSession({
+      agent: 'claude',
+      project: 'regie-demo',
+      approvalMode: 'ask',
+      prompt: 'Go',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    expect(world.bridge.listSessions()).toEqual([]);
+    const { sessionId } = await creating;
+
+    expect(methods()).toEqual(['newSession', 'setMode', 'prompt']);
+    const types = world
+      .received()
+      .filter((e) => e.sessionId === sessionId)
+      .map((e) => e.type);
+    expect(types.slice(0, 3)).toEqual(['session', 'session_update', 'user_message']);
+  });
+
+  it('does not take a resumed session for live while it loads', async () => {
+    const { sessionId } = await world.bridge.createSession({
+      agent: 'codex',
+      project: 'regie-demo',
+      approvalMode: 'ask',
+    });
+    world.restart();
+    world.codex.loadDelayMs = 30;
+
+    const resuming = world.bridge.resume(sessionId);
+    const prompted = world.bridge.prompt(sessionId, 'Go');
+    await Promise.all([resuming, prompted]);
+
+    const codexMethods = world.codex.calls.map((call) => call.method);
+    expect(codexMethods.slice(-3)).toEqual(['loadSession', 'setMode', 'prompt']);
+    expect(world.codex.callsOf('loadSession')).toHaveLength(1);
+  });
+});
+
 describe('shutdown', () => {
   it('cancels the running turns, closes the agents and keeps the history', async () => {
     const { sessionId } = await world.bridge.createSession({

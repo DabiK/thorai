@@ -47,6 +47,11 @@ export interface AgentConnection {
 
 /** The events, kept for the client to catch up. Appends must be durable once they return. */
 export interface EventStore {
+  /**
+   * Identifies this journal. A new journal (the old one deleted) has a new id: a client that
+   * kept numbers of another journal starts again.
+   */
+  readonly journalId: string;
   readAll(): readonly BridgeEvent[];
   append(event: BridgeEvent): void;
 }

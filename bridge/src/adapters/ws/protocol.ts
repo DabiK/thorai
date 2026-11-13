@@ -15,7 +15,11 @@ const sessionId = z.string().min(1).max(200);
 const seq = z.number().int().min(0);
 
 export const paramsSchemas = {
-  hello: z.object({ since: seq.nullish(), client: z.string().max(100).optional() }),
+  hello: z.object({
+    since: seq.nullish(),
+    journal: z.string().max(100).nullish(),
+    client: z.string().max(100).optional(),
+  }),
   'sessions.list': z.object({}),
   'session.create': z.object({
     agent: z.enum(AGENT_KINDS),

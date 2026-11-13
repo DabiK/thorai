@@ -17,6 +17,9 @@ pid_of() { # pid_of <file> <pattern in its command line>
 }
 
 mkdir -p "$state"
+# Same lock as regie-bridge-start: a start never runs in the middle of a stop.
+exec 9>"$state/regie-bridge.lock"
+flock -w 60 9 || { echo "Démarrage ou arrêt en cours depuis plus de 60 s."; exit 1; }
 touch "$state/regie-bridge.stop"
 supervisor=$(pid_of "$supervisor_pid" regie-bridge-supervise) || supervisor=''
 node=$(pid_of "$bridge_pid" 'regie/bridge/src/main.ts') || node=''

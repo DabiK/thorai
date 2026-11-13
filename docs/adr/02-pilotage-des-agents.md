@@ -166,6 +166,8 @@ Le contrat est dans `docs/protocole-pont.md`. Choix et constats durables :
 - **Port et jeton** : `127.0.0.1:47600`, jeton dans `/home/dev/.config/regie/bridge-token` (Debian) et `files/bridge-token` (app).
 - **Reprise** : `session/load` rejoue tout l'historique. Le pont ne le relaie pas : son journal l'a déjà. Le mode de validation est réappliqué après chaque chargement, pour les deux agents.
 - **Échecs bwrap** : le `tool_call` est déjà parti quand l'échec arrive. Le pont remplace l'échec par un `tool_call_update` marqué `_meta.regie.hidden = "sandbox_unavailable"`, que l'app retire du fil.
+- **Un seul pont par journal** : le pont prend un verrou sur son dossier d'état (`bridge.lock`), puis son port, avant de lire le journal. Chaque événement est synchronisé sur le disque avant d'être envoyé. Le journal porte un identifiant, renvoyé par `hello`, pour qu'un client détecte un journal remplacé.
+- **Chargement d'une session** : elle n'est utilisable qu'une fois `session/load` (ou `session/new`) et `session/set_mode` terminés. Les messages d'une même session sont envoyés dans l'ordre, l'un après l'autre.
 - **Message pendant un tour** : le pont essaie `_session/steering`, puis met le message en file par `session/prompt` si l'agent refuse.
 - **proot** :
   - quand le processus lancé dans proot est tué (SIGKILL), `proot-distro login` sort quand même avec le code 0. Le superviseur juge donc un arrêt propre au fichier `bridge.pid`, que seul un arrêt propre efface ;

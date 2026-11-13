@@ -17,8 +17,9 @@ import { join } from 'node:path';
 import { processConnector } from './adapters/acp/adapter-process.ts';
 import { FileEventStore, FileSessionStore } from './adapters/files/file-stores.ts';
 import { GitWorkspace } from './adapters/files/git-workspace.ts';
+import { lockStateDir } from './adapters/files/state-lock.ts';
 import { StderrLogger } from './adapters/logging/logger.ts';
-import { startWsServer } from './adapters/ws/ws-server.ts';
+import { listenWs } from './adapters/ws/ws-server.ts';
 import { Bridge } from './domain/bridge.ts';
 import { AGENT_KINDS } from './domain/model.ts';
 
@@ -58,6 +59,16 @@ function readToken(): string {
 
 async function main(): Promise<void> {
   const token = readToken();
+  // A second bridge stops here, before reading or writing the journal: first the state
+  // folder, then the port.
+  const unlock = lockStateDir(stateDir);
+  process.on('exit', unlock);
+  const server = await listenWs({
+    port,
+    token,
+    logger,
+    info: { version, pid: process.pid, startedAt: new Date().toISOString() },
+  });
   const bridge = new Bridge({
     connectors: AGENT_KINDS.map((agent) =>
       processConnector(agent, binaries, { cwd: projectsDir, logger }),
@@ -84,14 +95,7 @@ async function main(): Promise<void> {
     process.exit(0);
   };
 
-  const server = await startWsServer({
-    port,
-    token,
-    bridge,
-    logger,
-    info: { version, pid: process.pid, startedAt: new Date().toISOString() },
-    onShutdown: () => void stop('bridge.shutdown'),
-  });
+  server.attach({ bridge, onShutdown: () => void stop('bridge.shutdown') });
   writeFileSync(pidFile, `${process.pid}\n`, { mode: 0o600 });
   logger.info(`bridge ${version} ready, pid ${process.pid}, last seq ${bridge.lastSeq}`);
   for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP'] as const) {

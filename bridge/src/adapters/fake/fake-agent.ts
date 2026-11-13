@@ -15,6 +15,9 @@ interface Deferred<T> {
   reject(error: unknown): void;
 }
 
+const sleep = (ms: number) =>
+  ms > 0 ? new Promise((resolve) => setTimeout(resolve, ms)) : Promise.resolve();
+
 function deferred<T>(): Deferred<T> {
   let resolve!: (value: T) => void;
   let reject!: (error: unknown) => void;
@@ -40,6 +43,11 @@ export class FakeAgentConnector implements AgentConnector {
   setModeError: Error | null = null;
   /** Updates replayed by `loadSession`, as an agent does. */
   history: AcpUpdate[] = [];
+  /** How long `loadSession` and `setMode` take, as on the Thor. */
+  loadDelayMs = 0;
+  setModeDelayMs = 0;
+  /** Sent by the agent while `setMode` runs (Claude sends `config_option_update`). */
+  onSetMode: AcpUpdate[] = [];
   connections = 0;
   private handlers: AgentHandlers | null = null;
   private exit: Deferred<Exit> | null = null;
@@ -75,9 +83,12 @@ export class FakeAgentConnector implements AgentConnector {
       loadSession: async (sessionId, cwd) => {
         record('loadSession', sessionId, cwd);
         for (const update of this.history) handlers.update(sessionId, update);
+        await sleep(this.loadDelayMs);
       },
       setMode: async (sessionId, modeId) => {
         record('setMode', sessionId, modeId);
+        for (const update of this.onSetMode) handlers.update(sessionId, update);
+        await sleep(this.setModeDelayMs);
         if (this.setModeError) throw this.setModeError;
       },
       prompt: (sessionId, text) => {

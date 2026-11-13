@@ -10,20 +10,32 @@ import { isMethod, type Method, type Params, paramsSchemas, requestSchema } from
 /** The bridge listens on the loopback only: never on 0.0.0.0. */
 export const HOST = '127.0.0.1';
 
-export interface WsServerOptions {
+export interface ListenOptions {
   readonly port: number;
   readonly token: string;
-  readonly bridge: Bridge;
   readonly logger: Logger;
   readonly info: { readonly version: string; readonly pid: number; readonly startedAt: string };
-  /** Called after answering `bridge.shutdown`. */
-  readonly onShutdown: () => void;
   readonly heartbeatMs?: number;
 }
 
+export interface ServeOptions {
+  readonly bridge: Bridge;
+  /** Called after answering `bridge.shutdown`. */
+  readonly onShutdown: () => void;
+}
+
+export type WsServerOptions = ListenOptions & ServeOptions;
+
 export interface RunningServer {
   readonly port: number;
+  /** The address the server really listens on. */
+  readonly address: string;
   close(): Promise<void>;
+}
+
+/** A server that holds its port, and serves once the bridge is attached. */
+export interface ListeningServer extends RunningServer {
+  attach(serve: ServeOptions): void;
 }
 
 const MAX_PAYLOAD = 1024 * 1024;
@@ -32,8 +44,19 @@ const MAX_PAYLOAD = 1024 * 1024;
  * The WebSocket the app talks to. The token is checked on the HTTP upgrade, before any data:
  * a client without it gets a 401 and the socket is closed.
  */
-export function startWsServer(options: WsServerOptions): Promise<RunningServer> {
+export async function startWsServer(options: WsServerOptions): Promise<RunningServer> {
+  const server = await listenWs(options);
+  server.attach(options);
+  return server;
+}
+
+/**
+ * Takes the port first: a second bridge fails here, before reading or writing anything. Until
+ * `attach`, connections are refused with a 503.
+ */
+export function listenWs(options: ListenOptions): Promise<ListeningServer> {
   const { logger } = options;
+  let served: (ListenOptions & ServeOptions) | null = null;
   const expected = digest(options.token);
   const http = createServer((request, response) => {
     if (request.url === '/health') {
@@ -46,6 +69,13 @@ export function startWsServer(options: WsServerOptions): Promise<RunningServer> 
   const alive = new WeakSet<WebSocket>();
 
   http.on('upgrade', (request, socket, head) => {
+    if (served === null) {
+      socket.end(
+        'HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\nContent-Length: 0\r\n\r\n',
+      );
+      return;
+    }
+    const serving = served;
     if (!authorized(request, expected)) {
       logger.warn('connection refused: missing or wrong token');
       socket.end('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
@@ -54,7 +84,7 @@ export function startWsServer(options: WsServerOptions): Promise<RunningServer> 
     wss.handleUpgrade(request, socket, head, (ws) => {
       alive.add(ws);
       ws.on('pong', () => alive.add(ws));
-      serve(ws, options);
+      serve(ws, serving);
     });
   });
 
@@ -72,10 +102,14 @@ export function startWsServer(options: WsServerOptions): Promise<RunningServer> 
   return new Promise((resolve, reject) => {
     http.once('error', reject);
     http.listen(options.port, HOST, () => {
-      const port = (http.address() as AddressInfo).port;
-      logger.info(`listening on ws://${HOST}:${port}`);
+      const { port, address } = http.address() as AddressInfo;
+      logger.info(`listening on ws://${address}:${port}`);
       resolve({
         port,
+        address,
+        attach: (serve) => {
+          served = { ...options, ...serve };
+        },
         close: () =>
           new Promise((done) => {
             clearInterval(heartbeat);
@@ -103,10 +137,13 @@ function serve(ws: WebSocket, options: WsServerOptions): void {
       if (unsubscribe !== null) throw new BridgeError('bad_request', 'Déjà abonné aux événements.');
       const lastSeq = bridge.lastSeq;
       const since = params.since ?? lastSeq;
-      const resync = since > lastSeq;
+      // Another journal (deleted, restored): the client's numbers mean nothing here.
+      const otherJournal = params.journal != null && params.journal !== bridge.journalId;
+      const resync = since > lastSeq || otherJournal;
       return {
         result: {
           bridge: options.info,
+          journal: bridge.journalId,
           lastSeq,
           resync,
           sessions: bridge.listSessions(),

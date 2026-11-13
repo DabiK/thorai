@@ -1,7 +1,8 @@
+import { randomUUID } from 'node:crypto';
 import {
-  appendFileSync,
   closeSync,
   existsSync,
+  fdatasyncSync,
   fsyncSync,
   mkdirSync,
   openSync,
@@ -17,35 +18,65 @@ import type { EventStore, SessionStore } from '../../domain/ports.ts';
 /**
  * The events, one JSON line each, in `events.jsonl` of the state folder.
  *
- * Each append is written synchronously before the event goes out: an event a client received
- * is on disk. A line cut by a crash is dropped at the next start (it was never sent).
+ * - The first line names the journal: `{"journal": "<id>", "version": 1}`. A new file gets a
+ *   new id.
+ * - Each append is written and synced to the disk (`fdatasync`) before the event goes out: an
+ *   event a client received survives a crash of the bridge or of the console.
+ * - A line cut by a crash is dropped at the next start: it was never sent.
  */
 export class FileEventStore implements EventStore {
+  readonly journalId: string;
   private readonly path: string;
+  private readonly events: readonly BridgeEvent[];
+  private readonly fd: number;
 
-  constructor(stateDir: string) {
+  constructor(stateDir: string, newId: () => string = randomUUID) {
     mkdirSync(stateDir, { recursive: true, mode: 0o700 });
     this.path = join(stateDir, 'events.jsonl');
+    const { journalId, events } = this.load(newId);
+    this.journalId = journalId;
+    this.events = events;
+    this.fd = openSync(this.path, 'a', 0o600);
   }
 
   readAll(): readonly BridgeEvent[] {
-    if (!existsSync(this.path)) return [];
-    let text = readFileSync(this.path, 'utf8');
+    return this.events;
+  }
+
+  append(event: BridgeEvent): void {
+    writeSync(this.fd, `${JSON.stringify(event)}\n`);
+    fdatasyncSync(this.fd);
+  }
+
+  close(): void {
+    closeSync(this.fd);
+  }
+
+  private load(newId: () => string): { journalId: string; events: BridgeEvent[] } {
+    let text = existsSync(this.path) ? readFileSync(this.path, 'utf8') : '';
     if (text !== '' && !text.endsWith('\n')) {
       // The last line was cut by a crash: it was never sent, it is dropped.
       text = text.slice(0, text.lastIndexOf('\n') + 1);
       truncateSync(this.path, Buffer.byteLength(text, 'utf8'));
     }
-    const events: BridgeEvent[] = [];
-    for (const line of text.split('\n')) {
-      const event = line.trim() === '' ? null : parse(line);
-      if (event !== null) events.push(event);
-    }
-    return events;
+    const lines = text.split('\n').filter((line) => line.trim() !== '');
+    const header = lines.length > 0 ? parseHeader(lines[0] ?? '') : null;
+    const events = lines.map(parse).filter((event) => event !== null);
+    if (header !== null) return { journalId: header, events };
+    // A new journal, or one written before the header existed: it gets its id.
+    const journalId = newId();
+    const body = events.map((event) => `${JSON.stringify(event)}\n`).join('');
+    writeAtomically(this.path, `${JSON.stringify({ journal: journalId, version: 1 })}\n${body}`);
+    return { journalId, events };
   }
+}
 
-  append(event: BridgeEvent): void {
-    appendFileSync(this.path, `${JSON.stringify(event)}\n`, { mode: 0o600 });
+function parseHeader(line: string): string | null {
+  try {
+    const header = JSON.parse(line) as { journal?: unknown };
+    return typeof header.journal === 'string' ? header.journal : null;
+  } catch {
+    return null;
   }
 }
 

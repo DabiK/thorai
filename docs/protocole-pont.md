@@ -15,6 +15,7 @@ Le pont **relaie** ce que les agents envoient. Il ne réinvente pas leur schéma
 
 - Sans jeton, ou avec un mauvais jeton : réponse HTTP `401`, la connexion est fermée avant toute donnée. La comparaison se fait à temps constant.
 - `GET http://127.0.0.1:47600/health` répond `{"ok":true}`, sans jeton. Il dit seulement si le pont est démarré.
+- Pendant les premiers instants du démarrage, une connexion reçoit `503` : réessayer.
 - Le pont envoie un ping WebSocket toutes les 20 s. Un client qui ne répond pas est déconnecté.
 - Messages en texte JSON, 1 Mo au plus. Un message binaire est refusé.
 
@@ -55,16 +56,18 @@ Les requêtes sont traitées en parallèle : les réponses peuvent arriver dans 
 ## Numéros de séquence et rattrapage
 
 - Chaque événement a un `seq` : global à toutes les sessions, croissant de 1 en 1.
-- Les événements sont écrits sur disque avant d'être envoyés. Après un redémarrage du pont, la numérotation reprend où elle s'était arrêtée : ni trou, ni doublon.
-- Le client garde le dernier `seq` reçu.
-- À chaque connexion, il envoie `hello` avec ce numéro. Le pont répond, puis envoie tous les événements qui suivent, dans l'ordre, puis les nouveaux en direct.
+- Les événements sont écrits sur disque, et synchronisés (`fdatasync`), avant d'être envoyés. Après un redémarrage du pont ou de la console, la numérotation reprend où elle s'était arrêtée : ni trou, ni doublon.
+- Un seul pont par journal : un second pont lancé sur le même dossier d'état, ou sur le même port, s'arrête avant de lire ou d'écrire le journal.
+- Le journal a un identifiant, `journal` dans la réponse à `hello`. Un nouveau journal (l'ancien effacé) a un nouvel identifiant.
+- Le client garde le dernier `seq` reçu et l'identifiant du journal.
+- À chaque connexion, il envoie `hello` avec ce numéro et cet identifiant. Le pont répond, puis envoie tous les événements qui suivent, dans l'ordre, puis les nouveaux en direct.
 - Sans `since`, le client ne reçoit que les nouveaux événements. Il lit l'état dans la réponse à `hello`.
-- Si `since` dépasse le dernier numéro du pont (journal effacé), la réponse porte `"resync": true` : le client oublie ce qu'il sait et repart de la réponse à `hello`.
+- Si `journal` n'est pas celui du pont, ou si `since` dépasse son dernier numéro, la réponse porte `"resync": true`. Le pont n'envoie alors que les nouveaux événements : le client oublie ce qu'il sait et repart de la réponse à `hello`.
 - Les sessions continuent sans client. Une validation attend sa réponse, même client déconnecté.
 
 ```json
-{"id": 1, "method": "hello", "params": {"since": 100}}
-{"id": 1, "result": {"bridge": {"version": "0.1.0", "pid": 15645, "startedAt": "2026-11-13T21:01:40.496Z"}, "lastSeq": 106, "resync": false, "sessions": ["…"], "approvals": ["…"], "agents": [{"agent": "claude", "running": true, "authenticated": true}, {"agent": "codex", "running": true, "authenticated": true}]}}
+{"id": 1, "method": "hello", "params": {"since": 100, "journal": "5b0f2c1e-…"}}
+{"id": 1, "result": {"bridge": {"version": "0.1.0", "pid": 15645, "startedAt": "2026-11-13T21:01:40.496Z"}, "journal": "5b0f2c1e-…", "lastSeq": 106, "resync": false, "sessions": ["…"], "approvals": ["…"], "agents": [{"agent": "claude", "running": true, "authenticated": true}, {"agent": "codex", "running": true, "authenticated": true}]}}
 {"event": {"seq": 101, "…": "…"}}
 ```
 
@@ -72,7 +75,7 @@ Les requêtes sont traitées en parallèle : les réponses peuvent arriver dans 
 
 | Méthode | Paramètres | Résultat |
 | --- | --- | --- |
-| `hello` | `since?` | état du pont, puis le flux d'événements (voir plus haut) |
+| `hello` | `since?`, `journal?` | état du pont, puis le flux d'événements (voir plus haut) |
 | `sessions.list` | — | `{sessions}` : en cours et historique, la plus récente d'abord |
 | `session.create` | `agent`, `project`, `branch?`, `approvalMode`, `prompt?` | `{session}` |
 | `session.prompt` | `sessionId`, `text` | `{delivery}` |
@@ -109,7 +112,7 @@ Les requêtes sont traitées en parallèle : les réponses peuvent arriver dans 
 - `steering` : un tour est en cours et l'agent a accepté le message dedans (`_session/steering`) ;
 - `queued` : un tour est en cours et l'agent a refusé : le message attend la fin du tour.
 
-Une session de l'historique (`active: false`) est rechargée d'abord (`session/load`), sans action du client.
+Une session de l'historique (`active: false`) est rechargée d'abord (`session/load`, puis son mode), sans action du client. Les messages envoyés à une même session partent dans l'ordre où le pont les a reçus, et aucun ne part avant que la session soit chargée et son mode appliqué.
 
 ### Interrompre
 
@@ -261,6 +264,7 @@ am startservice --user 0 -n com.termux/com.termux.app.RunCommandService \
 
 `regie-bridge-start` :
 - ne fait rien si le pont tourne déjà ;
+- attend la fin d'un arrêt en cours, puis démarre (même verrou que `regie-bridge-stop`) ;
 - lance le superviseur `regie-bridge-supervise`, détaché ;
 - attend que `/health` réponde (30 s au plus) et le dit.
 
@@ -289,7 +293,7 @@ Les sessions arrêtées restent dans l'historique, en `stopped`.
 | Quoi | Où |
 | --- | --- |
 | Pont installé | Debian : `/home/dev/.local/share/regie/bridge/` |
-| Sessions et journal d'événements | Debian : `/home/dev/.local/state/regie/bridge/` (`sessions.json`, `events.jsonl`, `bridge.pid`) |
+| Sessions et journal d'événements | Debian : `/home/dev/.local/state/regie/bridge/` (`sessions.json`, `events.jsonl` dont la première ligne nomme le journal, `bridge.pid`, `bridge.lock`) |
 | Jeton du pont | Debian : `/home/dev/.config/regie/bridge-token` |
 | Scripts | Termux : `~/bin/regie-bridge-start`, `regie-bridge-stop`, `regie-bridge-supervise` |
 | Journal du pont et du superviseur | Termux : `~/.local/state/thor/regie-bridge.log` (le précédent en `.1` au-delà de 5 Mo) |
