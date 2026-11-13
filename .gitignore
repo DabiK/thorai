@@ -24,3 +24,4 @@ models/
 # Divers
 .DS_Store
 .scratch/regie-v1/runs/
+.worktrees/
