@@ -18,6 +18,8 @@
 - **13 novembre, ticket 01 fait** : socle Android livré et vérifié sur la Thor, y compris l'écran du bas éteint (ADR 05). R1 et l'écran du bas en arrière-plan tranchés par l'utilisateur.
 - **13 novembre, ticket 02 fait** : pont ACP (ADR 02), contrat `docs/protocole-pont.md`, fixtures réelles dans `bridge/fixtures/bridge-ws/`. Reste à vérifier avec l'utilisateur : l'historique après un redémarrage de la console (marche à suivre dans le rapport du ticket).
 
+- **13 novembre, ticket 13 `à fusionner`** : le pont accepte seul les lectures shell en mode « valider » (règle stricte, testée), purge le détail des sessions après 30 jours (`REGIE_BRIDGE_RETENTION_DAYS`) et laisse les branches à l'agent (consigne en tête, plus de `git switch`). Essayé sur la Thor avec Codex, sur un pont isolé (port 47613). Protocole et ADR 02 à jour. Le pont installé sur la console est à réinstaller (`thor/bridge/install.sh`) après la fusion.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |
