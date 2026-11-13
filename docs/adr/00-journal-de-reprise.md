@@ -12,6 +12,8 @@
   - 03 : accès des agents à Android ;
   - 04 : voix.
 
+- **13 novembre, ticket 02 à fusionner** : pont ACP (ADR 02), contrat `docs/protocole-pont.md`, fixtures réelles dans `bridge/fixtures/bridge-ws/`. Reste à vérifier par l'utilisateur : l'historique après un redémarrage de la console (marche à suivre dans le Rapport du ticket).
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |
@@ -35,3 +37,7 @@
 
 - Nom définitif de l'app (« Régie » est un nom de travail).
 - Lecture à voix haute : automatique ou seulement à la demande ? Un réglage est prévu, la valeur par défaut reste à décider.
+- Ticket 02 : en mode « valider », Codex demande une validation même pour lire (pas de sandbox sous proot). Le pont doit-il accepter seul les lectures ?
+- Ticket 02 : durée de conservation du journal d'événements du pont.
+- Ticket 02 : une session créée avec une branche fait `git switch` dans la copie de travail partagée. Refuser si une session travaille sur le projet, prévenir, ou un worktree par session ?
+- Ticket 02 : la liste des skills de l'utilisateur apparaît dans les fixtures commitées. À masquer ?
