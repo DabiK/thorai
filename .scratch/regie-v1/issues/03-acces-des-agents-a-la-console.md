@@ -43,5 +43,6 @@ Permettre à Claude Code et à Codex, qui tournent sur la Thor, de voir l'écran
 **Questions** (ADR 03, « Questions ouvertes ») :
 - ❓ Un agent peut valider ses propres demandes en touchant la bannière de Régie (écran haut par mobile-mcp, écran bas par `thor-screen`), ce qui contourne « rien ne part sans un appui sur A ». Faut-il interdire aux agents de toucher Régie, ou soumettre les outils `thor_android` à validation ?
 - ❓ Comment les agents apprennent-ils que `thor-screen` existe : consignes globales des agents, ou le pont à chaque session ?
+- ❓ Tant que le pont tourne, le serveur adb de la Debian écoute sur `127.0.0.1:5037` sans authentification : toute appli de la console peut s'en servir pour obtenir les droits `shell`. Accepter ce risque, ou demander l'essai de `ADB_SERVER_SOCKET` (socket Unix privée, ADR 03) ?
 
-**Hors périmètre** : mobilecli injecte un agent JVMTI dans l'appli débogable au premier plan (builds de debug de Régie) ; le serveur adb écoute sur `127.0.0.1:5037` sans authentification tant qu'il tourne (piste `ADB_SERVER_SOCKET` notée dans l'ADR).
+**À savoir** : mobilecli injecte un agent JVMTI dans l'appli débogable au premier plan, ce qui concerne les builds de debug de Régie (ADR 03, « Limites »). `bas.png` (prise depuis le Mac) et `bas-par-agent.png` sont identiques à l'octet près : l'écran n'avait pas bougé entre les deux captures.

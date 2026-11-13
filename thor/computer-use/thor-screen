@@ -5,6 +5,8 @@
 #   thor-screen ids                         écrans : nom, displayId, id physique, taille
 #   thor-screen capture haut|bas FICHIER    capture PNG de l'écran
 #   thor-screen tap haut|bas X Y            toucher en X, Y (pixels de l'écran)
+#   thor-screen swipe haut|bas X1 Y1 X2 Y2 [MS]   glisser, en MS millisecondes
+#   thor-screen text haut|bas "TEXTE"       saisir dans le champ qui a le focus
 #
 # Appareil : $ANDROID_SERIAL, sinon celui retenu par start.sh, sinon le seul connecté.
 set -euo pipefail
@@ -17,7 +19,7 @@ die() {
 }
 
 usage() {
-  sed -n '5,7p' "$0" | sed 's/^# \{0,1\}//' >&2
+  sed -n '5,9p' "$0" | sed 's/^# \{0,1\}//' >&2
   exit 2
 }
 
@@ -88,6 +90,23 @@ case "$cmd" in
     [ $# -eq 4 ] || usage
     display=$(screen_field "$2" 1)
     adb_ shell input -d "$display" tap "$3" "$4"
+    ;;
+  swipe)
+    [ $# -eq 6 ] || [ $# -eq 7 ] || usage
+    for n in "${@:3}"; do
+      [[ "$n" =~ ^[0-9]+$ ]] || die "nombre attendu : $n"
+    done
+    display=$(screen_field "$2" 1)
+    adb_ shell input -d "$display" swipe "${@:3}"
+    ;;
+  text)
+    [ $# -eq 3 ] || usage
+    display=$(screen_field "$2" 1)
+    # input text lit %s comme une espace ; le texte passe par le shell de la
+    # console, d'où les apostrophes.
+    typed=${3// /%s}
+    typed=${typed//\'/\'\\\'\'}
+    adb_ shell "input -d $display text '$typed'"
     ;;
   *)
     usage

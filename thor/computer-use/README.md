@@ -6,7 +6,11 @@ Claude Code et Codex, dans la Debian de la Thor, voient l'écran d'Android et ag
 - **Écran bas** : mobile-mcp ne le voit pas. Les agents utilisent `thor-screen` :
   - `thor-screen ids` : les deux écrans, avec leur `displayId` et leur id physique ;
   - `thor-screen capture haut|bas FICHIER.png` ;
-  - `thor-screen tap haut|bas X Y`.
+  - `thor-screen tap haut|bas X Y` ;
+  - `thor-screen swipe haut|bas X1 Y1 X2 Y2 [ms]` ;
+  - `thor-screen text haut|bas "texte"`, dans le champ qui a le focus. Caractères ASCII seulement : `input text` d'Android ne sait pas taper les accents.
+
+  Pas d'arbre d'interface sur l'écran bas : l'agent s'appuie sur la capture.
 
 ## Installer
 

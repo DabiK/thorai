@@ -39,3 +39,4 @@
 - Lecture à voix haute : automatique ou seulement à la demande ? Un réglage est prévu, la valeur par défaut reste à décider.
 - Ticket 03 : un agent peut toucher la bannière de Régie et valider seul. Interdire, ou soumettre les outils `thor_android` à validation ?
 - Ticket 03 : faire connaître `thor-screen` aux agents par leurs consignes globales, ou par le pont ?
+- Ticket 03 : le serveur adb de la Debian écoute sur `127.0.0.1:5037` sans authentification. Accepter ce risque, ou essayer une socket Unix privée (`ADB_SERVER_SOCKET`) ?

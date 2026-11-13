@@ -1,6 +1,6 @@
 # ADR 03 — Accès des agents à Android (computer use)
 
-Statut : accepté, 13 novembre 2026 (ticket 03). Association du débogage sans fil en attente de l'utilisateur.
+Statut : accepté sous réserve de l'essai de la liaison sans fil après l'association, 13 novembre 2026 (ticket 03). L'association attend l'utilisateur.
 
 ## Contexte
 
@@ -46,7 +46,7 @@ Pour relier la Debian à adbd :
    - puis par mDNS.
    
    Il écrit une ligne `THOR_ANDROID=ok|erreur …`, documentée dans `thor/computer-use/README.md`. Durée mesurée : 0,15 à 0,4 s.
-4. **Écran bas : `thor-screen`**, petit script adb (`ids`, `capture haut|bas`, `tap haut|bas X Y`). Les ids physiques sont relus à chaque appel (`cmd display get-displays`), pas codés en dur.
+4. **Écran bas : `thor-screen`**, petit script adb (`ids`, `capture`, `tap`, `swipe`, `text`, sur `haut` ou `bas`). Les gestes passent par `input -d <displayId>`. Les ids physiques sont relus à chaque appel (`cmd display get-displays`), pas codés en dur.
 5. Tout est scripté dans `thor/computer-use/` : `install.sh`, `uninstall.sh`, `pair-from-mac.sh`.
 
 ## Essais (13 novembre 2026)
@@ -64,7 +64,7 @@ Pour relier la Debian à adbd :
 
 ## Limites
 
-- **mobile-mcp ne voit que l'écran haut.** mobilecli code `defaultDisplayID = "0"`. Sur l'écran bas, `thor-screen` ne fait que la capture et le toucher : ni arbre d'interface, ni saisie.
+- **mobile-mcp ne voit que l'écran haut.** mobilecli code `defaultDisplayID = "0"`. Sur l'écran bas, `thor-screen` capture, touche, glisse et saisit du texte, mais ne lit pas l'arbre d'interface : l'agent travaille sur la capture. La saisie passe par `input text` : caractères ASCII seulement, pas d'accents.
 - **Les agents ne connaissent pas `thor-screen`** si on ne le leur dit pas. Voir « Questions ouvertes ».
 - **Le débogage sans fil exige le Wi-Fi.** Sans réseau, pas d'accès.
 - **Après un redémarrage**, le débogage sans fil peut revenir seul si le réseau a été coché « Toujours autoriser sur ce réseau ». Sinon, il faut le rallumer à la main dans les Options pour les développeurs. À confirmer au premier redémarrage. L'association, elle, survit.
@@ -93,7 +93,7 @@ Il ne permet pas de lire les données privées des applis non débogables.
 
 **Risque connu : un agent peut valider ses propres demandes.** Régie affiche les demandes de validation dans une bannière, sur l'écran haut et sur l'écran bas. Un agent peut toucher cette bannière :
 - sur l'écran haut, avec les outils `mobile_*` de `thor_android` ;
-- sur l'écran bas, avec `thor-screen tap bas X Y`.
+- sur l'écran bas, avec `thor-screen tap bas X Y` (ou `swipe`, `text`).
 
 Il peut ainsi valider sa propre demande, ou celle de l'autre agent. Cela contourne la règle du PRD « rien ne part sans un appui sur A ». Rien ne l'en empêche aujourd'hui. Suivis possibles, à trancher par l'utilisateur (voir « Questions ouvertes ») :
 - interdire aux agents de toucher Régie : refuser les gestes quand Régie est au premier plan, ou le leur interdire dans leurs consignes ;
@@ -122,3 +122,4 @@ Il peut ainsi valider sa propre demande, ou celle de l'autre agent. Cela contour
    - leurs consignes globales (`~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`), hors du périmètre de ce ticket ;
    - le pont, qui le leur dit à chaque session.
 2. **Un agent peut valider ses propres demandes** en touchant la bannière de Régie (voir « Sécurité »). Faut-il interdire aux agents de toucher Régie, ou faire passer les outils `thor_android` en validation ? Question pour l'utilisateur.
+3. **Le serveur adb écoute sur `127.0.0.1:5037` sans authentification** tant que le pont tourne. Toute appli de la console peut donc obtenir les droits `shell`. Faut-il accepter ce risque, ou essayer `ADB_SERVER_SOCKET` (voir « Sécurité ») ? Question pour l'utilisateur.

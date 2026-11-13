@@ -77,6 +77,10 @@ echo "4/4 Codex : serveur thor_android (~/.codex/config.toml de Termux)"
   cat <<'EOF'
 set -euo pipefail
 config=$HOME/.codex/config.toml
+mkdir -p "$(dirname "$config")"
+if [ ! -e "$config" ]; then
+  (umask 077 && touch "$config")
+fi
 want="command = \"$launcher\""
 current=$(awk '/^[ \t]*\[/ { s = ($0 ~ /^[ \t]*\[mcp_servers\.thor_android\][ \t]*$/) } s && /^[ \t]*command[ \t]*=/ { print; exit }' "$config")
 if [ "$current" = "$want" ]; then
