@@ -42,6 +42,8 @@
   - R1 ouvre la validation en attente s'il y en a une, sinon passe à la session suivante.
   - L'écran du bas de Régie reste affiché quand l'app passe en arrière-plan ; « Quitter » le ferme.
 
+- 13 novembre, après essai de l'appli voicelab : **la voix locale devient le fournisseur par défaut**, pour la transcription comme pour la synthèse. ElevenLabs reste un adapter optionnel. Ticket 12 : la lecture à voix haute utilise la synthèse locale, sauf réglage contraire.
+
 ## Questions en attente
 
 - Nom définitif de l'app (« Régie » est un nom de travail).

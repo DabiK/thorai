@@ -81,7 +81,7 @@ Chaque lot correspond à un ou plusieurs tickets.
 - **Voix** :
   - **Transcription** : en français en direct, avec le vocabulaire du dépôt.
   - **Synthèse** : des résumés courts lus à voix haute.
-  - **Fournisseurs** : ElevenLabs par défaut ; une alternative gratuite et locale se branche par un réglage.
+  - **Fournisseurs** : la voix locale et gratuite par défaut (transcription et synthèse) ; ElevenLabs reste branchable par un réglage.
 - **Vue d'ensemble, session en direct, validations, diff, nouvelle session** : comme décrits dans les parcours.
 - **Ordres vocaux (R2)** : règles fixes pour les ordres courants, plus un petit modèle de langage quand la phrase est ambiguë.
 - **Lecture à voix haute et notifications** :
@@ -93,8 +93,8 @@ Chaque lot correspond à un ou plusieurs tickets.
 - **Port de transcription** : un flux de texte partiel puis final, la langue, et une liste de termes à favoriser (fichiers, fonctions et branches du dépôt).
 - **Port de synthèse** : du texte en audio, en flux.
 - **Détection de parole** : sur l'appareil.
-- **Fournisseur par défaut** : ElevenLabs (Scribe en temps réel pour la transcription, Flash pour la synthèse). L'utilisateur saisit lui-même sa clé dans l'app.
-- **Alternative gratuite** : locale et hors ligne, par exemple sherpa-onnx avec un modèle multilingue qui couvre le français. Elle se choisit dans les réglages.
+- **Fournisseur par défaut : la voix locale**, gratuite et hors ligne (sherpa-onnx), pour la transcription comme pour la synthèse. L'utilisateur l'a essayée le 13 novembre et la trouve très bonne.
+- **ElevenLabs en option** (Scribe pour la transcription, Flash pour la synthèse), si la voix locale déçoit. L'utilisateur saisit lui-même sa clé dans l'app.
 - **Pas de reconnaissance vocale système** : la Thor n'a aucun service de reconnaissance ni de synthèse Google. On ne peut donc pas compter sur ceux d'Android.
 
 ## Hors périmètre de la v1
