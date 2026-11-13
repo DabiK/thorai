@@ -1,7 +1,8 @@
 #!/bin/bash
 # Relie le client adb de la Debian à l'adbd de la console.
 # Appelé par le pont à son démarrage, sous l'utilisateur dev. Rapide et
-# idempotent : il ne laisse tourner que le serveur adb.
+# idempotent : il ne laisse tourner que le serveur adb, sur une socket Unix
+# privée ($ADB_SERVER_SOCKET).
 #
 # Sortie standard : une seule ligne, lisible par machine.
 #   THOR_ANDROID=ok serial=<série adb> via=<existant|tcpip|sans-fil>
@@ -16,6 +17,13 @@ STATE_DIR=${XDG_STATE_HOME:-$HOME/.local/state}/thor-android
 TCPIP_ADDR=127.0.0.1:5555
 # getprop d'Android, par chemin absolu : le PATH de la Debian ne le contient pas.
 GETPROP=${THOR_GETPROP:-/system/bin/getprop}
+# Le serveur adb écoute sur une socket Unix privée, pas sur 127.0.0.1:5037 :
+# seuls les processus de Termux et de la Debian (même uid Android) la joignent.
+# Sous proot, le chemin réel est celui du rootfs suivi de celui-ci : il doit
+# tenir dans les 108 octets d'une adresse de socket Unix (103 aujourd'hui).
+# Même valeur dans stop.sh, pair.sh, thor-screen, thor-android-mcp, adb-wrapper
+# et dans les déclarations MCP d'install.sh.
+export ADB_SERVER_SOCKET=${ADB_SERVER_SOCKET:-localfilesystem:/home/dev/.thor-adb/server}
 
 ok() {
   mkdir -p "$STATE_DIR"
@@ -40,7 +48,16 @@ command -v "$ADB" >/dev/null 2>&1 ||
 [ -x "$GETPROP" ] ||
   fail 1 getprop-absent "$GETPROP est introuvable : la Debian ne voit pas le /system d'Android."
 
-# Démarre le serveur adb s'il n'y en a pas déjà un sur le port 5037.
+# Démarre le serveur adb s'il n'y en a pas déjà un sur la socket, dans un
+# dossier fermé aux autres (0700).
+case "$ADB_SERVER_SOCKET" in
+  localfilesystem:*)
+    socket_dir=$(dirname "${ADB_SERVER_SOCKET#localfilesystem:}")
+    if ! out=$(mkdir -p "$socket_dir" 2>&1 && chmod 700 "$socket_dir" 2>&1); then
+      fail 1 serveur-adb "dossier de la socket adb impossible à créer : $out"
+    fi
+    ;;
+esac
 if ! out=$(timeout 20 "$ADB" start-server 2>&1); then
   fail 1 serveur-adb "le serveur adb ne démarre pas : $out"
 fi

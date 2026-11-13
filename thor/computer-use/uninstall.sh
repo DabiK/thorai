@@ -1,7 +1,8 @@
 #!/bin/bash
 # Coupe l'accès des agents à Android : retire le serveur thor_android des deux
-# agents, arrête le serveur adb et efface ce que install.sh a posé, y compris la
-# clé adb de la Debian. Lancé depuis le Mac. Idempotent.
+# agents et leurs consignes thor-android, arrête le serveur adb et efface ce
+# que install.sh a posé, y compris la clé adb de la Debian. Lancé depuis le
+# Mac. Idempotent.
 #
 # Le paquet Debian adb reste installé : sans clé associée, il ne peut rien.
 # Côté console, couper aussi le Débogage sans fil (voir README.md).
@@ -13,17 +14,30 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 
 require_console
 
-echo "1/3 Claude Code et fichiers de dev"
-debian_sh dev <<'EOF'
+echo "1/3 Claude Code, consignes et fichiers de dev"
+{
+  cat "$HERE/block.sh"
+  printf 'wrapper_tag=%q\nsocket_dir=%q\n' "$ADB_WRAPPER_TAG" "$ADB_SOCKET_DIR"
+  cat <<'EOF'
 set -euo pipefail
 if jq -e '.mcpServers.thor_android' ~/.claude.json >/dev/null 2>&1; then
   claude mcp remove --scope user thor_android
 fi
-[ -x /opt/thor-android/stop.sh ] && /opt/thor-android/stop.sh || true
+status=$(block_drop "$HOME/.claude/CLAUDE.md")
+echo "    consignes Claude : $status"
+status=$(block_drop "$HOME/.codex/AGENTS.md")
+echo "    consignes Codex : $status"
+if [ -x /opt/thor-android/stop.sh ]; then
+  /opt/thor-android/stop.sh || true
+fi
 rm -f ~/.local/bin/thor-android-mcp ~/.local/bin/thor-screen
-rm -rf ~/.local/state/thor-android
+if [ -e ~/.local/bin/adb ] && grep -qF "$wrapper_tag" ~/.local/bin/adb; then
+  rm -f ~/.local/bin/adb
+fi
+rm -rf "$socket_dir" ~/.local/state/thor-android
 rm -f ~/.android/adbkey ~/.android/adbkey.pub
 EOF
+} | debian_sh dev
 
 echo "2/3 /opt/thor-android"
 debian_sh root <<'EOF'
@@ -36,7 +50,7 @@ echo "3/3 Codex"
   cat <<'EOF'
 set -euo pipefail
 config=$HOME/.codex/config.toml
-if grep -q '^[[:space:]]*\[mcp_servers\.thor_android[].]' "$config"; then
+if [ -e "$config" ] && grep -q '^[[:space:]]*\[mcp_servers\.thor_android[].]' "$config"; then
   drop_thor_android
   echo "    retiré"
 fi

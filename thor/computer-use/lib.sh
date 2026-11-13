@@ -6,6 +6,15 @@ THOR_SERIAL=${THOR_SERIAL:-THOR0000000001}
 TERMUX_PREFIX=/data/data/com.termux/files/usr
 TERMUX_HOME=/data/data/com.termux/files/home
 
+# Socket Unix privée du serveur adb de la Debian (même valeur que start.sh),
+# son dossier, et la ligne qui signe la cale ~dev/.local/bin/adb (adb-wrapper).
+# shellcheck disable=SC2034
+ADB_SOCKET=localfilesystem:/home/dev/.thor-adb/server
+# shellcheck disable=SC2034
+ADB_SOCKET_DIR=/home/dev/.thor-adb
+# shellcheck disable=SC2034
+ADB_WRAPPER_TAG='thor-android : adb des shells de dev'
+
 # Exécute dans Termux le script bash lu sur l'entrée standard.
 termux_sh() {
   adb -s "$THOR_SERIAL" shell -T run-as com.termux \

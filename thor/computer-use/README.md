@@ -12,6 +12,10 @@ Claude Code et Codex, dans la Debian de la Thor, voient l'écran d'Android et ag
 
   Pas d'arbre d'interface sur l'écran bas : l'agent s'appuie sur la capture.
 
+Les agents l'apprennent par leurs consignes globales ([`consignes.md`](consignes.md)), qui leur interdisent aussi de toucher l'app Régie (`app.regie`).
+
+Le serveur adb de la Debian écoute sur une socket Unix privée, `/home/dev/.thor-adb/server` (`ADB_SERVER_SOCKET=localfilesystem:…`), et plus sur `127.0.0.1:5037` : aucune autre appli de la console ne peut le joindre. Tous les scripts et les déclarations MCP passent par elle. Reste un risque, côté serveur de mobilecli sur la console : voir l'ADR 03, « Sécurité ».
+
 ## Installer
 
 Depuis le Mac, console branchée en USB :
@@ -20,12 +24,13 @@ Depuis le Mac, console branchée en USB :
 thor/computer-use/install.sh
 ```
 
-Le script peut être relancé sans risque. Il pose :
+Le script peut être relancé sans risque : un second passage ne change aucun fichier. Il pose :
 - dans la Debian : le paquet `adb` et `/opt/thor-android/` (mobile-mcp, `start.sh`, `stop.sh`, `pair.sh`) ;
-- dans `~dev/.local/bin/` : `thor-android-mcp` et `thor-screen` ;
-- la déclaration `thor_android` pour Claude (`~dev/.claude.json`, portée utilisateur) et pour Codex (`~/.codex/config.toml` de Termux).
+- dans `~dev/.local/bin/` : `thor-android-mcp`, `thor-screen` et `adb`, une cale qui impose la socket privée à tout `adb` lancé par les agents. Elle n'écrase pas un `adb` qui ne vient pas d'elle ;
+- les consignes de `consignes.md`, entre `<!-- thor-android:début -->` et `<!-- thor-android:fin -->`, dans `~dev/.claude/CLAUDE.md` (Claude) et `~/.codex/AGENTS.md` de Termux (Codex). Le bloc est remplacé s'il existe, sinon ajouté à la fin ; le fichier est créé s'il manque ;
+- la déclaration `thor_android` pour Claude (`~dev/.claude.json`, portée utilisateur) et pour Codex (`~/.codex/config.toml` de Termux), avec `ADB_SERVER_SOCKET` dans son `env`. Une ancienne déclaration différente est remplacée.
 
-Il ne touche à aucune autre entrée de ces fichiers.
+Il ne touche à aucune autre entrée de ces fichiers. Pour changer les consignes : modifier `consignes.md`, puis relancer `install.sh`.
 
 ## Associer la console (une fois)
 
@@ -46,7 +51,7 @@ L'association passe par une boîte de dialogue sur l'écran de la console. Seul 
 
 ## Au quotidien
 
-Le pont lance `/opt/thor-android/start.sh` à son démarrage. `/opt/thor-android/stop.sh` arrête le serveur adb de la Debian. `start.sh` affiche une seule ligne :
+Le pont lance `/opt/thor-android/start.sh` à son démarrage. `/opt/thor-android/stop.sh` arrête le serveur de mobilecli sur la console, puis le serveur adb de la socket. `start.sh` affiche une seule ligne :
 
 | Sortie | Code | Sens |
 | --- | --- | --- |
@@ -60,6 +65,8 @@ En cas d'erreur, l'explication en français est sur la sortie d'erreur.
 
 Le serveur adb vit dans la session Debian qui l'a lancé (proot `--kill-on-exit`). Il s'arrête donc avec le pont.
 
+Pour lancer `adb` à la main dans la Debian, passer par `adb` (la cale de `~/.local/bin`), sans changer `ADB_SERVER_SOCKET`. `/usr/bin/adb` en chemin absolu démarrerait un second serveur, sur `127.0.0.1:5037`, joignable par toute appli.
+
 ## Couper l'accès
 
 - **Tout de suite, sur la console** : désactiver **Utiliser le débogage sans fil**. Pour retirer aussi l'association : **Débogage sans fil › Appareils associés**, toucher l'appareil, puis **Retirer**. Ou bien **Options pour les développeurs › Annuler autorisations pour débog. USB**, qui révoque aussi le Mac.
@@ -67,4 +74,9 @@ Le serveur adb vit dans la session Debian qui l'a lancé (proot `--kill-on-exit`
   ```sh
   thor/computer-use/uninstall.sh
   ```
-  Ce script retire `thor_android` des deux agents, arrête le serveur adb et efface `/opt/thor-android`, les lanceurs et la clé adb de la Debian (`~dev/.android/adbkey`). Le paquet `adb` reste installé.
+  Ce script :
+  - retire `thor_android` des deux agents et le bloc de consignes de `CLAUDE.md` et d'`AGENTS.md`. Le reste de ces fichiers revient à l'octet près ; un fichier qu'`install.sh` avait créé et qui reste vide est effacé ;
+  - arrête le serveur de mobilecli et le serveur adb ;
+  - efface `/opt/thor-android`, les lanceurs, la cale `adb`, le dossier de la socket et la clé adb de la Debian (`~dev/.android/adbkey`).
+
+  Le paquet `adb` reste installé.

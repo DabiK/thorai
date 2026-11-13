@@ -6,7 +6,10 @@
 #
 # Pose sur la console :
 #   Debian  : paquet adb ; /opt/thor-android (mobile-mcp épinglé, start.sh,
-#             stop.sh, pair.sh) ; ~dev/.local/bin/thor-android-mcp et thor-screen
+#             stop.sh, pair.sh) ; ~dev/.local/bin/thor-android-mcp, thor-screen
+#             et adb (cale qui impose la socket privée du serveur adb)
+#   Consignes : bloc thor-android (consignes.md) dans ~dev/.claude/CLAUDE.md et
+#             ~/.codex/AGENTS.md, entre deux marqueurs ; le reste est intact
 #   Claude  : serveur thor_android en portée utilisateur (~dev/.claude.json)
 #   Codex   : bloc [mcp_servers.thor_android] dans ~/.codex/config.toml (Termux)
 set -euo pipefail
@@ -17,10 +20,11 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 
 MOBILE_MCP_VERSION=1.0.17
 LAUNCHER=/home/dev/.local/bin/thor-android-mcp
+ADB_WRAPPER=/home/dev/.local/bin/adb
 
 require_console
 
-echo "1/4 Debian (root) : adb, mobile-mcp $MOBILE_MCP_VERSION, scripts de /opt/thor-android"
+echo "1/5 Debian (root) : adb, mobile-mcp $MOBILE_MCP_VERSION, scripts de /opt/thor-android"
 {
   cat <<EOF
 set -euo pipefail
@@ -41,19 +45,46 @@ EOF
   emit_file "$HERE/pair.sh" /opt/thor-android/pair.sh 755
 } | debian_sh root
 
-echo "2/4 Debian (dev) : lanceurs thor-android-mcp et thor-screen"
+echo "2/5 Debian (dev) : thor-android-mcp, thor-screen et la cale adb"
 {
   emit_file "$HERE/thor-android-mcp" "$LAUNCHER" 755
   emit_file "$HERE/thor-screen" /home/dev/.local/bin/thor-screen 755
+  printf 'wrapper=%q\nwrapper_tag=%q\n' "$ADB_WRAPPER" "$ADB_WRAPPER_TAG"
+  cat <<'EOF'
+if [ -e "$wrapper" ] && ! grep -qF "$wrapper_tag" "$wrapper"; then
+  echo "    ATTENTION : $wrapper existe et ne vient pas de thor-android : laissé tel quel." >&2
+else
+EOF
+  emit_file "$HERE/adb-wrapper" "$ADB_WRAPPER" 755
+  echo 'fi'
   cat <<'EOF'
 set -euo pipefail
 mobilecli=$(node -p "require('/opt/thor-android/node_modules/@mobilenext/mobile-mcp/lib/mobilecli.js').Mobilecli.getMobilecliPath()")
-echo "    $("$mobilecli" --version), adb $(adb version | sed -n 's/^Version //p')"
+echo "    $("$mobilecli" --version), adb $(/usr/bin/adb version | sed -n 's/^Version //p')"
 EOF
 } | debian_sh dev
 
-echo "3/4 Claude Code : serveur thor_android (portée utilisateur)"
-CLAUDE_ENTRY="{\"type\":\"stdio\",\"command\":\"$LAUNCHER\",\"args\":[],\"env\":{}}"
+echo "3/5 Consignes des agents : ~/.claude/CLAUDE.md et ~/.codex/AGENTS.md"
+{
+  cat "$HERE/block.sh"
+  printf 'consignes_b64=%q\n' "$(base64 < "$HERE/consignes.md" | tr -d '\n')"
+  cat <<'EOF'
+set -euo pipefail
+content=$(mktemp)
+printf '%s' "$consignes_b64" | base64 -d > "$content"
+status=$(block_put "$HOME/.claude/CLAUDE.md" "$content")
+echo "    Claude : $status"
+status=$(block_put "$HOME/.codex/AGENTS.md" "$content")
+echo "    Codex : $status"
+rm -f "$content"
+if [ -e "$HOME/.codex/AGENTS.override.md" ]; then
+  echo "    ATTENTION : ~/.codex/AGENTS.override.md existe ; Codex le lit à la place d'AGENTS.md." >&2
+fi
+EOF
+} | debian_sh dev
+
+echo "4/5 Claude Code : serveur thor_android (portée utilisateur)"
+CLAUDE_ENTRY="{\"type\":\"stdio\",\"command\":\"$LAUNCHER\",\"args\":[],\"env\":{\"ADB_SERVER_SOCKET\":\"$ADB_SOCKET\"}}"
 {
   printf 'want=%q\n' "$CLAUDE_ENTRY"
   cat <<'EOF'
@@ -70,9 +101,9 @@ fi
 EOF
 } | debian_sh dev
 
-echo "4/4 Codex : serveur thor_android (~/.codex/config.toml de Termux)"
+echo "5/5 Codex : serveur thor_android (~/.codex/config.toml de Termux)"
 {
-  printf 'launcher=%q\n' "$LAUNCHER"
+  printf 'want=%q\n' "$(printf '[mcp_servers.thor_android]\ncommand = "%s"\nenv = { ADB_SERVER_SOCKET = "%s" }' "$LAUNCHER" "$ADB_SOCKET")"
   emit_toml_helpers
   cat <<'EOF'
 set -euo pipefail
@@ -81,16 +112,16 @@ mkdir -p "$(dirname "$config")"
 if [ ! -e "$config" ]; then
   (umask 077 && touch "$config")
 fi
-want="command = \"$launcher\""
-current=$(awk '/^[ \t]*\[/ { s = ($0 ~ /^[ \t]*\[mcp_servers\.thor_android\][ \t]*$/) } s && /^[ \t]*command[ \t]*=/ { print; exit }' "$config")
+# Lignes actuelles de [mcp_servers.thor_android] et de ses sous-tables.
+current=$(awk '/^[ \t]*\[/ { s = ($0 ~ /^[ \t]*\[mcp_servers\.thor_android[].]/) } s' "$config")
 if [ "$current" = "$want" ]; then
   echo "    déjà déclaré"
 else
-  if grep -q '^[[:space:]]*\[mcp_servers\.thor_android[].]' "$config"; then
+  if [ -n "$current" ]; then
     drop_thor_android
     echo "    ancienne déclaration retirée"
   fi
-  printf '\n[mcp_servers.thor_android]\n%s\n' "$want" >> "$config"
+  printf '\n%s\n' "$want" >> "$config"
   echo "    ajouté"
 fi
 EOF

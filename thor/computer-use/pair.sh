@@ -14,12 +14,20 @@ if [ $# -ne 2 ]; then
 fi
 port=$1
 code=$2
+# Même socket privée que start.sh.
+export ADB_SERVER_SOCKET=${ADB_SERVER_SOCKET:-localfilesystem:/home/dev/.thor-adb/server}
 
 # Si aucun serveur adb ne tournait avant, on l'arrête à la fin : sinon la
 # session Debian ne se fermerait pas.
 already_running=0
-pgrep -f 'adb .*fork-server' >/dev/null && already_running=1
+pgrep -f -x "([^ ]*/)?adb -L $ADB_SERVER_SOCKET fork-server server.*" >/dev/null && already_running=1
 
+case "$ADB_SERVER_SOCKET" in
+  localfilesystem:*)
+    socket_dir=$(dirname "${ADB_SERVER_SOCKET#localfilesystem:}")
+    mkdir -p "$socket_dir" && chmod 700 "$socket_dir"
+    ;;
+esac
 adb pair "127.0.0.1:$port" "$code"
 status=0
 "$(dirname "$0")/start.sh" || status=$?

@@ -1,6 +1,9 @@
 #!/bin/bash
 # Serveur MCP thor_android : mobile-mcp, épinglé dans /opt/thor-android.
-# La télémétrie de mobile-mcp est coupée.
+# La télémétrie de mobile-mcp est coupée. adb (lancé par mobile-mcp et par
+# mobilecli) passe par la socket privée du serveur adb ; les déclarations MCP
+# des deux agents la donnent aussi, la valeur ci-dessous sert de repli.
 export MOBILEMCP_DISABLE_TELEMETRY=1
+export ADB_SERVER_SOCKET=${ADB_SERVER_SOCKET:-localfilesystem:/home/dev/.thor-adb/server}
 export PATH="/usr/bin:$PATH"
 exec /usr/local/bin/node /opt/thor-android/node_modules/@mobilenext/mobile-mcp/lib/index.js "$@"
