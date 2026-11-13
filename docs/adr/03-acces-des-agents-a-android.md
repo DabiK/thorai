@@ -1,6 +1,6 @@
 # ADR 03 — Accès des agents à Android (computer use)
 
-Statut : accepté, 13 novembre 2026 (ticket 03). L'association du débogage sans fil est faite (clé de la Debian) et les essais sont passés sur le chemin livré, sans le Mac. Reste à voir avec l'utilisateur ce que devient le débogage sans fil après un redémarrage de la console.
+Statut : accepté sous réserve de la question ouverte 1 (un agent peut-il ouvrir une appli par-dessus Régie ?), 13 novembre 2026 (ticket 03). L'association du débogage sans fil est faite (clé de la Debian) et les essais sont passés sur le chemin livré, sans le Mac. Reste aussi à voir avec l'utilisateur ce que devient le débogage sans fil après un redémarrage de la console.
 
 ## Contexte
 
@@ -76,6 +76,7 @@ Les trois questions ouvertes de la première version de cet ADR sont tranchées 
    `start.sh`, `stop.sh` et `pair.sh` ferment leur entrée standard (`exec </dev/null`), et tous les `adb … shell` des scripts prennent `-n`. Sans cela, appelés depuis un script lu sur stdin (`bash -s`, comme le font `install.sh` et `uninstall.sh` par `lib.sh`), un `adb shell` avalait la suite du script : `uninstall.sh` sautait alors la moitié de la coupure et annonçait quand même « Accès coupé ». Par sécurité, `lib.sh` enveloppe aussi chaque script envoyé à la console dans un bloc `{ … }`, que bash lit en entier avant de l'exécuter.
 7. **Écran bas : `thor-screen`**, petit script adb (`ids`, `capture`, `tap`, `swipe`, `text`, `launch`, sur `haut` ou `bas`).
    - `launch PAQUET` résout l'activité de lancement (`cmd package resolve-activity`) puis fait `am start --display <displayId>`. Il refuse `app.regie`.
+   - Tout argument qui part vers le shell de la console est vérifié : coordonnées entières, nom de paquet et activité résolue limités à `[A-Za-z0-9_.]`, écran `haut` ou `bas`. Avant la troisième relecture, `tap` laissait passer une commande shell dans X ou Y, ce qui contournait le refus de `launch app.regie`.
    - Les gestes passent par `input -d <displayId>`.
    - Les ids physiques sont relus à chaque appel (`cmd display get-displays`), pas codés en dur.
 8. **Consignes globales** (`consignes.md`, une dizaine de lignes) :

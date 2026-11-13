@@ -73,6 +73,15 @@ screen_field() {
   awk -v f="$2" '{ print $f }' <<<"$line"
 }
 
+# adb shell joint ses arguments en une ligne lue par sh sur la console :
+# tout argument venu de l'appelant est vérifié avant d'y arriver.
+numbers() {
+  local n
+  for n in "$@"; do
+    [[ "$n" =~ ^[0-9]+$ ]] || die "nombre attendu : $n"
+  done
+}
+
 cmd=${1:-}
 case "$cmd" in
   ids)
@@ -92,14 +101,13 @@ case "$cmd" in
     ;;
   tap)
     [ $# -eq 4 ] || usage
+    numbers "$3" "$4"
     display=$(screen_field "$2" 1)
     adb_ shell -n input -d "$display" tap "$3" "$4"
     ;;
   swipe)
     [ $# -eq 6 ] || [ $# -eq 7 ] || usage
-    for n in "${@:3}"; do
-      [[ "$n" =~ ^[0-9]+$ ]] || die "nombre attendu : $n"
-    done
+    numbers "${@:3}"
     display=$(screen_field "$2" 1)
     adb_ shell -n input -d "$display" swipe "${@:3}"
     ;;
@@ -122,7 +130,8 @@ case "$cmd" in
     component=$(adb_ shell -n cmd package resolve-activity --brief \
       -a android.intent.action.MAIN -c android.intent.category.LAUNCHER "$3" |
       tr -d '\r' | tail -n 1)
-    [[ "$component" == */* ]] || die "aucune activité de lancement pour $3."
+    # Le composant revient de la console et repart dans son shell : forme stricte.
+    [[ "$component" =~ ^"$3"/[A-Za-z0-9_.]+$ ]] || die "aucune activité de lancement pour $3."
     # -f 0x10000000 : FLAG_ACTIVITY_NEW_TASK.
     adb_ shell -n am start --display "$display" -f 0x10000000 -n "$component"
     ;;
