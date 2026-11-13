@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Le micro de la maquette, centré dans la zone sûre de 72 dp de l'icône adaptative. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="1.75"
+        android:scaleY="1.75"
+        android:translateX="33"
+        android:translateY="33">
+        <path
+            android:pathData="M12,3 A3,3 0 0,1 15,6 V11 A3,3 0 0,1 9,11 V6 A3,3 0 0,1 12,3 Z M5,11 A7,7 0 0,0 19,11 M12,18 V21"
+            android:strokeWidth="1.6"
+            android:strokeColor="#FF6A4D"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+    </group>
+</vector>

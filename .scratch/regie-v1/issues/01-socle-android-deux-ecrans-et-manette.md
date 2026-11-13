@@ -36,11 +36,11 @@ Poser l'app Android sur la Thor, avec ses deux écrans, sa manette et le systèm
 
 ## Critères d'acceptation
 
-- L'app s'ouvre sur la Thor avec la vue d'ensemble en haut et le micro en bas, fidèle à la maquette.
-- La croix déplace le focus, sur l'écran actif comme après avoir touché l'autre écran.
-- Le maintien de L2 et de R2 est détecté (un état visible sur l'écran du bas suffit pour l'instant).
-- L'écran bas éteint ou absent → mode un seul écran, sans plantage.
-- Les captures des deux écrans sont dans `artifacts/screenshots/01/`.
+- [x] L'app s'ouvre sur la Thor avec la vue d'ensemble en haut et le micro en bas, fidèle à la maquette.
+- [x] La croix déplace le focus, sur l'écran actif comme après avoir touché l'autre écran.
+- [x] Le maintien de L2 et de R2 est détecté (un état visible sur l'écran du bas suffit pour l'instant).
+- [ ] L'écran bas éteint ou absent → mode un seul écran, sans plantage.
+- [x] Les captures des deux écrans sont dans `artifacts/screenshots/01/`.
 
 ## Rapport
 
