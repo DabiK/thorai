@@ -2,38 +2,71 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Régie</string>
 
+    <!-- Le compteur de l'en-tête : les sessions chargées dans un agent, pas l'historique. -->
     <plurals name="overview_session_count">
-        <item quantity="one">%d session</item>
-        <item quantity="many">%d sessions</item>
-        <item quantity="other">%d sessions</item>
+        <item quantity="one">%d session active</item>
+        <item quantity="many">%d sessions actives</item>
+        <item quantity="other">%d sessions actives</item>
     </plurals>
 
     <string name="agent_claude">Claude</string>
     <string name="agent_codex">Codex</string>
 
-    <string name="status_running">En cours</string>
+    <!-- Statuts du pont (docs/protocole-pont.md, « Statuts »). -->
+    <string name="status_working">En cours</string>
     <string name="status_awaiting_approval">Attend ta validation</string>
-    <string name="status_done">Terminé</string>
-    <string name="status_paused">En pause</string>
+    <string name="status_idle">En attente de consigne</string>
+    <string name="status_stopped">Arrêtée</string>
+    <string name="status_failed">Échec</string>
 
     <!-- « Étape 3 sur 5 » : rien ne s'accorde en nombre, d'où PluralsCandidate ignoré. -->
     <string name="card_step" tools:ignore="PluralsCandidate">Étape %1$d sur %2$d</string>
     <string name="card_step_with_label" tools:ignore="PluralsCandidate">Étape %1$d sur %2$d · %3$s</string>
     <string name="card_step_short" tools:ignore="PluralsCandidate">étape %1$d sur %2$d</string>
-    <string name="card_wants_command">Veut lancer une commande :</string>
-    <string name="card_wants_file_change">Veut modifier un fichier :</string>
-    <string name="card_question">Te pose une question : %1$s</string>
+    <string name="card_no_plan">Plan non communiqué par l\'agent</string>
+    <string name="card_wants_command">Veut lancer une commande :</string>
+    <string name="card_wants_file_change">Veut modifier un fichier :</string>
+    <string name="card_wants_other">Demande ton accord</string>
+
+    <!-- Où en est la dernière action. -->
+    <string name="action_status_pending">en attente</string>
+    <string name="action_status_in_progress">en cours</string>
+    <string name="action_status_completed">terminée</string>
+    <string name="action_status_failed">échouée</string>
+
+    <string name="version_untested">version non testée</string>
 
     <string name="banner_awaiting">%1$s attend ta validation</string>
     <string name="banner_see">Voir</string>
 
+    <!-- État du pont et marche à suivre, sans jargon (PRD, principes). -->
+    <string name="bridge_connecting">Connexion au pont…</string>
+    <string name="bridge_unreachable">Pont injoignable</string>
+    <string name="bridge_hint_grant_run_command">Autorise Régie à démarrer le pont : Infos de l\'appli › Autorisations › Autorisations supplémentaires › « Run commands in Termux environment ».</string>
+    <string name="bridge_hint_termux_missing">Termux ne répond pas : relance thor/bridge/install.sh depuis le Mac.</string>
+    <string name="bridge_hint_token_missing">Régie n\'a pas la clé du pont : lance thor/bridge/install.sh token-app depuis le Mac.</string>
+    <string name="bridge_hint_token_refused">Le pont refuse la clé de Régie : lance thor/bridge/install.sh token-app depuis le Mac.</string>
+    <string name="bridge_hint_restarting">Régie relance le pont et se reconnecte seule.</string>
+    <string name="android_access_title">Accès des agents à Android</string>
+    <string name="android_access_hint">Il ne reviendra pas seul après un redémarrage. Permission à accorder une fois depuis le Mac : adb shell pm grant app.regie android.permission.WRITE_SECURE_SETTINGS</string>
+
     <string name="mic_description">Maintenir pour dicter</string>
     <string name="mic_hold_l2">Maintiens L2 et parle</string>
-    <string name="mic_r2_examples">R2 pour un ordre : « lance Claude sur atelier », « où en est Codex ? », « mets tout en pause »</string>
+    <string name="mic_r2_examples">R2 pour un ordre : « lance Claude sur atelier », « où en est Codex ? », « mets tout en pause »</string>
     <string name="mic_l2_held">L2 maintenu</string>
     <string name="mic_r2_held">R2 maintenu</string>
 
     <string name="action_open">Ouvrir</string>
     <string name="action_new_session">Nouvelle session</string>
     <string name="action_speak_summary">Point à voix haute</string>
+    <string name="action_quit">Quitter</string>
+
+    <plurals name="quit_busy">
+        <item quantity="one">%d session travaille encore. Quitter l\'arrête.</item>
+        <item quantity="many">%d sessions travaillent encore. Quitter les arrête.</item>
+        <item quantity="other">%d sessions travaillent encore. Quitter les arrête.</item>
+    </plurals>
+    <string name="quit_confirm">Quitter</string>
+    <string name="quit_cancel">Annuler</string>
+    <string name="quit_stopping">Arrêt des sessions et du pont…</string>
 </resources>

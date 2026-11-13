@@ -39,7 +39,7 @@ artifacts/ captures d'écran des écrans livrés, rangées par ticket
 ## Architecture hexagonale
 
 - **Domaine** (`android/domain`), en Kotlin pur sans dépendance Android :
-  - le modèle : `Session`, `Agent`, `Approval`, `SessionEvent` ;
+  - le modèle : `Session`, `Agent`, `Approval`, `Overview` ;
   - les ports, par exemple `AgentGateway` ;
   - les cas d'usage.
 - **Ports de la voix** : dans `voice/api`, en Kotlin pur : transcription en flux, synthèse, détection de parole, vocabulaire à favoriser.

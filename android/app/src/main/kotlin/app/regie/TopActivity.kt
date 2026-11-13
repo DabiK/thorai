@@ -2,12 +2,15 @@ package app.regie
 
 import android.app.ActivityOptions
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import app.regie.console.TermuxBridgeLauncher
 import app.regie.display.ScreenMode
 import app.regie.ui.screens.OverviewTopScreen
 import kotlinx.coroutines.launch
@@ -18,6 +21,14 @@ class TopActivity : GamepadActivity() {
     /** Cette instance s'est ouverte sur le mauvais écran et a passé la main à une autre. */
     private var relaunched = false
 
+    /** La permission RUN_COMMAND est demandée : le lancement attend la réponse. */
+    private var askingPermission = false
+
+    private val runCommandPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+        askingPermission = false
+        container.runStartUp()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         container.displays.topScreenTarget(display.displayId)?.let { target ->
@@ -25,7 +36,9 @@ class TopActivity : GamepadActivity() {
             return
         }
         applyDebugExtras(intent)
+        container.start(replay = BuildConfig.DEBUG && intent.getBooleanExtra(EXTRA_FAKE_GATEWAY, false))
         container.topAlive.value = true
+        askRunCommandPermission()
 
         setScreen { overview, control ->
             val mode by container.displays.mode.collectAsStateWithLifecycle()
@@ -40,6 +53,29 @@ class TopActivity : GamepadActivity() {
                 }
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        container.topStarted.value = true
+        // À chaque retour au premier plan : le pont a pu s'arrêter, la console redémarrer.
+        if (!relaunched && !askingPermission) container.runStartUp()
+    }
+
+    /**
+     * Sans RUN_COMMAND, Régie ne peut pas démarrer le pont : la permission (de Termux) est demandée
+     * au premier lancement de chaque processus. Refusée, l'écran donne la marche à suivre.
+     */
+    private fun askRunCommandPermission() {
+        if (container.replaying) return
+        if (checkSelfPermission(TermuxBridgeLauncher.PERMISSION) == PackageManager.PERMISSION_GRANTED) return
+        askingPermission = true
+        runCommandPermission.launch(TermuxBridgeLauncher.PERMISSION)
+    }
+
+    override fun onStop() {
+        container.topStarted.value = false
+        super.onStop()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -82,5 +118,8 @@ class TopActivity : GamepadActivity() {
 
     companion object {
         const val EXTRA_FORCE_SINGLE_SCREEN = "force_single_screen"
+
+        /** En debug : `--ez fake_gateway true` au premier lancement du processus branche la passerelle factice. */
+        const val EXTRA_FAKE_GATEWAY = "fake_gateway"
     }
 }

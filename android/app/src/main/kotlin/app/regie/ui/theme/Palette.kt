@@ -16,6 +16,9 @@ object Palette {
     val done = Color(0xFF5ED19A)
     val mic = Color(0xFFFF6A4D)
 
+    /** Échec : le seul rouge de la maquette, celui du micro. */
+    val failed = mic
+
     // Nuances secondaires relevées dans la maquette.
     val divider = surfaceHigh
     val tagBackground = Color(0xFF23262B)

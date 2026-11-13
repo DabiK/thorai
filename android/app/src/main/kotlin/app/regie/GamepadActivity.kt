@@ -13,7 +13,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import app.regie.input.Button
 import app.regie.input.GamepadInput
 import app.regie.input.InputRouter
@@ -23,6 +26,7 @@ import app.regie.overview.ControlState
 import app.regie.domain.model.Overview
 import app.regie.ui.screens.ControlCallbacks
 import app.regie.ui.theme.RegieTheme
+import kotlinx.coroutines.launch
 import kotlin.math.max
 
 /**
@@ -42,12 +46,24 @@ abstract class GamepadActivity : ComponentActivity() {
         )
 
         override fun onOpenApproval() = container.controller.openPendingApproval()
+
+        override fun onQuit() = container.controller.requestQuit()
+
+        override fun onConfirmQuit() = container.controller.confirmQuit()
+
+        override fun onCancelQuit() = container.controller.cancelQuit()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         window.callback = GamepadWindowCallback(window.callback, container.inputRouter)
+        // « Quitter » est allé au bout : les deux écrans se ferment, même en arrière-plan.
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.CREATED) {
+                container.closing.collect { if (it) finishAndRemoveTask() }
+            }
+        }
     }
 
     override fun onStop() {

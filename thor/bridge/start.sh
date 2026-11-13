@@ -20,6 +20,12 @@ running() {
     [[ -r "/proc/$pid/cmdline" ]] && tr '\0' ' ' < "/proc/$pid/cmdline" | grep -q regie-bridge-supervise
 }
 
+# The agents' access to Android (ticket 03), linked again at every call, even when the bridge
+# already runs: after a restart of the console, wireless debugging comes back on a new port.
+if [[ -x "$HOME/bin/regie-android-access" ]]; then
+  setsid nohup "$HOME/bin/regie-android-access" > /dev/null 2>&1 < /dev/null 9>&- &
+fi
+
 if running; then
   echo "Le pont tourne déjà."
   exit 0

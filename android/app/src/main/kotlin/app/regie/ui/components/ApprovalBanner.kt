@@ -50,7 +50,7 @@ fun ApprovalBanner(pending: PendingApproval, onOpen: () -> Unit, modifier: Modif
                 overflow = TextOverflow.Ellipsis,
             )
             BasicText(
-                text = "${pending.session.project} · ${pending.approval.subject}",
+                text = listOfNotNull(pending.session.project, pending.approval.subject).joinToString(" · "),
                 style = mono(11.sp, color = Palette.textMuted),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
