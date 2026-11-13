@@ -1,6 +1,6 @@
 #!/bin/bash
 # Coupe l'accès des agents à Android : retire le serveur thor_android des deux
-# agents, leurs autorisations sans validation (trois entrées de Claude, règles
+# agents, leurs autorisations sans validation (quatre entrées de Claude, règles
 # de Codex) et leurs consignes thor-android, arrête le serveur adb et efface ce
 # que install.sh a posé, y compris la clé adb de la Debian, ainsi que le
 # dossier que mobilecli a pu poser dans les données de Régie. Lancé depuis le
