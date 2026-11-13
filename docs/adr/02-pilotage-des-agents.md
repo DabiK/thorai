@@ -157,12 +157,28 @@ Conséquences du mode « valider » :
   - Codex met environ 2 s, et il a fallu un SIGTERM au bout de 4 s une fois ;
   - après un SIGKILL, aucun processus orphelin.
 
+## Mise en œuvre dans le pont (ticket 02, 13 novembre 2026)
+
+Le contrat est dans `docs/protocole-pont.md`. Choix et constats durables :
+
+- **Installation sans dépendances facultatives** : `npm ci --omit=dev --omit=optional`. `node_modules` passe de 826 Mo à 91 Mo. Les deux agents marchent ainsi (client de démo et test de contrat sur la Thor), puisqu'ils utilisent `CLAUDE_CODE_EXECUTABLE` et `CODEX_PATH`.
+- **Fichier de verrouillage** : il est produit avec npm 11.19.1, la version de la Debian. `npm ci` refuse un `package-lock.json` écrit par npm 11.6 (« Missing: @emnapi/core from lock file »).
+- **Port et jeton** : `127.0.0.1:47600`, jeton dans `/home/dev/.config/regie/bridge-token` (Debian) et `files/bridge-token` (app).
+- **Reprise** : `session/load` rejoue tout l'historique. Le pont ne le relaie pas : son journal l'a déjà. Le mode de validation est réappliqué après chaque chargement, pour les deux agents.
+- **Échecs bwrap** : le `tool_call` est déjà parti quand l'échec arrive. Le pont remplace l'échec par un `tool_call_update` marqué `_meta.regie.hidden = "sandbox_unavailable"`, que l'app retire du fil.
+- **Message pendant un tour** : le pont essaie `_session/steering`, puis met le message en file par `session/prompt` si l'agent refuse.
+- **proot** :
+  - quand le processus lancé dans proot est tué (SIGKILL), `proot-distro login` sort quand même avec le code 0. Le superviseur juge donc un arrêt propre au fichier `bridge.pid`, que seul un arrêt propre efface ;
+  - une fois, pendant le premier essai, proot s'est arrêté (« vpid 1: terminated with signal 9 ») alors que le pont continuait, hors de proot. Pas reproduit en trois essais. Le superviseur arrête alors ce pont et le relance.
+- **RUN_COMMAND depuis adb** : `adb shell am startservice …` est refusé (« Requires permission com.termux.permission.RUN_COMMAND ») : l'utilisateur `shell` n'a pas la permission. Le même intent, envoyé avec l'uid de Termux (`am` de Termux), démarre et arrête bien le pont. L'app devra déclarer la permission et l'utilisateur l'accorder.
+- **Verrou de veille** : il est commun à Termux. `regie-bridge-stop` ne le rend pas si les services `thor-services` tournent encore.
+
 ## Conséquences
 
 - Le contrat du pont (`docs/protocole-pont.md`) s'appuie sur ce schéma ACP, avec les compensations ci-dessus. Les fixtures de `bridge/fixtures/acp-raw/` servent de référence à la passerelle factice.
 - L'app propose deux modes Codex : « valider » (`workspace-write` + consigne) et « tout autoriser » (`agent-full-access`). Le mode `agent` n'est pas proposé.
 - **Risques** :
-  - **Taille** : 826 Mo installés, dont environ 740 Mo de binaires embarqués inutilisés (`claude-agent-sdk-linux-arm64` 346 Mo, `codex-linux-arm64` 391 Mo). `npm install --omit=optional` est à tester.
+  - **Taille** : 826 Mo installés, dont environ 740 Mo de binaires embarqués inutilisés (`claude-agent-sdk-linux-arm64` 346 Mo, `codex-linux-arm64` 391 Mo). Réglé par `--omit=optional` : 91 Mo (voir « Mise en œuvre dans le pont »).
   - **Mises à jour** : une nouvelle version de Claude Code, Codex ou d'un adaptateur peut changer le schéma ou les modes. Les adaptateurs évoluent vite (0.107 et 2.6 en novembre 2026). Les versions restent épinglées et l'app avertit quand on en sort.
   - **Consigne de Codex** : le contournement de bwrap repose sur le modèle. Un modèle qui l'ignore produit à nouveau des appels `failed`, sans casser la session.
   - **Lectures en mode « valider »** : elles demandent une validation, ce qui peut faire beaucoup de validations. À arbitrer avec l'utilisateur, par exemple en acceptant seul les commandes en lecture seule.
