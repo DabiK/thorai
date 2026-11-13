@@ -5,19 +5,28 @@ Claude Code et Codex, dans la Debian de la Thor, voient l'écran d'Android et ag
 - **Écran haut** : les outils `mobile_*` de `thor_android` (capture, arbre d'interface, toucher, glisser, saisie, lancer une appli).
 - **Écran bas** : mobile-mcp ne le voit pas. Les agents utilisent `thor-screen` :
   - `thor-screen ids` : les deux écrans, avec leur `displayId` et leur id physique ;
-  - `thor-screen capture haut|bas FICHIER.png` ;
+  - `thor-screen capture haut|bas FICHIER.png`, qui crée le dossier du fichier. Les consignes demandent `/tmp/thor-screen/`, que Claude lit sans validation ;
   - `thor-screen tap haut|bas X Y` ;
   - `thor-screen swipe haut|bas X1 Y1 X2 Y2 [ms]` ;
   - `thor-screen text haut|bas "texte"`, dans le champ qui a le focus. Caractères ASCII seulement : `input text` d'Android ne sait pas taper les accents ;
-  - `thor-screen launch haut|bas PAQUET` : lance l'activité de lancement du paquet sur cet écran. Refuse `app.regie`.
+  - `thor-screen launch haut|bas PAQUET` : lance l'activité de lancement du paquet sur cet écran, Régie comprise.
 
   Pas d'arbre d'interface sur l'écran bas : l'agent s'appuie sur la capture.
 
-Les agents l'apprennent par leurs consignes globales ([`consignes.md`](consignes.md)), qui leur interdisent aussi de toucher l'app Régie (`app.regie`).
+Les agents l'apprennent par leurs consignes globales ([`consignes.md`](consignes.md)).
+
+**Les agents ont la main sur tout Android, sans validation** (décision de l'utilisateur du 13 novembre, ticket 14) : les deux écrans, toutes les applis, Régie comprise (`app.regie`). Ni Claude ni Codex ne demandent de validation pour les outils `thor_android`, pour `thor-screen` ni pour `adb`. Ce que cela ouvre :
+- un agent peut toucher les boutons de Régie, donc valider ses propres demandes ou celles de l'autre agent ;
+- une consigne cachée dans une page web, un fichier ou un dépôt peut faire piloter Android par un agent, sans que personne ne valide.
+
+Pour remettre des restrictions plus tard, au choix :
+- **adb seul** (plus de ports `127.0.0.1` ni d'injection dans Régie) : `mkdir -p ~/.config/thor-android && touch ~/.config/thor-android/adb-seul`, dans la Debian, en `dev` ;
+- **revalider chaque geste** : retirer les entrées de [`permissions.sh`](permissions.sh) de `permissions.allow` (`~dev/.claude/settings.json`), et pour Codex la ligne `default_tools_approval_mode` de `config.toml` et le fichier `~/.codex/rules/thor-android.rules` ;
+- **protéger Régie** : ajouter une phrase à `consignes.md` (par exemple « ne touche jamais `app.regie` »), puis relancer `install.sh`. Ce n'est qu'une consigne.
 
 Le serveur adb de la Debian écoute sur une socket Unix privée, `/home/dev/.thor-adb/server` (`ADB_SERVER_SOCKET=localfilesystem:…`), et plus sur `127.0.0.1:5037` : aucune autre appli de la console ne peut le joindre. Tous les scripts et les déclarations MCP passent par elle. Reste un risque, côté serveur de mobilecli sur la console : voir l'ADR 03, « Sécurité ».
 
-`thor-android-mcp` lance mobile-mcp en mode « legacy » (`MOBILEMCP_LEGACY_ROBOT=1`) : adb seul (`input`, `uiautomator dump`, `screencap`). Le mode par défaut de mobile-mcp, mobilecli, ouvre des ports `127.0.0.1` sur la console et injecte un agent dans l'appli débogable au premier plan, dont le build de debug de Régie. Pour revenir au mode mobilecli, ajouter `MOBILEMCP_LEGACY_ROBOT=0` à l'`env` de la déclaration `thor_android` de l'agent (Codex ne transmet pas l'environnement du shell à ses serveurs MCP).
+`thor-android-mcp` lance mobile-mcp en mode mobilecli (`MOBILEMCP_LEGACY_ROBOT=0`) : arbre d'interface de l'écran haut, toucher par élément, tous les outils. Ce mode ouvre des ports `127.0.0.1` sur la console, lance un démon `mobilecli` dans la Debian et injecte un agent dans l'appli débogable au premier plan, dont le build de debug de Régie. Le mode adb seul (`input`, `uiautomator dump`, `screencap`) reste un réglage : il suffit que le fichier `~dev/.config/thor-android/adb-seul` existe. `install.sh` ne touche pas à ce fichier : le réglage survit à une réinstallation. Pour revenir au mode mobilecli : `rm ~/.config/thor-android/adb-seul`.
 
 ## Installer
 
@@ -31,7 +40,9 @@ Le script peut être relancé sans risque : un second passage ne change aucun fi
 - dans la Debian : les paquets `adb` et `procps` (pour `pgrep`), s'ils manquent, et `/opt/thor-android/` (mobile-mcp, `start.sh`, `stop.sh`, `pair.sh`) ;
 - dans `~dev/.local/bin/` : `thor-android-mcp`, `thor-screen` et `adb`, une cale qui impose la socket privée à tout `adb` lancé par les agents. Elle n'écrase pas un `adb` qui ne vient pas d'elle ;
 - les consignes de `consignes.md`, entre `<!-- thor-android:début -->` et `<!-- thor-android:fin -->`, dans `~dev/.claude/CLAUDE.md` (Claude) et `~/.codex/AGENTS.md` de Termux (Codex). Le bloc est remplacé s'il existe, sinon ajouté à la fin ; le fichier est créé s'il manque ;
-- la déclaration `thor_android` pour Claude (`~dev/.claude.json`, portée utilisateur) et pour Codex (`~/.codex/config.toml` de Termux), avec `ADB_SERVER_SOCKET` dans son `env`. Une ancienne déclaration différente est remplacée.
+- la déclaration `thor_android` pour Claude (`~dev/.claude.json`, portée utilisateur) et pour Codex (`~/.codex/config.toml` de Termux), avec `ADB_SERVER_SOCKET` dans son `env`. Une ancienne déclaration différente est remplacée ;
+- **Claude, sans validation** : les entrées de `permissions.sh` dans `permissions.allow` de `~dev/.claude/settings.json` : `mcp__thor_android__*`, `Bash(thor-screen *)`, `Bash(adb *)` et `Read(//tmp/thor-screen/**)` (lire les captures). Les entrées qui manquent sont ajoutées à la fin ; le fichier est créé s'il manque. Une commande composée (`a && b`) n'est acceptée sans validation que si chaque morceau l'est ;
+- **Codex, sans validation** : `default_tools_approval_mode = "approve"` dans `[mcp_servers.thor_android]` (sans elle, Codex demande « Allow the thor_android MCP server to run tool… ? »), et [`thor-android.rules`](thor-android.rules) dans `~/.codex/rules/`, qui autorise `adb` et `thor-screen`. Un appel par chemin complet (`/home/dev/.local/bin/adb`) ne correspond pas à ces règles : Codex applique alors son réglage général, qui, avec `danger-full-access`, ne demande rien pour une commande ordinaire.
 
 Il ne touche à aucune autre entrée de ces fichiers. Si les consignes ne peuvent pas être posées, il s'arrête en erreur avant les déclarations MCP ; une déclaration `thor_android` laissée par une installation précédente reste alors en place (`uninstall.sh` la retire). Pour changer les consignes : modifier `consignes.md`, puis relancer `install.sh`.
 
@@ -56,7 +67,7 @@ L'association doit se faire avec le serveur adb de la Debian, jamais par un serv
 
 ## Au quotidien
 
-Le pont lance `/opt/thor-android/start.sh` à son démarrage. `/opt/thor-android/stop.sh` arrête le serveur de mobilecli sur la console, puis le serveur adb de la socket. `start.sh` affiche une seule ligne :
+Le pont lance `/opt/thor-android/start.sh` à son démarrage. `/opt/thor-android/stop.sh` arrête le démon de mobilecli dans la Debian et son serveur sur la console, puis le serveur adb de la socket. `start.sh` affiche une seule ligne :
 
 | Sortie | Code | Sens |
 | --- | --- | --- |
@@ -80,9 +91,9 @@ Pour lancer `adb` à la main dans la Debian, passer par `adb` (la cale de `~/.lo
   thor/computer-use/uninstall.sh
   ```
   Ce script :
-  - retire `thor_android` des deux agents et le bloc de consignes de `CLAUDE.md` et d'`AGENTS.md`. Le reste de ces fichiers revient à l'octet près, sauf qu'un fichier sans saut de ligne final en gagne un ; un fichier qui ne contient plus rien après le retrait est effacé, qu'`install.sh` l'ait créé ou qu'il ait déjà été vide avant. Si un bloc ne peut pas être retiré (marqueurs cassés, fichier en lecture seule), le script le signale et finit en erreur, mais coupe quand même tout le reste ;
+  - retire `thor_android` des deux agents, leurs autorisations sans validation (les entrées de `permissions.sh` dans `settings.json`, et `~/.codex/rules/thor-android.rules`, puis le dossier `rules` s'il est vide), et le bloc de consignes de `CLAUDE.md` et d'`AGENTS.md`. Seules nos entrées partent de `permissions.allow`. Limite : une entrée identique que l'utilisateur aurait posée lui-même part aussi. Le reste de ces fichiers garde son contenu ; `settings.json` est réécrit au format de jq (indentation de 2, saut de ligne final) et perd un `permissions.allow` resté vide, les autres fichiers reviennent à l'octet près, sauf qu'un fichier sans saut de ligne final en gagne un ; un fichier qui ne contient plus rien après le retrait est effacé, qu'`install.sh` l'ait créé ou qu'il ait déjà été vide avant. Si un bloc ne peut pas être retiré (marqueurs cassés, fichier en lecture seule), le script le signale et finit en erreur, mais coupe quand même tout le reste ;
   - arrête le serveur de mobilecli et le serveur adb ;
-  - efface `/opt/thor-android`, les lanceurs, la cale `adb`, le dossier de la socket et la clé adb de la Debian (`~dev/.android/adbkey`) ;
+  - efface `/opt/thor-android`, les lanceurs, la cale `adb`, le dossier de la socket, `~dev/.mobilecli` (journal du démon de mobilecli) et la clé adb de la Debian (`~dev/.android/adbkey`). **Sans cette clé, l'association est perdue** : après une réinstallation, il faut la refaire (« Associer la console ») ;
   - efface `/data/data/app.regie/mobilecli`, que mobilecli a pu poser dans les données de Régie (par `run-as`, en USB depuis le Mac). Rien d'autre n'est touché dans ces données. Si Régie est absente ou n'est pas débogable, le script le dit et continue.
 
   Le paquet `adb` reste installé.

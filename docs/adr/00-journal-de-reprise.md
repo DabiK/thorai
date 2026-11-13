@@ -23,6 +23,7 @@
 - **Ticket 03 bloqué sur une question produit** (13 novembre, 23 h 40) : un agent peut-il ouvrir une appli par-dessus Régie ? Les consignes livrées l'interdisent en attendant. Pour le reste : association faite avec la clé de la Debian. Sur le chemin livré, sans le Mac, la consigne « À propos » réussit avec Claude puis avec Codex. mobile-mcp passe en mode adb seul par défaut (`MOBILEMCP_LEGACY_ROBOT=1`) : en mode mobilecli, des ports `127.0.0.1` s'ouvraient sur la console et mobilecli injectait son agent dans le build de debug de Régie. `pair.sh` refuse un serveur adb relayé. **Reste à faire avec l'utilisateur** : redémarrer la console une fois pour voir si le débogage sans fil revient seul, et retirer l'association du Mac dans « Appareils associés » si elle y est encore.
 - **13 novembre, ticket 03 fait** : fusionné ; les deux questions sont tranchées par l'utilisateur (ticket 14 : liberté totale des agents).
 - **13 novembre, ticket 13 fait** : le pont accepte seul les lectures shell en mode « valider » (règle stricte, testée), purge le détail des sessions après 30 jours (`REGIE_BRIDGE_RETENTION_DAYS`) et laisse les branches à l'agent (consigne en tête, plus de `git switch`). Essayé sur la Thor avec Codex, sur un pont isolé (port 47613). Protocole et ADR 02 à jour. Le pont installé sur la console est à réinstaller (`thor/bridge/install.sh`) après la fusion.
+- **Ticket 14 à fusionner** (13 novembre, minuit) : les agents pilotent tout Android sans validation, Régie comprise. mobile-mcp passe en mobilecli par défaut ; pour revenir à adb seul : `touch ~/.config/thor-android/adb-seul`. Les permissions de Claude (`settings.json`) et de Codex (`approve` et `rules/thor-android.rules`) sont posées par `install.sh` et retirées par `uninstall.sh`. Essayé sur la Thor sans aucune validation. **L'association du débogage sans fil est à refaire par l'utilisateur** : l'essai de `uninstall.sh` a effacé la clé adb de la Debian.
 
 ## Ordre des vagues
 
@@ -66,5 +67,4 @@
 
 - Nom définitif de l'app (« Régie » est un nom de travail).
 - Lecture à voix haute : automatique ou seulement à la demande ? Un réglage est prévu, la valeur par défaut reste à décider.
-- Ticket 03 : un agent peut-il ouvrir une autre appli par-dessus Régie (qui passe alors en arrière-plan sur cet écran) ? Les consignes l'interdisent pour l'instant (variante prudente) : quand Régie occupe les deux écrans, aucun agent ne peut agir sur Android.
-- Ticket 03 : garder mobile-mcp en mode adb seul (`MOBILEMCP_LEGACY_ROBOT=1`, réglage livré) ? Il supprime les ports `127.0.0.1` et l'injection de mobilecli dans Régie, mais l'arbre d'interface de l'écran haut n'est plus fiable et quelques outils disparaissent. Voir ADR 03, « Questions ouvertes ».
+- Ticket 14 : `uninstall.sh` doit-il continuer à effacer la clé adb de la Debian ? Cela oblige à refaire l'association à la main après toute désinstallation.
