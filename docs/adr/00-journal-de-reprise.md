@@ -14,6 +14,7 @@
 
 - **13 novembre, ticket 01 fait** : socle Android livré et vérifié sur la Thor, y compris l'écran du bas éteint (ADR 05). R1 et l'écran du bas en arrière-plan tranchés par l'utilisateur.
 - **13 novembre, ticket 02 fait** : pont ACP (ADR 02), contrat `docs/protocole-pont.md`, fixtures réelles dans `bridge/fixtures/bridge-ws/`. Reste à vérifier avec l'utilisateur : l'historique après un redémarrage de la console (marche à suivre dans le rapport du ticket).
+- **14 novembre, ticket 05 bloqué sur un essai de l'utilisateur** : vue d'ensemble branchée sur le pont (ADR 06, module `android/gateway-bridge`). Reconnexion et rattrapage vérifiés sur la Thor, « Quitter » aussi. Relecture approuvée en 3 tours. Reste à faire par l'utilisateur pour le critère 3 : accorder `WRITE_SECURE_SETTINGS` (`pm grant`) et RUN_COMMAND, redémarrer la console, ouvrir Régie. Marche à suivre dans le rapport du ticket.
 
 ## Ordre des vagues
 
