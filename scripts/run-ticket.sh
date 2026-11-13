@@ -57,7 +57,7 @@ fi
 
 cd "$wt"
 status=0
-REGIE_TICKET_RUN=1 claude -p "$prompt" \
+REGIE_TICKET_RUN=1 CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0 claude -p "$prompt" \
 	--model "${TICKET_MODEL:-claude-opus-5-5}" \
 	--effort "${TICKET_EFFORT:-high}" \
 	--dangerously-skip-permissions \
