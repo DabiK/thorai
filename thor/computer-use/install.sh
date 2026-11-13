@@ -5,7 +5,7 @@
 #   thor/computer-use/install.sh            (THOR_SERIAL=THOR0000000001 par défaut)
 #
 # Pose sur la console :
-#   Debian  : paquet adb ; /opt/thor-android (mobile-mcp épinglé, start.sh,
+#   Debian  : paquets adb et procps ; /opt/thor-android (mobile-mcp épinglé, start.sh,
 #             stop.sh, pair.sh) ; ~dev/.local/bin/thor-android-mcp, thor-screen
 #             et adb (cale qui impose la socket privée du serveur adb)
 #   Consignes : bloc thor-android (consignes.md) dans ~dev/.claude/CLAUDE.md et
@@ -28,9 +28,13 @@ echo "1/5 Debian (root) : adb, mobile-mcp $MOBILE_MCP_VERSION, scripts de /opt/t
 {
   cat <<EOF
 set -euo pipefail
-if ! command -v adb >/dev/null 2>&1; then
+# adb, et procps pour pgrep (stop.sh, pair.sh).
+missing=
+command -v adb >/dev/null 2>&1 || missing="\$missing adb"
+command -v pgrep >/dev/null 2>&1 || missing="\$missing procps"
+if [ -n "\$missing" ]; then
   apt-get update -qq
-  DEBIAN_FRONTEND=noninteractive apt-get install -y -qq adb >/dev/null
+  DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \$missing >/dev/null
 fi
 mkdir -p /opt/thor-android
 cd /opt/thor-android
@@ -69,19 +73,28 @@ echo "3/5 Consignes des agents : ~/.claude/CLAUDE.md et ~/.codex/AGENTS.md"
   cat "$HERE/block.sh"
   printf 'consignes_b64=%q\n' "$(base64 < "$HERE/consignes.md" | tr -d '\n')"
   cat <<'EOF'
-set -euo pipefail
-content=$(mktemp)
-printf '%s' "$consignes_b64" | base64 -d > "$content"
-status=$(block_put "$HOME/.claude/CLAUDE.md" "$content")
-echo "    Claude : $status"
-status=$(block_put "$HOME/.codex/AGENTS.md" "$content")
-echo "    Codex : $status"
-rm -f "$content"
+set -uo pipefail
+content=$(mktemp) || exit 1
+trap 'rm -f "$content"' EXIT
+printf '%s' "$consignes_b64" | base64 -d > "$content" || exit 1
+rc=0
+for target in "Claude:$HOME/.claude/CLAUDE.md" "Codex:$HOME/.codex/AGENTS.md"; do
+  if result=$(block_put "${target#*:}" "$content"); then
+    echo "    ${target%%:*} : $result"
+  else
+    echo "    ERREUR : consignes de ${target%%:*} non posées (${target#*:})." >&2
+    rc=1
+  fi
+done
 if [ -e "$HOME/.codex/AGENTS.override.md" ]; then
   echo "    ATTENTION : ~/.codex/AGENTS.override.md existe ; Codex le lit à la place d'AGENTS.md." >&2
 fi
+exit "$rc"
 EOF
-} | debian_sh dev
+} | debian_sh dev || {
+  echo "Arrêt : sans leurs consignes, les agents ne recevront pas les outils thor_android." >&2
+  exit 1
+}
 
 echo "4/5 Claude Code : serveur thor_android (portée utilisateur)"
 CLAUDE_ENTRY="{\"type\":\"stdio\",\"command\":\"$LAUNCHER\",\"args\":[],\"env\":{\"ADB_SERVER_SOCKET\":\"$ADB_SOCKET\"}}"

@@ -30,7 +30,7 @@ Le script peut être relancé sans risque : un second passage ne change aucun fi
 - les consignes de `consignes.md`, entre `<!-- thor-android:début -->` et `<!-- thor-android:fin -->`, dans `~dev/.claude/CLAUDE.md` (Claude) et `~/.codex/AGENTS.md` de Termux (Codex). Le bloc est remplacé s'il existe, sinon ajouté à la fin ; le fichier est créé s'il manque ;
 - la déclaration `thor_android` pour Claude (`~dev/.claude.json`, portée utilisateur) et pour Codex (`~/.codex/config.toml` de Termux), avec `ADB_SERVER_SOCKET` dans son `env`. Une ancienne déclaration différente est remplacée.
 
-Il ne touche à aucune autre entrée de ces fichiers. Pour changer les consignes : modifier `consignes.md`, puis relancer `install.sh`.
+Il ne touche à aucune autre entrée de ces fichiers. Si les consignes ne peuvent pas être posées, il s'arrête en erreur avant de déclarer `thor_android` aux agents. Pour changer les consignes : modifier `consignes.md`, puis relancer `install.sh`.
 
 ## Associer la console (une fois)
 
@@ -75,7 +75,7 @@ Pour lancer `adb` à la main dans la Debian, passer par `adb` (la cale de `~/.lo
   thor/computer-use/uninstall.sh
   ```
   Ce script :
-  - retire `thor_android` des deux agents et le bloc de consignes de `CLAUDE.md` et d'`AGENTS.md`. Le reste de ces fichiers revient à l'octet près ; un fichier qu'`install.sh` avait créé et qui reste vide est effacé ;
+  - retire `thor_android` des deux agents et le bloc de consignes de `CLAUDE.md` et d'`AGENTS.md`. Le reste de ces fichiers revient à l'octet près, sauf qu'un fichier sans saut de ligne final en gagne un ; un fichier qu'`install.sh` avait créé et qui reste vide est effacé. Si un bloc ne peut pas être retiré (marqueurs cassés, fichier en lecture seule), le script le signale et finit en erreur, mais coupe quand même tout le reste ;
   - arrête le serveur de mobilecli et le serveur adb ;
   - efface `/opt/thor-android`, les lanceurs, la cale `adb`, le dossier de la socket et la clé adb de la Debian (`~dev/.android/adbkey`).
 

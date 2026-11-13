@@ -59,7 +59,7 @@ if [ ! -e "$W/absent.md" ]; then echo "ok   retrait fichier absent: rien créé"
 # 8. droits gardés
 f=$W/mode.md; printf 'y\n' > "$f"; chmod 600 "$f"
 block_put "$f" "$W/c1" >/dev/null
-m=$(stat -f %Sp "$f" 2>/dev/null || stat -c %A "$f")
+m=$(stat -c %A "$f" 2>/dev/null || stat -f %Sp "$f")
 if [ "$m" = "-rw-------" ]; then echo "ok   droits gardés"; else echo "ECHEC droits: $m"; fails=$((fails + 1)); fi
 
 # 9. marqueur de début sans fin : refus, fichier intact
@@ -72,6 +72,39 @@ check "bloc cassé: intact après retrait" "$W/orig" "$f"
 # 10. fichier vide préexistant : bloc seul, puis effacé au retrait (décision notée)
 f=$W/empty.md; : > "$f"
 block_put "$f" "$W/c1" >/dev/null; check "vide: bloc seul" "$W/blk1" "$f"
+
+# 11. fichier sans saut de ligne final : le reste revient, avec un \n final en plus
+#     (limite connue, README et ADR 03)
+f=$W/nonl.md; printf 'x' > "$f"
+block_put "$f" "$W/c1" >/dev/null
+{ printf 'x\n\n'; cat "$W/blk1"; } > "$W/exp"; check "sans \\n final: ajout" "$W/exp" "$f"
+block_drop "$f" >/dev/null
+printf 'x\n' > "$W/exp"; check "sans \\n final: retrait (gagne un \\n)" "$W/exp" "$f"
+
+# 12. fichier en lecture seule : échec signalé (code non nul), fichier intact
+#     (sans objet sous root, qui écrit quand même)
+if [ "$(id -u)" -ne 0 ]; then
+  ro_case() { # nom fonction contenu-initial
+    f=$W/ro-$1.md; printf '%s' "$3" > "$f"; chmod 444 "$f"; cp "$f" "$W/orig"
+    if $2 "$f" "$W/c1" >/dev/null 2>&1; then echo "ECHEC $1: succès annoncé"; fails=$((fails + 1)); else echo "ok   $1: échec signalé"; fi
+    check "$1: intact" "$W/orig" "$f"
+    chmod 644 "$f"
+  }
+  ro_case "lecture seule, ajout" block_put "$(printf 'a\n')"
+  ro_case "lecture seule, remplacement" block_put "$(printf 'a\n\n%s\nancien\n%s\n' "$B" "$E")"
+  ro_case "lecture seule, retrait" block_drop "$(printf 'a\n\n%s\nancien\n%s\n' "$B" "$E")"
+  # Déjà à jour : rien à écrire, donc succès, même en lecture seule.
+  f=$W/ro-ajour.md; cp "$W/blk1" "$f"; chmod 444 "$f"
+  if block_put "$f" "$W/c1" >/dev/null 2>&1; then echo "ok   lecture seule, déjà à jour: succès"; else echo "ECHEC lecture seule, déjà à jour: échec"; fails=$((fails + 1)); fi
+  chmod 644 "$f"
+fi
+
+# 13. dossier en lecture seule : le fichier temporaire ne peut pas être créé
+if [ "$(id -u)" -ne 0 ]; then
+  mkdir "$W/rodir"; f=$W/rodir/AGENTS.md; printf 'a\n' > "$f"; chmod 555 "$W/rodir"
+  if block_put "$f" "$W/c1" >/dev/null 2>&1; then echo "ECHEC dossier en lecture seule: succès annoncé"; fails=$((fails + 1)); else echo "ok   dossier en lecture seule: échec signalé"; fi
+  chmod 755 "$W/rodir"
+fi
 
 echo "échecs : $fails"
 [ "$fails" -eq 0 ]

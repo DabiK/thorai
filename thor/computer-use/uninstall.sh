@@ -14,37 +14,40 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 
 require_console
 
-echo "1/3 Claude Code, consignes et fichiers de dev"
+# Chaque étape va jusqu'au bout même si une autre échoue : l'accès est coupé
+# d'abord (serveurs, déclarations, fichiers), les consignes sont retirées en
+# dernier. Les échecs sont rappelés à la fin, avec un code de sortie 1.
+failed=()
+
+echo "1/4 Debian (dev) : serveurs, Claude Code, fichiers de dev"
 {
-  cat "$HERE/block.sh"
   printf 'wrapper_tag=%q\nsocket_dir=%q\n' "$ADB_WRAPPER_TAG" "$ADB_SOCKET_DIR"
   cat <<'EOF'
-set -euo pipefail
-if jq -e '.mcpServers.thor_android' ~/.claude.json >/dev/null 2>&1; then
-  claude mcp remove --scope user thor_android
-fi
-status=$(block_drop "$HOME/.claude/CLAUDE.md")
-echo "    consignes Claude : $status"
-status=$(block_drop "$HOME/.codex/AGENTS.md")
-echo "    consignes Codex : $status"
+set -uo pipefail
+rc=0
+fail() { echo "    ERREUR : $*" >&2; rc=1; }
 if [ -x /opt/thor-android/stop.sh ]; then
-  /opt/thor-android/stop.sh || true
+  /opt/thor-android/stop.sh || fail "arrêt du serveur adb (stop.sh)"
 fi
-rm -f ~/.local/bin/thor-android-mcp ~/.local/bin/thor-screen
+if jq -e '.mcpServers.thor_android' ~/.claude.json >/dev/null 2>&1; then
+  claude mcp remove --scope user thor_android || fail "retrait de thor_android de Claude"
+fi
+rm -f ~/.local/bin/thor-android-mcp ~/.local/bin/thor-screen || fail "lanceurs"
 if [ -e ~/.local/bin/adb ] && grep -qF "$wrapper_tag" ~/.local/bin/adb; then
-  rm -f ~/.local/bin/adb
+  rm -f ~/.local/bin/adb || fail "cale adb"
 fi
-rm -rf "$socket_dir" ~/.local/state/thor-android
-rm -f ~/.android/adbkey ~/.android/adbkey.pub
+rm -rf "$socket_dir" ~/.local/state/thor-android || fail "dossier de la socket"
+rm -f ~/.android/adbkey ~/.android/adbkey.pub || fail "clé adb"
+exit "$rc"
 EOF
-} | debian_sh dev
+} | debian_sh dev || failed+=("1/4 serveurs, Claude Code ou fichiers de dev")
 
-echo "2/3 /opt/thor-android"
-debian_sh root <<'EOF'
+echo "2/4 /opt/thor-android"
+debian_sh root <<'EOF' || failed+=("2/4 /opt/thor-android")
 rm -rf /opt/thor-android
 EOF
 
-echo "3/3 Codex"
+echo "3/4 Codex : déclaration thor_android"
 {
   emit_toml_helpers
   cat <<'EOF'
@@ -55,6 +58,29 @@ if [ -e "$config" ] && grep -q '^[[:space:]]*\[mcp_servers\.thor_android[].]' "$
   echo "    retiré"
 fi
 EOF
-} | termux_sh
+} | termux_sh || failed+=("3/4 déclaration Codex")
 
+echo "4/4 Consignes des agents"
+{
+  cat "$HERE/block.sh"
+  cat <<'EOF'
+set -uo pipefail
+rc=0
+for target in "Claude:$HOME/.claude/CLAUDE.md" "Codex:$HOME/.codex/AGENTS.md"; do
+  if result=$(block_drop "${target#*:}"); then
+    echo "    ${target%%:*} : $result"
+  else
+    echo "    ERREUR : consignes de ${target%%:*} non retirées (${target#*:})." >&2
+    rc=1
+  fi
+done
+exit "$rc"
+EOF
+} | debian_sh dev || failed+=("4/4 consignes (bloc à retirer à la main, entre ses deux marqueurs)")
+
+if [ ${#failed[@]} -gt 0 ]; then
+  echo "Coupure incomplète. Étapes en échec :" >&2
+  printf '  - %s\n' "${failed[@]}" >&2
+  exit 1
+fi
 echo "Accès coupé côté Debian. Sur la console, désactivez aussi le Débogage sans fil."

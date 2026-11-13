@@ -77,7 +77,8 @@ Les trois questions ouvertes de la première version de cet ADR sont tranchées 
    - le texte est posé entre `<!-- thor-android:début -->` et `<!-- thor-android:fin -->` par `block.sh` (`block_put`, `block_drop`) ;
    - `install.sh` remplace le bloc s'il existe. Sinon, il l'ajoute à la fin du fichier, après une ligne vide, ou crée le fichier ;
    - `uninstall.sh` retire le bloc et la ligne vide qui le précède. Il efface le fichier s'il ne reste rien (0 octet), ce qui est le cas quand `install.sh` l'avait créé ;
-   - le reste du fichier n'est jamais touché ;
+   - le reste du fichier n'est pas touché, à une exception près : un fichier sans saut de ligne final en gagne un. Après `install.sh` puis `uninstall.sh`, un tel fichier revient avec un `\n` de plus ; tout autre fichier revient à l'octet près ;
+   - en cas d'échec (fichier en lecture seule, marqueurs incohérents…), le fichier est laissé tel quel et l'erreur est signalée. `install.sh` s'arrête alors avant de déclarer `thor_android` aux agents : pas d'outils sans les consignes. `uninstall.sh` coupe d'abord l'accès (serveurs, déclarations, fichiers), retire les consignes en dernier, et finit avec un code d'erreur s'il reste quelque chose à faire à la main ;
    - Codex lit `~/.codex/AGENTS.override.md` à la place d'`AGENTS.md` s'il existe : `install.sh` le signale.
 9. Tout est scripté dans `thor/computer-use/` : `install.sh`, `uninstall.sh`, `pair-from-mac.sh`.
 
@@ -101,7 +102,11 @@ Sorties complètes : `artifacts/screenshots/03/socket-essais.txt`. Captures : `s
 - `uninstall.sh` puis `install.sh` : mêmes quatre fichiers identiques à l'octet près ;
 - `uninstall.sh` efface `CLAUDE.md` et `AGENTS.md`, qui n'existaient pas avant ;
 - l'ancienne déclaration sans `env` est remplacée des deux côtés ;
-- le bloc marqué est testé à part, sur 18 cas (fichier absent, avec contenu, bloc présent, bloc modifié, retrait, marqueurs cassés…) : sans échec avec awk BSD (Mac) et mawk (Debian).
+- le bloc marqué est testé à part par `thor/computer-use/test-block.sh`, sur 28 cas : fichier absent, avec contenu, bloc présent, bloc modifié, retrait, marqueurs cassés, fichier sans saut de ligne final, fichier ou dossier en lecture seule. Aucun échec avec awk BSD (Mac) ni avec mawk (Debian) ;
+- chemins d'échec, avec un marqueur de début orphelin ajouté à `CLAUDE.md` :
+  - `install.sh` signale l'erreur et finit en code 1, sans déclarer `thor_android` aux agents ;
+  - `uninstall.sh` coupe tout le reste (serveur adb, déclarations des deux agents, cale, `/opt/thor-android`, dossier de la socket), signale le bloc à retirer à la main et finit en code 1 ;
+- `stop.sh` sans `pgrep` dans le `PATH` : le repli par `/proc` trouve et arrête le serveur.
 
 **Chemin livré, sans échafaudage** :
 - `start.sh` répond `THOR_ANDROID=erreur raison=non-connecte` (code 2), comme attendu sans association ;
@@ -168,10 +173,12 @@ Il ne permet pas de lire les données privées des applis non débogables.
 - sur le réseau, adbd n'accepte que les appareils dont la clé est associée (TLS mutuel). Aujourd'hui : le Mac, en USB. Après l'association : la Debian. Le port d'association n'est ouvert que pendant que la fenêtre de code est affichée.
 
 **Risque résiduel : le serveur de mobilecli sur la console.** Pour parler à son serveur sur l'appareil (DeviceServer, utilisateur `shell`), mobilecli fait `adb forward tcp:N localabstract:mobilecli-server`.
-- Avec le serveur adb local, ce forward ouvre `127.0.0.1:N` sur la console. Toute appli qui a la permission Internet peut s'y connecter. À l'essai, ce forward est resté ouvert après la fin de mobilecli : il dure autant que le serveur adb, donc autant que le pont.
-- Même sans forward, la socket abstraite `@mobilecli-server` n'a aucun droit Unix. Avec SELinux permissif, toute appli peut la joindre tant que le DeviceServer tourne, c'est-à-dire jusqu'à 30 minutes après le dernier appel. La connexion a réussi depuis la Debian, dans le domaine `runas_app`.
-- Non vérifié : l'essai depuis une vraie appli, et ce que le DeviceServer accepte sans authentification. D'après les noms de ses méthodes, au moins l'arbre d'interface et la capture d'écran, peut-être les gestes et la saisie.
-- **Ce qui est fait** : `stop.sh` arrête le DeviceServer et le serveur adb (qui ferme les forwards) quand le pont s'arrête.
+- **Observé, avec l'échafaudage** : le forward était tenu par le serveur adb du Mac. Il y écoutait sur `127.0.0.1:33431` (`lsof`) et il est resté ouvert après la fin de mobilecli, jusqu'à ce qu'on le retire à la main.
+- **Déduit, non vérifié sur la console** (il faut l'association pour avoir un serveur adb local relié à la console) : avec le serveur adb de la Debian, ce même forward ouvrirait `127.0.0.1:N` sur la console, joignable par toute appli qui a la permission Internet. Il durerait autant que le serveur adb, donc autant que le pont.
+- **Observé** : depuis la Debian, une connexion directe à la socket abstraite `@mobilecli-server` réussit pendant que le DeviceServer tourne. Mais ce shell venait de `run-as`, dans le domaine `runas_app`, pas d'une appli ordinaire.
+- **Déduit, non vérifié** : une socket abstraite n'a aucun droit Unix, et SELinux est permissif. Toute appli pourrait donc la joindre, même sans forward, tant que le DeviceServer tourne, c'est-à-dire jusqu'à 30 minutes après le dernier appel.
+- **Non vérifié** : l'essai depuis une vraie appli, et ce que le DeviceServer accepte sans authentification. D'après les noms de ses méthodes, au moins l'arbre d'interface et la capture d'écran, peut-être les gestes et la saisie.
+- **Ce qui est fait** : `stop.sh` arrête le DeviceServer et le serveur adb (qui ferme les forwards) quand le pont s'arrête. Non vérifié en conditions réelles, faute d'association ; la commande d'arrêt du DeviceServer a été vérifiée seule, depuis le Mac, au nettoyage de l'échafaudage.
 - **Ce qu'on peut faire sans modifier mobilecli** : `MOBILEMCP_LEGACY_ROBOT=1`. mobile-mcp passe alors par adb seul (`input`, `uiautomator dump`, `screencap`) : pas de DeviceServer, pas de forward, pas d'agent JVMTI. En échange, on perd des outils : toucher par référence d'élément, appli au premier plan, presse-papiers, journaux, effacement des données. Non retenu ici : c'est un choix qui touche les capacités des agents (voir « Questions ouvertes »).
 
 **Garde-fous** :

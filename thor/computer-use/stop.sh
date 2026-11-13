@@ -12,8 +12,22 @@ export ADB_SERVER_SOCKET=${ADB_SERVER_SOCKET:-localfilesystem:/home/dev/.thor-ad
 rm -f "$STATE_DIR/serial"
 
 # Le serveur se reconnaît à sa ligne de commande : adb -L <socket> fork-server.
+SERVER_PATTERN="([^ ]*/)?adb -L $ADB_SERVER_SOCKET fork-server server.*"
 server_pids() {
-  pgrep -f -x "([^ ]*/)?adb -L $ADB_SERVER_SOCKET fork-server server.*"
+  if command -v pgrep >/dev/null 2>&1; then
+    pgrep -f -x "$SERVER_PATTERN"
+    return
+  fi
+  # Repli sans procps (install.sh le pose) : lecture de /proc.
+  local dir cmd found=1
+  for dir in /proc/[0-9]*; do
+    cmd=$(tr '\0' ' ' < "$dir/cmdline" 2>/dev/null) || continue
+    if [[ "${cmd% }" =~ ^$SERVER_PATTERN$ ]]; then
+      echo "${dir#/proc/}"
+      found=0
+    fi
+  done
+  return "$found"
 }
 
 if [ -z "$(server_pids)" ]; then
