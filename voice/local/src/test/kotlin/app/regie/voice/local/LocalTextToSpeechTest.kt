@@ -51,6 +51,20 @@ class LocalTextToSpeechTest {
         val elapsedMs = (System.nanoTime() - start) / 1_000_000
 
         assertTrue(elapsedMs < 1_000, "cancelling took $elapsedMs ms")
+        // The engine is given back only once the sentence in progress is done.
+        assertEquals(1, engines.openLeases)
+        val deadline = System.nanoTime() + 5_000_000_000
+        while (engines.openLeases > 0 && System.nanoTime() < deadline) Thread.sleep(10)
+        assertEquals(0, engines.openLeases)
+    }
+
+    @Test
+    fun `a finished speech gives its engine back`() = runTest {
+        val engines = FakeEngineSource()
+
+        LocalTextToSpeech(engines, LocalConfig()).synthesize("Bonjour. Fin.").toList()
+
+        assertEquals(0, engines.openLeases)
     }
 
     @Test
@@ -60,7 +74,7 @@ class LocalTextToSpeechTest {
                 throw IllegalStateException("native error")
         }
         val engines = object : EngineSource by FakeEngineSource() {
-            override suspend fun synthesizer(): SpeechSynthesizer = broken
+            override suspend fun synthesizer(): Lease<SpeechSynthesizer> = Lease(broken)
         }
 
         val error = assertFailsWith<VoiceException> { LocalTextToSpeech(engines, LocalConfig()).synthesize("Bonjour.").toList() }

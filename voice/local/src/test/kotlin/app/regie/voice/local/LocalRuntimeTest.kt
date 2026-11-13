@@ -48,13 +48,62 @@ class LocalRuntimeTest {
     fun `changing the hotwords setting reloads the decoder`() = runBlocking {
         val runtime = runtime(store(*LocalModels.SPEECH_TO_TEXT.toTypedArray()))
 
-        runtime.recognition {}
+        runtime.recognition {}.close()
         hotwords = true
         val engines = runtime.recognition {}
 
         assertTrue(engines.hotwords)
         assertEquals(listOf(false, true), factory.decoders.map { it.second.hotwords })
         assertTrue(factory.decoders.first().first.released)
+    }
+
+    @Test
+    fun `a decoder replaced by a new setting is freed only once its dictations end`() = runBlocking {
+        val runtime = runtime(store(*LocalModels.SPEECH_TO_TEXT.toTypedArray()))
+        val running = runtime.recognition {}
+        val old = factory.decoders.single().first
+
+        hotwords = true
+        val next = runtime.recognition {}
+
+        assertFalse(old.released, "the decoder of the dictation in progress was freed")
+        running.close()
+        assertTrue(old.released)
+        assertFalse(factory.decoders.last().first.released)
+        next.close()
+        assertFalse(factory.decoders.last().first.released, "the current decoder stays loaded")
+    }
+
+    @Test
+    fun `release waits for the dictations and the speech in progress`() = runBlocking {
+        val runtime = runtime(store(*LocalModels.ALL.toTypedArray()))
+        val dictation = runtime.recognition {}
+        val speech = runtime.synthesizer()
+
+        runtime.release()
+
+        assertFalse(factory.decoders.single().first.released)
+        assertFalse(factory.synthesizers.single().released)
+        dictation.close()
+        speech.close()
+        assertTrue(factory.decoders.single().first.released)
+        assertTrue(factory.synthesizers.single().released)
+        assertTrue(factory.segmenters.single().released)
+        runtime.recognition {}
+        assertEquals(2, factory.decoders.size, "loaded again after release")
+    }
+
+    @Test
+    fun `closing a dictation twice gives its decoder back once`() = runBlocking {
+        val runtime = runtime(store(*LocalModels.SPEECH_TO_TEXT.toTypedArray()))
+        val first = runtime.recognition {}
+        runtime.recognition {}
+
+        first.close()
+        first.close()
+        runtime.release()
+
+        assertFalse(factory.decoders.single().first.released, "the second dictation still uses it")
     }
 
     @Test
@@ -81,8 +130,8 @@ class LocalRuntimeTest {
     @Test
     fun `release frees the engines, which load again on next use`() = runBlocking {
         val runtime = runtime(store(*LocalModels.ALL.toTypedArray()))
-        runtime.recognition {}
-        runtime.synthesizer()
+        runtime.recognition {}.close()
+        runtime.synthesizer().close()
 
         runtime.release()
         runtime.recognition {}

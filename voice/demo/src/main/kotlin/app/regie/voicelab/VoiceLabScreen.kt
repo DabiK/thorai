@@ -59,7 +59,8 @@ fun VoiceLabScreen(lab: VoiceLab) {
             // Upper screen: 832 dp wide; lower screen (to type the key): 538 dp.
             val dictationShare = if (maxWidth >= 700.dp) 0.58f else 0.45f
             Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                DictationPanel(ui, Modifier.weight(dictationShare))
+                val guided = ui.guided
+                if (guided != null) GuidedPanel(ui, guided, Modifier.weight(dictationShare)) else DictationPanel(ui, Modifier.weight(dictationShare))
                 SettingsPanel(ui, lab, Modifier.weight(1f - dictationShare))
             }
         }
@@ -96,6 +97,29 @@ private fun DictationPanel(ui: UiState, modifier: Modifier) {
     }
 }
 
+/** The guided reading: the sentence to read in large, what is heard, the result of the last one. */
+@Composable
+private fun GuidedPanel(ui: UiState, guided: GuidedUi, modifier: Modifier) {
+    val providerName = if (guided.provider == "local") "Local" else "ElevenLabs"
+    val prompt = guided.prompt
+    Column(modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        val position = if (prompt != null) "${guided.read + 1}/${guided.total} · B : recommencer" else "${guided.read}/${guided.total} lues"
+        Text("Lecture guidée · $providerName · $position", color = Muted, fontSize = 16.sp, maxLines = 1)
+        // The sentence comes first: it keeps its whole height, the details below give way.
+        Box(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(12.dp)).padding(14.dp)) {
+            Text(prompt?.text ?: "Terminé", color = Bright, fontSize = 30.sp, lineHeight = 38.sp, fontWeight = FontWeight.SemiBold)
+        }
+        if (prompt != null) Text("Maintiens L2 et lis la phrase", color = Accent, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        val dictation = ui.dictation
+        if (dictation != null && !dictation.isTerminal) {
+            val (label, text, _) = describe(dictation)
+            Text("$label : $text", color = Muted, fontSize = 16.sp, maxLines = 2)
+        }
+        guided.last?.let { Text("Précédente : ${VoiceLab.describe(it)}", color = Bright, fontSize = 15.sp, maxLines = 2) }
+        guided.status?.let { Text(it, color = Accent, fontSize = 15.sp, maxLines = 2) }
+    }
+}
+
 /** Label, text, and whether the text is final. */
 private fun describe(state: DictationState?): Triple<String, String, Boolean> = when (state) {
     null -> Triple("Prêt", "…", false)
@@ -124,6 +148,14 @@ private fun SettingsPanel(ui: UiState, lab: VoiceLab, modifier: Modifier) {
             Choice("Local", ui.provider == "local") { lab.selectProvider("local") }
         }
         if (ui.provider == "local") LocalSettings(ui.local, lab) else ElevenLabsSettings(ui.elevenLabs, lab)
+
+        Spacer(Modifier.height(8.dp))
+        Section("Lecture guidée du corpus")
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Choice("ElevenLabs", ui.guided?.provider == "elevenlabs") { lab.startGuided("elevenlabs") }
+            Choice("Local", ui.guided?.provider == "local") { lab.startGuided("local") }
+            if (ui.guided != null) OutlinedButton(onClick = lab::stopGuided) { Text("Arrêter", fontSize = 18.sp) }
+        }
 
         Spacer(Modifier.height(8.dp))
         Section("Lecture à voix haute")

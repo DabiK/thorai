@@ -14,7 +14,8 @@ import kotlinx.coroutines.launch
 
 /**
  * A dictation in progress, driven by a push-to-talk button: created when the button is pressed,
- * [finish] when it is released, [cancel] to drop it.
+ * [finish] when it is released, [cancel] to drop it. Cancelling the scope it runs on ends it as
+ * [DictationState.Cancelled], like [cancel].
  */
 class Dictation internal constructor(
     speechToText: SpeechToText,
@@ -40,6 +41,12 @@ class Dictation internal constructor(
         } catch (e: Exception) {
             settle(DictationState.Failed(VoiceError.Provider("unexpected", e.message)))
         }
+    }
+
+    init {
+        // Whatever ends the job (cancel, the caller's scope cancelled, even before it started), the
+        // state becomes terminal, so that [await] and the observers of [state] never wait forever.
+        job.invokeOnCompletion { settle(DictationState.Cancelled) }
     }
 
     /** End of speech: stops the audio capture and asks for the final text. */

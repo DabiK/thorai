@@ -170,6 +170,25 @@ class LocalSpeechToTextTest {
 
         assertEquals(DictationState.Failed(VoiceError.Provider("local", "decoder crashed")), last)
         assertTrue(engines.segmenters.single().released)
+        assertEquals(0, engines.openLeases, "the decoder is given back")
+    }
+
+    @Test
+    fun `an unexpected error while preparing is reported as a failure, not thrown`() = runTest {
+        val engines = FakeEngineSource(prepare = { throw IllegalStateException("cannot rename x.part") })
+
+        val states = LocalSpeechToText(engines, config).transcribe(wav("consigne-02.wav").frames(), DictationRequest()).toList()
+
+        assertEquals(listOf<DictationState>(DictationState.Failed(VoiceError.Provider("local", "cannot rename x.part"))), states)
+    }
+
+    @Test
+    fun `a finished dictation gives its decoder back`() = runTest {
+        val engines = FakeEngineSource()
+
+        LocalSpeechToText(engines, config).transcribe(wav("consigne-02.wav").frames(), DictationRequest()).toList()
+
+        assertEquals(0, engines.openLeases)
     }
 
     @Test
@@ -188,6 +207,7 @@ class LocalSpeechToTextTest {
         LocalSpeechToText(engines, config).transcribe(wav("consigne-02.wav").frames(), DictationRequest()).take(2).toList()
 
         assertTrue(engines.segmenters.single().released)
+        assertEquals(0, engines.openLeases)
     }
 
     @Test

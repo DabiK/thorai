@@ -3,8 +3,6 @@ package app.regie.voicelab
 import android.content.Context
 import android.os.Build
 import android.util.Log
-import app.regie.voice.api.AudioFrame
-import app.regie.voice.api.AudioSource
 import app.regie.voice.api.Dictation
 import app.regie.voice.api.DictationRequest
 import app.regie.voice.api.DictationState
@@ -25,7 +23,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -63,6 +60,16 @@ data class ElevenLabsUi(
 
 data class BenchUi(val provider: String, val done: Int, val total: Int, val line: String, val running: Boolean)
 
+/** Guided reading: [read] sentences done out of [total], [prompt] to read now (null once finished). */
+data class GuidedUi(
+    val provider: String,
+    val read: Int,
+    val total: Int,
+    val prompt: Prompt?,
+    val last: BenchItem?,
+    val status: String?,
+)
+
 data class UiState(
     val provider: String,
     val dictation: DictationState? = null,
@@ -72,6 +79,7 @@ data class UiState(
     val local: LocalUi,
     val elevenLabs: ElevenLabsUi,
     val bench: BenchUi? = null,
+    val guided: GuidedUi? = null,
 )
 
 /**
@@ -104,6 +112,11 @@ class VoiceLab(private val context: Context, private val scope: CoroutineScope) 
     private var speech: Job? = null
     private var download: Job? = null
     private var bench: Job? = null
+    private var guided: GuidedReading? = null
+    private var guidedStartedAt = ""
+
+    /** Whether the guided reading is on: B then reads the last sentence again. */
+    val guidedActive: Boolean get() = guided != null
 
     init {
         preloadLocal()
@@ -190,9 +203,12 @@ class VoiceLab(private val context: Context, private val scope: CoroutineScope) 
 
     fun startDictation() {
         if (dictation?.state?.value?.isTerminal == false) return
+        val reading = guided
+        if (reading != null && reading.finished) return
         stopSpeaking()
-        val provider = provider()
-        val microphone = CountingSource(MicrophoneSource(context))
+        val provider = provider(reading?.provider ?: settings.provider)
+        val prompt = reading?.current
+        val microphone = CapturingSource(MicrophoneSource(context))
         val current = provider.speechToText.startDictation(scope, microphone, DictationRequest(language = "fr", vocabulary = vocabulary))
         dictation = current
         releasedAt = 0L
@@ -205,6 +221,10 @@ class VoiceLab(private val context: Context, private val scope: CoroutineScope) 
             val measure = Measure(provider.displayName, latencyMs, microphone.millis, rtf)
             mutableUi.update { it.copy(measure = measure) }
             Log.i(TAG, "dictation ended: ${terminal.javaClass.simpleName}, latency=${latencyMs}ms audio=${measure.audioMs}ms rtf=$rtf")
+            // Cancelled by B: the same sentence is read again.
+            if (reading != null && reading === guided && reading.current == prompt && terminal !is DictationState.Cancelled) {
+                recordGuided(reading, provider, microphone, terminal, latencyMs, rtf)
+            }
         }
     }
 
@@ -284,9 +304,75 @@ class VoiceLab(private val context: Context, private val scope: CoroutineScope) 
         }.last()
     }
 
+    // --- Guided reading: the user reads the corpus, holding L2 ---
+
+    /** Starts reading the corpus from its first sentence, dictating with [providerId]. */
+    fun startGuided(providerId: String) {
+        if (providerId != LocalVoiceProvider.ID.value && providerId != ElevenLabsVoiceProvider.ID.value) {
+            Log.w(TAG, "unknown provider '$providerId'")
+            return
+        }
+        val dir = corpusDir(USER_CORPUS)
+        val reading = GuidedReading(providerId, GuidedReading.prompts(sentences(dir)), dir, vocabulary)
+        guided = reading
+        guidedStartedAt = timestamp()
+        mutableUi.update { it.copy(dictation = null, measure = null) }
+        showGuided(reading, null, null)
+        Log.i(TAG, "guided: ${reading.total} sentences with $providerId, recordings in $dir")
+        if (providerId == LocalVoiceProvider.ID.value && local.modelsInstalled) downloadLocal()
+    }
+
+    fun stopGuided() {
+        guided = null
+        dictation?.cancel()
+        mutableUi.update { it.copy(guided = null) }
+        Log.i(TAG, "guided: stopped")
+    }
+
+    /** B: drops the dictation in progress, or goes back to the last sentence read; it is read again. */
+    fun redoGuided() {
+        val reading = guided ?: return
+        val current = dictation
+        if (current != null && !current.state.value.isTerminal) {
+            current.cancel()
+            showGuided(reading, null, "Dictée annulée : relis la phrase")
+        } else if (reading.redo()) {
+            showGuided(reading, null, "Relis la phrase")
+        }
+        Log.i(TAG, "guided: read ${reading.current?.label} again")
+    }
+
+    private fun recordGuided(
+        reading: GuidedReading,
+        provider: VoiceProvider,
+        capture: CapturingSource,
+        terminal: DictationState,
+        latencyMs: Long?,
+        rtf: Double?,
+    ) {
+        val item = reading.record(capture.samples(), capture.format, terminal, latencyMs, rtf)
+        Log.i(TAG, "guided: ${describe(item)}")
+        var status: String? = null
+        if (reading.finished) {
+            val report = reading.report(benchSettings(provider) + ("source" to "microphone"), guidedStartedAt)
+            val name = "guided-${reading.provider}-$guidedStartedAt"
+            writeReport(filesRoot(), name, report)
+            status = "Fini : $name.json, latence médiane ${report.latency?.median?.toLong()} ms, " +
+                "WER moyen ${report.wer?.mean?.let { "%.3f".format(Locale.ROOT, it) }}, termes ${report.termsFound}/${report.termsExpected}"
+            Log.i(TAG, "guided: $status")
+        }
+        showGuided(reading, item, status)
+    }
+
+    private fun showGuided(reading: GuidedReading, last: BenchItem?, status: String?) {
+        mutableUi.update {
+            it.copy(guided = GuidedUi(reading.provider, reading.results.size, reading.total, reading.current, last, status))
+        }
+    }
+
     // --- Bench, driven by adb ---
 
-    fun runBench(providerId: String, only: Set<Int>?) {
+    fun runBench(providerId: String, only: Set<Int>?, corpusName: String? = null) {
         if (bench?.isActive == true) {
             Log.w(TAG, "bench already running")
             return
@@ -297,11 +383,10 @@ class VoiceLab(private val context: Context, private val scope: CoroutineScope) 
                 mutableUi.update { it.copy(bench = BenchUi(providerId, done, total, line, running)) }
                 Log.i(TAG, "bench: $line")
             }
-            val root = requireNotNull(context.getExternalFilesDir(null)) { "no external files dir" }
-            val corpus = File(root, "corpus")
-            val sentences = File(corpus, "consignes.txt").takeIf { it.isFile }?.readText() ?: asset("consignes.txt")
-            val terms = File(corpus, "termes.txt").takeIf { it.isFile }?.readText()?.let(Vocabulary::parse) ?: vocabulary
-            val cases = Bench.cases(corpus, Bench.parseSentences(sentences), only)
+            val root = filesRoot()
+            val corpus = corpusDir(corpusName)
+            val terms = corpusFile(corpus, "termes.txt")?.let(Vocabulary::parse) ?: vocabulary
+            val cases = Bench.cases(corpus, sentences(corpus), only)
             if (cases.isEmpty()) return@launch show("aucun WAV dans $corpus", running = false)
 
             if (provider === local) {
@@ -321,15 +406,14 @@ class VoiceLab(private val context: Context, private val scope: CoroutineScope) 
                 val line = if (item == null) {
                     "${progress.done + 1}/${progress.total} ${progress.current}"
                 } else {
-                    "${item.case.id} latence=${item.latencyMs}ms wer=${item.wer?.let { "%.2f".format(Locale.ROOT, it) }} " +
-                        "obtenu=\"${item.obtained ?: item.error}\""
+                    describe(item)
                 }
                 show(line, progress.done, progress.total)
             }
-            val report = BenchReport(providerId, benchSettings(provider), startedAt, items)
-            val name = "bench-$providerId-$startedAt"
-            File(root, "$name.json").writeText(PRETTY.encodeToString(JsonObject.serializer(), report.toJson()))
-            File(root, "$name.csv").writeText(report.toCsv())
+            val settingsUsed = benchSettings(provider) + mapOf("realtime" to "true", "corpus" to (corpusName ?: "."))
+            val report = BenchReport(providerId, settingsUsed, startedAt, items)
+            val name = "bench-$providerId-" + (corpusName?.let { "$it-" } ?: "") + startedAt
+            writeReport(root, name, report)
             show(
                 "fini : $name.json, latence médiane ${report.latency?.median?.toLong()} ms, " +
                     "WER moyen ${report.wer?.mean?.let { "%.3f".format(Locale.ROOT, it) }}, termes ${report.termsFound}/${report.termsExpected}",
@@ -342,7 +426,6 @@ class VoiceLab(private val context: Context, private val scope: CoroutineScope) 
 
     private fun benchSettings(provider: VoiceProvider): Map<String, String> = buildMap {
         put("device", "${Build.MANUFACTURER} ${Build.MODEL}")
-        put("realtime", "true")
         if (provider === local) {
             put("model", LocalModels.PARAKEET.name)
             put("hotwords", settings.hotwords.toString())
@@ -362,7 +445,9 @@ class VoiceLab(private val context: Context, private val scope: CoroutineScope) 
                     ?: Log.w(TAG, "unknown scribe model '${command.model}'")
                 is Command.UseHotwords -> setHotwords(command.enabled)
                 Command.DownloadLocal -> downloadLocal()
-                is Command.RunBench -> runBench(command.provider, command.only)
+                is Command.RunBench -> runBench(command.provider, command.only, command.corpus)
+                is Command.StartGuided -> startGuided(command.provider)
+                Command.StopGuided -> stopGuided()
                 is Command.Speak -> speak(command.text)
             }
         }
@@ -370,22 +455,35 @@ class VoiceLab(private val context: Context, private val scope: CoroutineScope) 
 
     private fun asset(name: String): String = context.assets.open(name).bufferedReader().use { it.readText() }
 
-    /** Counts the captured audio, to show its duration. */
-    private class CountingSource(private val source: AudioSource) : AudioSource {
-        override val format = source.format
+    private fun filesRoot(): File = requireNotNull(context.getExternalFilesDir(null)) { "no external files dir" }
 
-        @Volatile
-        private var samples = 0L
-        val millis: Long get() = samples * 1000 / format.sampleRateHz
+    /** `files/corpus/`, or its sub-folder [name] (`user`: the recordings of the guided reading). */
+    private fun corpusDir(name: String?): File = File(filesRoot(), "corpus").let { if (name == null) it else File(it, name) }
 
-        override fun frames(): Flow<AudioFrame> = source.frames().onEach { samples += it.samples.size }
+    /** [name] from [dir], else from `files/corpus/`; null if neither has it (the asset is then used). */
+    private fun corpusFile(dir: File, name: String): String? =
+        listOf(File(dir, name), File(corpusDir(null), name)).firstOrNull { it.isFile }?.readText()
+
+    private fun sentences(dir: File): Map<Int, String> = Bench.parseSentences(corpusFile(dir, "consignes.txt") ?: asset("consignes.txt"))
+
+    private fun writeReport(root: File, name: String, report: BenchReport) {
+        File(root, "$name.json").writeText(PRETTY.encodeToString(JsonObject.serializer(), report.toJson()))
+        File(root, "$name.csv").writeText(report.toCsv())
     }
 
     companion object {
         private const val TAG = "VoiceLab"
+
+        /** Sub-folder of `files/corpus/` where the guided reading saves its recordings. */
+        const val USER_CORPUS = "user"
         private val PRETTY = Json { prettyPrint = true }
 
         private fun timestamp(): String = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.ROOT).format(Date())
+
+        /** One result, as shown on screen and in logcat. */
+        fun describe(item: BenchItem): String =
+            "${item.case.id} latence=${item.latencyMs}ms wer=${item.wer?.let { "%.2f".format(Locale.ROOT, it) }} " +
+                "termes=${item.terms?.found?.size ?: 0}/${item.terms?.expected ?: 0} obtenu=\"${item.obtained ?: item.error}\""
 
         /** What to tell the user, in French. */
         fun describe(error: VoiceError): String = when (error) {

@@ -154,21 +154,31 @@ internal class FakeEngineSource(
     var released = false
         private set
 
-    override suspend fun recognition(onPreparing: (Float?) -> Unit): RecognitionEngines {
-        prepare(onPreparing)
-        return RecognitionEngines(decoder, segmenter(), hotwords)
+    /** Engines handed out and not given back yet. */
+    @Volatile
+    var openLeases = 0
+        private set
+
+    private fun <T : Any> lease(engine: T): Lease<T> {
+        synchronized(this) { openLeases++ }
+        return Lease(engine) { synchronized(this) { openLeases-- } }
     }
 
-    override suspend fun synthesizer(): SpeechSynthesizer {
+    override suspend fun recognition(onPreparing: (Float?) -> Unit): RecognitionEngines {
+        prepare(onPreparing)
+        return RecognitionEngines(decoder, segmenter(), hotwords, lease(decoder))
+    }
+
+    override suspend fun synthesizer(): Lease<SpeechSynthesizer> {
         synthesizerMissing?.let { throw it }
-        return synthesizer
+        return lease(synthesizer)
     }
 
     override suspend fun segmenter(): SpeechSegmenter = FakeSegmenter().also { segmenters += it }
 
     override suspend fun prepareAll(onProgress: (Float?) -> Unit) {
         prepare(onProgress)
-        synthesizer()
+        synthesizer().close()
     }
 
     override suspend fun release() {

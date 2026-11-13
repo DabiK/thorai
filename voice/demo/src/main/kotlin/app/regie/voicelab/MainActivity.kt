@@ -17,7 +17,8 @@ import app.regie.voicelab.Triggers.Trigger
 
 /**
  * The single screen of the trial app, shown on the upper screen of the Thor. Hold L2 to dictate,
- * L2 or R2 cuts the voice. adb commands arrive as intent extras (see [Command]).
+ * L2 or R2 cuts the voice, B reads the last sentence again in the guided reading. adb commands
+ * arrive as intent extras through the `.Adb` alias (see [Command]).
  */
 class MainActivity : ComponentActivity() {
     private val lab: VoiceLab get() = (application as VoiceLabApp).lab
@@ -40,7 +41,7 @@ class MainActivity : ComponentActivity() {
             microphonePermission.launch(Manifest.permission.RECORD_AUDIO)
         }
         setContent { VoiceLabScreen(lab) }
-        window.callback = TriggerWindowCallback(window.callback, triggers)
+        window.callback = TriggerWindowCallback(window.callback, triggers, guidedActive = { lab.guidedActive }, redo = lab::redoGuided)
         // A recreated activity must not replay the command that launched it.
         if (savedInstanceState == null) handle(intent)
     }
@@ -52,6 +53,7 @@ class MainActivity : ComponentActivity() {
 
     private fun handle(intent: Intent) {
         val commands = Command.parse(
+            component = intent.component?.className,
             string = { intent.getStringExtra(it) },
             boolean = { if (intent.hasExtra(it)) intent.getBooleanExtra(it, false) else null },
         )
@@ -66,9 +68,16 @@ class MainActivity : ComponentActivity() {
 private class TriggerWindowCallback(
     private val wrapped: Window.Callback,
     private val triggers: Triggers,
+    private val guidedActive: () -> Boolean,
+    private val redo: () -> Unit,
 ) : Window.Callback by wrapped {
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // B keeps its usual meaning (back) outside of the guided reading.
+        if (event.keyCode == KeyEvent.KEYCODE_BUTTON_B && guidedActive()) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) redo()
+            return true
+        }
         val trigger = when (event.keyCode) {
             KeyEvent.KEYCODE_BUTTON_L2 -> Trigger.L2
             KeyEvent.KEYCODE_BUTTON_R2 -> Trigger.R2

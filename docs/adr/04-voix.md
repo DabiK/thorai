@@ -81,8 +81,8 @@ Statut : en cours, 13 novembre 2026 (ticket 04). La phase 1 a posé les ports, l
   - Interrompre annule la requête HTTP.
 - **Voix de synthèse** : il n'y a pas de `voice_id` par défaut, car les voix par défaut d'ElevenLabs expirent le 31 décembre 2026. C'est un réglage ; `voices()` (`GET /v1/voices`) les liste pour qu'on en choisisse une.
 - **La clé** : elle est lue à chaque usage par une fonction fournie par l'app (`ElevenLabsConfig.apiKey`). C'est l'utilisateur qui la saisit dans l'app ; elle n'est jamais dans le dépôt.
-- **Prix** : relevés au lancement du ticket. L'agent n'a pas relu la page des prix, il faut les revérifier avant la recommandation finale.
-  - Scribe v3 Live et v2 Realtime : 0,22 $ de l'heure, plus 0,08 $ de l'heure avec les keyterms ;
+- **Prix** : vérifiés le 13 novembre 2026 sur https://elevenlabs.io/pricing/api.
+  - Scribe v3 Live et v2 Realtime : 0,22 $ de l'heure, plus 0,08 $ de l'heure avec les keyterms (ou la bibliothèque de termes de v3 Live) ;
   - Flash : 0,04 $ pour 1 000 caractères.
 
 ### Factice (`voice/fake`)
@@ -228,7 +228,15 @@ Mesuré sur la Thor avec le banc de l'appli d'essai (`--es bench local`), sur le
 
 ### Marche à suivre pour l'utilisateur
 
-Voir le rapport du ticket 04 : saisie de la clé sur l'écran du bas, puis lecture des 20 consignes avec L2 maintenu, une fois par fournisseur.
+1. **Saisir la clé**, sur l'écran du bas, qui est tactile : `adb -s THOR0000000001 shell am force-stop app.regie.voicelab`, puis `adb -s THOR0000000001 shell am start --display 4 -n app.regie.voicelab/.MainActivity`. Toucher « ElevenLabs », coller la clé dans « Clé ElevenLabs », toucher « Enregistrer la clé » : « Clé enregistrée (chiffrée) » s'affiche. Toucher « Charger les voix » et en choisir une, française de préférence.
+2. **Vérifier la synthèse** : toucher « Lire » ; « Couper (L2/R2) » ou L2 coupe la voix.
+3. **Lire les 20 consignes avec ElevenLabs** : `adb -s THOR0000000001 shell am start --display 0 -n app.regie.voicelab/.Adb --es guided elevenlabs`. Pour chaque consigne affichée en haut : maintenir L2, la lire normalement, relâcher. B fait recommencer la consigne. Le micro est enregistré dans `files/corpus/user/`.
+4. **Rejouer la même voix dans les autres fournisseurs**, sans relire :
+   - `… .Adb --es bench local --es corpus user` ;
+   - `… .Adb --es bench local --es corpus user --ez hotwords true` ;
+   - `… .Adb --es scribe scribe_v2_realtime --es bench elevenlabs --es corpus user`.
+5. **Vérifier le passage à chaud** : dicter une phrase avec L2, choisir « Local » dans les réglages, dicter une autre phrase, sans relancer l'appli.
+6. **Récupérer les rapports** : `adb -s THOR0000000001 pull /sdcard/Android/data/app.regie.voicelab/files/ bench/` (fichiers `guided-*` et `bench-*-user-*`), puis remplir le tableau ci-dessus et trancher la recommandation.
 
 ## Conséquences
 

@@ -13,7 +13,7 @@
         android:supportsRtl="true"
         android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
 
-        <!-- Écran du haut. Les commandes adb arrivent en extras (voice/README.md). -->
+        <!-- Écran du haut. Les commandes adb passent par l'alias .Adb ci-dessous (voice/README.md). -->
         <activity
             android:name=".MainActivity"
             android:configChanges="density|keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
@@ -24,5 +24,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Entrée des commandes adb (banc, lecture, téléchargement) : elles coûtent des crédits
+             ElevenLabs ou des centaines de Mo. Seul le shell adb détient DUMP : aucune autre appli
+             ne peut lancer cet alias. Les extras reçus par .MainActivity sont ignorés. -->
+        <activity-alias
+            android:name=".Adb"
+            android:exported="true"
+            android:permission="android.permission.DUMP"
+            android:targetActivity=".MainActivity" />
     </application>
 </manifest>

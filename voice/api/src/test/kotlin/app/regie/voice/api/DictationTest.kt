@@ -1,6 +1,9 @@
 package app.regie.voice.api
 
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
@@ -105,6 +108,30 @@ class DictationTest {
         val dictation = throwing.startDictation(backgroundScope, EndlessMicrophone())
 
         assertEquals(DictationState.Failed(VoiceError.Offline), dictation.await())
+    }
+
+    @Test
+    fun `cancelling the caller's scope ends the dictation as cancelled`() = runTest {
+        val mic = EndlessMicrophone()
+        val scope = CoroutineScope(coroutineContext + Job())
+        val dictation = CountingSpeechToText().startDictation(scope, mic)
+        delay(250)
+
+        scope.cancel()
+
+        assertEquals(DictationState.Cancelled, dictation.await())
+        runCurrent()
+        assertTrue(mic.stopped)
+    }
+
+    @Test
+    fun `a scope cancelled before the dictation starts still ends it`() = runTest {
+        val scope = CoroutineScope(coroutineContext + Job())
+        scope.cancel()
+
+        val dictation = CountingSpeechToText().startDictation(scope, EndlessMicrophone())
+
+        assertEquals(DictationState.Cancelled, dictation.await())
     }
 
     @Test

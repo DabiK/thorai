@@ -55,6 +55,10 @@ class LocalSpeechToText internal constructor(
             send(DictationState.Failed(e.error))
             frames.cancel()
             return@channelFlow
+        } catch (e: Exception) {
+            send(DictationState.Failed(VoiceError.Provider("local", e.message ?: e.javaClass.simpleName)))
+            frames.cancel()
+            return@channelFlow
         }
 
         val transcriber = SegmentedTranscriber(
@@ -81,7 +85,8 @@ class LocalSpeechToText internal constructor(
         } catch (e: Exception) {
             DictationState.Failed(VoiceError.Provider("local", e.message ?: e.javaClass.simpleName))
         } finally {
-            withContext(NonCancellable + engines.engineDispatcher) { loaded.segmenter.release() }
+            // Gives the decoder back: a decoder replaced meanwhile (new setting, release) is freed now.
+            withContext(NonCancellable + engines.engineDispatcher) { loaded.close() }
         }
         if (terminal is DictationState.Final) lastStats = transcriber.stats
         send(terminal)

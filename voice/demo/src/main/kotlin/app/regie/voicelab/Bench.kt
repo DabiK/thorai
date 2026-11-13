@@ -171,21 +171,9 @@ class Bench(
             }
             last
         }
-        return when (terminal) {
-            is DictationState.Final -> {
-                val latencyMs = (timed.finalAt - timed.endedAt).coerceAtLeast(0) / 1_000_000
-                BenchItem(
-                    case, terminal.text, latencyMs, audioMs,
-                    case.expected?.let { Scoring.wordErrorRate(it, terminal.text) },
-                    realTimeFactor(),
-                    case.expected?.let { Scoring.terms(it, terminal.text, vocabulary.terms) },
-                    null,
-                )
-            }
-            is DictationState.Failed -> BenchItem(case, null, null, audioMs, null, null, null, terminal.error.toString())
-            null -> BenchItem(case, null, null, audioMs, null, null, null, "timeout after $timeout")
-            else -> BenchItem(case, null, null, audioMs, null, null, null, "ended in state $terminal")
-        }
+        if (terminal == null) return BenchItem(case, null, null, audioMs, null, null, null, "timeout after $timeout")
+        val latencyMs = (timed.finalAt - timed.endedAt).coerceAtLeast(0) / 1_000_000
+        return score(case, terminal, latencyMs, audioMs, realTimeFactor(), vocabulary)
     }
 
     /**
@@ -211,6 +199,29 @@ class Bench(
 
     companion object {
         private val number = Regex("""(\d+)\D*$""")
+
+        /**
+         * The result of one dictation of [case]: the text obtained and its scores when it is
+         * [DictationState.Final], the error otherwise. Shared by the bench and the guided reading.
+         */
+        fun score(
+            case: BenchCase,
+            terminal: DictationState,
+            latencyMs: Long?,
+            audioMs: Long,
+            realTimeFactor: Double?,
+            vocabulary: Vocabulary,
+        ): BenchItem = when (terminal) {
+            is DictationState.Final -> BenchItem(
+                case, terminal.text, latencyMs, audioMs,
+                case.expected?.let { Scoring.wordErrorRate(it, terminal.text) },
+                realTimeFactor,
+                case.expected?.let { Scoring.terms(it, terminal.text, vocabulary.terms) },
+                null,
+            )
+            is DictationState.Failed -> BenchItem(case, null, null, audioMs, null, null, null, terminal.error.toString())
+            else -> BenchItem(case, null, null, audioMs, null, null, null, "ended in state $terminal")
+        }
 
         /** Sentences of `consignes.txt`: `NN|text` per line, `#` for comments. */
         fun parseSentences(text: String): Map<Int, String> = text.lineSequence()

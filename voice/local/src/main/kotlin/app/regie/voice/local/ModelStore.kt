@@ -28,7 +28,8 @@ import java.io.InputStream
 import kotlin.coroutines.CoroutineContext
 
 /**
- * Downloads and installs the models under [root], one directory per model.
+ * Downloads and installs the models under [root], one directory per model. Every failure is
+ * thrown as a [VoiceException]: [VoiceError.Offline] for the network, [VoiceError.Provider] otherwise.
  *
  * - A download goes to `<file>.part` and resumes from there (HTTP range) after an interruption;
  *   it is renamed once complete.
@@ -81,7 +82,7 @@ class ModelStore(
                         file.delete()
                     } else {
                         val dir = directory(spec).apply { mkdirs() }
-                        if (!file.renameTo(File(dir, spec.fileName))) throw IOException("cannot move ${file.name}")
+                        move(file, File(dir, spec.fileName))
                         File(dir, MARKER).writeText(spec.url)
                     }
                 }
@@ -91,6 +92,9 @@ class ModelStore(
                 throw e
             } catch (e: IOException) {
                 throw VoiceException(VoiceError.Offline, e)
+            } catch (e: Exception) {
+                // Whatever else goes wrong (a library, the file system) is still a typed voice error.
+                throw VoiceException(VoiceError.Provider("install", e.message ?: e.javaClass.simpleName), e)
             } finally {
                 mutableProgress.value = null
             }
@@ -126,12 +130,12 @@ class ModelStore(
                         response.code == HTTP_RANGE_NOT_SATISFIABLE -> part.delete() // stale part: start over
                         response.code == HTTP_PARTIAL && offset > 0 -> {
                             append(response, part, append = true, start = offset, onBytes)
-                            check(part.renameTo(complete)) { "cannot rename ${part.name}" }
+                            move(part, complete)
                             return complete
                         }
                         response.isSuccessful -> {
                             append(response, part, append = false, start = 0, onBytes)
-                            check(part.renameTo(complete)) { "cannot rename ${part.name}" }
+                            move(part, complete)
                             return complete
                         }
                         else -> throw VoiceException(VoiceError.Provider("download_http_${response.code}", spec.url))
@@ -213,9 +217,14 @@ class ModelStore(
         val source = content.singleOrNull()?.takeIf { it.isDirectory } ?: staging
         val target = directory(spec)
         target.deleteRecursively()
-        if (!source.renameTo(target)) throw IOException("cannot move the extracted model to $target")
+        move(source, target)
         staging.deleteRecursively()
         File(target, MARKER).writeText(spec.url)
+    }
+
+    /** A failed rename is a problem of the storage, not of the network. */
+    private fun move(from: File, to: File) {
+        if (!from.renameTo(to)) throw VoiceException(VoiceError.Provider("storage", "cannot move ${from.name} to $to"))
     }
 
     private class CountingInputStream(input: InputStream) : FilterInputStream(input) {

@@ -31,26 +31,35 @@ class LocalTextToSpeech internal constructor(
 ) : TextToSpeech {
 
     override fun synthesize(text: String, request: SpeechRequest): Flow<AudioFrame> = callbackFlow {
-        val synthesizer = engines.synthesizer()
-        val format = AudioFormat(synthesizer.sampleRateHz)
-        val speaker = config.speaker()
+        val lease = engines.synthesizer()
         // A native call cannot be interrupted: the generation runs apart from the collector, so
         // that cancelling cuts the voice at once; the engine stops at its next callback.
-        val generation = CoroutineScope(engines.engineDispatcher).launch {
-            try {
-                for (sentence in sentences(text)) {
-                    if (!isActive) break
-                    synthesizer.generate(sentence, request.language, speaker, config.speechSpeed) { samples ->
-                        isActive && trySendBlocking(AudioFrame(toPcm(samples), format)).isSuccess
+        val generation = try {
+            val synthesizer = lease.engine
+            val format = AudioFormat(synthesizer.sampleRateHz)
+            val speaker = config.speaker()
+            CoroutineScope(engines.engineDispatcher).launch {
+                try {
+                    for (sentence in sentences(text)) {
+                        if (!isActive) break
+                        synthesizer.generate(sentence, request.language, speaker, config.speechSpeed) { samples ->
+                            isActive && trySendBlocking(AudioFrame(toPcm(samples), format)).isSuccess
+                        }
                     }
+                    channel.close()
+                } catch (e: CancellationException) {
+                    channel.close()
+                } catch (e: Exception) {
+                    channel.close(VoiceException(VoiceError.Provider("local_tts", e.message), e))
                 }
-                channel.close()
-            } catch (e: CancellationException) {
-                channel.close()
-            } catch (e: Exception) {
-                channel.close(VoiceException(VoiceError.Provider("local_tts", e.message), e))
             }
+        } catch (e: Throwable) {
+            lease.close()
+            throw e
         }
+        // Given back once the generation has really stopped, so that a release in between does not
+        // free the engine under it.
+        generation.invokeOnCompletion { lease.close() }
         awaitClose { generation.cancel() }
     }
 

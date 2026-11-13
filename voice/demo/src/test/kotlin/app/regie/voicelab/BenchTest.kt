@@ -194,8 +194,33 @@ class CommandTest {
 
     @Test
     fun `a bench can be limited to some sentences`() {
-        assertEquals(listOf(Command.RunBench("local", setOf(2, 13))), parse("bench" to "local", "only" to "02,13"))
-        assertEquals(listOf(Command.RunBench("elevenlabs", null)), parse("bench" to "elevenlabs"))
+        assertEquals(listOf(Command.RunBench("local", setOf(2, 13), null)), parse("bench" to "local", "only" to "02,13"))
+        assertEquals(listOf(Command.RunBench("elevenlabs", null, null)), parse("bench" to "elevenlabs"))
+    }
+
+    @Test
+    fun `a bench can replay the recordings of the guided reading`() {
+        assertEquals(listOf(Command.RunBench("elevenlabs", null, "user")), parse("bench" to "elevenlabs", "corpus" to "user"))
+        // Only a plain folder name under corpus/: no way out of it.
+        assertEquals(listOf(Command.RunBench("local", null, null)), parse("bench" to "local", "corpus" to "../../secrets"))
+    }
+
+    @Test
+    fun `the guided reading starts or stops`() {
+        assertEquals(listOf(Command.StartGuided("local")), parse("guided" to "local"))
+        assertEquals(listOf(Command.UseHotwords(false), Command.StopGuided), parse("guided" to "stop", "hotwords" to false))
+    }
+
+    @Test
+    fun `commands are only read from the adb entry, that only the shell may start`() {
+        val extras = mapOf("bench" to "elevenlabs", "speak" to "Bonjour")
+
+        val fromShell = Command.parse(Command.ADB_ENTRY, string = { extras[it] }, boolean = { null })
+        val fromAnotherApp = Command.parse("app.regie.voicelab.MainActivity", string = { extras[it] }, boolean = { null })
+
+        assertEquals(2, fromShell.size)
+        assertEquals(emptyList(), fromAnotherApp)
+        assertEquals(emptyList(), Command.parse(null, string = { extras[it] }, boolean = { null }))
     }
 
     @Test

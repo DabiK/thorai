@@ -21,19 +21,24 @@ adb -s THOR0000000001 shell pm grant app.regie.voicelab android.permission.RECOR
 adb -s THOR0000000001 shell am start --display 0 -n app.regie.voicelab/.MainActivity
 ```
 
-- Maintenir **L2** pour dicter ; **L2** ou **R2** coupe la voix.
+- Maintenir **L2** pour dicter ; **L2** ou **R2** coupe la voix ; en lecture guidée, **B** fait relire la phrase.
 - L'écran du haut n'est pas tactile. Pour saisir la clé ElevenLabs, lancer l'appli sur l'écran du bas : `am force-stop app.regie.voicelab`, puis `am start --display 4 …`. La clé est chiffrée par le Keystore d'Android et n'est jamais écrite ailleurs.
 - Si la console dort, `adb shell input keyevent KEYCODE_WAKEUP` la réveille.
 
 ## Commandes adb, sans toucher l'écran
 
-Toutes passent par `adb -s THOR0000000001 shell am start -n app.regie.voicelab/.MainActivity …`. On peut en combiner plusieurs : les réglages s'appliquent avant les actions.
+Toutes passent par `adb -s THOR0000000001 shell am start --display 0 -n app.regie.voicelab/.Adb …`. On peut en combiner plusieurs : les réglages s'appliquent avant les actions.
+
+`.Adb` est un alias de l'activité réservé aux appelants qui détiennent `android.permission.DUMP`, c'est-à-dire le shell adb : aucune autre appli de la console ne peut lancer un banc ElevenLabs (des crédits) ni un téléchargement de 616 Mo. Les extras envoyés à `.MainActivity` sont ignorés.
 
 | Extras | Effet |
 | --- | --- |
 | `--es download local` | Télécharge et charge les modèles locaux (environ 616 Mo à télécharger, 820 Mo installés) |
 | `--es bench local` ou `--es bench elevenlabs` | Rejoue le corpus au rythme réel dans ce fournisseur |
 | `--es only 02,13` | Avec `bench` : seulement ces consignes |
+| `--es corpus user` | Avec `bench` : rejoue `files/corpus/user/`, les enregistrements de la lecture guidée |
+| `--es guided local` ou `--es guided elevenlabs` | Lance la lecture guidée du corpus avec ce fournisseur (voir plus bas) |
+| `--es guided stop` | Quitte la lecture guidée |
 | `--es speak "'Le texte à lire.'"` | Lit le texte avec le fournisseur choisi (les apostrophes protègent les espaces dans le shell de la console) |
 | `--es provider local` ou `--es provider elevenlabs` | Choisit le fournisseur, gardé dans les réglages |
 | `--es scribe scribe_v3_live` ou `--es scribe scribe_v2_realtime` | Choisit le modèle Scribe |
@@ -70,3 +75,33 @@ Le suivi s'affiche à l'écran et dans `adb logcat -s VoiceLab`.
    - les termes de `termes.txt` présents dans l'attendu, retrouvés ou manqués.
    
    Suivent les moyennes et les médianes.
+
+## Lecture guidée : mesurer sur sa propre voix
+
+L'appli affiche les consignes de `consignes.txt` une par une ; on maintient L2 et on lit. Chaque dictée est enregistrée telle que le micro l'a captée, puis notée comme dans le banc.
+
+1. Lancer, l'appli sur l'écran du haut :
+
+   ```bash
+   adb -s THOR0000000001 shell am start --display 0 -n app.regie.voicelab/.Adb --es guided elevenlabs
+   ```
+
+   Ou `--es guided local`, ou les boutons « Lecture guidée du corpus » de l'écran.
+
+2. Pour chaque consigne affichée en grand : maintenir **L2**, lire la phrase, relâcher. L'appli :
+   - enregistre l'audio en WAV 16 kHz mono dans `files/corpus/user/NN.wav` (une lecture précédente du même numéro est remplacée) ;
+   - garde l'attendu, l'obtenu, la latence (relâchement de L2 → texte final), le WER et les termes ;
+   - passe à la consigne suivante.
+
+   **B** pendant une dictée l'annule ; après, il revient à la consigne qu'on vient de lire et efface son résultat. On la relit avec L2.
+
+3. Après la dernière consigne, l'appli écrit `guided-<fournisseur>-<horodatage>.json` et `.csv` dans `files/`, au format du banc (le réglage `source` vaut `microphone`).
+
+4. Rejouer exactement les mêmes enregistrements dans l'autre fournisseur, puis comparer les deux rapports :
+
+   ```bash
+   adb -s THOR0000000001 shell am start --display 0 -n app.regie.voicelab/.Adb --es bench local --es corpus user
+   adb -s THOR0000000001 pull /sdcard/Android/data/app.regie.voicelab/files/ bench/
+   ```
+
+   Le banc écrit alors `bench-<fournisseur>-user-<horodatage>.json` et `.csv`. Il prend `consignes.txt` et `termes.txt` dans `files/corpus/user/`, sinon dans `files/corpus/`, sinon dans l'APK.

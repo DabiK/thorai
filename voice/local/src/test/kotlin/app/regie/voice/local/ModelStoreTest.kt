@@ -221,6 +221,30 @@ class ModelStoreTest {
     }
 
     @Test
+    fun `a download that cannot be moved into place is a storage error`() = runBlocking {
+        server.enqueue(body(Random(11).nextBytes(1_000)))
+        val vad = spec("silero_vad.onnx", archive = false, size = 1_000)
+        // Something already sits where the complete file goes: the rename fails.
+        File(root, "silero_vad.onnx").mkdirs()
+        File(root, "silero_vad.onnx/keep").writeText("x")
+
+        val error = assertFailsWith<VoiceException> { ModelStore(root, client).install(listOf(vad)) }
+
+        assertEquals("storage", (error.error as VoiceError.Provider).code)
+    }
+
+    @Test
+    fun `an unexpected error is reported as a voice error`() = runBlocking {
+        val failing = client.newBuilder().addInterceptor { throw IllegalStateException("boom") }.build()
+
+        val error = assertFailsWith<VoiceException> {
+            ModelStore(root, failing).install(listOf(spec("silero_vad.onnx", archive = false, size = 10)))
+        }
+
+        assertEquals(VoiceError.Provider("install", "boom"), error.error)
+    }
+
+    @Test
     fun `an archive entry cannot escape the model directory`() = runBlocking {
         server.enqueue(body(tarBz2(mapOf("../../evil.txt" to "x".toByteArray()))))
         val model = spec("m.tar.bz2", archive = true, size = 1_000)
