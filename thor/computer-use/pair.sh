@@ -21,10 +21,26 @@ code=$2
 # Même socket privée que start.sh.
 export ADB_SERVER_SOCKET=${ADB_SERVER_SOCKET:-localfilesystem:/home/dev/.thor-adb/server}
 
+# Le serveur local se reconnaît à sa ligne de commande : adb -L <socket>
+# fork-server (même motif et même repli sans pgrep que stop.sh).
+SERVER_PATTERN="([^ ]*/)?adb -L $ADB_SERVER_SOCKET fork-server server.*"
+local_server_running() {
+  if command -v pgrep >/dev/null 2>&1; then
+    pgrep -f -x "$SERVER_PATTERN" >/dev/null
+    return
+  fi
+  local dir cmd
+  for dir in /proc/[0-9]*; do
+    cmd=$(tr '\0' ' ' < "$dir/cmdline" 2>/dev/null) || continue
+    [[ "${cmd% }" =~ ^$SERVER_PATTERN$ ]] && return 0
+  done
+  return 1
+}
+
 # Si aucun serveur adb ne tournait avant, on l'arrête à la fin : sinon la
-# session Debian ne se fermerait pas.
+# session Debian ne se fermerait pas. À calculer avant adb start-server.
 already_running=0
-pgrep -f -x "([^ ]*/)?adb -L $ADB_SERVER_SOCKET fork-server server.*" >/dev/null && already_running=1
+local_server_running && already_running=1
 
 case "$ADB_SERVER_SOCKET" in
   localfilesystem:*)
@@ -32,6 +48,21 @@ case "$ADB_SERVER_SOCKET" in
     mkdir -p "$socket_dir" && chmod 700 "$socket_dir"
     ;;
 esac
+
+# adb pair enregistre la clé du serveur qui répond sur la socket. Si ce n'est
+# pas un serveur de la Debian (socket relayée vers le serveur adb d'une autre
+# machine, par exemple le Mac), c'est la clé de cette machine qui serait
+# associée, et l'accès ne marcherait pas sans elle : on refuse.
+adb start-server >/dev/null 2>&1 || true
+if ! local_server_running; then
+  {
+    echo "Refus : le serveur adb qui répond sur $ADB_SERVER_SOCKET n'est pas un serveur local de la Debian."
+    echo "Un autre serveur adb (relayé, par exemple celui du Mac) y répond : adb pair associerait sa clé, pas celle de la Debian."
+    echo "Arrêtez ce relais, puis relancez l'association : elle doit se faire avec le serveur adb de la Debian."
+  } >&2
+  exit 3
+fi
+
 adb pair "127.0.0.1:$port" "$code"
 status=0
 "$(dirname "$0")/start.sh" || status=$?

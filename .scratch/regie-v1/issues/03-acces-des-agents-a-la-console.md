@@ -21,8 +21,8 @@ Permettre à Claude Code et à Codex, qui tournent sur la Thor, de voir l'écran
 
 ## Critères d'acceptation
 
-- [ ] Sur la Thor, dans une session Claude puis une session Codex, la consigne « ouvre les Paramètres, va dans À propos et dis-moi la version d'Android » réussit sans intervention, à part les validations. *Prouvé avec un échafaudage seulement (serveur adb du Mac, joint par la socket privée : Claude 29,7 s, Codex 44,3 s, « Android 13 ») : à refaire sur le chemin livré, après l'association.*
-- [x] Une capture de l'écran bas faite par un agent est possible, ou sa limite est expliquée. *mobile-mcp ne voit que l'écran haut ; `thor-screen capture bas` comble le manque. Prouvé avec l'échafaudage ; depuis les consignes globales, Claude trouve seul `thor-screen capture bas` (15,5 s).*
+- [x] Sur la Thor, dans une session Claude puis une session Codex, la consigne « ouvre les Paramètres, va dans À propos et dis-moi la version d'Android » réussit sans intervention, à part les validations. *Chemin livré, après l'association, sans échafaudage : Claude « Android 13 » en 45,5 s (par `thor-screen` sur l'écran bas, l'écran haut étant occupé par `app.regie.voicelab`), Codex « Android 13 » par les seuls outils `thor_android` sur l'écran haut. `artifacts/screenshots/03/sans-fil-essais.txt`.*
+- [x] Une capture de l'écran bas faite par un agent est possible, ou sa limite est expliquée. *mobile-mcp ne voit que l'écran haut ; `thor-screen capture bas` comble le manque. Prouvé sans échafaudage : pendant la consigne « À propos », Claude a capturé et piloté l'écran bas par `thor-screen` (`sans-fil-claude-bas.png`).*
 - [x] `docs/adr/03-acces-des-agents-a-android.md` : choix, essais, limites, comment désactiver.
 
 ## Rapport

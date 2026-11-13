@@ -49,6 +49,8 @@ L'association passe par une boîte de dialogue sur l'écran de la console. Seul 
    - ou sur la console, dans Termux, sur l'autre écran : `dev-linux`, puis `/opt/thor-android/pair.sh 37145 123456`.
 5. Le script répond `THOR_ANDROID=ok serial=… via=sans-fil`. La Debian apparaît dans **Appareils associés**.
 
+L'association doit se faire avec le serveur adb de la Debian, jamais par un serveur relayé (par exemple un échafaudage d'essai qui renvoie la socket vers le serveur adb du Mac) : `adb pair` associerait alors la clé de l'autre machine, et l'accès ne marcherait pas sans elle. `pair.sh` refuse dans ce cas (code 3) : retirer le relais, puis recommencer.
+
 ## Au quotidien
 
 Le pont lance `/opt/thor-android/start.sh` à son démarrage. `/opt/thor-android/stop.sh` arrête le serveur de mobilecli sur la console, puis le serveur adb de la socket. `start.sh` affiche une seule ligne :

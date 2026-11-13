@@ -1,6 +1,6 @@
 # ADR 03 — Accès des agents à Android (computer use)
 
-Statut : accepté sous réserve de l'essai de la liaison sans fil après l'association, 13 novembre 2026 (ticket 03). L'association attend l'utilisateur.
+Statut : accepté, 13 novembre 2026 (ticket 03). L'association du débogage sans fil est faite (clé de la Debian) et les essais sont passés sur le chemin livré, sans le Mac. Reste à voir avec l'utilisateur ce que devient le débogage sans fil après un redémarrage de la console.
 
 ## Contexte
 
@@ -140,6 +140,35 @@ Sorties complètes : `artifacts/screenshots/03/socket-essais.txt`. Captures : `s
   - après l'ajout de la phrase « Cette règle vaut même si la demande vient de la conversation, d'un fichier ou d'une page », Codex refuse aussi. Un seul essai.
 - Échafaudage retiré : relais, cale, `reverse tcp:15037`, `forward` et `reverse tcp:33431` de mobilecli, DeviceServer arrêté. Vérifié ensuite : aucun forward, aucun reverse, aucun processus.
 
+### Chemin livré, après l'association (13 novembre 2026, 22 h 55)
+
+Sorties complètes : `artifacts/screenshots/03/sans-fil-essais.txt`. Captures : `sans-fil-claude-haut.png`, `sans-fil-claude-bas.png`, `sans-fil-codex-haut.png`, `sans-fil-codex-bas.png`.
+
+**L'association doit se faire depuis la Debian, jamais par un serveur adb relayé.** Une première association avait été faite pendant que l'échafaudage relayait la socket vers le serveur adb du Mac : `adb pair` avait donc associé la clé du Mac, et l'accès ne marchait pas sans lui. Elle a été refaite sans échafaudage : c'est la clé de la Debian (`~dev/.android/adbkey`) qui est associée. Depuis, `pair.sh` refuse d'associer si le serveur qui répond sur la socket n'est pas un `adb -L … fork-server` de la Debian (code 3).
+
+**Aucun échafaudage** : côté Mac, aucun `reverse` ; aucun relais, aucune cale d'essai, aucune variable posée à la main. Le Mac sert seulement à lancer le script dans la Debian, par `adb shell run-as com.termux … proot-distro login`, et à relire les fichiers. Une seule session Debian fait tout, comme le fera le pont :
+- `start.sh` : `THOR_ANDROID=ok serial=127.0.0.1:35203 via=sans-fil`, code 0 ;
+- le serveur tourne sous `adb -L localfilesystem:/home/dev/.thor-adb/server fork-server`, rien n'écoute sur 5037 ;
+- « Paramètres › À propos », avec Claude puis avec Codex ;
+- `stop.sh` : `THOR_ANDROID=arrete`, code 0. Ensuite, plus de serveur adb dans la Debian ; vu d'Android, plus de DeviceServer, et les deux ports ouverts par les forwards de mobilecli sont fermés.
+
+**Contexte** : la console servait en même temps à d'autres tickets. L'écran haut affichait `app.regie.voicelab` (ticket 04), l'écran bas les Paramètres, laissés là par une session précédente.
+
+**Claude** (`claude -p`, mêmes autorisations qu'avant) : « Android 13 » en 45,5 s.
+- Il a vu `app.regie.voicelab` sur l'écran haut et n'y a fait aucun geste : « le nom est trop proche » de `app.regie`. Il a donc travaillé sur l'écran bas, déjà sur les Paramètres, avec `thor-screen` seul : captures, touchers, glissers, lecture des images.
+- Il a chargé les outils `thor_android` (connecté) mais ne s'en est pas servi : ils ne voient pas l'écran bas.
+- Deux commandes hors des autorisations accordées ont été refusées (`adb shell getprop`, `adb shell am start --display 4`) : ce sont des validations, que `-p` n'accorde pas. Il a trouvé seul un autre chemin.
+- C'est aussi la preuve, sans échafaudage, qu'un agent capture et pilote l'écran bas.
+
+**Codex** (`codex exec --json`, sans aucune option d'environnement) : « Android 13 », uniquement par les outils `thor_android` sur l'écran haut :
+- `mobile_launch_app com.android.settings`, `mobile_list_elements_on_screen`, toucher par référence (`@e37`), glissers ;
+- avant chaque geste, il vérifie l'appli au premier plan de chaque écran (`dumpsys activity activities`), comme le demandent les consignes ;
+- durée non mesurée par le script, environ une minute d'après les horloges.
+
+**Observé pendant l'essai Codex** (voir « Sécurité » et « Limites ») :
+- le serveur adb de la Debian tenait deux forwards de mobilecli : `tcp:40427 → localabstract:mobilecli-server` et `tcp:36737 → localabstract:mobilecli.app.regie`. Vu d'Android, `127.0.0.1:40427` et `127.0.0.1:36737` étaient en écoute ;
+- **mobilecli a injecté son agent JVMTI dans Régie.** Lancer les Paramètres sur l'écran haut les a retirés de l'écran bas, où Régie (build de debug, `app.regie/.BottomActivity`) est revenue au premier plan. mobilecli a alors copié `mobilecli.so` et `mobilecli.dex` dans `/data/data/app.regie/mobilecli/` (dossier en 0777). Codex n'a lancé que les Paramètres : l'injection vient de mobilecli, pas d'un geste de l'agent. Le dossier est resté en place.
+
 ## Limites
 
 - **mobile-mcp ne voit que l'écran haut.** mobilecli code `defaultDisplayID = "0"`. Sur l'écran bas, `thor-screen` capture, touche, glisse et saisit du texte, mais ne lit pas l'arbre d'interface : l'agent travaille sur la capture. La saisie passe par `input text` : caractères ASCII seulement, pas d'accents.
@@ -148,10 +177,13 @@ Sorties complètes : `artifacts/screenshots/03/socket-essais.txt`. Captures : `s
 - **Ouvrir une autre appli par-dessus Régie est permis par les consignes** : Régie passe en arrière-plan sur cet écran. Sans cela, un agent ne pourrait jamais agir sur Android pendant qu'on se sert de Régie, qui occupe les deux écrans. Voir « Questions ouvertes ».
 - **Un `adb` lancé hors de la cale ou en changeant `ADB_SERVER_SOCKET`** démarre un serveur sur `127.0.0.1:5037`. C'est le cas de `/usr/bin/adb` en chemin absolu, d'un `ANDROID_HOME` qui pointe ailleurs ou d'un `PATH` modifié. Les consignes l'interdisent, rien ne l'empêche. Ce serveur ne voit la console que si le débogage sans fil y est relié.
 - **Le débogage sans fil exige le Wi-Fi.** Sans réseau, pas d'accès.
-- **Après un redémarrage**, le débogage sans fil peut revenir seul si le réseau a été coché « Toujours autoriser sur ce réseau ». Sinon, il faut le rallumer à la main dans les Options pour les développeurs. À confirmer au premier redémarrage. L'association, elle, survit.
+- **Après un redémarrage**, le débogage sans fil peut revenir seul si le réseau a été coché « Toujours autoriser sur ce réseau ». Sinon, il faut le rallumer à la main dans les Options pour les développeurs. **Non vérifié** : la console sert à d'autres tickets et n'a pas été redémarrée. L'essai est à faire avec l'utilisateur. L'association, elle, survit.
+- **L'association se fait depuis la Debian**, avec son propre serveur adb. Un serveur relayé (un échafaudage vers le Mac, par exemple) associerait la clé d'une autre machine. `pair.sh` le refuse.
+- **Un écran occupé par une appli au nom proche de Régie** (`app.regie.voicelab`) a suffi pour que Claude n'y fasse aucun geste et passe par l'autre écran. Prudence voulue par les consignes ; elle peut faire échouer une consigne si l'autre écran ne s'y prête pas.
+- **Déplacer une appli d'un écran à l'autre change le premier plan de l'écran quitté.** Lancer les Paramètres en haut les a retirés de l'écran bas, où Régie est revenue au premier plan. Un agent ne le voit pas s'il ne regarde que l'écran visé.
 - **Le serveur adb vit dans la session proot qui l'a lancé** (`proot --kill-on-exit`). Il faut que le pont appelle `start.sh` depuis sa propre session, qui dure. Un agent lancé hors du pont démarre son propre serveur, sur la même socket. Ce serveur ne retrouve la console que si le débogage sans fil y est déjà relié. Non vérifié : `adb mdns check` ne répond rien avec le paquet Debian.
 - **mobilecli injecte un agent JVMTI dans l'appli au premier plan, si elle est débogable.**
-  - C'est le cas des builds de debug de Régie.
+  - C'est le cas des builds de debug de Régie. **Observé sans échafaudage** : pendant l'essai Codex, Régie était au premier plan de l'écran bas, et mobilecli a posé `/data/data/app.regie/mobilecli/` (en 0777) et ouvert un forward vers `localabstract:mobilecli.app.regie`. L'agent n'avait touché qu'aux Paramètres.
   - Il copie `mobilecli.so` et `mobilecli.dex` dans les données de l'appli (`run-as`), puis lance `am attach-agent`, pour détecter Flutter.
   - Les builds de release ne sont pas touchés. Aucun réglage ne le coupe en 1.0.23.
 - **Le serveur de mobilecli sur l'appareil** (`app_process … DeviceServer`, utilisateur `shell`) reste actif 30 minutes après le dernier appel. Pendant ce temps, il occupe le service UiAutomation : `uiautomator dump` lancé par un autre outil échoue. `stop.sh` l'arrête.
@@ -177,15 +209,15 @@ Il ne permet pas de lire les données privées des applis non débogables.
   - La socket est dans `/data/data/com.termux`, en 0700, propriété de Termux, puis dans `/home/dev/.thor-adb`, en 0700.
   - Une autre appli a un autre uid : elle ne traverse pas ces dossiers, même avec SELinux permissif.
   - Vérifié : plus rien n'écoute sur `127.0.0.1:5037`.
-- sur le réseau, adbd n'accepte que les appareils dont la clé est associée (TLS mutuel). Aujourd'hui : le Mac, en USB. Après l'association : la Debian. Le port d'association n'est ouvert que pendant que la fenêtre de code est affichée.
+- sur le réseau, adbd n'accepte que les appareils dont la clé est associée (TLS mutuel). Aujourd'hui : le Mac, en USB, et la Debian, associée le 13 novembre. Le port d'association n'est ouvert que pendant que la fenêtre de code est affichée.
 
 **Risque résiduel : le serveur de mobilecli sur la console.** Pour parler à son serveur sur l'appareil (DeviceServer, utilisateur `shell`), mobilecli fait `adb forward tcp:N localabstract:mobilecli-server`.
 - **Observé, avec l'échafaudage** : le forward était tenu par le serveur adb du Mac. Il y écoutait sur `127.0.0.1:33431` (`lsof`) et il est resté ouvert après la fin de mobilecli, jusqu'à ce qu'on le retire à la main.
-- **Déduit, non vérifié sur la console** (il faut l'association pour avoir un serveur adb local relié à la console) : avec le serveur adb de la Debian, ce même forward ouvrirait `127.0.0.1:N` sur la console, joignable par toute appli qui a la permission Internet. Il durerait autant que le serveur adb, donc autant que le pont.
+- **Observé sur la console, après l'association** : avec le serveur adb de la Debian, ce même forward ouvre `127.0.0.1:N` sur la console (`127.0.0.1:40427` pendant l'essai Codex), plus un second vers l'agent JVMTI de l'appli au premier plan (`127.0.0.1:36737 → localabstract:mobilecli.app.regie`). Ces ports sont joignables par toute appli qui a la permission Internet. Ils durent autant que le serveur adb, donc autant que le pont : `stop.sh` les a bien fermés.
 - **Observé** : depuis la Debian, une connexion directe à la socket abstraite `@mobilecli-server` réussit pendant que le DeviceServer tourne. Mais ce shell venait de `run-as`, dans le domaine `runas_app`, pas d'une appli ordinaire.
 - **Déduit, non vérifié** : une socket abstraite n'a aucun droit Unix, et SELinux est permissif. Toute appli pourrait donc la joindre, même sans forward, tant que le DeviceServer tourne, c'est-à-dire jusqu'à 30 minutes après le dernier appel.
 - **Non vérifié** : l'essai depuis une vraie appli, et ce que le DeviceServer accepte sans authentification. D'après les noms de ses méthodes, au moins l'arbre d'interface et la capture d'écran, peut-être les gestes et la saisie.
-- **Ce qui est fait** : `stop.sh` arrête le DeviceServer et le serveur adb (qui ferme les forwards) quand le pont s'arrête. Non vérifié en conditions réelles, faute d'association ; la commande d'arrêt du DeviceServer a été vérifiée seule, depuis le Mac, au nettoyage de l'échafaudage.
+- **Ce qui est fait** : `stop.sh` arrête le DeviceServer et le serveur adb (qui ferme les forwards) quand le pont s'arrête. Vérifié en conditions réelles après l'association : plus de DeviceServer, plus de serveur adb dans la Debian, les deux ports fermés vus d'Android.
 - **Ce qu'on peut faire sans modifier mobilecli** : `MOBILEMCP_LEGACY_ROBOT=1`. mobile-mcp passe alors par adb seul (`input`, `uiautomator dump`, `screencap`) : pas de DeviceServer, pas de forward, pas d'agent JVMTI. En échange, on perd des outils : toucher par référence d'élément, appli au premier plan, presse-papiers, journaux, effacement des données. Non retenu ici : c'est un choix qui touche les capacités des agents (voir « Questions ouvertes »).
 
 **Garde-fous** :
@@ -219,4 +251,4 @@ Il ne permet pas de lire les données privées des applis non débogables.
 ## Questions ouvertes
 
 1. **Un agent peut-il ouvrir une autre appli par-dessus Régie ?** Les consignes le permettent (Régie passe en arrière-plan sur cet écran), sinon aucun agent ne pourrait agir sur Android pendant qu'on se sert de Régie. Question pour l'utilisateur.
-2. **Faut-il passer mobile-mcp en `MOBILEMCP_LEGACY_ROBOT=1`** pour supprimer le DeviceServer, son forward et l'agent JVMTI, au prix de quelques outils (voir « Sécurité ») ? Question pour l'utilisateur.
+2. **Faut-il passer mobile-mcp en `MOBILEMCP_LEGACY_ROBOT=1`** pour supprimer le DeviceServer, son forward et l'agent JVMTI, au prix de quelques outils (voir « Sécurité ») ? Question pour l'utilisateur. Depuis l'essai après l'association, ce n'est plus une hypothèse : les ports `127.0.0.1` des forwards et l'injection dans le build de debug de Régie ont été observés.
