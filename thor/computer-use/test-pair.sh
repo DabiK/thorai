@@ -1,7 +1,7 @@
 #!/bin/bash
 # Test de thor/computer-use/pair.sh avec un faux adb et un faux pgrep : pas
 # d'adb pair si le serveur qui répond sur la socket n'est pas local, ni si
-# adb start-server échoue.
+# adb start-server échoue ; serveur démarré arrêté même si adb pair échoue.
 #   thor/computer-use/test-pair.sh [chemin de pair.sh]
 set -uo pipefail
 PAIR=$(cd "$(dirname "${1:-$(dirname "$0")/pair.sh}")" && pwd)/$(basename "${1:-pair.sh}")
@@ -31,6 +31,11 @@ if [ "$1" = start-server ] && [ "$LOCAL_ON_START" = echec ]; then
   exit 1
 fi
 if [ "$1" = start-server ] && [ "$LOCAL_ON_START" = 1 ]; then touch "$STATE"; fi
+# adb pair échoue avec le code 42 si PAIR_FAIL=1.
+if [ "$1" = pair ] && [ "${PAIR_FAIL:-0}" = 1 ]; then
+  echo "Failed: Unable to start pairing client." >&2
+  exit 42
+fi
 exit 0
 ADB
 # Faux pgrep : trouve le serveur local si le fichier d'état existe.
@@ -72,6 +77,18 @@ check "local: serveur arrêté à la fin" grep -qx stop "$W/log"
 run 1 1
 check "déjà lancé: adb pair appelé" grep -qx 'adb pair 127.0.0.1:37000 123456' "$W/log"
 check "déjà lancé: serveur laissé en place" not grep -qx stop "$W/log"
+
+# 5. adb pair échoue, serveur démarré par start-server : code d'adb pair,
+# pas de start.sh, serveur arrêté quand même
+PAIR_FAIL=1 run 1 0; st=$?
+check "pair en échec: code d'adb pair ($st)" test "$st" -eq 42
+check "pair en échec: start.sh pas appelé" not grep -qx start "$W/log"
+check "pair en échec: serveur arrêté à la fin" grep -qx stop "$W/log"
+
+# 6. adb pair échoue, serveur déjà lancé avant : laissé en place
+PAIR_FAIL=1 run 1 1; st=$?
+check "pair en échec, déjà lancé: code d'adb pair ($st)" test "$st" -eq 42
+check "pair en échec, déjà lancé: serveur laissé en place" not grep -qx stop "$W/log"
 
 [ "$fails" = 0 ] && echo "tout passe" || echo "$fails échec(s)"
 exit "$fails"

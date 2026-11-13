@@ -69,9 +69,13 @@ if ! local_server_running; then
   exit 3
 fi
 
-adb pair "127.0.0.1:$port" "$code"
+# Pas de sortie directe par set -e si adb pair échoue : le serveur démarré
+# plus haut doit quand même être arrêté.
 status=0
-"$(dirname "$0")/start.sh" || status=$?
+adb pair "127.0.0.1:$port" "$code" || status=$?
+if [ "$status" = 0 ]; then
+  "$(dirname "$0")/start.sh" || status=$?
+fi
 
 if [ "$already_running" = 0 ]; then
   "$(dirname "$0")/stop.sh" >/dev/null

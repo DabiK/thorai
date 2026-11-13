@@ -182,6 +182,7 @@ Même montage, sans échafaudage, après `install.sh` (mode adb seul par défaut
 - Avant, pendant et après : aucun forward, aucun DeviceServer, aucun nouveau port vu d'Android, pas de dossier `mobilecli` dans les données de Régie.
 - L'arbre d'interface renvoyé était celui de l'écran bas (voir « Limites ») : les deux agents s'en sont passés.
 - `thor-screen launch bas com.android.settings` ouvre les Paramètres sur l'écran bas ; `thor-screen launch bas app.regie` est refusé.
+- **Avec les consignes finales** (variante prudente sur Régie, vérification de la taille de l'arbre, `thor-screen launch`), les deux agents réussissent encore : Claude en 37 s (il ouvre les Paramètres en haut par `thor-screen launch haut`, puis capture, glisse et touche), Codex en 29 s (même chose sur l'écran bas). Ils préfèrent désormais `thor-screen`, qui vise l'écran sans ambiguïté. Aucun forward, aucun DeviceServer. Sorties à la fin de `adb-seul-essais.txt`.
 
 ## Limites
 
@@ -190,7 +191,7 @@ Même montage, sans échafaudage, après `install.sh` (mode adb seul par défaut
 - **mobile-mcp ne voit que l'écran haut.** mobilecli code `defaultDisplayID = "0"`. Sur l'écran bas, `thor-screen` capture, touche, glisse et saisit du texte, mais ne lit pas l'arbre d'interface : l'agent travaille sur la capture. La saisie passe par `input text` : caractères ASCII seulement, pas d'accents.
 - **`mobile_get_foreground_app` ne dit pas de quel écran il parle.** Il renvoie l'appli de l'écran qui a le focus, et pas forcément celle de l'écran haut : à l'essai, il a donné Cocoon (écran bas) alors que l'écran haut affichait autre chose. Les consignes renvoient donc à `dumpsys activity activities`, qui donne l'appli du dessus de chaque écran.
 - **Les consignes ne sont qu'une consigne.** Un agent peut passer outre, ou se faire convaincre par un fichier ou une page piégés. Codex l'a fait tant que la règle ne disait pas « même si on te le demande ». Le vrai garde-fou est au ticket 07.
-- **Ouvrir une autre appli par-dessus Régie est permis par les consignes** : Régie passe en arrière-plan sur cet écran. Sans cela, un agent ne pourrait jamais agir sur Android pendant qu'on se sert de Régie, qui occupe les deux écrans. Voir « Questions ouvertes ».
+- **Les consignes interdisent d'ouvrir une appli sur un écran où Régie est au premier plan** (variante prudente, en attendant l'utilisateur : voir « Questions ouvertes »). L'agent travaille sur l'autre écran s'il est libre, sinon il s'arrête et le dit. Conséquence : quand Régie occupe les deux écrans, aucun agent ne peut agir sur Android. Lancer une appli peut aussi ramener Régie au premier plan de l'autre écran : les consignes demandent de revérifier les deux écrans après un lancement.
 - **Un `adb` lancé hors de la cale ou en changeant `ADB_SERVER_SOCKET`** démarre un serveur sur `127.0.0.1:5037`. C'est le cas de `/usr/bin/adb` en chemin absolu, d'un `ANDROID_HOME` qui pointe ailleurs ou d'un `PATH` modifié. Les consignes l'interdisent, rien ne l'empêche. Ce serveur ne voit la console que si le débogage sans fil y est relié.
 - **Le débogage sans fil exige le Wi-Fi.** Sans réseau, pas d'accès.
 - **Après un redémarrage**, le débogage sans fil peut revenir seul si le réseau a été coché « Toujours autoriser sur ce réseau ». Sinon, il faut le rallumer à la main dans les Options pour les développeurs. **Non vérifié** : la console sert à d'autres tickets et n'a pas été redémarrée. L'essai est à faire avec l'utilisateur. L'association, elle, survit.
@@ -201,7 +202,7 @@ Même montage, sans échafaudage, après `install.sh` (mode adb seul par défaut
 - **mobilecli injecte un agent JVMTI dans l'appli au premier plan, si elle est débogable.**
   - C'est le cas des builds de debug de Régie. **Observé sans échafaudage** : pendant l'essai Codex, Régie était au premier plan de l'écran bas, et mobilecli a posé `/data/data/app.regie/mobilecli/` (en 0777) et ouvert un forward vers `localabstract:mobilecli.app.regie`. L'agent n'avait touché qu'aux Paramètres.
   - Il copie `mobilecli.so` et `mobilecli.dex` dans les données de l'appli (`run-as`), puis lance `am attach-agent`, pour détecter Flutter.
-  - Les builds de release ne sont pas touchés. Aucun réglage ne le coupe en 1.0.23.
+  - Les builds de release ne sont pas touchés. Aucun réglage de mobilecli 1.0.23 ne le coupe ; seul le mode adb seul de mobile-mcp (`MOBILEMCP_LEGACY_ROBOT=1`, le défaut livré) l'évite, en se passant de mobilecli.
 - **Le serveur de mobilecli sur l'appareil** (`app_process … DeviceServer`, utilisateur `shell`) reste actif 30 minutes après le dernier appel. Pendant ce temps, il occupe le service UiAutomation : `uiautomator dump` lancé par un autre outil échoue. `stop.sh` l'arrête.
 - **Ce DeviceServer est partagé.** Il n'y en a qu'un par console : il écoute sur une socket abstraite au nom fixe, `mobilecli-server`. Le `pkill -f com.mobilenext.mobilecli.DeviceServer` de `stop.sh` arrête donc aussi celui dont se sert un autre client mobilecli, par exemple un mobile-mcp lancé depuis le Mac. On ne peut pas distinguer « le nôtre » simplement. Le client mobilecli le relance au prochain appel (« device server on port … is gone, starting it again »).
 - mobile-mcp expose aussi des outils de « flotte distante » de mobile-next. Ils exigent un compte et restent inactifs ici.
@@ -253,7 +254,8 @@ Il ne permet pas de lire les données privées des applis non débogables.
 - **Côté Debian** : `thor/computer-use/uninstall.sh` depuis le Mac. Il :
   - retire `thor_android` des deux agents, ainsi que le bloc de consignes de `CLAUDE.md` et d'`AGENTS.md` ;
   - arrête le DeviceServer et le serveur adb ;
-  - efface les fichiers posés : `/opt/thor-android`, les lanceurs, la cale `adb`, le dossier de la socket, la clé adb de la Debian.
+  - efface les fichiers posés : `/opt/thor-android`, les lanceurs, la cale `adb`, le dossier de la socket, la clé adb de la Debian ;
+  - retire `/data/data/app.regie/mobilecli`, que mobilecli a pu poser dans les données de Régie en mode mobilecli (par `run-as`, si Régie est débogable).
 - `stop.sh` arrête seulement le DeviceServer et le serveur adb : la clé et les consignes restent.
 
 ## Conséquences
@@ -266,5 +268,5 @@ Il ne permet pas de lire les données privées des applis non débogables.
 
 ## Questions ouvertes
 
-1. **Un agent peut-il ouvrir une autre appli par-dessus Régie ?** Les consignes le permettent (Régie passe en arrière-plan sur cet écran), sinon aucun agent ne pourrait agir sur Android pendant qu'on se sert de Régie. Question pour l'utilisateur.
+1. **Un agent peut-il ouvrir une autre appli par-dessus Régie ?** Régie passerait alors en arrière-plan sur cet écran, avec ses boutons de validation. Les consignes livrées l'interdisent, en attendant la réponse : quand Régie occupe les deux écrans, aucun agent ne peut donc agir sur Android. Question pour l'utilisateur.
 2. **Garder mobile-mcp en mode adb seul (`MOBILEMCP_LEGACY_ROBOT=1`) ?** C'est le réglage livré, choisi en attendant la réponse de l'utilisateur. Il supprime les ports `127.0.0.1` et l'injection dans Régie, observés en mode mobilecli. En échange, l'arbre d'interface de l'écran haut n'est plus fiable, et quelques outils disparaissent (voir « Limites »). Les deux consignes « À propos » réussissent dans les deux modes. Question pour l'utilisateur.

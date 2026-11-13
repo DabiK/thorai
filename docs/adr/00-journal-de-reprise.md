@@ -39,5 +39,5 @@
 
 - Nom définitif de l'app (« Régie » est un nom de travail).
 - Lecture à voix haute : automatique ou seulement à la demande ? Un réglage est prévu, la valeur par défaut reste à décider.
-- Ticket 03 : un agent peut-il ouvrir une autre appli par-dessus Régie (qui passe alors en arrière-plan sur cet écran) ? Les consignes le permettent pour l'instant ; sinon aucun agent ne peut agir sur Android pendant qu'on se sert de Régie.
+- Ticket 03 : un agent peut-il ouvrir une autre appli par-dessus Régie (qui passe alors en arrière-plan sur cet écran) ? Les consignes l'interdisent pour l'instant (variante prudente) : quand Régie occupe les deux écrans, aucun agent ne peut agir sur Android.
 - Ticket 03 : garder mobile-mcp en mode adb seul (`MOBILEMCP_LEGACY_ROBOT=1`, réglage livré) ? Il supprime les ports `127.0.0.1` et l'injection de mobilecli dans Régie, mais l'arbre d'interface de l'écran haut n'est plus fiable et quelques outils disparaissent. Voir ADR 03, « Questions ouvertes ».
