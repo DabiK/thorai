@@ -1,6 +1,6 @@
 # 01 — Socle Android : deux écrans, manette et vue d'ensemble factice
 
-Statut : prêt
+Statut : bloqué
 Bloqué par : rien
 Possède : `android/`, `scripts/thor-*.sh`
 
@@ -44,4 +44,35 @@ Poser l'app Android sur la Thor, avec ses deux écrans, sa manette et le systèm
 
 ## Rapport
 
-(à remplir)
+**Statut : bloqué.** Un seul critère n'est pas tenu : l'écran du bas réellement éteint. Il faut l'utilisateur pour l'éteindre.
+
+**Ce qui marche, vérifié sur la Thor :**
+- `android/` construit avec Gradle 9.9.1, AGP 9.5.1, Kotlin 2.4.21 et le BOM Compose 2026.06.01. compileSdk et targetSdk sont à 36, minSdk à 33.
+- `:domain` est en Kotlin pur. `:app` est la seule racine de composition. Le build `../voice` est inclus dès que `voice/settings.gradle.kts` existe.
+- Deux activités partagent le même état :
+  - `TopActivity` sur le display 0. Si elle s'ouvre ailleurs, elle se relance sur le 0.
+  - `BottomActivity` sur le display 4.
+- Un routeur d'entrées unique sert les deux activités :
+  - L2 et R2 sont lus en touche et en axe, avec hystérésis, sans double début ;
+  - A est consommé : aucun clic parasite.
+- La vue d'ensemble fidèle à la maquette, alimentée par la passerelle factice. La croix déplace le focus depuis les deux écrans.
+- Le mode un seul écran (le panneau en bas de l'écran haut) a été vérifié en le forçant (`--ez force_single_screen true`, en debug seulement). La règle de bascule est testée pour un écran retiré et pour les états OFF, DOZE, DOZE_SUSPEND et ON_SUSPEND.
+- `./gradlew check` est vert : lint sans avertissement toléré, 61 tests (`domain` et `app`), dont 4 d'architecture.
+- Captures : `artifacts/screenshots/01/` (7 états, haut et bas).
+
+**À faire par l'utilisateur** (marche à suivre complète dans l'ADR 02, « Conséquences ») :
+1. Lancer Régie (`scripts/thor-install.sh`).
+2. Éteindre l'écran du bas par l'assistant d'écran double d'Odin (mode « Only bottom screen » / fermer l'écran secondaire).
+3. Relever `adb -s THOR0000000001 shell dumpsys display | grep -E 'Screen-2.*state'` et `adb -s THOR0000000001 logcat -d -s Regie`. Le journal doit contenir `mode d'écran : Single`, et le panneau doit apparaître en bas de l'écran haut.
+4. Rallumer l'écran du bas : l'écran du bas de Régie doit revenir.
+
+Si l'écran reste à `state ON` une fois éteint (luminosité nulle), la détection ne bascule pas. Il faudra alors une autre source, à décider.
+
+**Questions :**
+- ❓ PRD « Commandes » : R1 veut dire « session suivante », mais la maquette affiche « R1 Voir » sur le bandeau de validation. Aujourd'hui, R1 ouvre la première validation en attente, et passe à la session suivante quand il n'y en a pas. Faut-il garder ce comportement ?
+- ❓ Quand l'écran du haut de Régie passe en arrière-plan (Retour, Accueil), l'écran du bas doit-il rester affiché ? Aujourd'hui, il reste.
+
+**Hors périmètre, pour les tickets suivants :**
+- Le toucher du micro et la gâchette L2 ne sont pas combinés. Lever le doigt arrête la dictée même si L2 est encore enfoncé (ticket 08).
+- Au-delà de 4 sessions, les cartes en trop ne sont pas affichées et le stick droit ne fait rien. Le focus reste sur les 4 cartes visibles (ticket 05).
+- `docs/adr/02-socle-android.md` a le même numéro que `02-pilotage-des-agents.md` (ticket 02) : à renuméroter à la fusion.
