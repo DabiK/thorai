@@ -31,20 +31,16 @@ rm -rf /opt/thor-android
 EOF
 
 echo "3/3 Codex"
-termux_sh <<'EOF'
+{
+  emit_toml_helpers
+  cat <<'EOF'
 set -euo pipefail
 config=$HOME/.codex/config.toml
-if grep -q '^\[mcp_servers\.thor_android[].]' "$config"; then
-  tmp=$(mktemp)
-  awk '
-    /^\[/ { skip = ($0 ~ /^\[mcp_servers\.thor_android[].]/) }
-    !skip { print }
-  ' "$config" > "$tmp"
-  # Retire la ligne vide laissée en fin de fichier par install.sh.
-  sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' "$tmp" > "$config"
-  rm -f "$tmp"
+if grep -q '^[[:space:]]*\[mcp_servers\.thor_android[].]' "$config"; then
+  drop_thor_android
   echo "    retiré"
 fi
 EOF
+} | termux_sh
 
 echo "Accès coupé côté Debian. Sur la console, désactivez aussi le Débogage sans fil."

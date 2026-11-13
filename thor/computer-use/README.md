@@ -47,7 +47,7 @@ Le pont lance `/opt/thor-android/start.sh` à son démarrage. `/opt/thor-android
 | Sortie | Code | Sens |
 | --- | --- | --- |
 | `THOR_ANDROID=ok serial=<série> via=existant\|tcpip\|sans-fil` | 0 | Les agents peuvent piloter Android. |
-| `THOR_ANDROID=erreur raison=adb-absent\|serveur-adb` | 1 | Relancer `install.sh`. |
+| `THOR_ANDROID=erreur raison=adb-absent\|getprop-absent\|serveur-adb` | 1 | Relancer `install.sh`. |
 | `THOR_ANDROID=erreur raison=non-connecte` | 2 | Débogage sans fil coupé ou pas associé. |
 
 En cas d'erreur, l'explication en français est sur la sortie d'erreur.

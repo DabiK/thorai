@@ -5,15 +5,17 @@
 #
 # Sortie standard : une seule ligne, lisible par machine.
 #   THOR_ANDROID=ok serial=<série adb> via=<existant|tcpip|sans-fil>
-#   THOR_ANDROID=erreur raison=<adb-absent|serveur-adb|non-connecte>
-# Code de sortie : 0 si la console est joignable, 1 si adb manque ou ne
-# démarre pas, 2 si la console n'est pas joignable. Le message pour
+#   THOR_ANDROID=erreur raison=<adb-absent|getprop-absent|serveur-adb|non-connecte>
+# Code de sortie : 0 si la console est joignable, 1 si adb ou getprop manque,
+# ou si le serveur adb ne démarre pas, 2 si la console n'est pas joignable. Le message pour
 # l'utilisateur, en français, va sur la sortie d'erreur.
 set -uo pipefail
 
 ADB=${THOR_ADB:-adb}
 STATE_DIR=${XDG_STATE_HOME:-$HOME/.local/state}/thor-android
 TCPIP_ADDR=127.0.0.1:5555
+# getprop d'Android, par chemin absolu : le PATH de la Debian ne le contient pas.
+GETPROP=${THOR_GETPROP:-/system/bin/getprop}
 
 ok() {
   mkdir -p "$STATE_DIR"
@@ -35,6 +37,9 @@ command -v "$ADB" >/dev/null 2>&1 ||
   fail 1 adb-absent "adb n'est pas installé dans la Debian." \
     "Relancez thor/computer-use/install.sh depuis le Mac."
 
+[ -x "$GETPROP" ] ||
+  fail 1 getprop-absent "$GETPROP est introuvable : la Debian ne voit pas le /system d'Android."
+
 # Démarre le serveur adb s'il n'y en a pas déjà un sur le port 5037.
 if ! out=$(timeout 20 "$ADB" start-server 2>&1); then
   fail 1 serveur-adb "le serveur adb ne démarre pas : $out"
@@ -42,7 +47,10 @@ fi
 
 # Identifiant de cette console, pour ne pas confondre avec un autre appareil
 # que verrait le serveur adb.
-GUID=$(getprop persist.adb.wifi.guid 2>/dev/null | tr -d '\r' || true)
+if ! GUID=$("$GETPROP" persist.adb.wifi.guid 2>&1); then
+  fail 1 getprop-absent "$GETPROP ne répond pas : $GUID"
+fi
+GUID=$(tr -d '\r' <<<"$GUID")
 
 is_this_console() {
   [ -z "$GUID" ] && return 0
@@ -88,7 +96,7 @@ if try_connect "$TCPIP_ADDR"; then
 fi
 
 # 3. Débogage sans fil : le port change à chaque activation.
-ports=$(getprop service.adb.tls.port 2>/dev/null | tr -d '\r' || true)
+ports=$("$GETPROP" service.adb.tls.port 2>/dev/null | tr -d '\r' || true)
 ports="$ports $(timeout 5 "$ADB" mdns services 2>/dev/null |
   awk -v guid="$GUID" '/_adb-tls-connect/ && (guid == "" || index($0, guid)) { n = split($NF, a, ":"); print a[n] }')"
 for port in $ports; do

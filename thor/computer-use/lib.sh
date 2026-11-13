@@ -45,3 +45,38 @@ require_console() {
     exit 1
   fi
 }
+
+# Programme awk qui retire d'un config.toml de Codex la section
+# [mcp_servers.thor_android] et ses sous-tables, jusqu'à la prochaine ligne « [ ».
+# Les commentaires et lignes vides collés à la section suivante sont gardés.
+# Les lignes vides juste avant la section retirée partent avec elle.
+# shellcheck disable=SC2034,SC2016
+TOML_DROP_THOR_ANDROID='
+/^[ \t]*\[/ {
+  if ($0 ~ /^[ \t]*\[mcp_servers\.thor_android[].]/) { buf = ""; skip = 1; next }
+  if (skip) { skip = 0 }
+  printf "%s", buf; buf = ""; print; next
+}
+skip {
+  if ($0 ~ /^[ \t]*(#.*)?$/) { buf = buf $0 "\n" } else { buf = "" }
+  next
+}
+/^[ \t]*$/ { buf = buf $0 "\n"; next }
+{ printf "%s", buf; buf = ""; print }
+END { if (!skip) printf "%s", buf }
+'
+
+# Commandes bash (à exécuter dans Termux) qui définissent drop_thor_android :
+# applique le programme ci-dessus à $config, par un fichier temporaire et un mv.
+emit_toml_helpers() {
+  printf 'TOML_DROP_THOR_ANDROID=%q\n' "$TOML_DROP_THOR_ANDROID"
+  cat <<'EOF2'
+drop_thor_android() {
+  local tmp
+  tmp=$(mktemp "$config.XXXXXX")
+  awk "$TOML_DROP_THOR_ANDROID" "$config" > "$tmp"
+  chmod --reference="$config" "$tmp"
+  mv -f "$tmp" "$config"
+}
+EOF2
+}

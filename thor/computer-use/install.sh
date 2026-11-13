@@ -53,26 +53,44 @@ EOF
 } | debian_sh dev
 
 echo "3/4 Claude Code : serveur thor_android (portée utilisateur)"
-debian_sh dev <<EOF
+CLAUDE_ENTRY="{\"type\":\"stdio\",\"command\":\"$LAUNCHER\",\"args\":[],\"env\":{}}"
+{
+  printf 'want=%q\n' "$CLAUDE_ENTRY"
+  cat <<'EOF'
 set -euo pipefail
-if jq -e '.mcpServers.thor_android' ~/.claude.json >/dev/null 2>&1; then
+if jq -e --argjson want "$want" '.mcpServers.thor_android == $want' ~/.claude.json >/dev/null 2>&1; then
   echo "    déjà déclaré"
 else
-  claude mcp add-json --scope user thor_android '{"type":"stdio","command":"$LAUNCHER","args":[],"env":{}}'
+  if jq -e '.mcpServers.thor_android' ~/.claude.json >/dev/null 2>&1; then
+    claude mcp remove --scope user thor_android >/dev/null
+    echo "    ancienne déclaration retirée"
+  fi
+  claude mcp add-json --scope user thor_android "$want"
 fi
 EOF
+} | debian_sh dev
 
 echo "4/4 Codex : serveur thor_android (~/.codex/config.toml de Termux)"
-termux_sh <<EOF
+{
+  printf 'launcher=%q\n' "$LAUNCHER"
+  emit_toml_helpers
+  cat <<'EOF'
 set -euo pipefail
-config=\$HOME/.codex/config.toml
-if grep -q '^\[mcp_servers\.thor_android\]' "\$config"; then
+config=$HOME/.codex/config.toml
+want="command = \"$launcher\""
+current=$(awk '/^[ \t]*\[/ { s = ($0 ~ /^[ \t]*\[mcp_servers\.thor_android\][ \t]*$/) } s && /^[ \t]*command[ \t]*=/ { print; exit }' "$config")
+if [ "$current" = "$want" ]; then
   echo "    déjà déclaré"
 else
-  printf '\n[mcp_servers.thor_android]\ncommand = "%s"\n' "$LAUNCHER" >> "\$config"
+  if grep -q '^[[:space:]]*\[mcp_servers\.thor_android[].]' "$config"; then
+    drop_thor_android
+    echo "    ancienne déclaration retirée"
+  fi
+  printf '\n[mcp_servers.thor_android]\n%s\n' "$want" >> "$config"
   echo "    ajouté"
 fi
 EOF
+} | termux_sh
 
 cat <<'EOF'
 

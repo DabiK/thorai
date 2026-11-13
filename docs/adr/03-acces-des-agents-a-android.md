@@ -42,7 +42,7 @@ Pour relier la Debian à adbd :
 3. **`/opt/thor-android/start.sh`**, appelé par le pont à son démarrage. Il démarre le serveur adb s'il n'y en a pas, puis cherche la console dans cet ordre :
    - déjà connectée ;
    - `127.0.0.1:5555` ;
-   - port du débogage sans fil, lu dans `getprop service.adb.tls.port` (même contexte SELinux que `persist.adb.wifi.guid`, que Termux lit) ;
+   - port du débogage sans fil, lu par `/system/bin/getprop service.adb.tls.port`, en chemin absolu car le `PATH` de la Debian ne le contient pas (même contexte SELinux que `persist.adb.wifi.guid`, que Termux lit) ;
    - puis par mDNS.
    
    Il écrit une ligne `THOR_ANDROID=ok|erreur …`, documentée dans `thor/computer-use/README.md`. Durée mesurée : 0,15 à 0,4 s.
@@ -59,13 +59,13 @@ Pour relier la Debian à adbd :
 - Consigne « ouvre les Paramètres, va dans À propos et dis-moi la version d'Android » :
   - Claude Code 2.1.322, `claude -p … --allowedTools "mcp__thor_android__*"` : « Android 13 », en 25 s, uniquement par les outils `thor_android` ;
   - Codex 0.167.2, `codex exec` : « Android 13 », en 48 s, uniquement par les outils `thor_android`, sans demande de validation.
-- Écran bas : Claude a fait `thor-screen capture bas` et décrit l'écran.
+- Écran bas : Claude a fait `thor-screen capture bas` et décrit l'écran. La consigne lui donnait la commande à lancer : il ne l'a pas trouvée seul.
 - Sorties et captures : `artifacts/screenshots/03/`.
 
 ## Limites
 
 - **mobile-mcp ne voit que l'écran haut.** mobilecli code `defaultDisplayID = "0"`. Sur l'écran bas, `thor-screen` ne fait que la capture et le toucher : ni arbre d'interface, ni saisie.
-- **Les agents ne connaissent pas `thor-screen`** si on ne le leur dit pas. Voir la question en fin d'ADR.
+- **Les agents ne connaissent pas `thor-screen`** si on ne le leur dit pas. Voir « Questions ouvertes ».
 - **Le débogage sans fil exige le Wi-Fi.** Sans réseau, pas d'accès.
 - **Après un redémarrage**, le débogage sans fil peut revenir seul si le réseau a été coché « Toujours autoriser sur ce réseau ». Sinon, il faut le rallumer à la main dans les Options pour les développeurs. À confirmer au premier redémarrage. L'association, elle, survit.
 - **Le serveur adb vit dans la session proot qui l'a lancé** (`proot --kill-on-exit`). Il faut que le pont appelle `start.sh` depuis sa propre session, qui dure. Un agent lancé hors du pont démarre son propre serveur adb. Celui-ci ne retrouve la console que si le débogage sans fil y est déjà relié. Non vérifié : `adb mdns check` ne répond rien avec le paquet Debian.
@@ -89,7 +89,17 @@ Il ne permet pas de lire les données privées des applis non débogables.
 - toute appli de la console, tant que le serveur adb tourne : il écoute sur `127.0.0.1:5037` sans authentification ;
 - sur le réseau, seuls les appareils dont la clé est associée (TLS mutuel). Aujourd'hui : le Mac, en USB. Après l'association : la Debian. Le port d'association n'est ouvert que pendant que la fenêtre de code est affichée.
 
-**Garde-fous** : les validations propres à chaque agent. Claude n'appelle les outils `thor_android` qu'avec l'autorisation `mcp__thor_android__*`. Codex, en `codex exec`, ne les a pas soumis à validation lors de l'essai.
+**Garde-fous** : les validations propres à chaque agent. Claude n'appelle les outils `thor_android` qu'avec l'autorisation `mcp__thor_android__*`. Codex, en `codex exec`, les a appelés sans aucune validation lors de l'essai.
+
+**Risque connu : un agent peut valider ses propres demandes.** Régie affiche les demandes de validation dans une bannière, sur l'écran haut et sur l'écran bas. Un agent peut toucher cette bannière :
+- sur l'écran haut, avec les outils `mobile_*` de `thor_android` ;
+- sur l'écran bas, avec `thor-screen tap bas X Y`.
+
+Il peut ainsi valider sa propre demande, ou celle de l'autre agent. Cela contourne la règle du PRD « rien ne part sans un appui sur A ». Rien ne l'en empêche aujourd'hui. Suivis possibles, à trancher par l'utilisateur (voir « Questions ouvertes ») :
+- interdire aux agents de toucher Régie : refuser les gestes quand Régie est au premier plan, ou le leur interdire dans leurs consignes ;
+- soumettre les outils `thor_android` (et `thor-screen`) à validation, au prix d'une validation par geste.
+
+**Piste non vérifiée : fermer le port 5037.** Avec `ADB_SERVER_SOCKET=localfilesystem:<dossier privé de Termux>`, le serveur adb écoute sur une socket Unix, et non plus sur `127.0.0.1:5037`. Les autres applis ne le joindraient plus. Essai rapide sous proot, le 13 novembre : le serveur démarre sur la socket, le client lui parle, et le port 5037 reste fermé. Non vérifié en revanche : la liaison avec la console par le débogage sans fil, et mobilecli à travers cette socket. La variable devrait aussi être passée aux serveurs MCP : Codex filtre leur environnement. Non retenu pour l'instant.
 
 ## Comment couper
 
@@ -105,3 +115,10 @@ Il ne permet pas de lire les données privées des applis non débogables.
 - Le pont (ticket 02) appelle `/opt/thor-android/start.sh` à son démarrage, depuis sa propre session Debian, et lit la ligne `THOR_ANDROID=`.
 - Après une réinitialisation de la console : `install.sh`, puis l'association (README).
 - Une montée de version de mobile-mcp se fait en changeant `MOBILE_MCP_VERSION` dans `install.sh`, après un nouvel essai sur la Thor.
+
+## Questions ouvertes
+
+1. **Comment les agents apprennent-ils que `thor-screen` existe**, pour l'écran bas ? La preuve « écran bas » a été obtenue avec une consigne qui donnait la commande. Deux pistes :
+   - leurs consignes globales (`~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`), hors du périmètre de ce ticket ;
+   - le pont, qui le leur dit à chaque session.
+2. **Un agent peut valider ses propres demandes** en touchant la bannière de Régie (voir « Sécurité »). Faut-il interdire aux agents de toucher Régie, ou faire passer les outils `thor_android` en validation ? Question pour l'utilisateur.
