@@ -58,6 +58,8 @@
   - Régie ne gère pas les branches : la branche demandée part dans la consigne, et l'agent s'en occupe ;
   - les enregistrements de test du pont restent tels quels, dépôt privé. L'app installée sur la Thor ne montre jamais de session factice : la passerelle factice ne sert qu'aux tests.
 
+- 13 novembre, sur les questions du ticket 03, **et cela remplace les décisions de sécurité prises plus tôt** : les agents peuvent tout piloter sur Android, les deux écrans, Régie comprise, avec la méthode la plus libre (mobilecli). Pas de validation pour ces gestes, pas de règle « vraie main » dans Régie. Les restrictions viendront plus tard, si l'utilisateur en veut (ticket 14).
+
 ## Questions en attente
 
 - Nom définitif de l'app (« Régie » est un nom de travail).
