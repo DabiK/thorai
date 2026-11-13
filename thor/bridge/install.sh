@@ -8,7 +8,7 @@
 # 1. copies bridge/ into the Debian (/home/dev/.local/share/regie/bridge) and runs `npm ci`;
 # 2. creates the token once (32 random bytes), for the bridge and for the app (run-as);
 # 3. sets allow-external-apps=true in Termux, for RUN_COMMAND;
-# 4. installs regie-bridge-start, -stop and -supervise in the ~/bin of Termux.
+# 4. installs regie-bridge-start, -stop, -supervise and regie-android-access in the ~/bin of Termux.
 # Nothing starts at boot. The agents' settings (~/.claude, ~/.codex) are not touched.
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -73,12 +73,17 @@ termux-reload-settings
 grep '^allow-external-apps' \"\$f\""
 
 echo "4/4 Scripts de démarrage et d'arrêt"
+# Written aside then renamed: a running copy of the script is not changed under its feet.
+install_script() { # install_script <source in thor/bridge> <name in ~/bin>
+  termux_sh "set -e; mkdir -p \"\$HOME/bin\"; f=\"\$HOME/bin/$2\"; \
+cat > \"\$f.tmp\"; chmod 700 \"\$f.tmp\"; mv -f \"\$f.tmp\" \"\$f\"" < "$here/$1"
+}
 for name in start stop supervise; do
-  # Written aside then renamed: a running copy of the script is not changed under its feet.
-  termux_sh "set -e; mkdir -p \"\$HOME/bin\"; f=\"\$HOME/bin/regie-bridge-$name\"; \
-cat > \"\$f.tmp\"; chmod 700 \"\$f.tmp\"; mv -f \"\$f.tmp\" \"\$f\"" < "$here/$name.sh"
+  install_script "$name.sh" "regie-bridge-$name"
 done
-echo "   ~/bin/regie-bridge-start, regie-bridge-stop, regie-bridge-supervise"
+# The agents' access to Android after a restart (ticket 03), run by regie-bridge-start.
+install_script android-access.sh regie-android-access
+echo "   ~/bin/regie-bridge-start, regie-bridge-stop, regie-bridge-supervise, regie-android-access"
 
 cat << EOF
 
@@ -87,4 +92,8 @@ Installé. Démarrer et arrêter le pont par RUN_COMMAND, comme le fera l'app :
   thor/bridge/run-command.sh stop
 L'intent part avec l'uid de Termux (son am) : « adb shell am startservice … » est refusé,
 l'utilisateur shell n'a pas la permission com.termux.permission.RUN_COMMAND.
+
+Pour que Régie rallume le débogage sans fil après un redémarrage (accès des agents à Android),
+une seule fois, l'app installée :
+  adb -s $SERIAL shell pm grant $APP_ID android.permission.WRITE_SECURE_SETTINGS
 EOF
