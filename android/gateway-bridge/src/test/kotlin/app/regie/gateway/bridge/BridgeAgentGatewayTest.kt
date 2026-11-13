@@ -79,10 +79,10 @@ class BridgeAgentGatewayTest {
 
     private fun upgrade(bridge: FakeBridge) = server.enqueue(MockResponse.Builder().webSocketUpgrade(bridge).build())
 
-    private fun sessionJson(id: String, status: String, updatedAt: String, pending: String = "") =
+    private fun sessionJson(id: String, status: String, updatedAt: String, pending: String = "", active: Boolean = true) =
         """{"sessionId":"$id","agent":"codex","project":"demo","cwd":"/home/dev/projects/demo","branch":"main",
            "approvalMode":"ask","status":"$status","title":"Titre $id","createdAt":"2026-11-13T21:00:00Z",
-           "updatedAt":"$updatedAt","lastError":null,"active":true,"pendingApprovals":[$pending]}"""
+           "updatedAt":"$updatedAt","lastError":null,"active":$active,"pendingApprovals":[$pending]}"""
 
     private fun helloResult(id: Long, journal: String, lastSeq: Long, sessions: String, approvals: String = "", resync: Boolean = false) =
         """{"id":$id,"result":{"bridge":{"version":"0.1.0"},"journal":"$journal","lastSeq":$lastSeq,"resync":$resync,
@@ -168,7 +168,7 @@ class BridgeAgentGatewayTest {
                 "pont : rattrapage terminé (3 événements, seq 11 → 13, 1 ignoré car déjà vu, aucun trou)" in lines,
                 lines.toString(),
             )
-            assertTrue(lines.any { it.startsWith("pont : connexion perdue (fermée par le pont, code 1001)") }, lines.toString())
+            assertTrue(lines.any { it.startsWith("pont : connexion perdue (fermée par le pont, code 1001") }, lines.toString())
             assertTrue(lines.none { "0123abcd" in it }, "le jeton ne doit jamais apparaître dans la trace")
             val session = sessions.single()
             assertEquals(SessionStatus.AWAITING_APPROVAL, session.status)
@@ -326,6 +326,71 @@ class BridgeAgentGatewayTest {
                 lines.toString(),
             )
             assertTrue(lines.none { "0123abcd" in it })
+        }
+    }
+
+    @Test
+    fun `a session entering the cards shown gets its journal loaded once, without what the live will bring`() {
+        val bridge = FakeBridge()
+        upgrade(bridge)
+        val gateway = gateway()
+
+        withGateway(gateway) {
+            val hello = bridge.next("hello")
+            val socket = bridge.socket()
+            val shown = (1..4).map { sessionJson("a$it", "idle", "2026-11-13T21:00:0${it}Z") }
+            val history = sessionJson("h", "stopped", "2026-11-13T20:00:00Z", active = false)
+            socket.send(helloResult(hello.long("id")!!, "j", lastSeq = 20, sessions = (shown + history).joinToString(",")))
+
+            // Les 4 cartes affichées d'abord, pas l'historique.
+            val first = (1..4).map { bridge.next("session.events") }
+            assertEquals((1..4).map { "a$it" }.toSet(), first.map { it.obj("params")?.string("sessionId") }.toSet())
+            first.forEach { socket.send("""{"id":${it.long("id")},"result":{"events":[]}}""") }
+
+            // « h » est reprise : elle passe en tête des cartes, son journal est chargé.
+            socket.send(
+                """{"event":{"seq":21,"at":"2026-11-13T21:01:00Z","sessionId":"h","type":"session",
+                   "data":${sessionJson("h", "working", "2026-11-13T21:01:00Z")}}}""",
+            )
+            val load = bridge.next("session.events")
+            assertEquals("h", load.obj("params")?.string("sessionId"))
+            socket.send(toolCall(22, "live", "npm test").replace("\"sessionId\":\"s\"", "\"sessionId\":\"h\""))
+            socket.send(
+                """{"id":${load.long("id")},"result":{"events":[
+                   {"seq":5,"at":"2026-11-13T20:00:00Z","sessionId":"h","type":"session_update","data":{"sessionUpdate":"plan","entries":[{"content":"Lire","status":"completed"},{"content":"Tester","status":"in_progress"}]}},
+                   {"seq":6,"at":"2026-11-13T20:00:01Z","sessionId":"h","type":"session_update","data":{"sessionUpdate":"tool_call","toolCallId":"old","title":"ls","kind":"execute","status":"completed","rawInput":{"command":"ls"}}},
+                   {"seq":22,"at":"2026-11-13T21:01:02Z","sessionId":"h","type":"session_update","data":{"sessionUpdate":"tool_call","toolCallId":"live","title":"npm test","kind":"execute","status":"in_progress","rawInput":{"command":"npm test"}}},
+                   {"seq":23,"at":"2026-11-13T21:01:03Z","sessionId":"h","type":"session_update","data":{"sessionUpdate":"tool_call","toolCallId":"future","title":"rm x","kind":"execute","status":"pending","rawInput":{"command":"rm x"}}}]}}""",
+            )
+
+            val h = gateway.sessionsWhere { list -> list.any { it.id.value == "h" && it.progress != null } }.single { it.id.value == "h" }
+            assertEquals(1, h.progress?.done)
+            // seq 22 est déjà là par le direct, seq 23 viendra par le direct : rien d'inventé ni de doublé.
+            assertEquals(LastAction("npm test", ActionStatus.IN_PROGRESS), h.lastAction)
+
+            // Un autre événement de « h » ne recharge pas son journal.
+            socket.send(toolCall(23, "future", "rm x").replace("\"sessionId\":\"s\"", "\"sessionId\":\"h\""))
+            gateway.sessionsWhere { list -> list.any { it.lastAction?.description == "rm x" } }
+            assertTrue(bridge.requests.tryReceive().getOrNull()?.string("method") != "session.events")
+        }
+    }
+
+    @Test
+    fun `a bridge closing right after each hello ends up unreachable, with spaced retries`() {
+        val bridges = (1..3).map { FakeBridge().also(::upgrade) }
+        val gateway = gateway(unreachableAfter = 2)
+
+        withGateway(gateway) {
+            for (bridge in bridges.take(2)) {
+                val hello = bridge.next("hello")
+                val socket = bridge.socket()
+                socket.send(helloResult(hello.long("id")!!, "j", lastSeq = 0, sessions = ""))
+                socket.close(1001, "plantage")
+            }
+            withTimeout(5.seconds) { gateway.connection.first { it is BridgeConnection.Unreachable } }
+            assertEquals(BridgeConnection.Unreachable(UnreachableReason.NOT_RESPONDING), gateway.connection.value)
+            assertTrue(lines.any { it.contains("tenue moins de 10s, tentative 1") }, lines.toString())
+            assertTrue(lines.any { it.contains("tenue moins de 10s, tentative 2") }, lines.toString())
         }
     }
 }

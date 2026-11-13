@@ -29,6 +29,8 @@ import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 import kotlin.time.toJavaDuration
 
 /**
@@ -38,8 +40,11 @@ import kotlin.time.toJavaDuration
  *   Régie tourne. Il n'est jamais journalisé.
  * - Reconnexion seule, de plus en plus espacée ([retryDelay]), avec `hello` porteur du dernier `seq`
  *   et de l'identifiant du journal : le pont renvoie ce qui a été manqué, sans doublon.
- * - Après une première connexion ou un `resync`, le journal des sessions affichées est rechargé
- *   (`session.events`) pour retrouver leur plan et leur dernière action.
+ * - Le journal (`session.events`) d'une session est chargé quand elle entre dans les cartes
+ *   affichées, une fois par état reconstruit (première connexion, `resync`), pour retrouver son plan
+ *   et sa dernière action.
+ * - Une connexion qui se coupe moins de [stableAfter] après la réponse à `hello` compte comme un
+ *   échec : un pont qui retombe aussitôt finit dit injoignable, avec des essais espacés.
  *
  * L'état vit en mémoire : au relancement de l'app, un `hello` sans `since` suffit.
  *
@@ -56,6 +61,7 @@ class BridgeAgentGateway(
     /** Sessions dont on recharge le journal : celles que la vue d'ensemble affiche. */
     private val historyCount: Int = 4,
     private val shutdownTimeout: Duration = 3.seconds,
+    private val stableAfter: Duration = 10.seconds,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val log: (String) -> Unit = {},
 ) : AgentGateway {
@@ -72,6 +78,9 @@ class BridgeAgentGateway(
     private val state = BridgeState()
     private val nextId = AtomicLong()
 
+    /** Sessions dont le journal est chargé dans l'état actuel ; vidé quand l'état repart de zéro. */
+    private val historyLoaded = HashSet<String>()
+
     /** La connexion ouverte, pour les requêtes venues d'ailleurs ([shutdownBridge]). */
     @Volatile
     private var socket: WebSocket? = null
@@ -82,11 +91,27 @@ class BridgeAgentGateway(
         while (true) {
             when (val outcome = connectOnce(attempt = failures + 1)) {
                 is Outcome.Lost -> {
-                    failures = 0
-                    _connection.value = BridgeConnection.Connecting
-                    val wait = retryDelay(1)
-                    log("pont : connexion perdue (${outcome.detail}), nouvel essai dans $wait")
-                    delay(wait)
+                    if (outcome.heldFor >= stableAfter) {
+                        failures = 0
+                        _connection.value = BridgeConnection.Connecting
+                        val wait = retryDelay(1)
+                        log("pont : connexion perdue (${outcome.detail}), nouvel essai dans $wait")
+                        delay(wait)
+                    } else {
+                        // Coupée aussitôt après hello : un échec comme un autre, le backoff continue.
+                        failures++
+                        _connection.value = if (failures >= unreachableAfter) {
+                            BridgeConnection.Unreachable(UnreachableReason.NOT_RESPONDING)
+                        } else {
+                            BridgeConnection.Connecting
+                        }
+                        val wait = retryDelay(failures)
+                        log(
+                            "pont : connexion perdue (${outcome.detail}, tenue moins de $stableAfter, tentative $failures), " +
+                                "prochain essai dans $wait",
+                        )
+                        delay(wait)
+                    }
                 }
                 is Outcome.Failed -> {
                     failures++
@@ -131,13 +156,23 @@ class BridgeAgentGateway(
         val request = Request.Builder().url(url).header("Authorization", "Bearer $secret").build()
         val ws = client.newWebSocket(request, Listener(signals))
         val requests = HashMap<Long, Pair<String, JsonObject>>()
-        var greeted = false
+        var greetedAt: TimeMark? = null
         var catchUp: CatchUp? = null
+        val historyPending = HashSet<String>()
 
         fun send(method: String, params: JsonObject = JsonObject(emptyMap())) {
             val id = nextId.incrementAndGet()
             requests[id] = method to params
             ws.send(Frames.request(id, method, params))
+        }
+
+        // Le journal des sessions qui entrent dans les cartes affichées, une fois chacune.
+        fun loadHistories() {
+            if (greetedAt == null) return
+            for (id in state.firstSessions(historyCount)) {
+                if (id in historyLoaded || !historyPending.add(id)) continue
+                send("session.events", buildJsonObject { put("sessionId", id) })
+            }
         }
 
         try {
@@ -175,7 +210,10 @@ class BridgeAgentGateway(
                                     catchUp = null
                                 }
                             }
-                            if (applied) publish()
+                            if (applied) {
+                                publish()
+                                loadHistories()
+                            }
                         }
                         is Incoming.Response -> {
                             val id = incoming.id ?: continue
@@ -191,8 +229,10 @@ class BridgeAgentGateway(
                                 continue
                             }
                             val fresh = state.onResponse(method, params, result)
+                            if (method == "session.events") params.string("sessionId")?.let { historyLoaded += it }
                             if (method == "hello") {
-                                greeted = true
+                                greetedAt = TimeSource.Monotonic.markNow()
+                                if (fresh) historyLoaded.clear()
                                 Hello.parse(result)?.let { hello ->
                                     log(
                                         "pont : réponse hello (lastSeq=${hello.lastSeq}, resync=${hello.resync}, " +
@@ -209,25 +249,24 @@ class BridgeAgentGateway(
                                 }
                                 _connection.value = BridgeConnection.Connected
                                 send("agents.versions")
-                                if (fresh) {
-                                    state.firstSessions(historyCount).forEach { send("session.events", buildJsonObject { put("sessionId", it) }) }
-                                }
                             }
                             publish()
+                            loadHistories()
                         }
                         null -> Unit
                     }
                     is Signal.Failed -> {
                         val detail = signal.code?.let { "HTTP $it" } ?: signal.error
-                        return if (greeted) Outcome.Lost(detail) else Outcome.Failed(reasonOf(signal.code), detail)
+                        return greetedAt?.let { Outcome.Lost(detail, it.elapsedNow()) } ?: Outcome.Failed(reasonOf(signal.code), detail)
                     }
                     is Signal.Closed -> {
                         val detail = "fermée par le pont, code ${signal.code}"
-                        return if (greeted) Outcome.Lost(detail) else Outcome.Failed(UnreachableReason.NOT_RESPONDING, detail)
+                        return greetedAt?.let { Outcome.Lost(detail, it.elapsedNow()) }
+                            ?: Outcome.Failed(UnreachableReason.NOT_RESPONDING, detail)
                     }
                 }
             }
-            return Outcome.Lost("fin du flux")
+            return Outcome.Lost("fin du flux", greetedAt?.elapsedNow() ?: Duration.ZERO)
         } finally {
             catchUp?.let { log("${it.summary()} — interrompu") }
             socket = null
@@ -243,8 +282,8 @@ class BridgeAgentGateway(
     }
 
     private sealed interface Outcome {
-        /** La connexion avait abouti, puis s'est coupée. */
-        data class Lost(val detail: String) : Outcome
+        /** La connexion avait abouti (réponse à `hello`), puis s'est coupée au bout de [heldFor]. */
+        data class Lost(val detail: String, val heldFor: Duration) : Outcome
 
         data class Failed(val reason: UnreachableReason, val detail: String) : Outcome
     }

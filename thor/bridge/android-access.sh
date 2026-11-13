@@ -22,12 +22,16 @@ fi
 
 # One at a time: a second call while the first one waits for the port has nothing more to do.
 exec 8> "$state/regie-android-access.lock"
-flock -n 8 || exit 0
+if ! flock -n 8; then
+  say "un autre appel est en cours (verrou tenu), rien à faire"
+  exit 0
+fi
 
 # The wireless port takes a moment to show up after wireless debugging is turned back on:
 # start.sh exits 2 while the console is not reachable, 1 when something is missing (no retry).
 for ((i = 1; i <= attempts; i++)); do
-  out=$(proot-distro login debian --user dev -- "$script" 2>&1 < /dev/null)
+  # 8>&- : start.sh lance le serveur adb (un démon), qui ne doit pas hériter du verrou.
+  out=$(proot-distro login debian --user dev -- "$script" 2>&1 < /dev/null 8>&-)
   code=$?
   say "essai $i/$attempts : ${out//$'\n'/ | }"
   case "$code" in
