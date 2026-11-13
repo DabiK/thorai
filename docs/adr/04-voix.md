@@ -1,6 +1,6 @@
 # ADR 04 — La voix : ports, ElevenLabs, alternative locale
 
-Statut : en cours, 13 novembre 2026 (ticket 04, phase 1 sur 2). La phase 2 ajoute `:local` (sherpa-onnx) et l'appli d'essai `:demo`, puis les mesures.
+Statut : en cours, 13 novembre 2026 (ticket 04). La phase 1 a posé les ports, la voix factice et ElevenLabs. La phase 2 a ajouté `:local` (sherpa-onnx) et l'appli d'essai `:demo`. Restent les mesures, faites par l'utilisateur sur la Thor.
 
 ## Contexte
 
@@ -14,23 +14,27 @@ Statut : en cours, 13 novembre 2026 (ticket 04, phase 1 sur 2). La phase 2 ajout
 ### Build
 
 - `voice/` est un build Gradle autonome :
-  - wrapper Gradle 9.3.1 ;
-  - Kotlin 2.2.21, cible JVM 17 ;
+  - wrapper Gradle 9.9.1, car AGP 9.5.1 exige Gradle 9.6 ou plus (la phase 1 était en 9.3.1) ;
+  - Kotlin 2.4.21, cible JVM 17, comme `android/` (ticket 01), qui inclura ce build ;
   - avertissements traités comme des erreurs.
 - Versions des bibliothèques :
   - kotlinx-coroutines 1.10.2 ;
   - kotlinx-serialization-json 1.9.0, sans le plugin : on lit et on écrit des `JsonObject` ;
-  - OkHttp 5.5.1 et mockwebserver3 5.5.1 ;
-  - JUnit 5.14.4.
+  - OkHttp 5.4.0 et mockwebserver3 5.4.0. La phase 1 était en 5.5.1, mais `okhttp-android` 5.5.x exige `compileSdk` 37, alors que le Mac n'a que les plateformes 34 à 36 et qu'`android/` compile en 36. La 5.4.0 demande 36 ;
+  - JUnit 5.14.4. Les modules Android ajoutent `kotlin-test-junit5`, qu'ils ne choisissent pas tout seuls ;
+  - AGP 9.5.1, `compileSdk` 36, `minSdk` 33 (Android 13 sur la Thor), Compose BOM 2026.06.01, comme `android/` ;
+  - sherpa-onnx v2.0.1 et commons-compress 1.28.0 (voir plus bas).
 - Les modules ont le groupe `app.regie.voice`. L'app les obtient par substitution : `includeBuild("../voice")` puis `implementation("app.regie.voice:api")`. La substitution a été vérifiée avec un projet consommateur jetable.
-- La porte de qualité se lance par `./gradlew check` depuis `voice/`, avec le JDK par défaut du Mac (Temurin 25). Aucun `org.gradle.java.home` n'est versionné.
-- Modules de la phase 1 :
+- La porte de qualité se lance par `./gradlew check` depuis `voice/`, avec le JDK par défaut du Mac (Temurin 25). Aucun `org.gradle.java.home` n'est versionné. Elle comprend les tests JVM de tous les modules et le lint Android de `:local` et `:demo`. Le SDK est lu dans `voice/local.properties`, qui n'est pas versionné.
+- Modules :
   - `:api` : Kotlin pur, seule dépendance kotlinx-coroutines ;
   - `:fake` : JVM ;
-  - `:elevenlabs` : JVM, avec OkHttp.
+  - `:elevenlabs` : JVM, avec OkHttp ;
+  - `:local` : bibliothèque Android, avec sherpa-onnx ;
+  - `:demo` : application Android `app.regie.voicelab`, racine de composition de l'appli d'essai.
 - Un test d'architecture (`api/src/test/.../ArchitectureTest.kt`) lit les sources de tous les modules et vérifie que :
   - `:api` n'importe que Kotlin, les coroutines et le JDK ;
-  - un adapter n'importe aucun autre adapter, et son build ne dépend que de `:api`.
+  - un adapter n'importe aucun autre adapter, et son build ne dépend que de `:api`. Cela couvre `:local`.
   
   `demo`, racine de composition de l'appli d'essai, est exempté.
 
@@ -114,22 +118,89 @@ Statut : en cours, 13 novembre 2026 (ticket 04, phase 1 sur 2). La phase 2 ajout
 - Pour la synthèse, ils vérifient la requête, le PCM reconstitué malgré des morceaux de taille impaire, l'annulation de la requête HTTP quand on interrompt, les erreurs HTTP et la liste des voix.
 - **Les messages Scribe des fixtures suivent la documentation, ils n'ont pas été capturés sur une vraie session** : l'agent n'a pas de clé. Il faudra les remplacer par une capture réelle en phase 2.
 
-## Ce qui reste (phase 2)
+### Locale (`voice/local`)
 
-- `:local` avec sherpa-onnx, branché sur les mêmes ports, sans les modifier :
-  - transcription française : Parakeet TDT 0.6B v3 int8 découpé par la détection de parole, ou un modèle en flux s'il en existe un bon en français ;
-  - Silero pour la détection de parole ;
-  - une voix Piper française.
+- **sherpa-onnx v2.0.1 (26 octobre 2026), par JitPack** : `com.github.k2-fsa.sherpa-onnx:sherpa-onnx:v2.0.1`.
+  - Il n'est pas sur Maven Central. Le dépôt JitPack est déclaré dans `voice/settings.gradle.kts` et limité à ce groupe.
+  - L'AAR fait 49 Mo, pour 4 ABI, et contient les classes Kotlin `com.k2fsa.sherpa.onnx` : il n'y a rien à copier. L'appli ne garde que `arm64-v8a` (`abiFilters`).
+  - Les signatures ont été vérifiées par `javap` sur l'AAR.
+  - Repli possible : l'AAR des releases GitHub (`sherpa-onnx-2.0.1.aar`), mais une dépendance fichier ne passe pas d'un module à l'autre.
+- **Isolement** : seul `SherpaOnnxEngines.kt` importe `com.k2fsa`. Le reste de l'adapter passe par trois petites interfaces internes :
+  - `SegmentDecoder` (Parakeet) ;
+  - `SpeechSegmenter` (Silero) ;
+  - `SpeechSynthesizer` (Supertonic).
   
-  Les modèles se téléchargent au premier usage, ce qui donne `PreparingModel` et `ProviderStatus.Downloading`.
-- `:demo` (`app.regie.voicelab`) :
-  - le micro (`AudioSource`) et la sortie audio (`AudioSink`) Android ;
-  - L2 pour dicter ;
-  - le choix du fournisseur ;
-  - la saisie de la clé, stockée chiffrée ;
-  - le choix de la voix ;
-  - la mesure de la latence (de la fin de parole au texte final).
-- Remplacer les fixtures Scribe par une capture réelle.
+  Les tests JVM remplacent ces interfaces par des faux, sur les WAV de `voice/testdata/wav/`, sans code natif ni modèle.
+- **Modèles**, tous tirés des releases officielles de k2-fsa/sherpa-onnx (`asr-models` et `tts-models`). Ils sont téléchargés au premier usage dans `filesDir/voice-models`, jamais dans le dépôt ni dans l'APK.
+
+  | Rôle | Modèle | Téléchargé | Installé |
+  | --- | --- | --- | --- |
+  | Transcription | `sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8` (25 langues européennes, dont le français) | 487 Mo | 672 Mo |
+  | Détection de parole | `silero_vad.onnx` | 0,6 Mo | 0,6 Mo |
+  | Synthèse | `sherpa-onnx-supertonic-3-tts-int8-2026-05-11` (31 langues, dont le français, 10 voix) | 129 Mo | 145 Mo |
+  | Total | | 617 Mo | 818 Mo |
+
+- **Téléchargement** (`ModelStore`, OkHttp) :
+  - le fichier arrive dans `<fichier>.part` et reprend par `Range` après une coupure. Si le serveur ignore le `Range`, on repart de zéro ; s'il répond 416, la partie est périmée et on la jette. Le fichier n'est renommé qu'une fois complet ;
+  - la place libre est vérifiée avant de télécharger : ce qui reste à télécharger, plus la taille installée, plus 50 Mo ;
+  - l'archive `.tar.bz2` est extraite avec commons-compress dans un dossier `.extracting`. Une entrée qui sortirait du dossier est refusée. Le dossier est ensuite renommé, le marqueur `.installed` est écrit en dernier et l'archive est supprimée. Une archive corrompue est supprimée, pour être téléchargée de nouveau ;
+  - la progression compte le téléchargement et l'extraction. Elle s'expose par `ProviderStatus.Downloading` et `DictationState.PreparingModel` ;
+  - deux appels simultanés ne téléchargent qu'une fois ;
+  - **non vérifié** : aucune somme de contrôle, car les releases n'en publient pas à côté des fichiers.
+- **Transcription en « flux simulé »** (`SegmentedTranscriber`). Parakeet n'est pas un modèle en flux :
+  - Silero ne fait que **placer les coupures**, sur une fin d'énoncé : 0,3 s de silence, ou 12 s de parole au plus ;
+  - Parakeet décode **tout l'audio entre deux coupures**, et pas seulement le segment que Silero a gardé. Sur la Thor, décoder les seuls segments de Silero perdait le premier mot de chaque consigne (« Lance », « Mets »), dit avant que Silero se déclenche ;
+  - pendant la parole, l'énoncé en cours est redécodé toutes les 700 ms d'audio, ce qui donne le partiel ;
+  - au relâcher, l'énoncé en cours est fermé et décodé. La queue est décodée si de la parole y a été entendue, ou si rien n'a été reconnu (un mot trop court pour Silero) ;
+  - l'audio est mis en file dès le début, y compris pendant le chargement ou le téléchargement du modèle : rien ne se perd ;
+  - les modèles sont chargés une fois, sur un fil réservé (`limitedParallelism(1)`), jamais sur le fil principal. `prepare()` les précharge, `release()` les libère. Le chargement de Parakeet prend environ 2,3 s sur la Thor.
+- **Piste non retenue** : `sherpa-onnx-streaming-zipformer-fr-kroko-2025-08-06`, un vrai modèle en flux pour le français (57 Mo). Aucune mesure n'est publiée ; à essayer si la latence de Parakeet déçoit.
+- **Termes à favoriser (hotwords)** : sherpa-onnx v2.0.1 les accepte pour Parakeet TDT, à condition de passer en `modified_beam_search`. On reprend l'exemple officiel `test_asr_non_streaming_nemo_parakeet_tdt_v2_hotwords.js` :
+  - un `bpe.vocab` est dérivé de `tokens.txt` ;
+  - `modelingUnit = "bpe"` et `hotwordsScore = 2.0` ;
+  - le vocabulaire de la dictée est passé à chaque flux (`createStream(hotwords)`), les termes séparés par `/`.
+  
+  C'est un réglage (`LocalConfig.hotwords`), **désactivé par défaut** : la recherche en faisceau est plus lente. Changer ce réglage recharge le décodeur. Essayé sur la Thor : pas de plantage, le texte change ; l'effet est à mesurer.
+- **Synthèse : Supertonic 3, et non Piper.**
+  - sherpa-onnx 2.x a retiré espeak-ng : `data_dir` est ignoré, et une voix Piper demande un lexique ou des phonèmes calculés par l'app (`phoneme_codepoints`). Sur la Thor, `vits-piper-fr_FR-siwis-medium` ne produisait aucun son (« no lexicon, and no frontend available »).
+  - Supertonic 3 a son propre frontal texte. La langue de `SpeechRequest` lui est passée (`extra = {lang: "fr"}`), avec 8 pas de calcul.
+  - Ses 10 voix sont listées par `voices()` ; la voix est un réglage (`LocalConfig.speaker`).
+  - Licences : le code est sous MIT, le modèle sous OpenRAIL-M (restrictions d'usage, compatibles avec un usage personnel).
+  - Le texte est découpé en phrases dans l'adapter (après `.`, `!`, `?`, `…`). Sans ce découpage, Supertonic génère tout le texte avant le premier son : 3,3 s pour trois phrases, contre 0,8 s une fois découpé.
+  - La génération tourne à part de la collecte, parce qu'un appel natif ne s'interrompt pas. Annuler coupe donc la voix tout de suite ; le moteur s'arrête à son prochain rappel. Sur la Thor, la coupure est passée de 480 ms à 53 ms après R2.
+  - Le rappel natif doit être une classe et non un lambda. Le JNI cherche `invoke([F)Ljava/lang/Integer;`, qu'un lambda Kotlin 2 (invokedynamic désucré par D8) n'a pas : le processus s'arrêtait.
+- **Détection de parole** : `LocalVoiceActivityDetector` (Silero) implémente le port. On l'obtient par `LocalVoiceProvider.voiceActivityDetector()` et on le ferme après usage.
+- **Mesure de vitesse** : `LocalSpeechToText.lastStats` donne la durée de l'audio et le temps de décodage, partiels compris. On en tire le facteur temps réel.
+
+### Appli d'essai (`voice/demo`, `app.regie.voicelab`)
+
+- **Racine de composition** : elle construit ElevenLabs et le local.
+  - Le fournisseur, le modèle Scribe, la voix et les hotwords sont des réglages (`SharedPreferences`), lus à chaque usage. On change donc de fournisseur sans relancer.
+  - Le fournisseur ElevenLabs est reconstruit quand le modèle Scribe change.
+  - Quand le local est choisi et installé, ses modèles sont préchargés.
+- **Affichage** : écran du haut, fond sombre, gros caractères, textes en français. L'écran du haut n'étant pas tactile, la clé se saisit en lançant l'appli sur l'écran du bas (`voice/README.md`) ; la mise en page s'adapte aux deux largeurs.
+- **Clé ElevenLabs** :
+  - champ masqué, saisi par l'utilisateur ;
+  - chiffrée en AES-256-GCM par une clé de l'Android Keystore, qui n'en sort pas. Seuls l'IV et le chiffré sont gardés, dans des préférences privées ;
+  - sauvegardes exclues : `allowBackup="false"`, plus des règles d'extraction qui excluent tout ;
+  - jamais journalisée ;
+  - pas d'`EncryptedSharedPreferences`, qui est déprécié.
+- **L2 et R2** : on enveloppe le `Window.Callback`, comme le ticket 01, car `dispatchKeyEvent` est restreint sur `ComponentActivity`. Une gâchette est appuyée si la touche **ou** l'axe (`AXIS_LTRIGGER`/`AXIS_BRAKE`) le dit, avec une hystérésis de 0,5 à l'appui et 0,2 au relâcher. Un appui donne un seul événement, quel que soit l'ordre des deux signaux.
+  - L2 maintenu : dicter.
+  - Un appui sur L2 coupe aussi la voix avant de dicter ; R2 la coupe seulement.
+- **Micro** : `AudioRecord`, source `VOICE_RECOGNITION`, 16 kHz mono, par trames de 100 ms.
+- **Sortie** : `AudioTrack` en flux, écrit par tranches de 50 ms pour pouvoir couper vite.
+- **Mesures** affichées après chaque dictée : la latence du relâcher de L2 au texte final, la durée de l'audio et, pour le local, le facteur temps réel.
+- **Vocabulaire** : le dossier `voice/corpus/` est une source d'assets de l'APK. `termes.txt` et `consignes.txt` y sont donc sans copie à la main.
+- **Banc d'essai pilotable par adb** : les commandes sont dans `voice/README.md`.
+  - Les WAV et `consignes.txt` se poussent dans `/sdcard/Android/data/app.regie.voicelab/files/corpus/`, ce qui marche sur la Thor en Android 13.
+  - Chaque WAV est rejoué au rythme réel, comme une dictée. La fin de parole est la fin du WAV, une trame après la dernière émise, comme pour un micro.
+  - Le banc écrit `bench-<fournisseur>-<horodatage>.json` et `.csv` dans `files/`. On y trouve par consigne l'attendu, l'obtenu, la latence, la durée, le WER (minuscules, ponctuation retirée) et les termes de `termes.txt` retrouvés ou manqués ; puis les moyennes et les médianes.
+
+## Ce qui reste
+
+- Les mesures, sur la Thor, avec les 20 consignes lues par l'utilisateur, puis la recommandation du fournisseur par défaut.
+- Remplacer les fixtures Scribe par une capture réelle : cela demande la clé de l'utilisateur.
 - Piste à évaluer avec les mesures : la `keyterm_library` de Scribe v3 Live (jusqu'à 10 000 termes de 50 caractères, envoyée dans le premier morceau d'audio). Elle lèverait la limite de 50 termes et de 20 caractères, par exemple pour `kotlinx-coroutines-test`.
 
 ## Mesures
@@ -147,5 +218,9 @@ Recommandation du fournisseur par défaut : à écrire après les mesures.
 ## Conséquences
 
 - L'app (tickets 08, 09, 12) ne connaît que `voice/api` : `VoiceProviders`, `Dictation`, `TextToSpeech`, `AudioSink`. Changer de fournisseur ne demande qu'un réglage.
+- Pour dépendre de `:local`, `android/` devra déclarer le dépôt JitPack, restreint à `com.github.k2-fsa.sherpa-onnx`. En composite build, les dépendances externes d'un module inclus se résolvent avec les dépôts du build qui l'inclut.
+- `android/` doit rester en `compileSdk` 36 ou plus, et ne pas tirer OkHttp 5.5.x tant qu'il n'est pas en 37.
+- Le micro et la sortie audio Android (`MicrophoneSource`, `SpeakerSink`) vivent dans `:demo`. L'app les reprendra ou les déplacera dans un module partagé, au ticket qui branche la voix.
+- L'appli locale occupe 818 Mo une fois les modèles installés.
 - Une évolution du protocole Scribe se corrige dans `ScribeProtocol` et dans les fixtures, sans toucher au reste.
 - Le contenu dicté part chez ElevenLabs quand ce fournisseur est choisi (PRD, « Risques »).

@@ -4,10 +4,14 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
   alias(libs.plugins.kotlin.jvm) apply false
+  alias(libs.plugins.kotlin.compose) apply false
+  alias(libs.plugins.android.library) apply false
+  alias(libs.plugins.android.application) apply false
 }
 
 // Coordonnées utilisées par `includeBuild("../voice")` depuis android/ :
-// app.regie.voice:api, app.regie.voice:fake, app.regie.voice:elevenlabs.
+// app.regie.voice:api, app.regie.voice:fake, app.regie.voice:elevenlabs, app.regie.voice:local.
+// Les modules Android (:local, :demo) se configurent dans leur propre build.gradle.kts.
 subprojects {
   group = "app.regie.voice"
   version = "0.1.0"

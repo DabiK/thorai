@@ -1,0 +1,141 @@
+package app.regie.voice.local
+
+import app.regie.voice.api.ProviderStatus
+import app.regie.voice.api.VoiceError
+import app.regie.voice.api.VoiceException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
+import okhttp3.OkHttpClient
+import org.junit.jupiter.api.io.TempDir
+import java.io.File
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertSame
+import kotlin.test.assertTrue
+
+class LocalRuntimeTest {
+    @TempDir
+    lateinit var root: File
+
+    private val factory = FakeFactory()
+    private var hotwords = false
+
+    /** A store whose models are already installed: no network in these tests. */
+    private fun store(vararg installed: ModelSpec) = ModelStore(root, OkHttpClient()).also { store ->
+        installed.forEach { spec -> store.directory(spec).mkdirs(); File(store.directory(spec), ModelStore.MARKER).writeText("") }
+    }
+
+    private fun runtime(store: ModelStore) =
+        LocalRuntime(store, factory, LocalConfig(hotwords = { hotwords }), Dispatchers.Unconfined)
+
+    @Test
+    fun `the decoder is loaded once, each dictation gets its own segmenter`() = runBlocking {
+        val runtime = runtime(store(*LocalModels.SPEECH_TO_TEXT.toTypedArray()))
+
+        val first = runtime.recognition {}
+        val second = runtime.recognition {}
+
+        assertSame(first.decoder, second.decoder)
+        assertEquals(1, factory.decoders.size)
+        assertEquals(2, factory.segmenters.size)
+    }
+
+    @Test
+    fun `changing the hotwords setting reloads the decoder`() = runBlocking {
+        val runtime = runtime(store(*LocalModels.SPEECH_TO_TEXT.toTypedArray()))
+
+        runtime.recognition {}
+        hotwords = true
+        val engines = runtime.recognition {}
+
+        assertTrue(engines.hotwords)
+        assertEquals(listOf(false, true), factory.decoders.map { it.second.hotwords })
+        assertTrue(factory.decoders.first().first.released)
+    }
+
+    @Test
+    fun `loading reports a preparing state without progress`() = runBlocking {
+        val runtime = runtime(store(*LocalModels.SPEECH_TO_TEXT.toTypedArray()))
+        val reported = mutableListOf<Float?>()
+
+        runtime.recognition { reported += it }
+        runtime.recognition { reported += it }
+
+        assertEquals(listOf<Float?>(null), reported)
+    }
+
+    @Test
+    fun `synthesis needs its model to be installed`() = runBlocking {
+        val runtime = runtime(store(*LocalModels.SPEECH_TO_TEXT.toTypedArray()))
+
+        val error = assertFailsWith<VoiceException> { runtime.synthesizer() }
+
+        assertEquals(VoiceError.ModelMissing, error.error)
+        assertTrue(factory.synthesizers.isEmpty())
+    }
+
+    @Test
+    fun `release frees the engines, which load again on next use`() = runBlocking {
+        val runtime = runtime(store(*LocalModels.ALL.toTypedArray()))
+        runtime.recognition {}
+        runtime.synthesizer()
+
+        runtime.release()
+        runtime.recognition {}
+
+        assertTrue(factory.decoders.first().first.released)
+        assertTrue(factory.synthesizers.single().released)
+        assertEquals(2, factory.decoders.size)
+    }
+
+    @Test
+    fun `an engine that cannot load is reported as a provider error`() = runBlocking {
+        val broken = object : EngineFactory by factory {
+            override fun decoder(modelDir: File, settings: DecoderSettings): SegmentDecoder = throw IllegalArgumentException("bad model")
+        }
+        val runtime = LocalRuntime(store(*LocalModels.SPEECH_TO_TEXT.toTypedArray()), broken, LocalConfig(), Dispatchers.Unconfined)
+
+        val error = assertFailsWith<VoiceException> { runtime.recognition {} }
+
+        assertEquals(VoiceError.Provider("model_load", "bad model"), error.error)
+    }
+}
+
+class LocalVoiceProviderTest {
+    @TempDir
+    lateinit var root: File
+
+    @Test
+    fun `prepare reports the download, then ready`() = runTest {
+        val engines = FakeEngineSource(prepare = { progress -> progress(0f); progress(0.5f); progress(1f) })
+        val provider = LocalVoiceProvider(ModelStore(root, OkHttpClient()), engines, LocalConfig())
+
+        val statuses = provider.prepare().toList()
+
+        assertEquals(
+            listOf(ProviderStatus.Downloading(0f), ProviderStatus.Downloading(0.5f), ProviderStatus.Downloading(1f), ProviderStatus.Ready),
+            statuses,
+        )
+    }
+
+    @Test
+    fun `prepare reports a failure as unavailable`() = runTest {
+        val engines = FakeEngineSource(prepare = { throw VoiceException(VoiceError.Offline) })
+        val provider = LocalVoiceProvider(ModelStore(root, OkHttpClient()), engines, LocalConfig())
+
+        assertEquals(listOf<ProviderStatus>(ProviderStatus.Unavailable(VoiceError.Offline)), provider.prepare().toList())
+    }
+
+    @Test
+    fun `models are reported missing until installed`() {
+        val provider = LocalVoiceProvider(root)
+
+        assertFalse(provider.modelsInstalled)
+        assertEquals(LocalModels.ALL.sumOf { it.downloadBytes }, provider.remainingDownloadBytes)
+        assertEquals("local", provider.id.value)
+    }
+}

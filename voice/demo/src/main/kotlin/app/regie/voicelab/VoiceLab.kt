@@ -1,0 +1,406 @@
+package app.regie.voicelab
+
+import android.content.Context
+import android.os.Build
+import android.util.Log
+import app.regie.voice.api.AudioFrame
+import app.regie.voice.api.AudioSource
+import app.regie.voice.api.Dictation
+import app.regie.voice.api.DictationRequest
+import app.regie.voice.api.DictationState
+import app.regie.voice.api.ProviderStatus
+import app.regie.voice.api.SpeechVoice
+import app.regie.voice.api.VoiceError
+import app.regie.voice.api.VoiceException
+import app.regie.voice.api.VoiceProvider
+import app.regie.voice.api.Vocabulary
+import app.regie.voice.api.startDictation
+import app.regie.voice.elevenlabs.ElevenLabsConfig
+import app.regie.voice.elevenlabs.ElevenLabsVoiceProvider
+import app.regie.voice.elevenlabs.ScribeModel
+import app.regie.voice.local.LocalConfig
+import app.regie.voice.local.LocalModels
+import app.regie.voice.local.LocalVoiceProvider
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.last
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+/** Measures of the last dictation. */
+data class Measure(val provider: String, val latencyMs: Long?, val audioMs: Long, val realTimeFactor: Double?)
+
+data class LocalUi(
+    val installed: Boolean,
+    val remainingMb: Long,
+    val downloading: Boolean = false,
+    val progress: Float? = null,
+    val status: String? = null,
+    val hotwords: Boolean = false,
+)
+
+data class ElevenLabsUi(
+    val keySaved: Boolean,
+    val scribe: ScribeModel,
+    val voiceName: String?,
+    val voices: List<SpeechVoice> = emptyList(),
+    val voicesStatus: String? = null,
+)
+
+data class BenchUi(val provider: String, val done: Int, val total: Int, val line: String, val running: Boolean)
+
+data class UiState(
+    val provider: String,
+    val dictation: DictationState? = null,
+    val measure: Measure? = null,
+    val speaking: Boolean = false,
+    val speechInfo: String? = null,
+    val local: LocalUi,
+    val elevenLabs: ElevenLabsUi,
+    val bench: BenchUi? = null,
+)
+
+/**
+ * Composition root and state of the trial app: it builds the providers, runs dictations, speech,
+ * downloads and benches, and exposes what the screen shows. The provider is read from the
+ * settings at each use, so switching applies to the next dictation without restarting.
+ */
+class VoiceLab(private val context: Context, private val scope: CoroutineScope) {
+    private val settings = Settings(context)
+    private val secrets = SecretStore(context)
+    private val sink = SpeakerSink()
+
+    val local = LocalVoiceProvider(File(context.filesDir, "voice-models"), LocalConfig(hotwords = { settings.hotwords }))
+    private var elevenLabs = buildElevenLabs()
+
+    /** Terms to favour: `voice/corpus/termes.txt`, packaged as an asset. */
+    private val vocabulary = Vocabulary.parse(asset("termes.txt"))
+
+    private val mutableUi = MutableStateFlow(
+        UiState(
+            provider = settings.provider,
+            local = localUi(),
+            elevenLabs = ElevenLabsUi(secrets.contains(SecretStore.ELEVENLABS_KEY), settings.scribeModel, settings.voiceName),
+        ),
+    )
+    val ui: StateFlow<UiState> = mutableUi.asStateFlow()
+
+    private var dictation: Dictation? = null
+    private var releasedAt = 0L
+    private var speech: Job? = null
+    private var download: Job? = null
+    private var bench: Job? = null
+
+    init {
+        preloadLocal()
+    }
+
+    /** Loads the installed local models in the background, so that the first dictation is fast. */
+    private fun preloadLocal() {
+        if (settings.provider == LocalVoiceProvider.ID.value && local.modelsInstalled) downloadLocal()
+    }
+
+    private fun buildElevenLabs() = ElevenLabsVoiceProvider(
+        ElevenLabsConfig(
+            apiKey = { secrets.read(SecretStore.ELEVENLABS_KEY) },
+            voiceId = { settings.voiceId },
+            sttModel = settings.scribeModel,
+        ),
+    )
+
+    private fun provider(id: String = settings.provider): VoiceProvider = if (id == LocalVoiceProvider.ID.value) local else elevenLabs
+
+    private fun localUi() = LocalUi(
+        installed = local.modelsInstalled,
+        remainingMb = local.remainingDownloadBytes / 1_000_000,
+        hotwords = settings.hotwords,
+    )
+
+    // --- Settings ---
+
+    fun selectProvider(id: String) {
+        if (id != LocalVoiceProvider.ID.value && id != ElevenLabsVoiceProvider.ID.value) {
+            Log.w(TAG, "unknown provider '$id'")
+            return
+        }
+        settings.provider = id
+        mutableUi.update { it.copy(provider = id) }
+        Log.i(TAG, "provider: $id")
+        preloadLocal()
+    }
+
+    fun selectScribe(model: ScribeModel) {
+        settings.scribeModel = model
+        elevenLabs = buildElevenLabs()
+        mutableUi.update { it.copy(elevenLabs = it.elevenLabs.copy(scribe = model)) }
+        Log.i(TAG, "scribe model: ${model.id}")
+    }
+
+    fun setHotwords(enabled: Boolean) {
+        settings.hotwords = enabled
+        mutableUi.update { it.copy(local = it.local.copy(hotwords = enabled)) }
+        Log.i(TAG, "local hotwords: $enabled")
+    }
+
+    /** Stores the key typed by the user, encrypted. It is never logged. */
+    fun saveKey(key: String) {
+        if (key.isBlank()) return
+        secrets.write(SecretStore.ELEVENLABS_KEY, key.trim())
+        mutableUi.update { it.copy(elevenLabs = it.elevenLabs.copy(keySaved = true)) }
+    }
+
+    fun deleteKey() {
+        secrets.delete(SecretStore.ELEVENLABS_KEY)
+        mutableUi.update { it.copy(elevenLabs = it.elevenLabs.copy(keySaved = false)) }
+    }
+
+    fun loadVoices() {
+        scope.launch {
+            mutableUi.update { it.copy(elevenLabs = it.elevenLabs.copy(voicesStatus = "Chargement des voix…")) }
+            try {
+                val voices = elevenLabs.textToSpeech.voices()
+                mutableUi.update { it.copy(elevenLabs = it.elevenLabs.copy(voices = voices, voicesStatus = "${voices.size} voix")) }
+            } catch (e: VoiceException) {
+                mutableUi.update { it.copy(elevenLabs = it.elevenLabs.copy(voicesStatus = describe(e.error))) }
+            }
+        }
+    }
+
+    fun selectVoice(voice: SpeechVoice) {
+        settings.voiceId = voice.id
+        settings.voiceName = voice.name
+        mutableUi.update { it.copy(elevenLabs = it.elevenLabs.copy(voiceName = voice.name)) }
+    }
+
+    // --- Dictation: hold L2 ---
+
+    fun startDictation() {
+        if (dictation?.state?.value?.isTerminal == false) return
+        stopSpeaking()
+        val provider = provider()
+        val microphone = CountingSource(MicrophoneSource(context))
+        val current = provider.speechToText.startDictation(scope, microphone, DictationRequest(language = "fr", vocabulary = vocabulary))
+        dictation = current
+        releasedAt = 0L
+        mutableUi.update { it.copy(dictation = DictationState.Connecting, measure = null) }
+        Log.i(TAG, "dictation started with ${provider.id}")
+        scope.launch {
+            val terminal = current.state.onEach { state -> mutableUi.update { it.copy(dictation = state) } }.first { it.isTerminal }
+            val latencyMs = if (terminal is DictationState.Final && releasedAt > 0) (System.nanoTime() - releasedAt) / 1_000_000 else null
+            val rtf = if (provider === local && terminal is DictationState.Final) local.speechToText.lastStats?.realTimeFactor else null
+            val measure = Measure(provider.displayName, latencyMs, microphone.millis, rtf)
+            mutableUi.update { it.copy(measure = measure) }
+            Log.i(TAG, "dictation ended: ${terminal.javaClass.simpleName}, latency=${latencyMs}ms audio=${measure.audioMs}ms rtf=$rtf")
+        }
+    }
+
+    /** End of speech (L2 released): latency is measured from here. */
+    fun finishDictation() {
+        val current = dictation ?: return
+        if (current.state.value.isTerminal) return
+        releasedAt = System.nanoTime()
+        current.finish()
+    }
+
+    // --- Speech ---
+
+    fun speak(text: String) {
+        stopSpeaking()
+        if (text.isBlank()) return
+        val provider = provider()
+        speech = scope.launch {
+            val start = System.nanoTime()
+            var firstAudio: Long? = null
+            mutableUi.update { it.copy(speaking = true, speechInfo = "Lecture avec ${provider.displayName}…") }
+            try {
+                sink.play(
+                    provider.textToSpeech.synthesize(text).onEach {
+                        if (firstAudio == null) firstAudio = (System.nanoTime() - start) / 1_000_000
+                    },
+                )
+                val info = "Lu avec ${provider.displayName}, premier son en ${firstAudio ?: "?"} ms"
+                mutableUi.update { it.copy(speechInfo = info) }
+                Log.i(TAG, "speech done: first audio ${firstAudio}ms, total ${(System.nanoTime() - start) / 1_000_000}ms")
+            } catch (e: CancellationException) {
+                mutableUi.update { it.copy(speechInfo = "Voix coupée") }
+                Log.i(TAG, "speech cut after ${(System.nanoTime() - start) / 1_000_000}ms")
+                throw e
+            } catch (e: VoiceException) {
+                mutableUi.update { it.copy(speechInfo = describe(e.error)) }
+                Log.w(TAG, "speech failed: ${e.error}")
+            } finally {
+                mutableUi.update { it.copy(speaking = false) }
+            }
+        }
+    }
+
+    fun stopSpeaking() {
+        speech?.cancel()
+        speech = null
+    }
+
+    // --- Local models ---
+
+    fun downloadLocal() {
+        if (download?.isActive == true) return
+        download = scope.launch {
+            mutableUi.update { it.copy(local = it.local.copy(downloading = true, status = "Préparation…")) }
+            val last = prepareLocal()
+            mutableUi.update {
+                it.copy(local = localUi().copy(status = if (last is ProviderStatus.Unavailable) describe(last.error) else "Modèles prêts"))
+            }
+        }
+    }
+
+    /** Downloads and loads the local models, reporting progress on screen and in logcat. */
+    private suspend fun prepareLocal(): ProviderStatus {
+        var logged = -1
+        return local.prepare().onEach { status ->
+            val line = when (status) {
+                is ProviderStatus.Downloading -> status.progress?.let { "Téléchargement ${(it * 100).toInt()} %" } ?: "Chargement des modèles…"
+                ProviderStatus.Ready -> "Modèles prêts"
+                is ProviderStatus.Unavailable -> describe(status.error)
+            }
+            mutableUi.update { it.copy(local = it.local.copy(progress = (status as? ProviderStatus.Downloading)?.progress, status = line)) }
+            val percent = ((status as? ProviderStatus.Downloading)?.progress?.times(100))?.toInt()
+            if (percent == null || percent / 5 != logged) {
+                logged = percent?.div(5) ?: logged
+                Log.i(TAG, "local models: $line")
+            }
+        }.last()
+    }
+
+    // --- Bench, driven by adb ---
+
+    fun runBench(providerId: String, only: Set<Int>?) {
+        if (bench?.isActive == true) {
+            Log.w(TAG, "bench already running")
+            return
+        }
+        bench = scope.launch(Dispatchers.Default) {
+            val provider = provider(providerId)
+            fun show(line: String, done: Int = 0, total: Int = 0, running: Boolean = true) {
+                mutableUi.update { it.copy(bench = BenchUi(providerId, done, total, line, running)) }
+                Log.i(TAG, "bench: $line")
+            }
+            val root = requireNotNull(context.getExternalFilesDir(null)) { "no external files dir" }
+            val corpus = File(root, "corpus")
+            val sentences = File(corpus, "consignes.txt").takeIf { it.isFile }?.readText() ?: asset("consignes.txt")
+            val terms = File(corpus, "termes.txt").takeIf { it.isFile }?.readText()?.let(Vocabulary::parse) ?: vocabulary
+            val cases = Bench.cases(corpus, Bench.parseSentences(sentences), only)
+            if (cases.isEmpty()) return@launch show("aucun WAV dans $corpus", running = false)
+
+            if (provider === local) {
+                val status = prepareLocal()
+                if (status !is ProviderStatus.Ready) return@launch show("modèles locaux indisponibles", running = false)
+            } else if (provider.prepare().last() is ProviderStatus.Unavailable) {
+                return@launch show("ElevenLabs indisponible : clé absente", running = false)
+            }
+
+            val startedAt = timestamp()
+            show("${cases.size} enregistrements, ${provider.displayName}", 0, cases.size)
+            val items = Bench(terms).run(
+                provider.speechToText,
+                cases,
+                realTimeFactor = { if (provider === local) local.speechToText.lastStats?.realTimeFactor else null },
+            ) { progress, item ->
+                val line = if (item == null) {
+                    "${progress.done + 1}/${progress.total} ${progress.current}"
+                } else {
+                    "${item.case.id} latence=${item.latencyMs}ms wer=${item.wer?.let { "%.2f".format(Locale.ROOT, it) }} " +
+                        "obtenu=\"${item.obtained ?: item.error}\""
+                }
+                show(line, progress.done, progress.total)
+            }
+            val report = BenchReport(providerId, benchSettings(provider), startedAt, items)
+            val name = "bench-$providerId-$startedAt"
+            File(root, "$name.json").writeText(PRETTY.encodeToString(JsonObject.serializer(), report.toJson()))
+            File(root, "$name.csv").writeText(report.toCsv())
+            show(
+                "fini : $name.json, latence médiane ${report.latency?.median?.toLong()} ms, " +
+                    "WER moyen ${report.wer?.mean?.let { "%.3f".format(Locale.ROOT, it) }}, termes ${report.termsFound}/${report.termsExpected}",
+                items.size,
+                items.size,
+                running = false,
+            )
+        }
+    }
+
+    private fun benchSettings(provider: VoiceProvider): Map<String, String> = buildMap {
+        put("device", "${Build.MANUFACTURER} ${Build.MODEL}")
+        put("realtime", "true")
+        if (provider === local) {
+            put("model", LocalModels.PARAKEET.name)
+            put("hotwords", settings.hotwords.toString())
+        } else {
+            put("model", settings.scribeModel.id)
+        }
+    }
+
+    // --- adb commands ---
+
+    fun handle(commands: List<Command>) {
+        for (command in commands) {
+            Log.i(TAG, "command: ${command.javaClass.simpleName}")
+            when (command) {
+                is Command.UseProvider -> selectProvider(command.provider)
+                is Command.UseScribe -> ScribeModel.entries.firstOrNull { it.id == command.model }?.let(::selectScribe)
+                    ?: Log.w(TAG, "unknown scribe model '${command.model}'")
+                is Command.UseHotwords -> setHotwords(command.enabled)
+                Command.DownloadLocal -> downloadLocal()
+                is Command.RunBench -> runBench(command.provider, command.only)
+                is Command.Speak -> speak(command.text)
+            }
+        }
+    }
+
+    private fun asset(name: String): String = context.assets.open(name).bufferedReader().use { it.readText() }
+
+    /** Counts the captured audio, to show its duration. */
+    private class CountingSource(private val source: AudioSource) : AudioSource {
+        override val format = source.format
+
+        @Volatile
+        private var samples = 0L
+        val millis: Long get() = samples * 1000 / format.sampleRateHz
+
+        override fun frames(): Flow<AudioFrame> = source.frames().onEach { samples += it.samples.size }
+    }
+
+    companion object {
+        private const val TAG = "VoiceLab"
+        private val PRETTY = Json { prettyPrint = true }
+
+        private fun timestamp(): String = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.ROOT).format(Date())
+
+        /** What to tell the user, in French. */
+        fun describe(error: VoiceError): String = when (error) {
+            VoiceError.Offline -> "Hors ligne : vérifier le réseau"
+            VoiceError.KeyMissing -> "Clé ElevenLabs absente : la saisir dans les réglages"
+            VoiceError.KeyRejected -> "Clé ElevenLabs refusée"
+            VoiceError.QuotaExceeded -> "Quota ElevenLabs épuisé"
+            VoiceError.RateLimited -> "Trop de requêtes : réessayer dans un moment"
+            VoiceError.ModelMissing -> "Modèles locaux absents : les télécharger"
+            is VoiceError.NotConfigured -> when (error.setting) {
+                "voice_id" -> "Choisir une voix ElevenLabs dans les réglages"
+                "RECORD_AUDIO" -> "Autoriser le micro"
+                else -> "Réglage manquant : ${error.setting}"
+            }
+            is VoiceError.Provider -> "Erreur ${error.code}" + (error.message?.let { " : $it" } ?: "")
+        }
+    }
+}
