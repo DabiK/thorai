@@ -57,6 +57,7 @@ Les requêtes sont traitées en parallèle : les réponses peuvent arriver dans 
 
 - Chaque événement a un `seq` : global à toutes les sessions, croissant de 1 en 1.
 - Les événements sont écrits sur disque, et synchronisés (`fdatasync`), avant d'être envoyés. Après un redémarrage du pont ou de la console, la numérotation reprend où elle s'était arrêtée : ni trou, ni doublon.
+- La purge des vieux événements (voir « Conservation de l'historique ») laisse des trous dans les numéros du journal, jamais de retour en arrière : un numéro n'est jamais réutilisé. Un client qui rattrape depuis un numéro purgé reçoit ce qui reste, dans l'ordre.
 - Un seul pont par journal : un second pont lancé sur le même dossier d'état, ou sur le même port, s'arrête avant de lire ou d'écrire le journal. Le verrou (`bridge.lock`) note le PID, le `boot_id` et le script du pont : un verrou d'un démarrage précédent de la console, ou dont le PID sert maintenant à un autre programme, est repris.
 - Le journal a un identifiant, `journal` dans la réponse à `hello`. Un nouveau journal (l'ancien effacé) a un nouvel identifiant.
 - Le client garde le dernier `seq` reçu et l'identifiant du journal.
@@ -78,7 +79,7 @@ Les requêtes sont traitées en parallèle : les réponses peuvent arriver dans 
 | --- | --- | --- |
 | `hello` | `since?`, `journal?` | état du pont, puis le flux d'événements (voir plus haut) |
 | `sessions.list` | — | `{sessions}` : en cours et historique, la plus récente d'abord |
-| `session.create` | `agent`, `project`, `branch?`, `approvalMode`, `prompt?` | `{session}` |
+| `session.create` | `agent`, `project`, `branch?`, `approvalMode`, `prompt?` | `{session}` ; le pont ne change pas de branche (voir plus bas) |
 | `session.prompt` | `sessionId`, `text` | `{delivery}` |
 | `session.cancel` | `sessionId` | `{}` |
 | `session.resume` | `sessionId` | `{session}`, rechargée dans son agent |
@@ -97,7 +98,13 @@ Les requêtes sont traitées en parallèle : les réponses peuvent arriver dans 
 
 - `agent` : `claude` ou `codex`.
 - `project` : un dossier de `~/projects`. Tout chemin qui en sort est refusé (`..`, chemin absolu, lien vers l'extérieur).
-- `branch` (facultatif) : le pont fait `git switch`, ou `git switch -c` si la branche n'existe pas, avant de lancer l'agent. En cas d'échec (nom invalide, modifications en cours, pas un dépôt git) : erreur `branch_failed`, aucune session n'est créée. Deux sessions sur le même projet partagent la même copie de travail, donc la même branche.
+- `branch` (facultatif) : **le pont ne touche pas aux branches**, c'est l'agent qui les gère (ticket 13). Le pont met en tête du premier message envoyé à l'agent :
+
+  ```
+  Travaille sur la branche <branch>, crée-la depuis main si elle n’existe pas.
+  ```
+
+  suivi d'une ligne vide, puis du message. L'agent choisit comment faire (`git switch`, worktree…). Le premier message est la consigne de `prompt`, sinon le premier `session.prompt`, même s'il est injecté dans un tour (`steering`). Les messages suivants partent tels quels. Le nom doit être un nom de branche valide (`git check-ref-format --branch`), sinon : erreur `bad_request`, aucune session n'est créée.
 - `approvalMode` : `ask` ou `allow-all` (voir « Modes de validation »).
 - `prompt` (facultatif) : la consigne, envoyée dès la création.
 
@@ -132,7 +139,7 @@ Enveloppe : `seq`, `at` (date ISO), `sessionId` (`null` pour le pont ou un agent
 | --- | --- |
 | `session` | la session entière (voir « Sessions »), à chaque changement de statut, de titre ou de validations en attente |
 | `session_update` | la mise à jour ACP (`update` de `session/update`), telle quelle sauf corrections (voir plus bas) |
-| `user_message` | `{text, delivery}` : un message envoyé à l'agent |
+| `user_message` | `{text, delivery, prefix?}` : un message envoyé à l'agent. `prefix` : la consigne de branche ajoutée en tête du premier message (voir « Créer une session ») ; l'agent a reçu `prefix`, une ligne vide, puis `text` |
 | `approval_request` | une validation à donner (voir « Validations ») |
 | `approval_resolved` | `{approvalId, outcome, by}` ; `by` vaut `client`, `cancel`, `agent_exit` ou `shutdown` |
 | `turn_end` | `{stopReason, usage}` : fin d'un tour (`end_turn`, `cancelled`, `max_tokens`, `refusal`…) |
@@ -171,15 +178,29 @@ Silences : Claude peut rester 30 s sans rien envoyer pendant une longue réponse
 ## Sessions
 
 ```json
-{"sessionId": "00000000-0000-4000-8000-000000000013", "agent": "codex", "project": "regie-demo", "cwd": "/home/dev/projects/regie-demo", "branch": "main", "approvalMode": "ask", "status": "idle", "title": "Résumer notes.md dans todo.md", "createdAt": "2026-11-13T21:02:09.969Z", "updatedAt": "2026-11-13T21:02:42.537Z", "lastError": null, "active": true, "pendingApprovals": []}
+{"sessionId": "00000000-0000-4000-8000-000000000013", "agent": "codex", "project": "regie-demo", "cwd": "/home/dev/projects/regie-demo", "branch": "essai", "requestedBranch": "essai", "approvalMode": "ask", "status": "idle", "title": "Résumer notes.md dans todo.md", "createdAt": "2026-11-13T21:02:09.969Z", "updatedAt": "2026-11-13T21:02:42.537Z", "lastError": null, "modifiedFiles": ["todo.md"], "purgedAt": null, "active": true, "pendingApprovals": []}
 ```
 
 - `sessionId` : l'identifiant ACP, donné par l'agent.
-- `branch` : la branche au moment de la création, `null` hors d'un dépôt git.
+- `branch` : la branche du dossier de la session (`cwd`), relue par le pont (`git symbolic-ref --short HEAD`) à la création, à la fin de chaque commande de l'agent, à la fin de chaque tour et au rechargement de la session. Un changement envoie l'événement `session`. `null` hors d'un dépôt git, ou sur un `HEAD` détaché. Si l'agent travaille dans un autre dossier (un worktree qu'il a créé ailleurs), `branch` reste celle de `cwd`.
+- `requestedBranch` : la branche demandée à la création (`branch` de `session.create`), `null` sinon. Elle peut différer de `branch` : c'est l'agent qui s'y place.
 - `title` : le titre donné par l'agent, sinon le début de la première consigne.
+- `updatedAt` : la dernière activité de la session. Un arrêt du pont, qui la passe en `stopped`, n'en est pas une.
+- `modifiedFiles` : les fichiers que l'agent a modifiés, relatifs au projet quand ils y sont : ceux de ses éditions terminées (diff ou `locations` d'un appel `edit`, `delete` ou `move`). Une écriture faite par une commande shell (`printf … >> todo.md`) n'y est pas.
+- `purgedAt` : quand les événements de la session ont été purgés (voir « Conservation de l'historique »), `null` sinon.
 - `active` : chargée dans un processus d'agent. `false` pour l'historique.
 - `pendingApprovals` : les `approvalId` en attente.
 - L'historique est sur disque : il survit à un redémarrage du pont et de la console.
+
+### Conservation de l'historique
+
+- Le détail d'une session (ses événements) est gardé **30 jours** après sa dernière activité (`updatedAt`).
+- Au-delà, ses événements sont effacés du disque et de la mémoire du pont. La session reste dans `sessions.list` avec son résumé : titre, agent, projet, statut, dates, branche, fichiers modifiés. `purgedAt` dit quand. `session.events` ne rend plus que ce qui a suivi la purge.
+- Une session purgée peut être reprise (`session.resume`, `session.prompt`) : l'agent garde son propre historique.
+- Une session en cours de chargement, en cours (`working`) ou qui attend une validation n'est jamais purgée.
+- Les événements sans session (`bridge`, `agent`) plus vieux que la durée sont purgés aussi.
+- Le nettoyage tourne au démarrage du pont, puis toutes les 24 h.
+- La durée se règle par `REGIE_BRIDGE_RETENTION_DAYS` (en jours, décimales permises, 30 par défaut). Une valeur qui n'est pas un nombre positif empêche le pont de démarrer. Le superviseur lance le pont par `bash -lc` : la variable peut se mettre dans `/home/dev/.profile` de la Debian.
 
 ### Statuts
 
@@ -202,7 +223,26 @@ Deux niveaux dans l'app. Le pont les traduit en modes ACP, et les réapplique ap
 
 - Claude démarre en `auto`, le réglage de l'utilisateur : le pont force le mode juste après la création.
 - Le mode `agent` de Codex n'est jamais utilisé.
-- En `ask`, Codex demande aussi une validation pour chaque lecture (`cat`, `rg`). Le pont ne les accepte pas tout seul : la règle est à trancher avec l'utilisateur.
+- En `ask`, Codex demande aussi une validation pour chaque lecture (`cat`, `rg`). Le pont accepte seul les commandes en lecture seule (voir « Lectures acceptées par le pont »).
+
+### Lectures acceptées par le pont
+
+En `ask`, le pont répond seul à une demande de validation (ticket 13) quand toutes ces conditions tiennent :
+- l'appel est une commande shell : `kind: "execute"`, la commande dans `rawInput.command`. C'est la forme des deux agents : `Bash` de Claude, exec de Codex. Une édition, un plan, un outil MCP remontent toujours ;
+- `rawInput` ne porte que la commande et sa description (`command`, `cwd`, `description`, `command_description`, `timeout`, `run_in_background`). Un accès réseau (`url`) ou des permissions en plus (`additionalPermissions`) demandés par Codex remontent ;
+- l'agent propose une option `allow_once` : le pont choisit celle-là, jamais « toujours » ;
+- la commande ne fait que lire (règle ci-dessous).
+
+La demande n'est alors pas relayée : ni `approval_request`, ni `approval_resolved`. L'appel reste dans le fil comme une action ordinaire (`session_update` `tool_call`, puis ses `tool_call_update`). Le journal du pont le note : `read-only command approved by the bridge: <commande>`.
+
+La règle est stricte : dans le doute, la commande remonte.
+- Programmes acceptés : `cat`, `ls`, `head`, `tail`, `wc`, `nl`, `grep`, `rg`, `find`, `pwd`, `cd`, `echo`, `which`, `stat`, `file`, `tree`, `sed -n` avec un script d'affichage seul (`12p`, `1,40p`), `git status`, `git log`, `git diff`, `git show`, `git rev-parse`, `git branch` sans nom (liste seulement). Tout autre programme remonte, comme un programme appelé par son chemin (`/bin/cat`).
+- Options refusées : `find` avec `-exec`, `-execdir`, `-ok`, `-okdir`, `-delete`, `-fprint`, `-fprint0`, `-fprintf`, `-fls` ; `rg` avec `--pre`, `--hostname-bin`, `-z`, `--search-zip` ; `git` avec une option avant la sous-commande (`-c`, `-C`, `--git-dir`…), `--output`, `--ext-diff`, `--textconv` ; `tree -o`, `tree -R` ; `file -C`. Pour `find`, `rg`, `git`, `sed`, `tree` et `file`, un motif non protégé (`*`) remonte aussi : il pourrait devenir une option.
+- Enchaînements : `&&`, `||`, `;`, `|` et les retours à la ligne entre commandes qui lisent toutes. Une seule qui écrit, et tout remonte.
+- Remontent toujours : une redirection (`>`, `>>`, `<`, `2>&1`, here-doc), une substitution (`$(…)`, `` `…` ``, `<(…)`, `>(…)`), une variable (`$X`, `${X}`, même entre guillemets doubles), une tâche de fond (`&`), un sous-shell ou un groupe (`(…)`, `{ …; }`), une affectation (`X=1 cmd`), un commentaire, un guillemet non fermé.
+- `bash -c '…'`, `bash -lc '…'`, `sh -c '…'` : le script est jugé avec la même règle.
+
+Le découpage de la commande passe par `shell-quote` 1.12 (adapter `adapters/shell/`). Les tests de la règle, commande par commande, sont dans `bridge/src/adapters/shell/shell-quote-parser.test.ts`.
 
 ## Validations
 
@@ -230,12 +270,11 @@ Deux niveaux dans l'app. Le pont les traduit en modes ACP, et les réapplique ap
 
 | `code` | Quand |
 | --- | --- |
-| `bad_request` | JSON invalide, méthode inconnue, paramètre manquant ou invalide |
+| `bad_request` | JSON invalide, méthode inconnue, paramètre manquant ou invalide (nom de branche invalide compris) |
 | `unknown_session` | `sessionId` inconnu |
 | `unknown_approval` | la validation n'attend plus (déjà réglée, ou tour interrompu) |
 | `unknown_option` | `optionId` non proposé par l'agent |
 | `bad_project` | projet hors de `~/projects` ou introuvable |
-| `branch_failed` | `git switch` impossible |
 | `agent_failed` | l'agent n'a pas démarré, ou a refusé la demande (le message de l'agent suit) |
 | `shutting_down` | le pont s'arrête |
 | `internal` | erreur inattendue, détaillée dans le journal du pont |
@@ -301,13 +340,13 @@ Les sessions arrêtées restent dans l'historique, en `stopped`.
 | Quoi | Où |
 | --- | --- |
 | Pont installé | Debian : `/home/dev/.local/share/regie/bridge/` |
-| Sessions et journal d'événements | Debian : `/home/dev/.local/state/regie/bridge/` (`sessions.json`, `events.jsonl` dont la première ligne nomme le journal, `bridge.pid`, `bridge.lock`) |
+| Sessions et journal d'événements | Debian : `/home/dev/.local/state/regie/bridge/` (`sessions.json`, `events.jsonl` dont la première ligne nomme le journal et, après une purge, garde le dernier numéro `lastSeq`, `bridge.pid`, `bridge.lock`) |
 | Jeton du pont | Debian : `/home/dev/.config/regie/bridge-token` |
 | Scripts | Termux : `~/bin/regie-bridge-start`, `regie-bridge-stop`, `regie-bridge-supervise` |
 | Journal du pont et du superviseur | Termux : `~/.local/state/thor/regie-bridge.log` (le précédent en `.1` au-delà de 5 Mo) |
 | PID du superviseur | Termux : `~/.local/state/thor/regie-bridge-supervisor.pid` |
 
-Réglages du pont, par variables d'environnement : `REGIE_BRIDGE_PORT`, `REGIE_BRIDGE_TOKEN_FILE`, `REGIE_BRIDGE_STATE_DIR`, `REGIE_PROJECTS_DIR`, `CLAUDE_CODE_EXECUTABLE`, `CODEX_PATH` (voir `bridge/src/main.ts`).
+Réglages du pont, par variables d'environnement : `REGIE_BRIDGE_PORT`, `REGIE_BRIDGE_TOKEN_FILE`, `REGIE_BRIDGE_STATE_DIR`, `REGIE_PROJECTS_DIR`, `REGIE_BRIDGE_RETENTION_DAYS` (voir « Conservation de l'historique »), `CLAUDE_CODE_EXECUTABLE`, `CODEX_PATH` (voir `bridge/src/main.ts`).
 
 ## Depuis le Mac
 
