@@ -48,11 +48,13 @@
 
 - 13 novembre, après essai de l'appli voicelab : **la voix locale devient le fournisseur par défaut**, pour la transcription comme pour la synthèse. ElevenLabs reste un adapter optionnel. Ticket 12 : la lecture à voix haute utilise la synthèse locale, sauf réglage contraire.
 
+- 13 novembre, sur les questions du ticket 02 (ticket 13) :
+  - le pont accepte seul les commandes en lecture seule ;
+  - le détail des sessions est gardé 30 jours, puis seulement leur résumé ;
+  - Régie ne gère pas les branches : la branche demandée part dans la consigne, et l'agent s'en occupe ;
+  - les enregistrements de test du pont restent tels quels, dépôt privé. L'app installée sur la Thor ne montre jamais de session factice : la passerelle factice ne sert qu'aux tests.
+
 ## Questions en attente
 
 - Nom définitif de l'app (« Régie » est un nom de travail).
 - Lecture à voix haute : automatique ou seulement à la demande ? Un réglage est prévu, la valeur par défaut reste à décider.
-- Ticket 02 : en mode « valider », Codex demande une validation même pour lire (pas de sandbox sous proot). Le pont doit-il accepter seul les lectures ?
-- Ticket 02 : durée de conservation du journal d'événements du pont.
-- Ticket 02 : une session créée avec une branche fait `git switch` dans la copie de travail partagée. Refuser si une session travaille sur le projet, prévenir, ou un worktree par session ?
-- Ticket 02 : la liste des skills de l'utilisateur apparaît dans les fixtures commitées. À masquer ?

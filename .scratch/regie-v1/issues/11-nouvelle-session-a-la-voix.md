@@ -12,7 +12,7 @@ Bloqué par : 09
 - **Fiche pré-remplie** :
   - agent ;
   - projet, choisi parmi `~/projects` ;
-  - branche, existante ou nouvelle avec sa base ;
+  - branche, existante ou nouvelle avec sa base. Régie ne fait aucune opération git : la branche part dans la consigne et l'agent la gère (décision de l'utilisateur, 13 novembre ; ticket 13) ;
   - niveau de validation ;
   - consigne.
 - **Correction de la fiche** : croix haut/bas pour choisir une ligne, gauche/droite pour la changer, L2 pour redicter la consigne.
