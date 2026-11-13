@@ -1,6 +1,6 @@
 # 01 — Socle Android : deux écrans, manette et vue d'ensemble factice
 
-Statut : fait (reste l'essai « écran du bas éteint », à faire avec l'utilisateur)
+Statut : fait
 Bloqué par : rien
 Possède : `android/`, `scripts/thor-*.sh`
 
@@ -39,7 +39,7 @@ Poser l'app Android sur la Thor, avec ses deux écrans, sa manette et le systèm
 - [x] L'app s'ouvre sur la Thor avec la vue d'ensemble en haut et le micro en bas, fidèle à la maquette.
 - [x] La croix déplace le focus, sur l'écran actif comme après avoir touché l'autre écran.
 - [x] Le maintien de L2 et de R2 est détecté (un état visible sur l'écran du bas suffit pour l'instant).
-- [ ] L'écran bas éteint ou absent → mode un seul écran, sans plantage.
+- [x] L'écran bas éteint ou absent → mode un seul écran, sans plantage. Vérifié avec l'utilisateur le 13 novembre : l'écran du bas éteint par l'appui long sur AYN Menu, Android le signale `state OFF` aux applis, et le panneau passe en bas de l'écran du haut (`artifacts/screenshots/01/08-ecran-bas-eteint-haut.png`).
 - [x] Les captures des deux écrans sont dans `artifacts/screenshots/01/`.
 
 ## Rapport
