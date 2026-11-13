@@ -11,8 +11,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlin.time.Clock
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Instant
 
 /**
  * Passerelle factice : rejoue l'enregistrement d'une démo sur le vrai pont (`demo-run.jsonl`,
@@ -20,14 +26,18 @@ import kotlin.time.Duration.Companion.milliseconds
  * le même décodage que la vraie passerelle ; les réponses sont aiguillées par les requêtes
  * enregistrées, comme la vraie le fait avec les siennes.
  *
+ * Les dates enregistrées sont décalées pour que la démo semble se dérouler maintenant : sans cela,
+ * une session « En cours » afficherait l'ancienneté de l'enregistrement.
+ *
  * Elle sert à développer l'interface sans console. Aucune commande ne part.
  */
 class ReplayAgentGateway internal constructor(
     private val load: () -> List<RecordedFrame>,
     private val speed: Double,
+    private val clock: Clock,
 ) : AgentGateway {
 
-    constructor(speed: Double = 1.0) : this(Fixtures::demoRun, speed)
+    constructor(speed: Double = 1.0) : this(Fixtures::demoRun, speed, Clock.System)
 
     private val _sessions = MutableStateFlow<List<Session>>(emptyList())
     private val _agents = MutableStateFlow<List<AgentVersion>>(emptyList())
@@ -37,7 +47,7 @@ class ReplayAgentGateway internal constructor(
 
     override suspend fun maintainConnection() {
         // Près de 500 Ko de JSON : lus hors du fil de l'interface.
-        val frames = withContext(Dispatchers.Default) { load() }
+        val frames = withContext(Dispatchers.Default) { shiftedToNow(load(), clock.now()) }
         val state = BridgeState()
         val requests = HashMap<Long, Pair<String, JsonObject>>()
         var clock = frames.firstOrNull()?.atMillis ?: 0
@@ -78,6 +88,33 @@ class ReplayAgentGateway internal constructor(
                 }
                 null -> false
             }
+        }
+
+        private val DATES = setOf("at", "updatedAt", "createdAt", "startedAt")
+
+        /**
+         * Décale toutes les dates de l'enregistrement (`at`, `updatedAt`, `createdAt`, `startedAt`) de
+         * `now − début`, où le début est la date du premier événement moins son délai dans
+         * l'enregistrement : rejouée à partir de [now], chaque trame porte sa date d'arrivée.
+         */
+        fun shiftedToNow(frames: List<RecordedFrame>, now: Instant): List<RecordedFrame> {
+            val origin = frames.firstOrNull()?.atMillis ?: return frames
+            val start = frames.firstNotNullOfOrNull { recorded ->
+                recorded.frame.obj("event")?.instant("at")?.let { it - (recorded.atMillis - origin).milliseconds }
+            } ?: return frames
+            val offset = now - start
+            return frames.map { it.copy(frame = shift(it.frame, offset) as JsonObject) }
+        }
+
+        private fun shift(element: JsonElement, offset: Duration): JsonElement = when (element) {
+            is JsonObject -> JsonObject(
+                element.mapValues { (key, value) ->
+                    val date = if (key in DATES) (value as? JsonPrimitive)?.takeIf { it.isString }?.content?.let { runCatching { Instant.parse(it) }.getOrNull() } else null
+                    if (date != null) JsonPrimitive((date + offset).toString()) else shift(value, offset)
+                },
+            )
+            is JsonArray -> JsonArray(element.map { shift(it, offset) })
+            else -> element
         }
 
         /** L'état à la fin de l'enregistrement, sans attendre. */

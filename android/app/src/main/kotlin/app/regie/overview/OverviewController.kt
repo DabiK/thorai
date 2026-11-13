@@ -1,6 +1,7 @@
 package app.regie.overview
 
 import app.regie.domain.model.Overview
+import app.regie.domain.model.SessionId
 import app.regie.input.Button
 import app.regie.input.GamepadInput
 import app.regie.input.Trigger
@@ -24,11 +25,18 @@ sealed interface QuitStep {
  */
 data class ControlState(
     val focusedIndex: Int = 0,
+    /** La session qui a le focus : il la suit quand les cartes changent d'ordre. */
+    val focusedId: SessionId? = null,
     val heldTriggers: Set<Trigger> = emptySet(),
     val quit: QuitStep? = null,
 ) {
-    /** Le focus ramené dans la liste, si des sessions ont disparu. */
-    fun focusIn(count: Int): Int = focusedIndex.coerceIn(0, (count - 1).coerceAtLeast(0))
+    /**
+     * La case qui a le focus parmi les cartes affichées ([visible], dans l'ordre) : celle de la
+     * session suivie, sinon l'index ramené dans la liste (session disparue des cartes affichées).
+     */
+    fun focusIn(visible: List<SessionId>): Int =
+        focusedId?.let(visible::indexOf)?.takeIf { it >= 0 }
+            ?: focusedIndex.coerceIn(0, (visible.size - 1).coerceAtLeast(0))
 }
 
 /**
@@ -46,8 +54,21 @@ class OverviewController(
     private val sessions get() = overview.value.sessions
 
     /** Seules les cartes affichées peuvent recevoir le focus. */
-    private val visibleCount get() = sessions.size.coerceAtMost(OverviewGrid.VISIBLE_CARDS)
+    private val visibleIds get() = sessions.take(OverviewGrid.VISIBLE_CARDS).map { it.id }
+    private val visibleCount get() = visibleIds.size
     private val focused get() = sessions.getOrNull(currentFocus())
+
+    /**
+     * À chaque nouvelle vue d'ensemble : le focus suit sa session si elle a changé de place ; si
+     * elle a quitté les cartes affichées, l'index est gardé, borné, et la carte qui s'y trouve est suivie.
+     */
+    fun syncFocus() {
+        val visible = visibleIds
+        _state.update { state ->
+            val index = state.focusIn(visible)
+            state.copy(focusedIndex = index, focusedId = visible.getOrNull(index))
+        }
+    }
 
     fun handle(input: GamepadInput) {
         if (_state.value.quit != null) return handleWhileQuitting(input)
@@ -128,9 +149,9 @@ class OverviewController(
         )
     }
 
-    private fun currentFocus() = _state.value.focusIn(visibleCount)
+    private fun currentFocus() = _state.value.focusIn(visibleIds)
 
     private fun moveFocus(direction: Direction) = setFocus(grid.move(currentFocus(), direction, visibleCount))
 
-    private fun setFocus(index: Int) = _state.update { it.copy(focusedIndex = index) }
+    private fun setFocus(index: Int) = _state.update { it.copy(focusedIndex = index, focusedId = visibleIds.getOrNull(index)) }
 }

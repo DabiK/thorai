@@ -19,17 +19,6 @@ kotlin {
     }
 }
 
-// La passerelle factice rejoue les enregistrements du pont, lus là où le ticket 02 les a rangés :
-// pas de copie, ils partent dans le jar sous `bridge-ws/`.
-sourceSets {
-    main {
-        resources {
-            srcDir(rootProject.layout.projectDirectory.dir("../bridge/fixtures"))
-            include("bridge-ws/*.jsonl")
-        }
-    }
-}
-
 lint {
     abortOnError = true
     warningsAsErrors = true
@@ -45,4 +34,6 @@ dependencies {
     testImplementation(libs.kotlin.test.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.okhttp.mockwebserver)
+    // Les enregistrements du pont : fournis à l'exécution par le debug de `:app`, ici par les tests.
+    testImplementation(project(":bridge-fixtures"))
 }

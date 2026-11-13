@@ -163,9 +163,9 @@ class BridgeAgentGatewayTest {
             val sessions = gateway.sessionsWhere { it.singleOrNull()?.lastAction?.description == "rm x" }
             // La trace prouve le rattrapage : le doublon est compté comme ignoré, sans trou.
             assertTrue("pont : hello envoyé (since=11, journal=j1)" in lines, lines.toString())
-            assertTrue("pont : réponse hello (lastSeq=13, resync=false, 1 sessions, 1 validations)" in lines, lines.toString())
+            assertTrue("pont : réponse hello (lastSeq=13, resync=false, 1 session, 1 validation)" in lines, lines.toString())
             assertTrue(
-                "pont : rattrapage terminé (3 événements, seq 11 → 13, 1 ignorés car déjà vus, aucun trou)" in lines,
+                "pont : rattrapage terminé (3 événements, seq 11 → 13, 1 ignoré car déjà vu, aucun trou)" in lines,
                 lines.toString(),
             )
             assertTrue(lines.any { it.startsWith("pont : connexion perdue (fermée par le pont, code 1001)") }, lines.toString())
@@ -322,7 +322,7 @@ class BridgeAgentGatewayTest {
 
             assertTrue("pont : hello envoyé (since=11, journal=journal-)" in lines, lines.toString())
             assertTrue(
-                "pont : rattrapage terminé (2 événements, seq 12 → 14, 0 ignorés car déjà vus, trous : attendu 13, reçu 14)" in lines,
+                "pont : rattrapage terminé (2 événements, seq 12 → 14, 0 ignoré car déjà vu, trous : attendu 13, reçu 14)" in lines,
                 lines.toString(),
             )
             assertTrue(lines.none { "0123abcd" in it })

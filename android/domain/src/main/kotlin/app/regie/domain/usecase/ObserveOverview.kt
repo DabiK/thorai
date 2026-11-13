@@ -14,7 +14,7 @@ class ObserveOverview(private val gateway: AgentGateway, private val startUp: Fl
             Overview.of(
                 sessions = sessions,
                 agents = agents,
-                bridge = BridgeStatus.of(connection, report?.lastLaunch),
+                bridge = BridgeStatus.of(connection, report?.launch),
                 androidAccessMissing = report?.wirelessDebugging == WirelessDebugging.PERMISSION_MISSING,
             )
         }

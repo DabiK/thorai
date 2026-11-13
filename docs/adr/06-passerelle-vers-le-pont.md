@@ -27,7 +27,7 @@ Passer à OkHttp 5.5 : en même temps que compileSdk 37 (voir ADR 05).
 - Kotlin JVM pur, avec le lint d'Android, comme `:domain`. Il dépend du domaine seulement.
 - `Frames` lit les trames ; `BridgeState` reconstruit l'état (sessions, validations, versions, dernier `seq`) ; `BridgeAgentGateway` tient la connexion (OkHttp) ; `ReplayAgentGateway` est la passerelle factice.
 - La passerelle factice rejoue `demo-run.jsonl` au rythme de l'enregistrement, et **passe par le même décodage** (`BridgeState.onResponse`, `apply`) : les réponses sont aiguillées par les requêtes enregistrées, comme la vraie le fait avec les siennes. Les tests du décodage tournent ainsi sur des données réelles.
-- Les enregistrements sont lus là où le ticket 02 les a rangés (`bridge/fixtures/bridge-ws/`, ajouté comme dossier de ressources Gradle), sans copie. Ils partent dans l'APK (environ 680 Ko, compressés dans l'archive), y compris en release : c'est le prix d'une passerelle factice choisissable sur la console.
+- Les enregistrements sont lus là où le ticket 02 les a rangés (`bridge/fixtures/bridge-ws/`), sans copie, par un petit module sans code, `:bridge-fixtures`, qui en fait des ressources rangées sous `bridge-ws/`. Seuls le debug de `:app` (`debugImplementation`) et les tests de `:gateway-bridge` en dépendent : l'APK debug les embarque (environ 680 Ko), l'APK release non (vérifié avec `assembleRelease`). La passerelle factice n'est de toute façon choisissable qu'en debug.
 - L'ancienne maquette codée en dur (`domain/fake/FakeAgentGateway`) disparaît : plus rien n'en avait besoin.
 - `ArchitectureTest` : l'interface n'importe aucun adapter (`app.regie.gateway.*`, `app.regie.console.*`) ; le domaine n'importe ni OkHttp ni kotlinx-serialization ; la passerelle ne dépend ni d'Android ni de l'app ; un adapter n'importe pas l'autre ; seul `RegieApplication.kt` choisit la passerelle.
 
@@ -77,10 +77,14 @@ Pourquoi : un `resync` remplace tout l'état, et une ligne de la carte (dernièr
 
 Ports : `AndroidAccess` (débogage sans fil) et `BridgeLauncher` (RUN_COMMAND), adapters Android dans `app/console/`.
 
-À la création de l'écran du haut, puis à chaque retour au premier plan, et quand le pont se tait :
+À la création de l'écran du haut, puis à chaque retour au premier plan, et tant que le pont se tait :
 1. **Débogage sans fil** : si Régie a `WRITE_SECURE_SETTINGS`, `Settings.Global` `adb_wifi_enabled` est remis à 1 s'il était à 0. Sans la permission, l'écran du bas le dit sobrement (« Accès des agents à Android ») et le reste fonctionne.
 2. **Pont** : `regie-bridge-start` part par RUN_COMMAND si `/health` ne répond pas, **ou** si le débogage sans fil vient d'être rallumé : le script relie alors les agents au nouveau port, même si le pont tournait déjà.
 3. Un démarrage envoyé il y a moins de 30 s n'est pas renvoyé.
+
+Tant que la connexion reste `Unreachable(NOT_RESPONDING)`, `KeepBridgeUp` (domaine) relance `StartUp` : tout de suite, puis à chaque échéance (le reste des 30 s si un démarrage vient de partir, sinon 30 s). Ainsi un pont qui tombe juste après un démarrage est relancé sans attendre un retour au premier plan. Il ne relance que si un écran de Régie est visible et qu'elle ne quitte pas : Android refuse de démarrer un service depuis l'arrière-plan. Sinon il revérifie toutes les 5 s.
+
+Le rapport d'un lancement dit ce qui s'est passé cette fois-ci : pont déjà là, démarrage envoyé (et son résultat), ou démarrage déjà demandé il y a moins de 30 s.
 
 - `com.termux.permission.RUN_COMMAND` est demandée à l'utilisateur au premier lancement de chaque processus (`RequestPermission`). Refusée : « Pont injoignable » et la marche à suivre (Infos de l'appli › Autorisations › Autorisations supplémentaires).
 - `<queries>` déclare `com.termux` (visibilité des paquets, Android 11 et plus).

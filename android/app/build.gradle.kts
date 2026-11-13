@@ -51,6 +51,8 @@ kotlin {
 dependencies {
     implementation(project(":domain"))
     implementation(project(":gateway-bridge"))
+    // Les enregistrements rejoués par la passerelle factice, qui n'est choisissable qu'en debug.
+    debugImplementation(project(":bridge-fixtures"))
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)

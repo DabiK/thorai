@@ -196,7 +196,8 @@ class BridgeAgentGateway(
                                 Hello.parse(result)?.let { hello ->
                                     log(
                                         "pont : réponse hello (lastSeq=${hello.lastSeq}, resync=${hello.resync}, " +
-                                            "${hello.sessions.size} sessions, ${hello.approvals.size} validations)",
+                                            "${count(hello.sessions.size, "session", "sessions")}, " +
+                                            "${count(hello.approvals.size, "validation", "validations")})",
                                     )
                                     val since = params.long("since")
                                     val target = hello.lastSeq
@@ -277,8 +278,9 @@ class BridgeAgentGateway(
             if (seq >= target) done = true
         }
 
-        fun summary() = "pont : rattrapage terminé ($received événements, seq $first → $last, " +
-            "$ignored ignorés car déjà vus, " + (if (gaps.isEmpty()) "aucun trou" else "trous : ${gaps.joinToString("; ")}") + ")"
+        fun summary() = "pont : rattrapage terminé (${count(received, "événement", "événements")}, seq $first → $last, " +
+            "${count(ignored, "ignoré car déjà vu", "ignorés car déjà vus")}, " +
+            (if (gaps.isEmpty()) "aucun trou" else "trous : ${gaps.joinToString("; ")}") + ")"
     }
 
     /** Appelé sur les fils d'OkHttp : il ne fait que passer les signaux à la boucle de connexion. */
@@ -315,6 +317,9 @@ class BridgeAgentGateway(
         /** 0,5 s, 1 s, 2 s, 4 s, puis 5 s. */
         fun backoff(attempt: Int): Duration =
             (FIRST_RETRY * (1 shl (attempt - 1).coerceIn(0, 10))).coerceAtMost(LAST_RETRY)
+
+        /** « 0 session », « 1 session », « 2 sessions » : le pluriel français commence à 2. */
+        private fun count(n: Int, one: String, many: String) = "$n ${if (n < 2) one else many}"
 
         private fun reasonOf(code: Int?): UnreachableReason =
             if (code == 401) UnreachableReason.TOKEN_REFUSED else UnreachableReason.NOT_RESPONDING

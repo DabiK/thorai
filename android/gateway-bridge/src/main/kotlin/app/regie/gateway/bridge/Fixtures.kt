@@ -2,7 +2,10 @@ package app.regie.gateway.bridge
 
 import kotlinx.serialization.json.JsonObject
 
-/** Les enregistrements du vrai pont (`bridge/fixtures/bridge-ws/`, ticket 02), embarqués dans le module. */
+/**
+ * Les enregistrements du vrai pont (`bridge/fixtures/bridge-ws/`, ticket 02), lus sur le classpath.
+ * Ils viennent du module `:bridge-fixtures`, présent en debug et dans les tests, absent en release.
+ */
 internal object Fixtures {
     const val DEMO_RUN = "demo-run.jsonl"
     const val CLAUDE_SESSION = "claude-session.jsonl"

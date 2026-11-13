@@ -22,7 +22,7 @@ class StartUpTest {
     fun `a bridge already up with wireless debugging on is left alone`() = runTest {
         val report = startUp()
 
-        assertEquals(StartUpReport(WirelessDebugging.ALREADY_ON, lastLaunch = null), report)
+        assertEquals(StartUpReport(WirelessDebugging.ALREADY_ON, bridgeUp = true, launch = null), report)
         assertEquals(emptyList(), launcher.sent)
     }
 
@@ -30,7 +30,7 @@ class StartUpTest {
     fun `a silent bridge is started`() = runTest {
         gateway.bridgeUp = false
 
-        assertEquals(StartUpReport(WirelessDebugging.ALREADY_ON, LaunchResult.SENT), startUp())
+        assertEquals(StartUpReport(WirelessDebugging.ALREADY_ON, bridgeUp = false, launch = LaunchResult.SENT), startUp())
         assertEquals(listOf("start"), launcher.sent)
     }
 
@@ -69,8 +69,9 @@ class StartUpTest {
         access.result = WirelessDebugging.PERMISSION_MISSING
         gateway.bridgeUp = false
 
-        assertEquals(StartUpReport(WirelessDebugging.PERMISSION_MISSING, LaunchResult.SENT), startUp())
-        assertEquals(startUp.report.value, StartUpReport(WirelessDebugging.PERMISSION_MISSING, LaunchResult.SENT))
+        val expected = StartUpReport(WirelessDebugging.PERMISSION_MISSING, bridgeUp = false, launch = LaunchResult.SENT)
+        assertEquals(expected, startUp())
+        assertEquals(expected, startUp.report.value)
     }
 
     @Test
@@ -78,9 +79,9 @@ class StartUpTest {
         gateway.bridgeUp = false
         launcher.result = LaunchResult.PERMISSION_MISSING
 
-        assertEquals(LaunchResult.PERMISSION_MISSING, startUp().lastLaunch)
+        assertEquals(LaunchResult.PERMISSION_MISSING, startUp().launch)
         launcher.result = LaunchResult.SENT
-        assertEquals(LaunchResult.SENT, startUp().lastLaunch)
+        assertEquals(LaunchResult.SENT, startUp().launch)
         assertEquals(listOf("start", "start"), launcher.sent)
     }
 
@@ -92,9 +93,23 @@ class StartUpTest {
         val report = startUp()
 
         assertEquals(listOf("start"), launcher.sent)
-        assertEquals(LaunchResult.SENT, report.lastLaunch)
+        assertEquals(StartUpReport(WirelessDebugging.ALREADY_ON, bridgeUp = false, launch = null, retryIn = 20.seconds), report)
         time += 25.seconds
         startUp()
         assertEquals(listOf("start", "start"), launcher.sent)
+    }
+
+    @Test
+    fun `the report tells what this launch did, not an earlier one`() = runTest {
+        gateway.bridgeUp = false
+        launcher.result = LaunchResult.PERMISSION_MISSING
+        assertEquals(LaunchResult.PERMISSION_MISSING, startUp().launch)
+
+        // Le pont a été démarré depuis le Mac : rien à démarrer cette fois.
+        gateway.bridgeUp = true
+        val report = startUp()
+
+        assertEquals(StartUpReport(WirelessDebugging.ALREADY_ON, bridgeUp = true, launch = null), report)
+        assertEquals(report, startUp.report.value)
     }
 }

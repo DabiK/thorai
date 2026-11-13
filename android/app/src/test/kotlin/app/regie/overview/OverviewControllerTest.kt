@@ -147,10 +147,57 @@ class OverviewControllerTest {
         press(Button.DOWN)
         press(Button.RIGHT)
         overview.value = overviewOf(sessions.filterNot { it.id == SessionId("thor-dev") })
+        controller.syncFocus()
 
-        assertEquals(2, controller.state.value.focusIn(overview.value.sessions.size))
+        assertEquals(2, focus)
         press(Button.A)
         assertEquals(listOf<OverviewAction>(OverviewAction.OpenSession(SessionId("montage"))), actions)
+    }
+
+    /** Ce que fait la racine de composition à chaque nouvelle vue d'ensemble. */
+    private fun publish(list: List<Session>) {
+        overview.value = overviewOf(list)
+        controller.syncFocus()
+    }
+
+    @Test
+    fun `the focus follows its session when the cards change order`() {
+        controller.syncFocus()
+        press(Button.RIGHT)
+        assertEquals(SessionId("atelier-meubles"), controller.state.value.focusedId)
+
+        // « montage » change de statut : elle passe en tête, les autres reculent d'une case.
+        publish(sessions.map { if (it.id == SessionId("montage")) it.copy(updatedAt = t0) else it })
+
+        assertEquals(2, focus)
+        press(Button.A)
+        assertEquals(listOf<OverviewAction>(OverviewAction.OpenSession(SessionId("atelier-meubles"))), actions)
+    }
+
+    @Test
+    fun `the first card keeps its session from the start, before any move`() {
+        controller.syncFocus()
+
+        publish(sessions.map { if (it.id == SessionId("thor-dev")) it.copy(updatedAt = t0) else it })
+
+        assertEquals(1, focus)
+        press(Button.A)
+        assertEquals(listOf<OverviewAction>(OverviewAction.OpenSession(SessionId("atelier"))), actions)
+    }
+
+    @Test
+    fun `a session leaving the four cards shown leaves the focus on its square`() {
+        controller.syncFocus()
+        press(Button.DOWN)
+        assertEquals(SessionId("montage"), controller.state.value.focusedId)
+
+        // Deux sessions plus récentes repoussent « montage » à la cinquième place.
+        val newer = (1..2).map { session("new-$it", SessionStatus.WORKING, minutesAgo = 0).copy(updatedAt = t0 + it.minutes) }
+        publish(newer + sessions)
+
+        assertEquals(2, focus)
+        press(Button.A)
+        assertEquals(listOf<OverviewAction>(OverviewAction.OpenSession(SessionId("atelier"))), actions)
     }
 
     @Test

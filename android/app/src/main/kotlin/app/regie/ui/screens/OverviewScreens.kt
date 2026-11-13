@@ -270,7 +270,7 @@ private fun rememberNow(): State<Instant> = produceState(Clock.System.now()) {
 @Composable
 private fun SessionGrid(overview: Overview, control: ControlState, now: Instant, compact: Boolean, modifier: Modifier) {
     val sessions = overview.sessions
-    val focus = control.focusIn(sessions.size.coerceAtMost(OverviewGrid.VISIBLE_CARDS))
+    val focus = control.focusIn(sessions.take(OverviewGrid.VISIBLE_CARDS).map { it.id })
     Column(
         modifier = modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = if (compact) 12.dp else 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),

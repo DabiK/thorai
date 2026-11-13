@@ -25,7 +25,7 @@ class ObserveOverviewTest {
         gateway.sessions.value = listOf(session("1"))
         gateway.agents.value = listOf(AgentVersion(Agent.CODEX, "0.167.2", isTested = false))
         gateway.connection.value = BridgeConnection.Unreachable(UnreachableReason.NOT_RESPONDING)
-        val report = MutableStateFlow<StartUpReport?>(StartUpReport(WirelessDebugging.PERMISSION_MISSING, LaunchResult.PERMISSION_MISSING))
+        val report = MutableStateFlow<StartUpReport?>(StartUpReport(WirelessDebugging.PERMISSION_MISSING, bridgeUp = false, launch = LaunchResult.PERMISSION_MISSING))
 
         val overview = ObserveOverview(gateway, report)().first()
 

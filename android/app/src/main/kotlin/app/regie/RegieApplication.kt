@@ -7,10 +7,9 @@ import android.util.Log
 import app.regie.console.TermuxBridgeLauncher
 import app.regie.console.WirelessDebuggingAccess
 import app.regie.display.DisplayMonitor
-import app.regie.domain.model.BridgeConnection
 import app.regie.domain.model.Overview
-import app.regie.domain.model.UnreachableReason
 import app.regie.domain.port.AgentGateway
+import app.regie.domain.usecase.KeepBridgeUp
 import app.regie.domain.usecase.ObserveOverview
 import app.regie.domain.usecase.OpenApproval
 import app.regie.domain.usecase.OpenSession
@@ -66,6 +65,7 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
     private var startUp: StartUp? = null
     private var quit: Quit? = null
     private var startUpJob: Job? = null
+    private var keepBridgeUpJob: Job? = null
 
     private val startDictation = StartDictation()
     private val stopDictation = StopDictation()
@@ -83,6 +83,9 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
 
     /** L'écran du haut existe : l'écran du bas se ferme quand il disparaît. */
     val topAlive = MutableStateFlow(false)
+
+    /** L'écran du haut est visible. */
+    val topStarted = MutableStateFlow(false)
 
     /** L'écran du bas est visible : l'écran du haut ne le relance pas. */
     val bottomStarted = MutableStateFlow(false)
@@ -123,11 +126,18 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
         Log.i(TAG, "passerelle : ${if (replay) "factice (enregistrements du pont)" else "pont"}")
 
         scope.launch { chosen.maintainConnection() }
-        scope.launch { ObserveOverview(chosen, reports)().collect { _overview.value = it } }
-        // Le pont s'est tu en cours de route : Régie le relance (StartUp espace les tentatives).
         scope.launch {
-            chosen.connection.collect {
-                if (it == BridgeConnection.Unreachable(UnreachableReason.NOT_RESPONDING)) runStartUp()
+            ObserveOverview(chosen, reports)().collect {
+                _overview.value = it
+                // Dans la même passe : jamais une image où le focus pointe une autre session.
+                controller.syncFocus()
+            }
+        }
+        // Le pont s'est tu en cours de route : Régie le relance, à chaque échéance, tant qu'un de
+        // ses écrans est visible (Android refuse de démarrer un service depuis l'arrière-plan).
+        startUp?.let { useCase ->
+            keepBridgeUpJob = scope.launch {
+                KeepBridgeUp(chosen, useCase, canStart = { !_closing.value && (topStarted.value || bottomStarted.value) }).run()
             }
         }
     }
@@ -138,7 +148,12 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
         if (startUpJob?.isActive == true || _closing.value) return
         startUpJob = scope.launch {
             val report = useCase()
-            Log.i(TAG, "lancement : débogage sans fil ${report.wirelessDebugging}, pont ${report.lastLaunch ?: "déjà là"}")
+            val bridge = when {
+                report.launch != null -> "démarrage ${report.launch}"
+                report.bridgeUp -> "déjà là"
+                else -> "démarrage déjà demandé il y a moins de 30 s"
+            }
+            Log.i(TAG, "lancement : débogage sans fil ${report.wirelessDebugging}, pont $bridge")
         }
     }
 
@@ -167,6 +182,7 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
     private fun quitNow() {
         scope.launch {
             startUpJob?.cancel()
+            keepBridgeUpJob?.cancel()
             val outcome = quit?.invoke()
             Log.i(TAG, "quitter : $outcome")
             _closing.value = true

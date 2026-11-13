@@ -57,6 +57,7 @@ class TopActivity : GamepadActivity() {
 
     override fun onStart() {
         super.onStart()
+        container.topStarted.value = true
         // À chaque retour au premier plan : le pont a pu s'arrêter, la console redémarrer.
         if (!relaunched && !askingPermission) container.runStartUp()
     }
@@ -70,6 +71,11 @@ class TopActivity : GamepadActivity() {
         if (checkSelfPermission(TermuxBridgeLauncher.PERMISSION) == PackageManager.PERMISSION_GRANTED) return
         askingPermission = true
         runCommandPermission.launch(TermuxBridgeLauncher.PERMISSION)
+    }
+
+    override fun onStop() {
+        container.topStarted.value = false
+        super.onStop()
     }
 
     override fun onNewIntent(intent: Intent) {

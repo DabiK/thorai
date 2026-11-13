@@ -63,14 +63,14 @@ sealed interface BridgeStatus {
     data class Unreachable(val hint: BridgeHint) : BridgeStatus
 
     companion object {
-        fun of(connection: BridgeConnection, lastLaunch: LaunchResult?): BridgeStatus = when (connection) {
+        fun of(connection: BridgeConnection, launch: LaunchResult?): BridgeStatus = when (connection) {
             BridgeConnection.Connecting -> Connecting
             BridgeConnection.Connected -> Connected
             is BridgeConnection.Unreachable -> Unreachable(
                 when (connection.reason) {
                     UnreachableReason.TOKEN_MISSING -> BridgeHint.TOKEN_MISSING
                     UnreachableReason.TOKEN_REFUSED -> BridgeHint.TOKEN_REFUSED
-                    UnreachableReason.NOT_RESPONDING -> when (lastLaunch) {
+                    UnreachableReason.NOT_RESPONDING -> when (launch) {
                         LaunchResult.PERMISSION_MISSING -> BridgeHint.GRANT_RUN_COMMAND
                         LaunchResult.TERMUX_MISSING -> BridgeHint.TERMUX_MISSING
                         LaunchResult.SENT, null -> BridgeHint.RESTARTING
