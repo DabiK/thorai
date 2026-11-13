@@ -1,6 +1,6 @@
 # 01 — Socle Android : deux écrans, manette et vue d'ensemble factice
 
-Statut : bloqué
+Statut : fait (reste l'essai « écran du bas éteint », à faire avec l'utilisateur)
 Bloqué par : rien
 Possède : `android/`, `scripts/thor-*.sh`
 
@@ -60,7 +60,7 @@ Poser l'app Android sur la Thor, avec ses deux écrans, sa manette et le systèm
 - `./gradlew check` est vert : lint sans avertissement toléré, 58 tests (`domain` et `app`), dont 4 d'architecture.
 - Captures : `artifacts/screenshots/01/` (7 états, haut et bas).
 
-**À faire par l'utilisateur** (marche à suivre complète dans l'ADR 02, « Conséquences ») :
+**À faire par l'utilisateur** (marche à suivre complète dans l'ADR 05, « Conséquences ») :
 1. Lancer Régie (`scripts/thor-install.sh`).
 2. Éteindre l'écran du bas par l'assistant d'écran double d'Odin (mode « Only bottom screen » / fermer l'écran secondaire).
 3. Relever `adb -s THOR0000000001 shell dumpsys display | grep -E 'Screen-2.*state'` et `adb -s THOR0000000001 logcat -d -s Regie`. Le journal doit contenir `mode d'écran : Single`, et le panneau doit apparaître en bas de l'écran haut.
@@ -75,4 +75,4 @@ Si l'écran reste à `state ON` une fois éteint (luminosité nulle), la détect
 **Hors périmètre, pour les tickets suivants :**
 - Le toucher du micro et la gâchette L2 ne sont pas combinés. Lever le doigt arrête la dictée même si L2 est encore enfoncé (ticket 08).
 - Au-delà de 4 sessions, les cartes en trop ne sont pas affichées et le stick droit ne fait rien. Le focus reste sur les 4 cartes visibles (ticket 05).
-- `docs/adr/02-socle-android.md` a le même numéro que `02-pilotage-des-agents.md` (ticket 02) : à renuméroter à la fusion.
+- `docs/adr/05-socle-android.md` a le même numéro que `02-pilotage-des-agents.md` (ticket 02) : à renuméroter à la fusion.

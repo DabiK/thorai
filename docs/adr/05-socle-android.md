@@ -1,4 +1,4 @@
-# ADR 02 — Socle Android : versions, deux écrans, manette, polices
+# ADR 05 — Socle Android : versions, deux écrans, manette, polices
 
 Statut : accepté, 13 novembre 2026 (ticket 01).
 
