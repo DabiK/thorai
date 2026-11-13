@@ -1,0 +1,331 @@
+package app.regie.gateway.bridge
+
+import app.regie.domain.model.ActionStatus
+import app.regie.domain.model.BridgeConnection
+import app.regie.domain.model.LastAction
+import app.regie.domain.model.Session
+import app.regie.domain.model.SessionStatus
+import app.regie.domain.model.UnreachableReason
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import kotlinx.serialization.json.JsonObject
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
+import okhttp3.Response
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
+import java.util.concurrent.CopyOnWriteArrayList
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
+
+/** La connexion au pont, contre un faux pont local (MockWebServer) : jamais la console. */
+class BridgeAgentGatewayTest {
+
+    private val server = MockWebServer()
+    private var token: String? = "0123abcd"
+    private val lines = CopyOnWriteArrayList<String>()
+
+    @BeforeTest
+    fun start() = server.start()
+
+    @AfterTest
+    fun stop() = server.close()
+
+    private fun gateway(unreachableAfter: Int = 2) = BridgeAgentGateway(
+        baseUrl = server.url("/").toString(),
+        token = { token },
+        retryDelay = { 20.milliseconds },
+        unreachableAfter = unreachableAfter,
+        historyCount = 4,
+        shutdownTimeout = 2.seconds,
+        log = { lines += it },
+    )
+
+    /** Un faux pont, une connexion : il reçoit les requêtes et répond à la main. */
+    private class FakeBridge : WebSocketListener() {
+        val requests = Channel<JsonObject>(Channel.UNLIMITED)
+        val opened = Channel<WebSocket>(1)
+
+        override fun onOpen(webSocket: WebSocket, response: Response) {
+            opened.trySend(webSocket)
+        }
+
+        override fun onMessage(webSocket: WebSocket, text: String) {
+            requests.trySend(Frames.parseObject(text)!!)
+        }
+
+        suspend fun socket() = opened.receive()
+
+        suspend fun next(method: String): JsonObject {
+            while (true) {
+                val request = requests.receive()
+                if (request.string("method") == method) return request
+            }
+        }
+    }
+
+    private fun upgrade(bridge: FakeBridge) = server.enqueue(MockResponse.Builder().webSocketUpgrade(bridge).build())
+
+    private fun sessionJson(id: String, status: String, updatedAt: String, pending: String = "") =
+        """{"sessionId":"$id","agent":"codex","project":"demo","cwd":"/home/dev/projects/demo","branch":"main",
+           "approvalMode":"ask","status":"$status","title":"Titre $id","createdAt":"2026-11-13T21:00:00Z",
+           "updatedAt":"$updatedAt","lastError":null,"active":true,"pendingApprovals":[$pending]}"""
+
+    private fun helloResult(id: Long, journal: String, lastSeq: Long, sessions: String, approvals: String = "", resync: Boolean = false) =
+        """{"id":$id,"result":{"bridge":{"version":"0.1.0"},"journal":"$journal","lastSeq":$lastSeq,"resync":$resync,
+           "sessions":[$sessions],"approvals":[$approvals],"agents":[]}}"""
+
+    private fun toolCall(seq: Long, call: String, command: String) =
+        """{"event":{"seq":$seq,"at":"2026-11-13T21:00:${10 + seq}Z","sessionId":"s","type":"session_update",
+           "data":{"sessionUpdate":"tool_call","toolCallId":"$call","title":"$command","kind":"execute","status":"in_progress",
+           "rawInput":{"command":"$command"}}}}"""
+
+    private fun versions(id: Long) =
+        """{"id":$id,"result":{"agents":[{"agent":"codex","binary":"codex-cli 0.168.0","isTested":false}]}}"""
+
+    private suspend fun BridgeAgentGateway.sessionsWhere(predicate: (List<Session>) -> Boolean) =
+        withTimeout(5.seconds) { sessions.first(predicate) }
+
+    private fun <T> withGateway(gateway: BridgeAgentGateway, block: suspend CoroutineScope.() -> T): T = runBlocking {
+        val job = launch(Dispatchers.Default) { gateway.maintainConnection() }
+        try {
+            withTimeout(15.seconds) { block() }
+        } finally {
+            job.cancelAndJoin()
+        }
+    }
+
+    @Test
+    fun `the token goes in the Authorization header and the first hello has no since`() {
+        val bridge = FakeBridge()
+        upgrade(bridge)
+        val gateway = gateway()
+
+        withGateway(gateway) {
+            val hello = bridge.next("hello")
+            assertEquals(JsonObject(emptyMap()), hello.obj("params"))
+            assertEquals("Bearer 0123abcd", server.takeRequest().headers["Authorization"])
+        }
+    }
+
+    @Test
+    fun `after a cut, the app reconnects alone and catches up without duplicate nor loss`() {
+        val first = FakeBridge()
+        upgrade(first)
+        val gateway = gateway()
+
+        withGateway(gateway) {
+            val hello = first.next("hello")
+            val socket = first.socket()
+            socket.send(helloResult(hello.long("id")!!, "j1", lastSeq = 10, sessions = sessionJson("s", "working", "2026-11-13T21:00:10Z")))
+            val history = first.next("session.events")
+            assertEquals("s", history.obj("params")?.string("sessionId"))
+            socket.send("""{"id":${history.long("id")},"result":{"events":[]}}""")
+            socket.send(toolCall(11, "a", "ls"))
+            gateway.sessionsWhere { it.singleOrNull()?.lastAction?.description == "ls" }
+            assertEquals(BridgeConnection.Connected, gateway.connection.value)
+
+            // Le pont s'arrête, puis revient.
+            val second = FakeBridge()
+            upgrade(second)
+            socket.close(1001, "arrêt du pont")
+
+            val reconnect = second.next("hello")
+            assertEquals(11, reconnect.obj("params")?.long("since"))
+            assertEquals("j1", reconnect.obj("params")?.string("journal"))
+            val socket2 = second.socket()
+            socket2.send(
+                helloResult(
+                    reconnect.long("id")!!, "j1", lastSeq = 13,
+                    sessions = sessionJson("s", "awaiting_approval", "2026-11-13T21:00:30Z", pending = "\"p\""),
+                    approvals = """{"approvalId":"p","sessionId":"s","toolCall":{"kind":"execute","title":"rm x","rawInput":{"command":"rm x"}},"options":[]}""",
+                ),
+            )
+            // Rattrapage : un doublon de l'événement 11, puis les manqués 12 et 13.
+            socket2.send(toolCall(11, "a", "ls"))
+            socket2.send(toolCall(12, "b", "cat notes.md"))
+            socket2.send(toolCall(13, "c", "rm x"))
+            socket2.send(toolCall(12, "b", "cat notes.md"))
+
+            val sessions = gateway.sessionsWhere { it.singleOrNull()?.lastAction?.description == "rm x" }
+            // La trace prouve le rattrapage : le doublon est compté comme ignoré, sans trou.
+            assertTrue("pont : hello envoyé (since=11, journal=j1)" in lines, lines.toString())
+            assertTrue("pont : réponse hello (lastSeq=13, resync=false, 1 sessions, 1 validations)" in lines, lines.toString())
+            assertTrue(
+                "pont : rattrapage terminé (3 événements, seq 11 → 13, 1 ignorés car déjà vus, aucun trou)" in lines,
+                lines.toString(),
+            )
+            assertTrue(lines.any { it.startsWith("pont : connexion perdue (fermée par le pont, code 1001)") }, lines.toString())
+            assertTrue(lines.none { "0123abcd" in it }, "le jeton ne doit jamais apparaître dans la trace")
+            val session = sessions.single()
+            assertEquals(SessionStatus.AWAITING_APPROVAL, session.status)
+            assertEquals("rm x", session.pendingApproval?.subject)
+            assertEquals(LastAction("rm x", ActionStatus.IN_PROGRESS), session.lastAction)
+
+            // Le rattrapage ne recharge pas les journaux : rien n'est perdu, tout est arrivé par le direct.
+            val next = second.requests.receive()
+            assertEquals("agents.versions", next.string("method"))
+            socket2.send(versions(next.long("id")!!))
+            withTimeout(5.seconds) { gateway.agents.first { it.isNotEmpty() } }
+            assertTrue(second.requests.tryReceive().isFailure)
+        }
+    }
+
+    @Test
+    fun `a resync forgets the old state and reloads the journal of the sessions shown`() {
+        val first = FakeBridge()
+        upgrade(first)
+        val gateway = gateway()
+
+        withGateway(gateway) {
+            val hello = first.next("hello")
+            val socket = first.socket()
+            socket.send(helloResult(hello.long("id")!!, "ancien", lastSeq = 50, sessions = sessionJson("s", "idle", "2026-11-13T21:00:10Z")))
+            gateway.sessionsWhere { it.size == 1 }
+
+            val second = FakeBridge()
+            upgrade(second)
+            socket.close(1001, "arrêt du pont")
+            val reconnect = second.next("hello")
+            assertEquals(50, reconnect.obj("params")?.long("since"))
+            val socket2 = second.socket()
+            socket2.send(helloResult(reconnect.long("id")!!, "nouveau", lastSeq = 3, sessions = sessionJson("t", "working", "2026-11-13T22:00:00Z"), resync = true))
+            gateway.sessionsWhere { it.map { s -> s.id.value } == listOf("t") }
+
+            val history = second.next("session.events")
+            assertEquals("t", history.obj("params")?.string("sessionId"))
+            socket2.send(
+                """{"id":${history.long("id")},"result":{"events":[
+                   {"seq":2,"at":"2026-11-13T22:00:01Z","sessionId":"t","type":"session_update","data":{"sessionUpdate":"tool_call","toolCallId":"x","title":"npm test","kind":"execute","status":"in_progress","rawInput":{"command":"npm test"}}}]}}""",
+            )
+            val session = gateway.sessionsWhere { it.singleOrNull()?.lastAction != null }.single()
+            assertEquals(LastAction("npm test", ActionStatus.IN_PROGRESS), session.lastAction)
+        }
+    }
+
+    @Test
+    fun `a refused token is reported at once`() {
+        server.enqueue(MockResponse.Builder().code(401).build())
+        server.enqueue(MockResponse.Builder().code(401).build())
+        val gateway = gateway(unreachableAfter = 10)
+
+        withGateway(gateway) {
+            withTimeout(5.seconds) { gateway.connection.first { it is BridgeConnection.Unreachable } }
+            assertEquals(BridgeConnection.Unreachable(UnreachableReason.TOKEN_REFUSED), gateway.connection.value)
+        }
+    }
+
+    @Test
+    fun `a missing token is reported without calling the bridge`() {
+        token = null
+        val gateway = gateway()
+
+        withGateway(gateway) {
+            withTimeout(5.seconds) { gateway.connection.first { it is BridgeConnection.Unreachable } }
+            assertEquals(BridgeConnection.Unreachable(UnreachableReason.TOKEN_MISSING), gateway.connection.value)
+            assertEquals(0, server.requestCount)
+        }
+    }
+
+    @Test
+    fun `a bridge still starting (503) is retried, and only then said unreachable`() {
+        repeat(3) { server.enqueue(MockResponse.Builder().code(503).build()) }
+        val bridge = FakeBridge()
+        upgrade(bridge)
+        val gateway = gateway(unreachableAfter = 2)
+
+        withGateway(gateway) {
+            withTimeout(5.seconds) { gateway.connection.first { it is BridgeConnection.Unreachable } }
+            assertEquals(BridgeConnection.Unreachable(UnreachableReason.NOT_RESPONDING), gateway.connection.value)
+            val hello = bridge.next("hello")
+            bridge.socket().send(helloResult(hello.long("id")!!, "j", lastSeq = 0, sessions = ""))
+            withTimeout(5.seconds) { gateway.connection.first { it == BridgeConnection.Connected } }
+        }
+    }
+
+    @Test
+    fun `quitting asks the bridge to shut down`() {
+        val bridge = FakeBridge()
+        upgrade(bridge)
+        val gateway = gateway()
+
+        withGateway(gateway) {
+            val hello = bridge.next("hello")
+            val socket = bridge.socket()
+            socket.send(helloResult(hello.long("id")!!, "j", lastSeq = 0, sessions = ""))
+            withTimeout(5.seconds) { gateway.connection.first { it == BridgeConnection.Connected } }
+
+            val stopped = async { gateway.shutdownBridge() }
+            val shutdown = bridge.next("bridge.shutdown")
+            socket.send("""{"id":${shutdown.long("id")},"result":{}}""")
+            assertTrue(stopped.await())
+        }
+    }
+
+    @Test
+    fun `without a connection, the shutdown is not heard`() = runBlocking {
+        assertFalse(gateway().shutdownBridge())
+    }
+
+    @Test
+    fun `the health check says whether the bridge is up`() = runBlocking {
+        server.enqueue(MockResponse.Builder().body("""{"ok":true}""").build())
+        assertTrue(gateway().isBridgeUp())
+        assertEquals("/health", server.takeRequest().url.encodedPath)
+        server.enqueue(MockResponse.Builder().code(500).build())
+        assertFalse(gateway().isBridgeUp())
+    }
+
+    @Test
+    fun `the retry delay grows from half a second to five`() {
+        assertEquals(
+            listOf(500, 1000, 2000, 4000, 5000, 5000).map { it.milliseconds },
+            (1..6).map(BridgeAgentGateway::backoff),
+        )
+    }
+
+    @Test
+    fun `a gap in the catch-up is reported`() {
+        val first = FakeBridge()
+        upgrade(first)
+        val gateway = gateway()
+
+        withGateway(gateway) {
+            val hello = first.next("hello")
+            val socket = first.socket()
+            socket.send(helloResult(hello.long("id")!!, "journal-long-1234", lastSeq = 11, sessions = sessionJson("s", "working", "2026-11-13T21:00:10Z")))
+            withTimeout(5.seconds) { gateway.connection.first { it == BridgeConnection.Connected } }
+
+            val second = FakeBridge()
+            upgrade(second)
+            socket.close(1001, "arrêt du pont")
+            val reconnect = second.next("hello")
+            second.socket().apply {
+                send(helloResult(reconnect.long("id")!!, "journal-long-1234", lastSeq = 14, sessions = sessionJson("s", "working", "2026-11-13T21:00:20Z")))
+                send(toolCall(12, "a", "ls"))
+                send(toolCall(14, "b", "rm x"))
+            }
+            gateway.sessionsWhere { it.singleOrNull()?.lastAction?.description == "rm x" }
+
+            assertTrue("pont : hello envoyé (since=11, journal=journal-)" in lines, lines.toString())
+            assertTrue(
+                "pont : rattrapage terminé (2 événements, seq 12 → 14, 0 ignorés car déjà vus, trous : attendu 13, reçu 14)" in lines,
+                lines.toString(),
+            )
+            assertTrue(lines.none { "0123abcd" in it })
+        }
+    }
+}

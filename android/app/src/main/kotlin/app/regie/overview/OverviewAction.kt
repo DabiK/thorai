@@ -14,4 +14,7 @@ sealed interface OverviewAction {
     data object NewSession : OverviewAction
     data class SpeakSummary(val target: SessionId?) : OverviewAction
     data object PauseAll : OverviewAction
+
+    /** Arrêter les sessions et le pont, puis fermer Régie. */
+    data object Quit : OverviewAction
 }

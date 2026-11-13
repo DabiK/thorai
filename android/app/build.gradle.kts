@@ -50,6 +50,7 @@ kotlin {
 
 dependencies {
     implementation(project(":domain"))
+    implementation(project(":gateway-bridge"))
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)

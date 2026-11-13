@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,27 +12,42 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import app.regie.R
+import app.regie.domain.model.AgentVersion
+import app.regie.domain.model.BridgeHint
+import app.regie.domain.model.BridgeStatus
 import app.regie.domain.model.Overview
 import app.regie.input.Button
 import app.regie.input.Trigger
 import app.regie.overview.ControlState
 import app.regie.overview.OverviewGrid
+import app.regie.overview.QuitStep
 import app.regie.ui.components.ApprovalBanner
 import app.regie.ui.components.ButtonChip
 import app.regie.ui.components.MicButton
@@ -39,28 +55,53 @@ import app.regie.ui.components.SessionCard
 import app.regie.ui.theme.Palette
 import app.regie.ui.theme.mono
 import app.regie.ui.theme.sans
+import kotlinx.coroutines.delay
+import java.util.Locale
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 /** Ce que l'écran du bas peut demander, au doigt comme à la manette. */
 interface ControlCallbacks {
     fun onButton(button: Button)
     fun onTrigger(trigger: Trigger, held: Boolean)
     fun onOpenApproval()
+
+    /** « Quitter », au toucher : le PRD ne lui donne pas de bouton de manette. */
+    fun onQuit()
+    fun onConfirmQuit()
+    fun onCancelQuit()
 }
 
 /** Écran du haut : la vue d'ensemble. En mode un seul écran, la zone du bas devient un panneau en bas. */
 @Composable
 fun OverviewTopScreen(overview: Overview, control: ControlState, singleScreen: Boolean, callbacks: ControlCallbacks) {
-    Column(Modifier.fillMaxSize().background(Palette.background)) {
-        OverviewHeader(overview)
-        SessionGrid(overview, control, compact = singleScreen, modifier = Modifier.weight(1f))
-        if (singleScreen) CompactControlPanel(overview, control, callbacks)
+    val now by rememberNow()
+    Box(Modifier.fillMaxSize().background(Palette.background)) {
+        Column(Modifier.fillMaxSize()) {
+            OverviewHeader(overview)
+            SessionGrid(overview, control, now, compact = singleScreen, modifier = Modifier.weight(1f))
+            if (singleScreen) {
+                Notices(overview, Modifier.padding(start = 20.dp, end = 20.dp, bottom = 10.dp).fillMaxWidth())
+                CompactControlPanel(overview, control, callbacks)
+            }
+        }
+        if (singleScreen) control.quit?.let { QuitPrompt(it, callbacks) }
     }
 }
 
 /** Écran du bas : la première validation en attente, le micro et les boutons utiles. */
 @Composable
 fun OverviewBottomScreen(overview: Overview, control: ControlState, callbacks: ControlCallbacks) {
-    Column(Modifier.fillMaxSize().background(Palette.background)) {
+    Box(Modifier.fillMaxSize().background(Palette.background)) {
+        BottomContent(overview, control, callbacks)
+        control.quit?.let { QuitPrompt(it, callbacks) }
+    }
+}
+
+@Composable
+private fun BottomContent(overview: Overview, control: ControlState, callbacks: ControlCallbacks) {
+    Column(Modifier.fillMaxSize()) {
+        // La première validation en attente d'abord, en haut de l'écran (PRD, parcours 1).
         overview.firstPendingApproval?.let {
             ApprovalBanner(
                 pending = it,
@@ -68,6 +109,7 @@ fun OverviewBottomScreen(overview: Overview, control: ControlState, callbacks: C
                 modifier = Modifier.padding(start = 16.dp, top = 14.dp, end = 16.dp).fillMaxWidth(),
             )
         }
+        Notices(overview, Modifier.padding(start = 16.dp, top = 14.dp, end = 16.dp).fillMaxWidth())
         Column(
             modifier = Modifier.weight(1f).fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -85,7 +127,7 @@ fun OverviewBottomScreen(overview: Overview, control: ControlState, callbacks: C
                 modifier = Modifier.widthIn(max = 420.dp),
             )
         }
-        ButtonBar(callbacks, Modifier.fillMaxWidth().height(50.dp).topDivider().padding(horizontal = 16.dp))
+        ButtonBar(callbacks, Modifier.fillMaxWidth().height(50.dp).topDivider().padding(horizontal = 16.dp), withQuitSpacer = true)
     }
 }
 
@@ -97,23 +139,136 @@ private fun OverviewHeader(overview: Overview) {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         BasicText(stringResource(R.string.app_name), style = sans(16.sp, weight = 650, letterSpacing = (-0.01).em))
-        val count = overview.sessions.size
+        val count = overview.activeCount
         BasicText(
             pluralStringResource(R.plurals.overview_session_count, count, count),
             style = sans(13.sp, color = Palette.textMuted),
         )
+        BridgeIndicator(overview.bridge)
         Spacer(Modifier.weight(1f))
-        BasicText(
-            text = overview.agentVersions.entries
-                .sortedBy { it.key.ordinal }
-                .joinToString(" · ") { (agent, version) -> "${agent.name.lowercase()} $version" },
-            style = mono(11.sp, color = Palette.textSubtle),
-        )
+        BasicText(agentVersions(overview.agents), style = mono(11.sp, color = Palette.textSubtle))
+    }
+}
+
+/** L'état du pont dans l'en-tête, seulement quand il n'est pas connecté. */
+@Composable
+private fun BridgeIndicator(bridge: BridgeStatus) {
+    val (label, color) = when (bridge) {
+        BridgeStatus.Connected -> return
+        BridgeStatus.Connecting -> stringResource(R.string.bridge_connecting) to Palette.textMuted
+        is BridgeStatus.Unreachable -> stringResource(R.string.bridge_unreachable) to Palette.waiting
+    }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box(Modifier.size(7.dp).background(color, CircleShape))
+        BasicText(label, style = sans(13.sp, color = color))
+    }
+}
+
+/**
+ * « claude 2.1.322 · codex 0.167.2 ». Une version hors de la plage testée est en ambre, avec
+ * l'avertissement ; une version que le pont n'a pas lue n'est pas affichée.
+ */
+@Composable
+private fun agentVersions(agents: List<AgentVersion>): AnnotatedString {
+    val untested = stringResource(R.string.version_untested)
+    return buildAnnotatedString {
+        agents.sortedBy { it.agent.ordinal }.forEachIndexed { index, entry ->
+            if (index > 0) append(" · ")
+            val label = listOfNotNull(entry.agent.name.lowercase(Locale.ROOT), entry.version).joinToString(" ")
+            if (entry.isTested) {
+                append(label)
+            } else {
+                withStyle(SpanStyle(color = Palette.waiting)) { append("$label ($untested)") }
+            }
+        }
+    }
+}
+
+/** Ce que l'utilisateur doit savoir et peut faire : pont injoignable, accès des agents à Android. */
+@Composable
+private fun Notices(overview: Overview, modifier: Modifier) {
+    val bridge = overview.bridge as? BridgeStatus.Unreachable
+    if (bridge == null && !overview.androidAccessMissing) return
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        bridge?.let { Notice(stringResource(R.string.bridge_unreachable), stringResource(hintText(it.hint)), Palette.waiting) }
+        if (overview.androidAccessMissing) {
+            Notice(stringResource(R.string.android_access_title), stringResource(R.string.android_access_hint), Palette.textMuted)
+        }
+    }
+}
+
+private fun hintText(hint: BridgeHint) = when (hint) {
+    BridgeHint.GRANT_RUN_COMMAND -> R.string.bridge_hint_grant_run_command
+    BridgeHint.TERMUX_MISSING -> R.string.bridge_hint_termux_missing
+    BridgeHint.TOKEN_MISSING -> R.string.bridge_hint_token_missing
+    BridgeHint.TOKEN_REFUSED -> R.string.bridge_hint_token_refused
+    BridgeHint.RESTARTING -> R.string.bridge_hint_restarting
+}
+
+@Composable
+private fun Notice(title: String, text: String, color: Color) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Palette.surface, RoundedCornerShape(12.dp))
+            .padding(horizontal = 12.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Box(Modifier.padding(top = 5.dp).size(7.dp).background(color, CircleShape))
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            BasicText(title, style = sans(13.sp, weight = 600, color = color))
+            BasicText(text, style = sans(12.sp, color = Palette.textMuted, lineHeight = 17.sp))
+        }
+    }
+}
+
+/** Confirmation de « Quitter » (A confirme, B annule, au doigt aussi), puis l'arrêt en cours. */
+@Composable
+private fun QuitPrompt(step: QuitStep, callbacks: ControlCallbacks) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Palette.background.copy(alpha = 0.82f))
+            // Le voile avale les touchers : rien d'autre ne réagit pendant la confirmation.
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier
+                .widthIn(max = 460.dp)
+                .background(Palette.surface, RoundedCornerShape(14.dp))
+                .padding(horizontal = 22.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            when (step) {
+                is QuitStep.Confirm -> {
+                    BasicText(
+                        pluralStringResource(R.plurals.quit_busy, step.busy, step.busy),
+                        style = sans(15.sp, weight = 600, lineHeight = 20.sp),
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(22.dp)) {
+                        BarAction("A", stringResource(R.string.quit_confirm), callbacks::onConfirmQuit)
+                        BarAction("B", stringResource(R.string.quit_cancel), callbacks::onCancelQuit)
+                    }
+                }
+                QuitStep.Stopping -> BasicText(stringResource(R.string.quit_stopping), style = sans(15.sp, weight = 600))
+            }
+        }
+    }
+}
+
+/** Ticks d'une seconde, pour que l'ancienneté avance à l'écran. */
+@Composable
+private fun rememberNow(): State<Instant> = produceState(Clock.System.now()) {
+    while (true) {
+        delay(1_000)
+        value = Clock.System.now()
     }
 }
 
 @Composable
-private fun SessionGrid(overview: Overview, control: ControlState, compact: Boolean, modifier: Modifier) {
+private fun SessionGrid(overview: Overview, control: ControlState, now: Instant, compact: Boolean, modifier: Modifier) {
     val sessions = overview.sessions
     val focus = control.focusIn(sessions.size.coerceAtMost(OverviewGrid.VISIBLE_CARDS))
     Column(
@@ -130,6 +285,7 @@ private fun SessionGrid(overview: Overview, control: ControlState, compact: Bool
                     } else {
                         SessionCard(
                             session = session,
+                            now = now,
                             focused = index == focus,
                             compact = compact,
                             modifier = Modifier.weight(1f).fillMaxSize(),
@@ -168,12 +324,12 @@ private fun CompactControlPanel(overview: Overview, control: ControlState, callb
                 )
             else -> ApprovalBanner(pending, callbacks::onOpenApproval, Modifier.weight(1f), compact = true)
         }
-        ButtonBar(callbacks, Modifier)
+        ButtonBar(callbacks, Modifier, withQuitSpacer = false)
     }
 }
 
 @Composable
-private fun ButtonBar(callbacks: ControlCallbacks, modifier: Modifier) {
+private fun ButtonBar(callbacks: ControlCallbacks, modifier: Modifier, withQuitSpacer: Boolean) {
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
@@ -182,7 +338,21 @@ private fun ButtonBar(callbacks: ControlCallbacks, modifier: Modifier) {
         BarAction("A", stringResource(R.string.action_open)) { callbacks.onButton(Button.A) }
         BarAction("X", stringResource(R.string.action_new_session)) { callbacks.onButton(Button.X) }
         BarAction("Y", stringResource(R.string.action_speak_summary)) { callbacks.onButton(Button.Y) }
+        if (withQuitSpacer) Spacer(Modifier.weight(1f))
+        QuitAction(callbacks::onQuit)
     }
+}
+
+/** « Quitter », tactile seulement : un simple libellé, sans puce de bouton. */
+@Composable
+private fun QuitAction(onClick: () -> Unit) {
+    BasicText(
+        text = stringResource(R.string.action_quit),
+        style = sans(12.5.sp, color = Palette.textMuted),
+        modifier = Modifier
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick)
+            .padding(vertical = 8.dp),
+    )
 }
 
 @Composable

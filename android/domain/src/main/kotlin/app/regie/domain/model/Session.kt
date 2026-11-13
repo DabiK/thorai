@@ -1,39 +1,49 @@
 package app.regie.domain.model
 
-import kotlin.time.Duration
+import kotlin.time.Instant
 
 @JvmInline
 value class SessionId(val value: String)
 
-/** Étape [step] sur [total] du plan de l'agent (0 : aucune étape commencée), avec le libellé de l'étape en cours s'il est connu. */
-data class Progress(val step: Int, val total: Int, val currentStep: String? = null) {
+/**
+ * Avancement d'après le plan de l'agent : [done] étapes faites sur [total], et l'étape en cours
+ * ([currentStep]) si l'agent en a une.
+ */
+data class Progress(val done: Int, val total: Int, val currentStep: String? = null) {
     init {
-        require(total > 0 && step in 0..total) { "étape $step hors de 0..$total" }
+        require(total > 0 && done in 0..total) { "$done étapes faites hors de 0..$total" }
     }
+
+    /** Le numéro affiché, « étape x sur y » : l'étape en cours, sinon la dernière faite. */
+    val step: Int get() = if (currentStep != null) (done + 1).coerceAtMost(total) else done
 }
 
-/** Dernière action de l'agent, par exemple une commande et son résultat. */
-data class LastAction(val command: String, val outcome: String? = null)
+/** Où en est la dernière action de l'agent. */
+enum class ActionStatus { PENDING, IN_PROGRESS, COMPLETED, FAILED }
 
-/** Lignes ajoutées et retirées par la session. */
-data class DiffStat(val added: Int, val removed: Int)
+/** Dernière action de l'agent : la commande, sinon le titre que l'agent lui donne. */
+data class LastAction(val description: String, val status: ActionStatus?)
 
 /**
  * Une session de Claude ou de Codex, telle que la vue d'ensemble la montre.
- * Les champs facultatifs sont absents quand l'agent ne les expose pas.
+ * Les champs facultatifs sont absents quand le pont ou l'agent ne les expose pas.
+ *
+ * - [active] : chargée dans un processus d'agent (`false` pour l'historique).
+ * - [updatedAt] : dernier changement de statut, de titre ou de validations, d'après le pont.
+ * - [lastActivityAt] : dernier signe de l'agent, quel qu'il soit ; l'ancienneté se compte depuis là.
  */
 data class Session(
     val id: SessionId,
     val agent: Agent,
     val project: String,
     val branch: String?,
-    val task: String,
+    val title: String?,
     val status: SessionStatus,
-    val sinceLastActivity: Duration,
+    val active: Boolean,
+    val updatedAt: Instant,
+    val lastActivityAt: Instant,
     val progress: Progress? = null,
     val lastAction: LastAction? = null,
     val pendingApproval: Approval? = null,
-    val question: String? = null,
-    val summary: String? = null,
-    val diffStat: DiffStat? = null,
+    val lastError: String? = null,
 )

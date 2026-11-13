@@ -72,28 +72,30 @@ fun AgentTag(agent: Agent) {
 }
 
 fun statusColor(status: SessionStatus): Color = when (status) {
-    SessionStatus.RUNNING -> Palette.running
+    SessionStatus.WORKING -> Palette.running
     SessionStatus.AWAITING_APPROVAL -> Palette.waiting
-    SessionStatus.DONE -> Palette.done
-    SessionStatus.PAUSED -> Palette.textMuted
+    SessionStatus.IDLE -> Palette.done
+    SessionStatus.STOPPED -> Palette.textMuted
+    SessionStatus.FAILED -> Palette.failed
 }
 
-/** Pastille d'état : point coloré et libellé. En pause, le point est creux. */
+/** Pastille d'état : point coloré et libellé. Arrêtée, le point est creux. */
 @Composable
 fun StatusPill(status: SessionStatus) {
     val color = statusColor(status)
     val label = stringResource(
         when (status) {
-            SessionStatus.RUNNING -> R.string.status_running
+            SessionStatus.WORKING -> R.string.status_working
             SessionStatus.AWAITING_APPROVAL -> R.string.status_awaiting_approval
-            SessionStatus.DONE -> R.string.status_done
-            SessionStatus.PAUSED -> R.string.status_paused
+            SessionStatus.IDLE -> R.string.status_idle
+            SessionStatus.STOPPED -> R.string.status_stopped
+            SessionStatus.FAILED -> R.string.status_failed
         },
     )
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         val dot = Modifier.size(7.dp)
         Box(
-            if (status == SessionStatus.PAUSED) {
+            if (status == SessionStatus.STOPPED) {
                 dot.border(1.5.dp, color, CircleShape)
             } else {
                 dot.background(color, CircleShape)

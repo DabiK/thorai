@@ -1,6 +1,5 @@
 package app.regie.ui
 
-import app.regie.domain.model.DiffStat
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.time.Duration.Companion.days
@@ -22,10 +21,5 @@ class FormatsTest {
     @Test
     fun `a negative age is shown as zero seconds`() {
         assertEquals("0 s", formatAge((-5).seconds))
-    }
-
-    @Test
-    fun `the diff stat uses a true minus sign`() {
-        assertEquals("+86 −12", formatDiffStat(DiffStat(added = 86, removed = 12)))
     }
 }

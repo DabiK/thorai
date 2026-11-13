@@ -17,28 +17,32 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.regie.R
+import app.regie.domain.model.ActionStatus
+import app.regie.domain.model.Approval
 import app.regie.domain.model.ApprovalKind
 import app.regie.domain.model.Progress
 import app.regie.domain.model.Session
 import app.regie.domain.model.SessionStatus
 import app.regie.ui.formatAge
-import app.regie.ui.formatDiffStat
 import app.regie.ui.theme.Palette
 import app.regie.ui.theme.mono
 import app.regie.ui.theme.sans
+import kotlin.time.Instant
 
 private val CardShape = RoundedCornerShape(14.dp)
 
 /**
- * Carte d'une session dans la vue d'ensemble. Chaque bloc n'apparaît que si la
- * session expose l'information. [compact] sert au mode un seul écran.
+ * Carte d'une session dans la vue d'ensemble : agent, projet, branche, statut, étape, dernière
+ * action et ancienneté. Ce que le pont n'expose pas est montré absent, jamais inventé.
+ * [now] fait avancer l'ancienneté ; [compact] sert au mode un seul écran.
  */
 @Composable
-fun SessionCard(session: Session, focused: Boolean, compact: Boolean, modifier: Modifier = Modifier) {
+fun SessionCard(session: Session, now: Instant, focused: Boolean, compact: Boolean, modifier: Modifier = Modifier) {
     val awaiting = session.status == SessionStatus.AWAITING_APPROVAL
     Column(
         modifier = modifier
@@ -50,15 +54,17 @@ fun SessionCard(session: Session, focused: Boolean, compact: Boolean, modifier: 
         verticalArrangement = Arrangement.spacedBy(if (compact) 6.dp else 9.dp),
     ) {
         CardHeader(session)
-        BasicText(
-            text = session.task,
-            style = sans(15.sp, weight = 600, lineHeight = 19.5.sp),
-            maxLines = if (compact) 1 else 2,
-            overflow = TextOverflow.Ellipsis,
-        )
+        session.title?.let {
+            BasicText(
+                text = it,
+                style = sans(15.sp, weight = 600, lineHeight = 19.5.sp),
+                maxLines = if (compact) 1 else 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         CardBody(session)
         Spacer(Modifier.weight(1f))
-        CardFooter(session)
+        CardFooter(session, now)
     }
 }
 
@@ -81,29 +87,42 @@ private fun CardHeader(session: Session) {
 private fun CardBody(session: Session) {
     val muted = sans(12.sp, color = Palette.textMuted, lineHeight = 17.4.sp)
     val progress = session.progress
-    if (session.status == SessionStatus.RUNNING && progress != null) {
-        StepBar(progress)
-        BasicText(
-            text = progress.currentStep
-                ?.let { stringResource(R.string.card_step_with_label, progress.step, progress.total, it) }
-                ?: stringResource(R.string.card_step, progress.step, progress.total),
-            style = muted,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+    val approval = session.pendingApproval
+    val error = session.lastError.takeIf { session.status == SessionStatus.FAILED }
+    when {
+        approval != null -> ApprovalRequest(approval, muted)
+        error != null -> BasicText(error, style = sans(12.sp, color = Palette.failed, lineHeight = 17.4.sp), maxLines = 2, overflow = TextOverflow.Ellipsis)
+        progress != null -> {
+            StepBar(progress)
+            BasicText(
+                text = progress.currentStep
+                    ?.let { stringResource(R.string.card_step_with_label, progress.step, progress.total, it) }
+                    ?: stringResource(R.string.card_step, progress.step, progress.total),
+                style = muted,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        // Sans plan, on le dit, sans barre d'étapes.
+        else -> BasicText(stringResource(R.string.card_no_plan), style = sans(12.sp, color = Palette.textSubtle))
     }
-    session.pendingApproval?.let { approval ->
+}
+
+@Composable
+private fun ApprovalRequest(approval: Approval, style: TextStyle) {
+    BasicText(
+        text = stringResource(
+            when (approval.kind) {
+                ApprovalKind.COMMAND -> R.string.card_wants_command
+                ApprovalKind.FILE_CHANGE -> R.string.card_wants_file_change
+                ApprovalKind.OTHER -> R.string.card_wants_other
+            },
+        ),
+        style = style,
+    )
+    approval.subject?.let {
         BasicText(
-            text = stringResource(
-                when (approval.kind) {
-                    ApprovalKind.COMMAND -> R.string.card_wants_command
-                    ApprovalKind.FILE_CHANGE -> R.string.card_wants_file_change
-                },
-            ),
-            style = muted,
-        )
-        BasicText(
-            text = approval.subject,
+            text = it,
             style = mono(12.sp),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -113,12 +132,6 @@ private fun CardBody(session: Session) {
                 .padding(horizontal = 10.dp, vertical = 8.dp),
         )
     }
-    session.question?.let {
-        BasicText(stringResource(R.string.card_question, it), style = muted, maxLines = 2, overflow = TextOverflow.Ellipsis)
-    }
-    session.summary?.let {
-        BasicText(it, style = muted, maxLines = 2, overflow = TextOverflow.Ellipsis)
-    }
 }
 
 /** Barre d'étapes : faites en bleu, en cours en bleu sourd, à venir en gris. */
@@ -126,10 +139,9 @@ private fun CardBody(session: Session) {
 private fun StepBar(progress: Progress) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         repeat(progress.total) { index ->
-            val step = index + 1
             val color = when {
-                step < progress.step -> Palette.running
-                step == progress.step -> Palette.stepCurrent
+                index < progress.done -> Palette.running
+                index == progress.done && progress.currentStep != null -> Palette.stepCurrent
                 else -> Palette.stepPending
             }
             Box(Modifier.weight(1f).height(4.dp).background(color, RoundedCornerShape(2.dp)))
@@ -138,24 +150,51 @@ private fun StepBar(progress: Progress) {
 }
 
 @Composable
-private fun CardFooter(session: Session) {
+private fun CardFooter(session: Session, now: Instant) {
     val subtle = mono(11.5.sp, color = Palette.textSubtle)
-    val lastAction = session.lastAction
-    val diffStat = session.diffStat
+    // Pendant une validation, la commande est déjà au-dessus : le pied donne l'étape, comme la maquette.
+    val lastAction = session.lastAction.takeIf { session.pendingApproval == null }
     val progress = session.progress
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        when {
-            lastAction != null -> {
-                BasicText("›", style = subtle)
-                BasicText(lastAction.command, style = mono(11.5.sp, color = Palette.footerText), maxLines = 1)
+        // La dernière action et où elle en est prennent la place libre ; l'ancienneté reste calée à droite.
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            when {
+                lastAction != null -> {
+                    BasicText("›", style = subtle)
+                    BasicText(
+                        text = lastAction.description,
+                        style = mono(11.5.sp, color = Palette.footerText),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    lastAction.status?.let {
+                        BasicText(actionStatusLabel(it), style = subtle.copy(color = actionStatusColor(it)), maxLines = 1)
+                    }
+                }
+                progress != null && session.pendingApproval != null ->
+                    BasicText(stringResource(R.string.card_step_short, progress.step, progress.total), style = subtle)
             }
-            diffStat != null -> BasicText(formatDiffStat(diffStat), style = subtle)
-            progress != null -> BasicText(stringResource(R.string.card_step_short, progress.step, progress.total), style = subtle)
         }
-        // Le résultat de la dernière action prend la place libre ; l'ancienneté reste calée à droite.
-        Box(Modifier.weight(1f)) {
-            lastAction?.outcome?.let { BasicText(it, style = subtle, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-        }
-        BasicText(formatAge(session.sinceLastActivity), style = subtle)
+        BasicText(formatAge(now - session.lastActivityAt), style = subtle)
     }
+}
+
+@Composable
+private fun actionStatusLabel(status: ActionStatus): String = stringResource(
+    when (status) {
+        ActionStatus.PENDING -> R.string.action_status_pending
+        ActionStatus.IN_PROGRESS -> R.string.action_status_in_progress
+        ActionStatus.COMPLETED -> R.string.action_status_completed
+        ActionStatus.FAILED -> R.string.action_status_failed
+    },
+)
+
+private fun actionStatusColor(status: ActionStatus) = when (status) {
+    ActionStatus.FAILED -> Palette.failed
+    else -> Palette.textSubtle
 }

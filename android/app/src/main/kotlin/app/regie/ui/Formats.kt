@@ -1,6 +1,5 @@
 package app.regie.ui
 
-import app.regie.domain.model.DiffStat
 import kotlin.time.Duration
 
 private const val NBSP = ' '
@@ -15,6 +14,3 @@ fun formatAge(age: Duration): String {
         else -> "${positive.inWholeDays}${NBSP}j"
     }
 }
-
-/** Lignes ajoutées et retirées, avec un vrai signe moins : « +86 −12 ». */
-fun formatDiffStat(diff: DiffStat): String = "+${diff.added} −${diff.removed}"

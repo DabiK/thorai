@@ -9,10 +9,23 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-/** État de la manette partagé par les deux écrans : carte qui a le focus et gâchettes maintenues. */
+/** Où en est « Quitter ». */
+sealed interface QuitStep {
+    /** [busy] sessions travaillent encore : A confirme, B annule. */
+    data class Confirm(val busy: Int) : QuitStep
+
+    /** Les sessions et le pont s'arrêtent, Régie va se fermer. */
+    data object Stopping : QuitStep
+}
+
+/**
+ * État de la manette partagé par les deux écrans : carte qui a le focus, gâchettes maintenues,
+ * et « Quitter » en cours.
+ */
 data class ControlState(
     val focusedIndex: Int = 0,
     val heldTriggers: Set<Trigger> = emptySet(),
+    val quit: QuitStep? = null,
 ) {
     /** Le focus ramené dans la liste, si des sessions ont disparu. */
     fun focusIn(count: Int): Int = focusedIndex.coerceIn(0, (count - 1).coerceAtLeast(0))
@@ -37,6 +50,7 @@ class OverviewController(
     private val focused get() = sessions.getOrNull(currentFocus())
 
     fun handle(input: GamepadInput) {
+        if (_state.value.quit != null) return handleWhileQuitting(input)
         when (input) {
             is GamepadInput.Pressed -> onPressed(input.button)
             is GamepadInput.TriggerDown -> onTrigger(input.trigger, held = true)
@@ -49,6 +63,35 @@ class OverviewController(
     /** Toucher le bandeau de validation sur l'écran du bas : comme R1. */
     fun openPendingApproval() {
         overview.value.firstPendingApproval?.let { dispatch(OverviewAction.OpenApproval(it.approval.id)) }
+    }
+
+    /**
+     * « Quitter », au toucher seulement : le PRD ne lui donne pas de bouton de manette. Si une
+     * session travaille encore, on demande confirmation.
+     */
+    fun requestQuit() {
+        if (_state.value.quit != null) return
+        val busy = overview.value.busyCount
+        if (busy > 0) _state.update { it.copy(quit = QuitStep.Confirm(busy)) } else confirmQuit()
+    }
+
+    fun confirmQuit() {
+        if (_state.value.quit == QuitStep.Stopping) return
+        _state.update { it.copy(quit = QuitStep.Stopping) }
+        dispatch(OverviewAction.Quit)
+    }
+
+    fun cancelQuit() {
+        if (_state.value.quit is QuitStep.Confirm) _state.update { it.copy(quit = null) }
+    }
+
+    /** Pendant la confirmation : A confirme, B annule, le reste attend. Une gâchette relâchée l'est toujours. */
+    private fun handleWhileQuitting(input: GamepadInput) {
+        when {
+            input == GamepadInput.Pressed(Button.A) && _state.value.quit is QuitStep.Confirm -> confirmQuit()
+            input == GamepadInput.Pressed(Button.B) -> cancelQuit()
+            input is GamepadInput.TriggerUp -> onTrigger(input.trigger, held = false)
+        }
     }
 
     private fun onPressed(button: Button) {
