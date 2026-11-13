@@ -82,8 +82,9 @@ echo "   ~/bin/regie-bridge-start, regie-bridge-stop, regie-bridge-supervise"
 
 cat << EOF
 
-Installé. Démarrer le pont comme le fera l'app :
-  adb -s $SERIAL shell am startservice --user 0 -n com.termux/com.termux.app.RunCommandService \\
-    -a com.termux.RUN_COMMAND --es com.termux.RUN_COMMAND_PATH $THOME/bin/regie-bridge-start \\
-    --ez com.termux.RUN_COMMAND_BACKGROUND true
+Installé. Démarrer et arrêter le pont par RUN_COMMAND, comme le fera l'app :
+  thor/bridge/run-command.sh start
+  thor/bridge/run-command.sh stop
+L'intent part avec l'uid de Termux (son am) : « adb shell am startservice … » est refusé,
+l'utilisateur shell n'a pas la permission com.termux.permission.RUN_COMMAND.
 EOF

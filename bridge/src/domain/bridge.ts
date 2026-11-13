@@ -98,6 +98,8 @@ export class Bridge {
   private readonly replaying = new Set<string>();
   /** The last message sent to each session: the next one waits for it, order is kept. */
   private readonly sending = new Map<string, Promise<unknown>>();
+  /** Bumped by each interruption: a message queued before it is not sent. */
+  private readonly interruptions = new Map<string, number>();
   private readonly turns = new Set<Promise<void>>();
   private stopping: Promise<void> | null = null;
 
@@ -231,9 +233,10 @@ export class Bridge {
     this.assertRunning();
     this.recordOf(sessionId);
     const previous = this.sending.get(sessionId) ?? Promise.resolve();
+    const interruption = this.interruptions.get(sessionId) ?? 0;
     const next = previous.then(
-      () => this.send(sessionId, text),
-      () => this.send(sessionId, text),
+      () => this.send(sessionId, text, interruption),
+      () => this.send(sessionId, text, interruption),
     );
     this.sending.set(sessionId, next);
     const forget = () => {
@@ -243,11 +246,14 @@ export class Bridge {
     return next;
   }
 
-  private async send(sessionId: string, text: string): Promise<Delivery> {
+  private async send(sessionId: string, text: string, interruption: number): Promise<Delivery> {
+    const interrupted = () => (this.interruptions.get(sessionId) ?? 0) !== interruption;
+    if (interrupted()) return 'cancelled';
     this.assertRunning();
     const record = this.recordOf(sessionId);
     const live = await this.ensureLive(sessionId);
     const connection = await this.connection(record.agent);
+    if (interrupted()) return 'cancelled';
     if (live.inFlight > 0) {
       const injected = await connection.steer(sessionId, text).catch(() => false);
       if (injected) {
@@ -260,9 +266,13 @@ export class Bridge {
     return delivery;
   }
 
-  /** Interrupts the running turn. The session stays usable. */
+  /**
+   * Interrupts the session: the running turn, and the messages still waiting to be sent (while
+   * the session loads, for instance). The session stays usable.
+   */
   async cancel(sessionId: string): Promise<void> {
     const record = this.recordOf(sessionId);
+    this.interruptions.set(sessionId, (this.interruptions.get(sessionId) ?? 0) + 1);
     if (!this.live.has(sessionId)) return;
     const connection = await this.connection(record.agent);
     await connection.cancel(sessionId);

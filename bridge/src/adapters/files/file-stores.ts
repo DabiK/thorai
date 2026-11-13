@@ -7,7 +7,9 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
+  readSync,
   renameSync,
+  statSync,
   truncateSync,
   writeSync,
 } from 'node:fs';
@@ -53,22 +55,70 @@ export class FileEventStore implements EventStore {
   }
 
   private load(newId: () => string): { journalId: string; events: BridgeEvent[] } {
-    let text = existsSync(this.path) ? readFileSync(this.path, 'utf8') : '';
-    if (text !== '' && !text.endsWith('\n')) {
+    let header: string | null = null;
+    let first = true;
+    const events: BridgeEvent[] = [];
+    if (existsSync(this.path)) {
+      const complete = readLines(this.path, (line) => {
+        if (first) {
+          first = false;
+          header = parseHeader(line);
+          if (header !== null) return;
+        }
+        const event = parse(line);
+        if (event !== null) events.push(event);
+      });
       // The last line was cut by a crash: it was never sent, it is dropped.
-      text = text.slice(0, text.lastIndexOf('\n') + 1);
-      truncateSync(this.path, Buffer.byteLength(text, 'utf8'));
+      if (complete < statSync(this.path).size) truncateSync(this.path, complete);
     }
-    const lines = text.split('\n').filter((line) => line.trim() !== '');
-    const header = lines.length > 0 ? parseHeader(lines[0] ?? '') : null;
-    const events = lines.map(parse).filter((event) => event !== null);
     if (header !== null) return { journalId: header, events };
     // A new journal, or one written before the header existed: it gets its id.
     const journalId = newId();
-    const body = events.map((event) => `${JSON.stringify(event)}\n`).join('');
-    writeAtomically(this.path, `${JSON.stringify({ journal: journalId, version: 1 })}\n${body}`);
+    const temporary = `${this.path}.tmp`;
+    const fd = openSync(temporary, 'w', 0o600);
+    try {
+      writeSync(fd, `${JSON.stringify({ journal: journalId, version: 1 })}\n`);
+      for (const event of events) writeSync(fd, `${JSON.stringify(event)}\n`);
+      fsyncSync(fd);
+    } finally {
+      closeSync(fd);
+    }
+    renameSync(temporary, this.path);
     return { journalId, events };
   }
+}
+
+/**
+ * Reads a file line by line, by blocks: a big journal is never held in one string. Returns the
+ * size in bytes of the whole lines, those ending with a newline.
+ */
+function readLines(path: string, onLine: (line: string) => void): number {
+  const fd = openSync(path, 'r');
+  const buffer = Buffer.alloc(1024 * 1024);
+  let pending: Buffer[] = [];
+  let complete = 0;
+  let read = 0;
+  try {
+    for (;;) {
+      const size = readSync(fd, buffer, 0, buffer.length, read);
+      if (size === 0) break;
+      let start = 0;
+      for (let i = 0; i < size; i += 1) {
+        if (buffer[i] !== 0x0a) continue;
+        pending.push(buffer.subarray(start, i));
+        const line = Buffer.concat(pending).toString('utf8');
+        pending = [];
+        if (line.trim() !== '') onLine(line);
+        start = i + 1;
+        complete = read + start;
+      }
+      pending.push(Buffer.from(buffer.subarray(start, size)));
+      read += size;
+    }
+  } finally {
+    closeSync(fd);
+  }
+  return complete;
 }
 
 function parseHeader(line: string): string | null {

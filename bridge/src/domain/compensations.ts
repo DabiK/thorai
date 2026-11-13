@@ -19,6 +19,19 @@ const WITHHELD_OPTIONS = new Set(['accept_execpolicy_amendment']);
 /** Marks a tool call the app must hide. */
 export const HIDDEN_SANDBOX_FAILURE = 'sandbox_unavailable';
 
+/**
+ * Most of a command's output relayed at once, in characters: the end is kept, as RUN_COMMAND
+ * does. A chunk is relayed alone (the app appends it); the whole output, capped, once at the end.
+ */
+export const OUTPUT_LIMIT = 64 * 1024;
+
+/** The output of a running command: its start (for `bwrap:`) and its last characters. */
+interface Output {
+  readonly head: string;
+  readonly tail: string;
+  readonly truncated: boolean;
+}
+
 type Json = Record<string, unknown>;
 
 export interface NormalizedApproval {
@@ -30,8 +43,8 @@ export interface NormalizedApproval {
 export class SessionCompensations {
   /** Diff content of the tool calls still running, by `toolCallId`. */
   private readonly diffs = new Map<string, unknown[]>();
-  /** Terminal output gathered so far, by `toolCallId`. */
-  private readonly outputs = new Map<string, string>();
+  /** Terminal output gathered so far, by `toolCallId`, capped. */
+  private readonly outputs = new Map<string, Output>();
 
   update(update: AcpUpdate): AcpUpdate {
     switch (update.sessionUpdate) {
@@ -79,7 +92,7 @@ export class SessionCompensations {
       content === undefined ? update : { ...update, content },
     );
     if (id === null) return relayed;
-    const output = this.outputs.get(id) ?? '';
+    const output = this.outputs.get(id)?.head ?? '';
     const finished = update.status === 'completed' || update.status === 'failed';
     if (finished) {
       this.outputs.delete(id);
@@ -97,20 +110,48 @@ export class SessionCompensations {
     return relayed;
   }
 
+  /**
+   * Codex sends the output of a command in `_meta.terminal_output_delta`. The relayed update
+   * carries in `content`:
+   * - the chunk just received, marked `_meta.regie.output = "delta"`: the app appends it;
+   * - at the end (`terminal_exit`), the whole output, its last `OUTPUT_LIMIT` characters only,
+   *   marked `"final"`: the app replaces what it gathered.
+   * The raw chunk is taken out of `_meta`: it is not relayed twice.
+   */
   private withTerminalOutput(update: AcpUpdate): AcpUpdate {
     const id = toolCallIdOf(update);
     const meta = update._meta;
     if (id === null || !isObject(meta)) return update;
     const delta = meta.terminal_output_delta;
     const exit = meta.terminal_exit;
-    if (isObject(delta) && typeof delta.data === 'string') {
-      this.outputs.set(id, (this.outputs.get(id) ?? '') + delta.data);
-    } else if (!isObject(exit) || !this.outputs.has(id)) {
-      return update;
-    }
-    const text = this.outputs.get(id) ?? '';
-    return { ...update, content: [{ type: 'content', content: { type: 'text', text } }] };
+    const chunk = isObject(delta) && typeof delta.data === 'string' ? delta.data : null;
+    if (chunk === null && !isObject(exit)) return update;
+    const output = this.gather(id, chunk ?? '');
+    const { terminal_output_delta: _relayedInContent, regie: _ours, ...rest } = meta;
+    const final = isObject(exit);
+    const text = final ? output.tail : capped(chunk ?? '').text;
+    const truncated = final ? output.truncated : capped(chunk ?? '').truncated;
+    return {
+      ...update,
+      content: [{ type: 'content', content: { type: 'text', text } }],
+      _meta: { ...rest, regie: { output: final ? 'final' : 'delta', truncated } },
+    };
   }
+
+  private gather(id: string, chunk: string): Output {
+    const previous = this.outputs.get(id) ?? { head: '', tail: '', truncated: false };
+    const head = previous.head.length >= 16 ? previous.head : (previous.head + chunk).slice(0, 16);
+    const { text, truncated } = capped(previous.tail + chunk);
+    const output = { head, tail: text, truncated: previous.truncated || truncated };
+    this.outputs.set(id, output);
+    return output;
+  }
+}
+
+function capped(text: string): { text: string; truncated: boolean } {
+  return text.length > OUTPUT_LIMIT
+    ? { text: text.slice(-OUTPUT_LIMIT), truncated: true }
+    : { text, truncated: false };
 }
 
 function toolCallIdOf(value: Readonly<Json>): string | null {

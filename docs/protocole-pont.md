@@ -57,10 +57,11 @@ Les requêtes sont traitées en parallèle : les réponses peuvent arriver dans 
 
 - Chaque événement a un `seq` : global à toutes les sessions, croissant de 1 en 1.
 - Les événements sont écrits sur disque, et synchronisés (`fdatasync`), avant d'être envoyés. Après un redémarrage du pont ou de la console, la numérotation reprend où elle s'était arrêtée : ni trou, ni doublon.
-- Un seul pont par journal : un second pont lancé sur le même dossier d'état, ou sur le même port, s'arrête avant de lire ou d'écrire le journal.
+- Un seul pont par journal : un second pont lancé sur le même dossier d'état, ou sur le même port, s'arrête avant de lire ou d'écrire le journal. Le verrou (`bridge.lock`) note le PID, le `boot_id` et le script du pont : un verrou d'un démarrage précédent de la console, ou dont le PID sert maintenant à un autre programme, est repris.
 - Le journal a un identifiant, `journal` dans la réponse à `hello`. Un nouveau journal (l'ancien effacé) a un nouvel identifiant.
 - Le client garde le dernier `seq` reçu et l'identifiant du journal.
 - À chaque connexion, il envoie `hello` avec ce numéro et cet identifiant. Le pont répond, puis envoie tous les événements qui suivent, dans l'ordre, puis les nouveaux en direct.
+- Un seul `hello` par connexion : un second est refusé (`bad_request`).
 - Sans `since`, le client ne reçoit que les nouveaux événements. Il lit l'état dans la réponse à `hello`.
 - Si `journal` n'est pas celui du pont, ou si `since` dépasse son dernier numéro, la réponse porte `"resync": true`. Le pont n'envoie alors que les nouveaux événements : le client oublie ce qu'il sait et repart de la réponse à `hello`.
 - Les sessions continuent sans client. Une validation attend sa réponse, même client déconnecté.
@@ -110,13 +111,14 @@ Les requêtes sont traitées en parallèle : les réponses peuvent arriver dans 
 `delivery` dit comment le message est parti :
 - `prompt` : aucun tour en cours, un nouveau tour commence ;
 - `steering` : un tour est en cours et l'agent a accepté le message dedans (`_session/steering`) ;
-- `queued` : un tour est en cours et l'agent a refusé : le message attend la fin du tour.
+- `queued` : un tour est en cours et l'agent a refusé : le message attend la fin du tour ;
+- `cancelled` : le message n'est pas parti, la session a été interrompue (`session.cancel`) pendant qu'il attendait, par exemple pendant son chargement.
 
 Une session de l'historique (`active: false`) est rechargée d'abord (`session/load`, puis son mode), sans action du client. Les messages envoyés à une même session partent dans l'ordre où le pont les a reçus, et aucun ne part avant que la session soit chargée et son mode appliqué.
 
 ### Interrompre
 
-`session.cancel` envoie `session/cancel`. Le tour se termine avec `stopReason: "cancelled"`. Les validations en attente de cette session sont réglées en `cancelled`. La session reste utilisable.
+`session.cancel` envoie `session/cancel`. Les messages qui attendaient encore (session en cours de chargement) ne partent pas : leur `delivery` vaut `cancelled`. Le tour se termine avec `stopReason: "cancelled"`. Les validations en attente de cette session sont réglées en `cancelled`. La session reste utilisable.
 
 ### Reprendre une session de l'historique
 
@@ -149,7 +151,13 @@ Silences : Claude peut rester 30 s sans rien envoyer pendant une longue réponse
 
 ### Corrections faites par le pont (ADR 02)
 
-- **Sortie des commandes de Codex** : elle arrive dans `_meta.terminal_output_delta`. Le pont la met dans `content`, sous la forme `[{"type": "content", "content": {"type": "text", "text": "<toute la sortie jusqu'ici>"}}]`. Le contenu `terminal` (un terminal que le client n'a jamais créé) est retiré.
+- **Sortie des commandes de Codex** : elle arrive par morceaux dans `_meta.terminal_output_delta`. Le pont la met dans `content` (`[{"type": "content", "content": {"type": "text", "text": "…"}}]`), avec `_meta.regie` :
+  - `{"output": "delta"}` : le morceau reçu, seul. L'app **l'ajoute** à la sortie de l'appel ;
+  - `{"output": "final"}`, à la fin de la commande (`terminal_exit`) : toute la sortie, une seule fois. L'app **remplace** ce qu'elle a reconstitué ;
+  - la sortie finale, et chaque morceau, sont limités aux 64 Ko de la fin ; `"truncated": true` dit qu'il manque le début ;
+  - le morceau brut est retiré de `_meta` : il n'est pas envoyé deux fois.
+
+  Le contenu `terminal` (un terminal que le client n'a jamais créé) est retiré.
 - **Échecs dans le sandbox de Codex** (sortie commençant par `bwrap:`) : le `tool_call` a déjà été envoyé. Le pont envoie alors à la place de l'échec :
 
   ```json
@@ -258,7 +266,7 @@ am startservice --user 0 -n com.termux/com.termux.app.RunCommandService \
 
 - Dans Termux : `allow-external-apps=true` dans `~/.termux/termux.properties`. L'installation le règle.
 - Dans l'app : déclarer `<uses-permission android:name="com.termux.permission.RUN_COMMAND" />`. L'utilisateur l'accorde une fois : Infos de l'appli > Autorisations > Autorisations supplémentaires > « Run commands in Termux environment ».
-- Sans cette permission, Android refuse l'intent : `Error: Requires permission com.termux.permission.RUN_COMMAND`. C'est ce que répond `adb shell am startservice …` : l'utilisateur `shell` n'a pas la permission.
+- Sans cette permission, Android refuse l'intent : `Error: Requires permission com.termux.permission.RUN_COMMAND`. C'est ce que répond `adb shell am startservice …` : l'utilisateur `shell` n'a pas la permission. Depuis le Mac, `thor/bridge/run-command.sh start|stop` envoie le même intent avec l'uid de Termux (son `am`, par `run-as`).
 
 ### Démarrage
 

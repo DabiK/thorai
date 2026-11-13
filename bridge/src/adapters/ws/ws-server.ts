@@ -126,15 +126,21 @@ export function listenWs(options: ListenOptions): Promise<ListeningServer> {
 function serve(ws: WebSocket, options: WsServerOptions): void {
   const { bridge, logger } = options;
   let unsubscribe: (() => void) | null = null;
+  let greeted = false;
   const send = (frame: unknown) => {
     if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(frame));
   };
   const sendEvent = (event: BridgeEvent) => send({ event });
-  ws.on('close', () => unsubscribe?.());
+  ws.on('close', () => {
+    unsubscribe?.();
+    unsubscribe = null;
+  });
 
   const handlers: { [M in Method]: (params: Params<M>) => unknown } = {
     hello: (params) => {
-      if (unsubscribe !== null) throw new BridgeError('bad_request', 'Déjà abonné aux événements.');
+      // Set at once: a second `hello`, even sent right after the first, is refused.
+      if (greeted) throw new BridgeError('bad_request', 'Déjà abonné aux événements.');
+      greeted = true;
       const lastSeq = bridge.lastSeq;
       const since = params.since ?? lastSeq;
       // Another journal (deleted, restored): the client's numbers mean nothing here.
@@ -152,7 +158,9 @@ function serve(ws: WebSocket, options: WsServerOptions): void {
         },
         // Sent right after the response: the events after `since`, then the live ones.
         after: () => {
-          unsubscribe = bridge.subscribe(resync ? lastSeq : since, sendEvent);
+          if (ws.readyState === ws.OPEN) {
+            unsubscribe = bridge.subscribe(resync ? lastSeq : since, sendEvent);
+          }
         },
       };
     },

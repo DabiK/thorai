@@ -161,6 +161,20 @@ describe('the WebSocket server', () => {
     await second.close();
   });
 
+  it('refuses a second hello on the same connection, even sent right after the first', async () => {
+    const client = new Client();
+    const [first, second] = await Promise.all([
+      client.call('hello', { since: 0 }),
+      client.call('hello', { since: 0 }),
+    ]);
+    await settle();
+
+    expect(first).toMatchObject({ result: { lastSeq: 1 } });
+    expect(second).toMatchObject({ error: { code: 'bad_request' } });
+    expect(client.events.map((e) => e.seq)).toEqual([1]);
+    await client.close();
+  });
+
   it('tells a client of another journal to start again', async () => {
     const client = new Client();
     const hello = await client.call('hello', { since: 1, journal: 'an-old-journal' });

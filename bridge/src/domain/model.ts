@@ -119,8 +119,11 @@ export interface ApprovalRequest {
   readonly plan: string | null;
 }
 
-/** How a message reached the agent. */
-export type Delivery = 'prompt' | 'steering' | 'queued';
+/**
+ * How a message reached the agent. `cancelled`: it never did, the session was interrupted while
+ * the message waited (session loading, previous message).
+ */
+export type Delivery = 'prompt' | 'steering' | 'queued' | 'cancelled';
 
 export interface TurnResult {
   readonly stopReason: string;

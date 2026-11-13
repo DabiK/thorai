@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { HIDDEN_SANDBOX_FAILURE, SessionCompensations } from './compensations.ts';
+import { HIDDEN_SANDBOX_FAILURE, OUTPUT_LIMIT, SessionCompensations } from './compensations.ts';
 import type { AcpUpdate, PermissionRequest } from './model.ts';
 
 /** Replays a raw ACP recording of the Thor (bridge/fixtures/acp-raw) through the compensations. */
@@ -93,6 +93,41 @@ describe('Codex compensations, on the recordings of the Thor', () => {
 
     expect(plan?.plan).toEqual(expect.any(String));
     expect(plan?.plan?.length).toBeGreaterThan(20);
+  });
+});
+
+describe('a long command output', () => {
+  it('is relayed chunk by chunk, then once capped at the end: linear, not quadratic', () => {
+    const compensations = new SessionCompensations();
+    const chunk = `${'x'.repeat(4095)}\n`;
+    const chunks = 512; // 2 Mo of output
+    const relayed: AcpUpdate[] = [];
+    relayed.push(
+      compensations.update({ sessionUpdate: 'tool_call', toolCallId: 't', kind: 'execute' }),
+    );
+    for (let i = 0; i < chunks; i += 1) {
+      relayed.push(
+        compensations.update({
+          sessionUpdate: 'tool_call_update',
+          toolCallId: 't',
+          _meta: { terminal_output_delta: { data: chunk, terminal_id: 't' } },
+        }),
+      );
+    }
+    const end = compensations.update({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 't',
+      status: 'completed',
+      _meta: { terminal_exit: { exit_code: 0, signal: null, terminal_id: 't' } },
+    });
+    relayed.push(end);
+
+    const total = relayed.reduce((sum, update) => sum + JSON.stringify(update).length, 0);
+    expect(total).toBeLessThan(chunk.length * chunks * 1.2 + OUTPUT_LIMIT * 1.2);
+    expect(relayed[1]?._meta).toEqual({ regie: { output: 'delta', truncated: false } });
+    const text = (end.content as Array<{ content: { text: string } }>)[0]?.content.text ?? '';
+    expect(text.length).toBe(OUTPUT_LIMIT);
+    expect(end._meta).toMatchObject({ regie: { output: 'final', truncated: true } });
   });
 });
 

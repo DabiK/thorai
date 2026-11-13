@@ -550,6 +550,27 @@ describe('a session goes live only once loaded and in its mode', () => {
     expect(types.slice(0, 3)).toEqual(['session', 'session_update', 'user_message']);
   });
 
+  it('drops the messages still waiting when the session is interrupted while it loads', async () => {
+    const { sessionId } = await world.bridge.createSession({
+      agent: 'claude',
+      project: 'regie-demo',
+      approvalMode: 'ask',
+    });
+    world.restart();
+    world.claude.loadDelayMs = 30;
+    world.claude.calls.length = 0;
+
+    const first = world.bridge.prompt(sessionId, 'premier');
+    const second = world.bridge.prompt(sessionId, 'second');
+    await world.bridge.cancel(sessionId);
+    const after = world.bridge.prompt(sessionId, 'après');
+
+    await expect(first).resolves.toBe('cancelled');
+    await expect(second).resolves.toBe('cancelled');
+    await expect(after).resolves.toBe('prompt');
+    expect(world.claude.callsOf('prompt')).toEqual([[sessionId, 'après']]);
+  });
+
   it('does not take a resumed session for live while it loads', async () => {
     const { sessionId } = await world.bridge.createSession({
       agent: 'codex',
