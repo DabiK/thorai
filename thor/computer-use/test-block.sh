@@ -2,6 +2,7 @@
 # Test de thor/computer-use/block.sh : block_put / block_drop.
 #   thor/computer-use/test-block.sh [chemin de block.sh]
 set -uo pipefail
+# shellcheck source=block.sh
 . "${1:-$(dirname "$0")/block.sh}"
 W=$(mktemp -d)
 trap 'rm -rf "$W"' EXIT
@@ -52,12 +53,14 @@ block_put "$f" "$W/c1" >/dev/null; block_drop "$f" >/dev/null; check "ligne vide
 # 7. retrait sans bloc : rien ne bouge
 f=$W/none.md; printf 'rien\n' > "$f"; cp "$f" "$W/orig"
 block_drop "$f" >/dev/null; check "retrait sans bloc: inchangé" "$W/orig" "$f"
-block_drop "$W/absent.md" >/dev/null; [ ! -e "$W/absent.md" ] && echo "ok   retrait fichier absent: rien créé" || { echo "ECHEC retrait absent"; fails=$((fails + 1)); }
+block_drop "$W/absent.md" >/dev/null
+if [ ! -e "$W/absent.md" ]; then echo "ok   retrait fichier absent: rien créé"; else echo "ECHEC retrait absent"; fails=$((fails + 1)); fi
 
 # 8. droits gardés
 f=$W/mode.md; printf 'y\n' > "$f"; chmod 600 "$f"
 block_put "$f" "$W/c1" >/dev/null
-m=$(ls -l "$f" | cut -c1-10); [ "$m" = "-rw-------" ] && echo "ok   droits gardés" || { echo "ECHEC droits: $m"; fails=$((fails + 1)); }
+m=$(stat -f %Sp "$f" 2>/dev/null || stat -c %A "$f")
+if [ "$m" = "-rw-------" ]; then echo "ok   droits gardés"; else echo "ECHEC droits: $m"; fails=$((fails + 1)); fi
 
 # 9. marqueur de début sans fin : refus, fichier intact
 f=$W/broken.md; printf 'a\n%s\nb\n' "$B" > "$f"; cp "$f" "$W/orig"
