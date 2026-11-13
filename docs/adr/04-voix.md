@@ -205,15 +205,30 @@ Statut : en cours, 13 novembre 2026 (ticket 04). La phase 1 a posé les ports, l
 
 ## Mesures
 
-À remplir en phase 2, sur la Thor, avec les 20 consignes du corpus lues par l'utilisateur :
+### Banc du 13 novembre 2026, voix de synthèse
 
-| Fournisseur | Latence fin de parole → texte final (médiane, max) | Erreurs grossières | Termes du dépôt reconnus |
-| --- | --- | --- | --- |
-| ElevenLabs Scribe v3 Live | | | |
-| ElevenLabs Scribe v2 Realtime | | | |
-| Local (sherpa-onnx) | | | |
+Mesuré sur la Thor avec le banc de l'appli d'essai (`--es bench local`), sur les 20 consignes de `voice/corpus/`. Les enregistrements viennent de `scripts/voice-corpus.sh` (`say -v Thomas`, 16 kHz). Ils durent 3,8 s en moyenne et sont rejoués au rythme réel. Rapports bruts : `bench-local-20261113-222537` (sans termes favorisés) et `bench-local-20261113-222730` (avec), dans le dossier `files/` de l'appli.
 
-Recommandation du fournisseur par défaut : à écrire après les mesures.
+| Fournisseur | Latence fin de parole → texte final (médiane, max) | WER moyen | Termes du dépôt reconnus | Facteur temps réel |
+| --- | --- | --- | --- | --- |
+| Local, Parakeet TDT v3 int8, sans termes favorisés | 223 ms, 367 ms | 0,29 | 14 / 45 | 0,22 |
+| Local, avec termes favorisés (`modified_beam_search` + hotwords) | 279 ms, 582 ms | 0,21 | 22 / 45 | 0,27 |
+| ElevenLabs Scribe v3 Live | à mesurer par l'utilisateur (pas de clé) | | | |
+| ElevenLabs Scribe v2 Realtime | à mesurer par l'utilisateur (pas de clé) | | | |
+
+- **Erreurs grossières**, en local : le français courant passe bien, mais les identifiants se déforment. Par exemple : « Session et vent, renomme le chant Imestan » pour `SessionEvent`/`timestamp`, « Sherpa Hunts », « trait Slay » pour `Thread.sleep`, « Termu », « ProDistro », « la scie » pour la CI. Avec les termes favorisés, on retrouve `AgentGateway`, `MainActivity`, `StateFlow`, `kotlinx-coroutines`, `on-request` et `regie`.
+- **Le banc est pessimiste pour les termes** : la voix « Thomas » de macOS lit elle-même les mots anglais à la française (`timestamp`, `tool_call`, `gradlew`). Il faut refaire la mesure avec la voix de l'utilisateur.
+- **La latence locale est très bonne** : la transcription du dernier segment tient en un quart de seconde, sur l'appareil, sans réseau.
+- Scribe n'a pas pu être mesuré : la clé reste à saisir par l'utilisateur. Le connecteur ElevenLabs de la session ne propose que `eleven_scribe_v1` en différé, qui ne représente pas v3 Live ; on ne l'a pas utilisé.
+
+### Recommandation
+
+- **Fournisseur par défaut : ElevenLabs, Scribe v3 Live** (choix du PRD), **sous réserve** de la mesure de l'utilisateur. Le local reconnaît mal les termes de code, alors que c'est le cœur des consignes ; Scribe v3 Live accepte 50 keyterms, ou une bibliothèque de termes. Si Scribe ne fait pas nettement mieux que 22 / 45 sur les termes avec la vraie voix, il faut revoir ce choix.
+- **Repli local : activer les termes favorisés par défaut.** Ils font gagner 8 points de WER et 8 termes, pour environ 55 ms de latence en plus.
+
+### Marche à suivre pour l'utilisateur
+
+Voir le rapport du ticket 04 : saisie de la clé sur l'écran du bas, puis lecture des 20 consignes avec L2 maintenu, une fois par fournisseur.
 
 ## Conséquences
 
