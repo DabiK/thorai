@@ -1,0 +1,48 @@
+# Termes du dépôt à favoriser pendant la dictée, un par ligne, par ordre de priorité.
+# ElevenLabs n'en garde que 50, de 20 caractères au plus (règle appliquée par l'adapter).
+AgentGateway
+SessionEvent
+Approval
+ApprovalRepository
+Dictation
+VoiceCommand
+SpokenSummary
+Overview
+Bridge
+sendDictation
+MainActivity
+SessionScreen
+sherpa-onnx
+ElevenLabs
+Termux
+proot-distro
+displayId
+build.gradle.kts
+StateFlow
+ViewModel
+WebSocket
+Codex
+Claude Code
+README
+JUnit
+tool_call
+kotlinx-coroutines
+gradlew
+npm
+createdAt
+timestamp
+Thread.sleep
+delay
+coroutine
+androidx.compose
+material3
+git diff
+pull request
+working tree
+commit
+on-request
+docs/adr
+ADR
+CI
+regie
+main

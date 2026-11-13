@@ -2,6 +2,8 @@
 
 ## Où on en est
 
+- **13 novembre, ticket 04 fait** : module `voice/` (ports, local sherpa-onnx, ElevenLabs, factice) et appli d'essai `app.regie.voicelab` (ADR 04). La mesure ElevenLabs n'est plus nécessaire : l'utilisateur a retenu la voix locale par défaut après l'avoir essayée. Recommandation du ticket : termes du dépôt favorisés activés par défaut.
+
 **13 novembre 2026, cadrage terminé.**
 
 - Maquette des 6 écrans validée « dans les grandes lignes » par l'utilisateur.
@@ -11,6 +13,7 @@
   - 02 : pont ;
   - 03 : accès des agents à Android ;
   - 04 : voix.
+- **13 novembre, ticket 04 (voix) `bloqué`, branche prête à relire.** Le module `voice/` est livré : ElevenLabs, local sherpa-onnx et appli d'essai `app.regie.voicelab`. Le banc local a tourné sur la Thor. Il manque la clé ElevenLabs et la lecture des 20 consignes par l'utilisateur ; la marche à suivre est dans l'ADR 04.
 
 - **13 novembre, ticket 01 fait** : socle Android livré et vérifié sur la Thor, y compris l'écran du bas éteint (ADR 05). R1 et l'écran du bas en arrière-plan tranchés par l'utilisateur.
 - **13 novembre, ticket 02 fait** : pont ACP (ADR 02), contrat `docs/protocole-pont.md`, fixtures réelles dans `bridge/fixtures/bridge-ws/`. Reste à vérifier avec l'utilisateur : l'historique après un redémarrage de la console (marche à suivre dans le rapport du ticket).
