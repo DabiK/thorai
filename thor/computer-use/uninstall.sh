@@ -2,13 +2,23 @@
 # Coupe l'accès des agents à Android : retire le serveur thor_android des deux
 # agents, leurs autorisations sans validation (quatre entrées de Claude, règles
 # de Codex) et leurs consignes thor-android, arrête le serveur adb et efface ce
-# que install.sh a posé, y compris la clé adb de la Debian, ainsi que le
-# dossier que mobilecli a pu poser dans les données de Régie. Lancé depuis le
-# Mac. Idempotent.
+# que install.sh a posé, ainsi que le dossier que mobilecli a pu poser dans
+# les données de Régie. Lancé depuis le Mac. Idempotent.
+#
+# La clé adb de la Debian est gardée, pour ne pas refaire l'association du
+# débogage sans fil à chaque réinstallation (décision de l'utilisateur, 13
+# novembre). Pour l'effacer aussi : uninstall.sh --oublier-association
 #
 # Le paquet Debian adb reste installé : sans clé associée, il ne peut rien.
 # Côté console, couper aussi le Débogage sans fil (voir README.md).
 set -euo pipefail
+
+forget_pairing=0
+case "${1:-}" in
+  --oublier-association) forget_pairing=1 ;;
+  "") ;;
+  *) echo "usage : $0 [--oublier-association]" >&2; exit 2 ;;
+esac
 
 HERE=$(cd "$(dirname "$0")" && pwd)
 # shellcheck source-path=SCRIPTDIR source=lib.sh
@@ -24,7 +34,7 @@ failed=()
 echo "1/5 Debian (dev) : serveurs, Claude Code, fichiers de dev"
 {
   cat "$HERE/permissions.sh"
-  printf 'wrapper_tag=%q\nsocket_dir=%q\n' "$ADB_WRAPPER_TAG" "$ADB_SOCKET_DIR"
+  printf 'wrapper_tag=%q\nsocket_dir=%q\nforget_pairing=%q\n' "$ADB_WRAPPER_TAG" "$ADB_SOCKET_DIR" "$forget_pairing"
   cat <<'EOF'
 set -uo pipefail
 rc=0
@@ -58,7 +68,9 @@ fi
 rm -rf "$socket_dir" ~/.local/state/thor-android || fail "dossier de la socket"
 # Journal et pid du démon de mobilecli (stop.sh l'a arrêté).
 rm -rf ~/.mobilecli || fail "dossier ~/.mobilecli"
-rm -f ~/.android/adbkey ~/.android/adbkey.pub || fail "clé adb"
+if [ "$forget_pairing" = 1 ]; then
+  rm -f ~/.android/adbkey ~/.android/adbkey.pub || fail "clé adb"
+fi
 exit "$rc"
 EOF
 } | debian_sh dev || failed+=("1/5 serveurs, Claude Code ou fichiers de dev")
