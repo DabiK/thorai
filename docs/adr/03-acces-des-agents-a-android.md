@@ -65,20 +65,22 @@ Les trois questions ouvertes de la première version de cet ADR sont tranchées 
 
    Il écrit une ligne `THOR_ANDROID=ok|erreur …`, documentée dans `thor/computer-use/README.md`. Durée mesurée sur la socket : 0,26 à 0,28 s.
 6. **`/opt/thor-android/stop.sh`** :
-   - arrête le serveur de mobilecli sur la console (voir « Sécurité ») ;
+   - arrête le serveur de mobilecli sur la console (voir « Sécurité » et « Limites » : ce serveur est partagé) ;
    - arrête le serveur adb de la socket par `adb kill-server`, ce qui ferme aussi les `adb forward` ;
    - en repli, envoie un signal aux processus `adb -L <socket> fork-server`.
 
    Il ne touche à aucun autre serveur adb.
+
+   `start.sh`, `stop.sh` et `pair.sh` ferment leur entrée standard (`exec </dev/null`), et tous les `adb … shell` des scripts prennent `-n`. Sans cela, appelés depuis un script lu sur stdin (`bash -s`, comme le font `install.sh` et `uninstall.sh` par `lib.sh`), un `adb shell` avalait la suite du script : `uninstall.sh` sautait alors la moitié de la coupure et annonçait quand même « Accès coupé ». Par sécurité, `lib.sh` enveloppe aussi chaque script envoyé à la console dans un bloc `{ … }`, que bash lit en entier avant de l'exécuter.
 7. **Écran bas : `thor-screen`**, petit script adb (`ids`, `capture`, `tap`, `swipe`, `text`, sur `haut` ou `bas`).
    - Les gestes passent par `input -d <displayId>`.
    - Les ids physiques sont relus à chaque appel (`cmd display get-displays`), pas codés en dur.
 8. **Consignes globales** (`consignes.md`, une dizaine de lignes) :
    - le texte est posé entre `<!-- thor-android:début -->` et `<!-- thor-android:fin -->` par `block.sh` (`block_put`, `block_drop`) ;
    - `install.sh` remplace le bloc s'il existe. Sinon, il l'ajoute à la fin du fichier, après une ligne vide, ou crée le fichier ;
-   - `uninstall.sh` retire le bloc et la ligne vide qui le précède. Il efface le fichier s'il ne reste rien (0 octet), ce qui est le cas quand `install.sh` l'avait créé ;
+   - `uninstall.sh` retire le bloc et la ligne vide qui le précède. Il efface le fichier s'il ne reste rien (0 octet) : c'est le cas quand `install.sh` l'avait créé, mais aussi quand le fichier existait déjà, vide ;
    - le reste du fichier n'est pas touché, à une exception près : un fichier sans saut de ligne final en gagne un. Après `install.sh` puis `uninstall.sh`, un tel fichier revient avec un `\n` de plus ; tout autre fichier revient à l'octet près ;
-   - en cas d'échec (fichier en lecture seule, marqueurs incohérents…), le fichier est laissé tel quel et l'erreur est signalée. `install.sh` s'arrête alors avant de déclarer `thor_android` aux agents : pas d'outils sans les consignes. `uninstall.sh` coupe d'abord l'accès (serveurs, déclarations, fichiers), retire les consignes en dernier, et finit avec un code d'erreur s'il reste quelque chose à faire à la main ;
+   - en cas d'échec (fichier illisible ou en lecture seule, marqueurs incohérents…), l'erreur est signalée et le fichier n'est pas modifié, tant que l'échec survient avant l'écriture ou à l'ouverture du fichier. Une écriture interrompue en cours de route (disque plein) peut le laisser tronqué. `install.sh` s'arrête alors avant les déclarations MCP. Sur une première installation, les agents n'ont donc pas d'outils sans consignes. Une déclaration `thor_android` laissée par une installation précédente reste en place : le message le dit, et renvoie à `uninstall.sh`. `uninstall.sh` coupe d'abord l'accès (serveurs, déclarations, fichiers), retire les consignes en dernier, et finit avec un code d'erreur s'il reste quelque chose à faire à la main ;
    - Codex lit `~/.codex/AGENTS.override.md` à la place d'`AGENTS.md` s'il existe : `install.sh` le signale.
 9. Tout est scripté dans `thor/computer-use/` : `install.sh`, `uninstall.sh`, `pair-from-mac.sh`.
 
@@ -102,11 +104,15 @@ Sorties complètes : `artifacts/screenshots/03/socket-essais.txt`. Captures : `s
 - `uninstall.sh` puis `install.sh` : mêmes quatre fichiers identiques à l'octet près ;
 - `uninstall.sh` efface `CLAUDE.md` et `AGENTS.md`, qui n'existaient pas avant ;
 - l'ancienne déclaration sans `env` est remplacée des deux côtés ;
-- le bloc marqué est testé à part par `thor/computer-use/test-block.sh`, sur 28 cas : fichier absent, avec contenu, bloc présent, bloc modifié, retrait, marqueurs cassés, fichier sans saut de ligne final, fichier ou dossier en lecture seule. Aucun échec avec awk BSD (Mac) ni avec mawk (Debian) ;
+- le bloc marqué est testé à part par `thor/computer-use/test-block.sh`, sur 32 vérifications : fichier absent, avec contenu, bloc présent, bloc modifié, retrait, marqueurs cassés, fichier sans saut de ligne final, fichier ou dossier en lecture seule, fichier illisible. Aucun échec avec awk BSD (Mac) ni avec mawk (Debian) ;
 - chemins d'échec, avec un marqueur de début orphelin ajouté à `CLAUDE.md` :
   - `install.sh` signale l'erreur et finit en code 1, sans déclarer `thor_android` aux agents ;
   - `uninstall.sh` coupe tout le reste (serveur adb, déclarations des deux agents, cale, `/opt/thor-android`, dossier de la socket), signale le bloc à retirer à la main et finit en code 1 ;
 - `stop.sh` sans `pgrep` dans le `PATH` : le repli par `/proc` trouve et arrête le serveur.
+- **Entrée standard** (deuxième relecture) : les scripts lus par `bash -s` partagent leur entrée standard avec les commandes qu'ils lancent.
+  - Désinstallation simulée sur le Mac, avec un faux `adb` dont `shell` lit stdin : la version d'avant finissait en code 0 avec « Accès coupé », alors que la déclaration Claude, les lanceurs, la cale, la clé et la socket restaient. 10 lignes du script avaient été avalées.
+  - Version corrigée, avec ou sans l'enveloppe `{ … }` : tout est retiré, rien n'est avalé.
+  - Sur la vraie console (échafaudage socket → `reverse`) : l'ancien `stop.sh` et l'ancien `start.sh` avalent la suite du script, les nouveaux non, pas plus que `thor-screen`.
 
 **Chemin livré, sans échafaudage** :
 - `start.sh` répond `THOR_ANDROID=erreur raison=non-connecte` (code 2), comme attendu sans association ;
@@ -149,6 +155,7 @@ Sorties complètes : `artifacts/screenshots/03/socket-essais.txt`. Captures : `s
   - Il copie `mobilecli.so` et `mobilecli.dex` dans les données de l'appli (`run-as`), puis lance `am attach-agent`, pour détecter Flutter.
   - Les builds de release ne sont pas touchés. Aucun réglage ne le coupe en 1.0.23.
 - **Le serveur de mobilecli sur l'appareil** (`app_process … DeviceServer`, utilisateur `shell`) reste actif 30 minutes après le dernier appel. Pendant ce temps, il occupe le service UiAutomation : `uiautomator dump` lancé par un autre outil échoue. `stop.sh` l'arrête.
+- **Ce DeviceServer est partagé.** Il n'y en a qu'un par console : il écoute sur une socket abstraite au nom fixe, `mobilecli-server`. Le `pkill -f com.mobilenext.mobilecli.DeviceServer` de `stop.sh` arrête donc aussi celui dont se sert un autre client mobilecli, par exemple un mobile-mcp lancé depuis le Mac. On ne peut pas distinguer « le nôtre » simplement. Le client mobilecli le relance au prochain appel (« device server on port … is gone, starting it again »).
 - mobile-mcp expose aussi des outils de « flotte distante » de mobile-next. Ils exigent un compte et restent inactifs ici.
 
 ## Sécurité

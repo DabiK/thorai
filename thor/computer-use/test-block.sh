@@ -106,5 +106,15 @@ if [ "$(id -u)" -ne 0 ]; then
   chmod 755 "$W/rodir"
 fi
 
+# 14. fichier illisible (droits 000) : échec signalé, jamais « pas de bloc »
+if [ "$(id -u)" -ne 0 ]; then
+  for fn in block_put block_drop; do
+    f=$W/unreadable-$fn.md; { printf 'a\n\n'; cat "$W/blk1"; } > "$f"; chmod 000 "$f"
+    if out=$($fn "$f" "$W/c2" 2>/dev/null); then echo "ECHEC $fn, fichier illisible: succès annoncé ($out)"; fails=$((fails + 1)); else echo "ok   $fn, fichier illisible: échec signalé"; fi
+    chmod 644 "$f"
+    { printf 'a\n\n'; cat "$W/blk1"; } > "$W/exp"; check "$fn, fichier illisible: intact" "$W/exp" "$f"
+  done
+fi
+
 echo "échecs : $fails"
 [ "$fails" -eq 0 ]

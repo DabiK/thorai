@@ -25,12 +25,12 @@ thor/computer-use/install.sh
 ```
 
 Le script peut être relancé sans risque : un second passage ne change aucun fichier. Il pose :
-- dans la Debian : le paquet `adb` et `/opt/thor-android/` (mobile-mcp, `start.sh`, `stop.sh`, `pair.sh`) ;
+- dans la Debian : les paquets `adb` et `procps` (pour `pgrep`), s'ils manquent, et `/opt/thor-android/` (mobile-mcp, `start.sh`, `stop.sh`, `pair.sh`) ;
 - dans `~dev/.local/bin/` : `thor-android-mcp`, `thor-screen` et `adb`, une cale qui impose la socket privée à tout `adb` lancé par les agents. Elle n'écrase pas un `adb` qui ne vient pas d'elle ;
 - les consignes de `consignes.md`, entre `<!-- thor-android:début -->` et `<!-- thor-android:fin -->`, dans `~dev/.claude/CLAUDE.md` (Claude) et `~/.codex/AGENTS.md` de Termux (Codex). Le bloc est remplacé s'il existe, sinon ajouté à la fin ; le fichier est créé s'il manque ;
 - la déclaration `thor_android` pour Claude (`~dev/.claude.json`, portée utilisateur) et pour Codex (`~/.codex/config.toml` de Termux), avec `ADB_SERVER_SOCKET` dans son `env`. Une ancienne déclaration différente est remplacée.
 
-Il ne touche à aucune autre entrée de ces fichiers. Si les consignes ne peuvent pas être posées, il s'arrête en erreur avant de déclarer `thor_android` aux agents. Pour changer les consignes : modifier `consignes.md`, puis relancer `install.sh`.
+Il ne touche à aucune autre entrée de ces fichiers. Si les consignes ne peuvent pas être posées, il s'arrête en erreur avant les déclarations MCP ; une déclaration `thor_android` laissée par une installation précédente reste alors en place (`uninstall.sh` la retire). Pour changer les consignes : modifier `consignes.md`, puis relancer `install.sh`.
 
 ## Associer la console (une fois)
 

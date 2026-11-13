@@ -33,15 +33,15 @@ missing=
 command -v adb >/dev/null 2>&1 || missing="\$missing adb"
 command -v pgrep >/dev/null 2>&1 || missing="\$missing procps"
 if [ -n "\$missing" ]; then
-  apt-get update -qq
-  DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \$missing >/dev/null
+  apt-get update -qq </dev/null
+  DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \$missing </dev/null >/dev/null
 fi
 mkdir -p /opt/thor-android
 cd /opt/thor-android
 [ -f package.json ] || echo '{"name":"thor-android","private":true}' > package.json
-current=\$(node -p "require('./node_modules/@mobilenext/mobile-mcp/package.json').version" 2>/dev/null || true)
+current=\$(node -p "require('./node_modules/@mobilenext/mobile-mcp/package.json').version" </dev/null 2>/dev/null || true)
 if [ "\$current" != "$MOBILE_MCP_VERSION" ]; then
-  npm install --save-exact --omit=dev --no-audit --no-fund --loglevel=error @mobilenext/mobile-mcp@$MOBILE_MCP_VERSION
+  npm install --save-exact --omit=dev --no-audit --no-fund --loglevel=error @mobilenext/mobile-mcp@$MOBILE_MCP_VERSION </dev/null
 fi
 EOF
   emit_file "$HERE/start.sh" /opt/thor-android/start.sh 755
@@ -63,8 +63,8 @@ EOF
   echo 'fi'
   cat <<'EOF'
 set -euo pipefail
-mobilecli=$(node -p "require('/opt/thor-android/node_modules/@mobilenext/mobile-mcp/lib/mobilecli.js').Mobilecli.getMobilecliPath()")
-echo "    $("$mobilecli" --version), adb $(/usr/bin/adb version | sed -n 's/^Version //p')"
+mobilecli=$(node -p "require('/opt/thor-android/node_modules/@mobilenext/mobile-mcp/lib/mobilecli.js').Mobilecli.getMobilecliPath()" </dev/null)
+echo "    $("$mobilecli" --version </dev/null), adb $(/usr/bin/adb version </dev/null | sed -n 's/^Version //p')"
 EOF
 } | debian_sh dev
 
@@ -92,7 +92,9 @@ fi
 exit "$rc"
 EOF
 } | debian_sh dev || {
-  echo "Arrêt : sans leurs consignes, les agents ne recevront pas les outils thor_android." >&2
+  echo "Arrêt avant les déclarations MCP (étapes 4 et 5) : les consignes ne sont pas posées." >&2
+  echo "Une déclaration thor_android posée par une installation précédente reste en place :" >&2
+  echo "corrigez les consignes puis relancez install.sh, ou coupez l'accès avec uninstall.sh." >&2
   exit 1
 }
 
@@ -106,10 +108,10 @@ if jq -e --argjson want "$want" '.mcpServers.thor_android == $want' ~/.claude.js
   echo "    déjà déclaré"
 else
   if jq -e '.mcpServers.thor_android' ~/.claude.json >/dev/null 2>&1; then
-    claude mcp remove --scope user thor_android >/dev/null
+    claude mcp remove --scope user thor_android </dev/null >/dev/null
     echo "    ancienne déclaration retirée"
   fi
-  claude mcp add-json --scope user thor_android "$want"
+  claude mcp add-json --scope user thor_android "$want" </dev/null
 fi
 EOF
 } | debian_sh dev

@@ -26,11 +26,19 @@ echo "1/4 Debian (dev) : serveurs, Claude Code, fichiers de dev"
 set -uo pipefail
 rc=0
 fail() { echo "    ERREUR : $*" >&2; rc=1; }
+# </dev/null : aucune commande ne doit lire l'entrée standard, d'où vient ce
+# script (lib.sh, debian_sh).
 if [ -x /opt/thor-android/stop.sh ]; then
-  /opt/thor-android/stop.sh || fail "arrêt du serveur adb (stop.sh)"
+  /opt/thor-android/stop.sh </dev/null || fail "arrêt du serveur adb (stop.sh)"
 fi
-if jq -e '.mcpServers.thor_android' ~/.claude.json >/dev/null 2>&1; then
-  claude mcp remove --scope user thor_android || fail "retrait de thor_android de Claude"
+if [ ! -e ~/.claude.json ]; then
+  : # Claude n'a aucune déclaration.
+elif ! command -v jq >/dev/null 2>&1; then
+  fail "jq absent : retirer thor_android de Claude à la main (claude mcp remove --scope user thor_android)"
+elif ! jq empty ~/.claude.json </dev/null >/dev/null 2>&1; then
+  fail "~/.claude.json illisible : retirer thor_android de Claude à la main (claude mcp remove --scope user thor_android)"
+elif jq -e '.mcpServers.thor_android' ~/.claude.json </dev/null >/dev/null 2>&1; then
+  claude mcp remove --scope user thor_android </dev/null || fail "retrait de thor_android de Claude"
 fi
 rm -f ~/.local/bin/thor-android-mcp ~/.local/bin/thor-screen || fail "lanceurs"
 if [ -e ~/.local/bin/adb ] && grep -qF "$wrapper_tag" ~/.local/bin/adb; then

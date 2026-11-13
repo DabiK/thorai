@@ -42,12 +42,13 @@ serial() {
 }
 
 SERIAL=$(serial)
-adb_() { adb -s "$SERIAL" "$@"; }
+# </dev/null : adb shell et exec-out ne doivent pas lire l'entrée de l'appelant.
+adb_() { adb -s "$SERIAL" "$@" </dev/null; }
 
 # Une ligne par écran : displayId, id physique, largeur x hauteur.
 # L'écran haut est le displayId 0 ; l'écran bas est l'autre écran physique.
 displays() {
-  adb_ shell cmd display get-displays | tr -d '\r' |
+  adb_ shell -n cmd display get-displays | tr -d '\r' |
     sed -n 's/.*Display id \([0-9][0-9]*\):.* real \([0-9]*\) x \([0-9]*\),.*uniqueId "local:\([0-9][0-9]*\)".*/\1 \4 \2x\3/p'
 }
 
@@ -91,7 +92,7 @@ case "$cmd" in
   tap)
     [ $# -eq 4 ] || usage
     display=$(screen_field "$2" 1)
-    adb_ shell input -d "$display" tap "$3" "$4"
+    adb_ shell -n input -d "$display" tap "$3" "$4"
     ;;
   swipe)
     [ $# -eq 6 ] || [ $# -eq 7 ] || usage
@@ -99,7 +100,7 @@ case "$cmd" in
       [[ "$n" =~ ^[0-9]+$ ]] || die "nombre attendu : $n"
     done
     display=$(screen_field "$2" 1)
-    adb_ shell input -d "$display" swipe "${@:3}"
+    adb_ shell -n input -d "$display" swipe "${@:3}"
     ;;
   text)
     [ $# -eq 3 ] || usage
@@ -108,7 +109,7 @@ case "$cmd" in
     # console, d'où les apostrophes.
     typed=${3// /%s}
     typed=${typed//\'/\'\\\'\'}
-    adb_ shell "input -d $display text '$typed'"
+    adb_ shell -n "input -d $display text '$typed'"
     ;;
   *)
     usage

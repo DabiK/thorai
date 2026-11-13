@@ -7,6 +7,10 @@
 #
 # Le port est celui affiché après les deux-points dans « Adresse IP et port ».
 set -euo pipefail
+# Ce script ne lit jamais l'entrée standard : on la ferme, pour qu'aucune
+# commande (adb shell…) n'avale celle de l'appelant, par exemple un script lu
+# par « bash -s ».
+exec </dev/null
 
 if [ $# -ne 2 ]; then
   echo "usage : $0 <port d'association> <code à 6 chiffres>" >&2

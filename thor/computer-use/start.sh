@@ -11,6 +11,10 @@
 # ou si le serveur adb ne démarre pas, 2 si la console n'est pas joignable. Le message pour
 # l'utilisateur, en français, va sur la sortie d'erreur.
 set -uo pipefail
+# Ce script ne lit jamais l'entrée standard : on la ferme, pour qu'aucune
+# commande (adb shell…) n'avale celle de l'appelant, par exemple un script lu
+# par « bash -s ».
+exec </dev/null
 
 ADB=${THOR_ADB:-adb}
 STATE_DIR=${XDG_STATE_HOME:-$HOME/.local/state}/thor-android
@@ -72,7 +76,7 @@ GUID=$(tr -d '\r' <<<"$GUID")
 is_this_console() {
   [ -z "$GUID" ] && return 0
   local remote
-  remote=$(timeout 5 "$ADB" -s "$1" shell getprop persist.adb.wifi.guid 2>/dev/null | tr -d '\r')
+  remote=$(timeout 5 "$ADB" -s "$1" shell -n getprop persist.adb.wifi.guid 2>/dev/null | tr -d '\r')
   [ "$remote" = "$GUID" ]
 }
 

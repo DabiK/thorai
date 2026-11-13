@@ -15,9 +15,20 @@ ADB_SOCKET_DIR=/home/dev/.thor-adb
 # shellcheck disable=SC2034
 ADB_WRAPPER_TAG='thor-android : adb des shells de dev'
 
+# Le script lu par « bash -s » partage l'entrée standard des commandes qu'il
+# lance : une commande qui lit stdin (adb shell sans -n, par exemple) avalerait
+# la suite du script, qui ne s'exécuterait pas. On l'enveloppe donc dans un
+# bloc { … } : bash le lit en entier avant d'exécuter quoi que ce soit, et
+# l'entrée standard est vide quand les commandes tournent.
+_whole_script() {
+  printf '{\n'
+  cat
+  printf '\n}\n'
+}
+
 # Exécute dans Termux le script bash lu sur l'entrée standard.
 termux_sh() {
-  adb -s "$THOR_SERIAL" shell -T run-as com.termux \
+  _whole_script | adb -s "$THOR_SERIAL" shell -T run-as com.termux \
     "$TERMUX_PREFIX/bin/env" HOME="$TERMUX_HOME" PREFIX="$TERMUX_PREFIX" \
     TMPDIR="$TERMUX_PREFIX/tmp" PATH="$TERMUX_PREFIX/bin:/system/bin" \
     LD_PRELOAD="$TERMUX_PREFIX/lib/libtermux-exec.so" LANG=en_US.UTF-8 \
@@ -27,7 +38,7 @@ termux_sh() {
 # Exécute dans la Debian, sous l'utilisateur $1 (dev ou root), le script bash
 # lu sur l'entrée standard. Mêmes montages que le lanceur dev-linux de Termux.
 debian_sh() {
-  adb -s "$THOR_SERIAL" shell -T run-as com.termux \
+  _whole_script | adb -s "$THOR_SERIAL" shell -T run-as com.termux \
     "$TERMUX_PREFIX/bin/env" HOME="$TERMUX_HOME" PREFIX="$TERMUX_PREFIX" \
     TMPDIR="$TERMUX_PREFIX/tmp" PATH="$TERMUX_PREFIX/bin:/system/bin" \
     LD_PRELOAD="$TERMUX_PREFIX/lib/libtermux-exec.so" LANG=en_US.UTF-8 \

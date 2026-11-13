@@ -8,10 +8,15 @@
 #                               remplace le bloc existant, sinon l'ajoute à la
 #                               fin après une ligne vide, sinon crée le fichier.
 #   block_drop FICHIER          retire le bloc et la ligne vide qui le précède ;
-#                               efface le fichier s'il ne reste rien (0 octet).
+#                               efface le fichier s'il ne reste rien (0 octet) :
+#                               c'est le cas d'un fichier créé par block_put,
+#                               mais aussi d'un fichier qui était vide avant.
 #
 # Les deux affichent ce qu'elles ont fait et renvoient 0, ou renvoient 1 avec
-# un message sur la sortie d'erreur ; le fichier est alors laissé tel quel.
+# un message sur la sortie d'erreur. Le fichier n'est pas modifié si l'échec
+# survient avant l'écriture ou à son ouverture (fichier illisible, en lecture
+# seule, marqueurs incohérents…). Une écriture interrompue en cours de route
+# (disque plein) peut en revanche le laisser tronqué.
 
 THOR_BLOCK_BEGIN='<!-- thor-android:début -->'
 THOR_BLOCK_END='<!-- thor-android:fin -->'
@@ -71,6 +76,7 @@ _block_build() {
 block_put() {
   local file=$1 content=$2 tmp status rc=0
   if [ -e "$file" ]; then
+    [ -r "$file" ] || _block_fail "$file illisible." || return 1
     _block_check "$file" || return 1
   fi
   mkdir -p "$(dirname "$file")" || _block_fail "dossier de $file impossible à créer." || return 1
@@ -88,10 +94,21 @@ block_put() {
 
 block_drop() {
   local file=$1 tmp rc=0
-  if [ ! -e "$file" ] || ! grep -qxF "$THOR_BLOCK_BEGIN" "$file"; then
+  if [ ! -e "$file" ]; then
     echo "pas de bloc"
     return 0
   fi
+  [ -r "$file" ] || _block_fail "$file illisible." || return 1
+  # grep : 0 = trouvé, 1 = absent, 2 = erreur de lecture.
+  grep -qxF "$THOR_BLOCK_BEGIN" "$file"
+  case $? in
+    0) ;;
+    1)
+      echo "pas de bloc"
+      return 0
+      ;;
+    *) _block_fail "$file illisible." || return 1 ;;
+  esac
   _block_check "$file" || return 1
   tmp=$(mktemp "$(dirname "$file")/.thor-block.XXXXXX") ||
     _block_fail "fichier temporaire impossible à créer à côté de $file." || return 1

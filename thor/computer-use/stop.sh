@@ -5,6 +5,10 @@
 #
 # Sortie standard : THOR_ANDROID=arrete ou THOR_ANDROID=rien-a-arreter.
 set -uo pipefail
+# Ce script ne lit jamais l'entrée standard : on la ferme, pour qu'aucune
+# commande (adb shell…) n'avale celle de l'appelant, par exemple un script lu
+# par « bash -s ».
+exec </dev/null
 
 STATE_DIR=${XDG_STATE_HOME:-$HOME/.local/state}/thor-android
 # Même valeur que start.sh.
@@ -40,7 +44,7 @@ ADB=${THOR_ADB:-adb}
 # survivrait 30 minutes au dernier appel, sur une socket abstraite que toute
 # appli peut joindre (SELinux permissif sur la Thor, ADR 03) : on l'arrête.
 for serial in $(timeout 5 "$ADB" devices 2>/dev/null | awk 'NR > 1 && $2 == "device" { print $1 }'); do
-  timeout 5 "$ADB" -s "$serial" shell 'pkill -f com.mobilenext.mobilecli.DeviceServer' >/dev/null 2>&1 || true
+  timeout 5 "$ADB" -s "$serial" shell -n 'pkill -f com.mobilenext.mobilecli.DeviceServer' >/dev/null 2>&1 || true
 done
 
 # Arrêt propre (il ferme aussi les adb forward de mobilecli), puis signal en repli.
