@@ -1,6 +1,6 @@
 # 05 — Vue d'ensemble branchée sur le pont
 
-Statut : bloqué
+Statut : fait (reste l'essai après redémarrage, avec l'utilisateur)
 Bloqué par : essai du critère 3 par l'utilisateur (deux permissions à accorder, redémarrage de la console)
 Possède : adapter `AgentGateway` vers le pont (module `android/gateway-bridge` ou équivalent)
 
