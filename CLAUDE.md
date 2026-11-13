@@ -17,7 +17,7 @@ L'app ne refait pas le travail des agents. Elle :
 | Quoi | Où |
 | --- | --- |
 | Produit : promesse, principes, parcours, fonctionnalités | `docs/PRD.md` |
-| Maquette des 6 écrans (référence visuelle) | https://example.invalid/regie-maquette |
+| Maquette des 6 écrans (référence visuelle) | https://example.invalid/regie-maquette, lisible avec l'outil Artifact (action `read`, `path` `project/<Écran>.dc.html` : `Main`, `Dictee`, `Session`, `Validation`, `Diff`, `Lancer`) |
 | Fiche de la console : écrans, manette, Termux, agents installés | `docs/thor.md` |
 | Tickets, avec leurs bloquants et leur statut | `.scratch/regie-v1/issues/` |
 | Décisions techniques | `docs/adr/` |
@@ -67,6 +67,7 @@ Toutes les sessions partagent **une seule console** :
 
 ## Comment traiter un ticket
 
+0. Travailler dans un worktree, sur une branche `ticket/<NN>-<slug>`, jamais directement sur `main`.
 1. Lire le ticket, la section du PRD, les ADR cités et, pour l'interface, l'écran de la maquette.
 2. Chercher d'abord ce qui existe déjà. Pour une API de bibliothèque, vérifier la documentation à jour (MCP `context7` ou le web) plutôt que de répondre de mémoire. Noter le choix dans un ADR.
 3. Implémenter par petites étapes, avec les tests à côté.
@@ -78,6 +79,8 @@ Toutes les sessions partagent **une seule console** :
 7. Faire les commits (Conventional Commits) sur la branche du ticket.
 8. Mettre le statut du ticket à `à fusionner`, remplir sa section « Rapport » et mettre à jour le journal de reprise.
 9. **Ne pas fusionner, ne pas rebaser sur `main` et ne pas pousser** : c'est l'orchestrateur qui fusionne.
+
+Si le ticket a besoin de l'utilisateur (toucher l'écran de la console, saisir une clé, lire des phrases au micro), le lui demander clairement et attendre sa réponse. Sans personne pour répondre, passer le ticket en `bloqué` et noter la question dans sa section « Rapport ».
 
 ## Vocabulaire
 
