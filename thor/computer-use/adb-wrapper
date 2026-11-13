@@ -1,0 +1,8 @@
+#!/bin/bash
+# thor-android : adb des shells de dev (posé en ~/.local/bin/adb par install.sh,
+# devant /usr/bin dans le PATH des agents). Le serveur adb de la Debian écoute
+# sur une socket Unix privée, et pas sur 127.0.0.1:5037 : sans cette variable,
+# un client adb démarrerait un second serveur sur 5037, joignable par toute
+# appli de la console. Même valeur que start.sh.
+export ADB_SERVER_SOCKET=${ADB_SERVER_SOCKET:-localfilesystem:/home/dev/.thor-adb/server}
+exec /usr/bin/adb "$@"
