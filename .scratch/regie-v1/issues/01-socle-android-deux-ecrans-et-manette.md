@@ -57,7 +57,7 @@ Poser l'app Android sur la Thor, avec ses deux écrans, sa manette et le systèm
   - A est consommé : aucun clic parasite.
 - La vue d'ensemble fidèle à la maquette, alimentée par la passerelle factice. La croix déplace le focus depuis les deux écrans.
 - Le mode un seul écran (le panneau en bas de l'écran haut) a été vérifié en le forçant (`--ez force_single_screen true`, en debug seulement). La règle de bascule est testée pour un écran retiré et pour les états OFF, DOZE, DOZE_SUSPEND et ON_SUSPEND.
-- `./gradlew check` est vert : lint sans avertissement toléré, 61 tests (`domain` et `app`), dont 4 d'architecture.
+- `./gradlew check` est vert : lint sans avertissement toléré, 58 tests (`domain` et `app`), dont 4 d'architecture.
 - Captures : `artifacts/screenshots/01/` (7 états, haut et bas).
 
 **À faire par l'utilisateur** (marche à suivre complète dans l'ADR 02, « Conséquences ») :
