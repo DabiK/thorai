@@ -21,7 +21,7 @@ On prend la console et on parle. On voit d'un coup d'œil où en sont toutes ses
 - **Rien ne part sans un appui sur A.** Une dictée se relit avant l'envoi. Dire « approuve » demande quand même A.
 - **L'attention n'est demandée que pour une décision** : une validation, une question de l'agent, une fin de session, un échec. Le reste se consulte.
 - **L'app ne refait pas le travail des agents.** Outils, consignes et réglages restent ceux de Claude Code et Codex. On relaie ce qu'ils exposent. Quand un agent n'expose pas une information, l'app le dit au lieu d'inventer.
-- **Les sessions vivent sans l'app.** Fermer l'app ou éteindre l'écran ne coupe pas une session.
+- **Une app qu'on lance, rien au démarrage de la console.** Rien ne démarre au boot. À son lancement, l'app démarre le pont s'il ne tourne pas. Passer l'app en arrière-plan ou éteindre l'écran ne coupe pas une session en cours. « Quitter » arrête le pont et les sessions, avec une confirmation si une session travaille encore.
 - **Une information par zone.** Pas de jargon : on écrit « attend ta validation », pas « permission_request ».
 
 ## Commandes
@@ -73,9 +73,9 @@ Chaque lot correspond à un ou plusieurs tickets.
   - système visuel de la maquette.
 - **Pont sur la Thor** :
   - sessions Claude et Codex exposées à l'app par une connexion locale protégée ;
-  - les sessions survivent à l'app ;
+  - les sessions continuent quand l'app passe en arrière-plan ;
   - historique et reprise ;
-  - démarrage automatique.
+  - démarré par l'app à son lancement, jamais au boot.
 - **Accès des agents à la console** : Claude et Codex peuvent voir l'écran d'Android et agir dessus (computer use), avec des outils existants.
 - **Voix** :
   - **Transcription** : en français en direct, avec le vocabulaire du dépôt.

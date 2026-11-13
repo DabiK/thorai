@@ -27,6 +27,10 @@
 - L'orchestrateur relit, fusionne dans `main`, pousse sur le dépôt GitHub privé et lance la vague suivante. L'utilisateur l'a autorisé le 13 novembre.
 - Une seule console pour tout le monde : voir `CLAUDE.md`, « La console ».
 
+## Décisions de l'utilisateur
+
+- 13 novembre : **rien ne démarre au boot**. Régie est une app qu'on lance ; c'est elle qui démarre le pont (RUN_COMMAND) et l'arrête quand on quitte.
+
 ## Questions en attente
 
 - Nom définitif de l'app (« Régie » est un nom de travail).
