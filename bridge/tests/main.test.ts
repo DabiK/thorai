@@ -22,7 +22,7 @@ afterEach(() => {
   rmSync(base, { recursive: true, force: true });
 });
 
-function bridge(state: string, port: number) {
+function bridge(state: string, port: number, settings: Record<string, string> = {}) {
   const child = spawn(process.execPath, [MAIN], {
     env: {
       ...process.env,
@@ -30,6 +30,7 @@ function bridge(state: string, port: number) {
       REGIE_BRIDGE_TOKEN_FILE: join(base, 'token'),
       REGIE_BRIDGE_STATE_DIR: join(base, state),
       REGIE_PROJECTS_DIR: join(base, 'projects'),
+      ...settings,
     },
     stdio: ['ignore', 'ignore', 'pipe'],
   });
@@ -72,5 +73,61 @@ describe('two bridges', () => {
     expect(await second.exited).toBe(1);
     expect(second.log()).toContain('EADDRINUSE');
     expect(existsSync(join(base, 'other-state/events.jsonl'))).toBe(false);
+  });
+});
+
+describe('retention of the history', () => {
+  const OLD = '2020-01-01T00:00:00.000Z';
+
+  function oldSession(sessionId: string) {
+    return {
+      sessionId,
+      agent: 'codex',
+      project: 'demo',
+      cwd: join(base, 'projects/demo'),
+      branch: null,
+      approvalMode: 'ask',
+      status: 'idle',
+      title: 'Ancienne',
+      createdAt: OLD,
+      updatedAt: OLD,
+      lastError: null,
+    };
+  }
+
+  it('purges the old events at start, and keeps the session listed', async () => {
+    const state = join(base, 'state');
+    mkdirSync(state);
+    writeFileSync(
+      join(state, 'sessions.json'),
+      JSON.stringify({ version: 1, sessions: [oldSession('old-1')] }),
+    );
+    const event = { seq: 1, at: OLD, sessionId: 'old-1', type: 'user_message', data: {} };
+    writeFileSync(
+      join(state, 'events.jsonl'),
+      `${JSON.stringify({ journal: 'j', version: 1 })}\n${JSON.stringify(event)}\n`,
+    );
+
+    const started = bridge('state', 0);
+    await started.ready;
+
+    const journal = readFileSync(join(state, 'events.jsonl'), 'utf8');
+    expect(journal).not.toContain('"old-1"');
+    // The header keeps the journal name and the last number: numbering never goes back.
+    const header = JSON.parse(journal.split('\n')[0] ?? '');
+    expect(header.journal).toBe('j');
+    expect(header.lastSeq).toBeGreaterThanOrEqual(2);
+    const sessions = JSON.parse(readFileSync(join(state, 'sessions.json'), 'utf8'));
+    expect(sessions.sessions[0]).toMatchObject({ sessionId: 'old-1', title: 'Ancienne' });
+    expect(sessions.sessions[0].purgedAt).toEqual(expect.any(String));
+    expect(started.log()).toContain('purge: 1 sessions');
+  });
+
+  it('refuses a retention that is not a positive number of days', async () => {
+    const started = bridge('state', 0, { REGIE_BRIDGE_RETENTION_DAYS: 'trente' });
+
+    expect(await started.exited).toBe(1);
+    expect(started.log()).toContain('REGIE_BRIDGE_RETENTION_DAYS');
+    expect(existsSync(join(base, 'state/events.jsonl'))).toBe(false);
   });
 });

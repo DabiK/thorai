@@ -71,6 +71,39 @@ describe('FileEventStore', () => {
     expect(new FileEventStore(dir, () => 'other').journalId).toBe('journal-c');
   });
 
+  it('purges events from the disk at once, keeping the journal name and the numbering', () => {
+    const journal = new EventJournal(new FileEventStore(dir, () => 'journal-p'), new FakeClock());
+    journal.append({ sessionId: 'old', type: 'user_message', data: { text: 'a' } });
+    journal.append({ sessionId: 'kept', type: 'user_message', data: { text: 'b' } });
+    journal.append({ sessionId: 'old', type: 'user_message', data: { text: 'c' } });
+
+    const removed = journal.remove((event) => event.sessionId === 'old');
+    journal.append({ sessionId: 'kept', type: 'user_message', data: { text: 'd' } });
+
+    expect(removed.map((e) => e.seq)).toEqual([1, 3]);
+    expect(journal.since(0).map((e) => e.seq)).toEqual([2, 4]);
+    expect(journal.since(2).map((e) => e.seq)).toEqual([4]);
+    const restarted = new EventJournal(new FileEventStore(dir, () => 'other'), new FakeClock());
+    expect(restarted.journalId).toBe('journal-p');
+    expect(restarted.since(0).map((e) => [e.seq, e.data])).toEqual([
+      [2, { text: 'b' }],
+      [4, { text: 'd' }],
+    ]);
+    expect(statSync(join(dir, 'events.jsonl')).mode & 0o777).toBe(0o600);
+  });
+
+  it('never numbers back, even when the purge removed the last events', () => {
+    const journal = new EventJournal(new FileEventStore(dir), new FakeClock());
+    journal.append({ sessionId: 'old', type: 'user_message', data: {} });
+    journal.append({ sessionId: 'old', type: 'user_message', data: {} });
+    journal.remove(() => true);
+
+    const restarted = new EventJournal(new FileEventStore(dir), new FakeClock());
+
+    expect(restarted.lastSeq).toBe(2);
+    expect(restarted.append({ sessionId: null, type: 'bridge', data: {} }).seq).toBe(3);
+  });
+
   it('keeps the file private', () => {
     new FileEventStore(dir).append({ seq: 1, at: '', sessionId: null, type: 'bridge', data: {} });
 
@@ -86,12 +119,16 @@ describe('FileSessionStore', () => {
       project: 'regie-demo',
       cwd: '/home/dev/projects/regie-demo',
       branch: 'main',
+      requestedBranch: null,
+      branchInstructionPending: false,
       approvalMode: 'ask',
       status: 'idle',
       title: 'Résumé',
       createdAt: '2026-11-13T20:00:00.000Z',
       updatedAt: '2026-11-13T20:00:01.000Z',
       lastError: null,
+      modifiedFiles: ['todo.md'],
+      purgedAt: null,
     };
     new FileSessionStore(dir).saveAll([record]);
 

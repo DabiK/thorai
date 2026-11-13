@@ -18,6 +18,7 @@ import {
   type SessionStatus,
   type SessionSummary,
 } from './model.ts';
+import { ModifiedFiles, withModifiedFiles } from './modified-files.ts';
 import type {
   AgentConnection,
   AgentConnector,
@@ -27,8 +28,10 @@ import type {
   IdGenerator,
   Logger,
   SessionStore,
+  ShellParser,
   Workspace,
 } from './ports.ts';
+import { ReadOnlyCommands } from './read-only-command.ts';
 
 export interface BridgeDeps {
   readonly connectors: readonly AgentConnector[];
@@ -38,9 +41,22 @@ export interface BridgeDeps {
   readonly clock: Clock;
   readonly ids: IdGenerator;
   readonly logger: Logger;
+  /** Splits the commands the agents ask to run, to approve the read-only ones. */
+  readonly shell: ShellParser;
+  /** How many days the events of a session are kept after its last change (30). */
+  readonly retentionDays?: number;
   /** How long `shutdown` waits for the cancelled turns to end. */
   readonly shutdownGraceMs?: number;
 }
+
+/** What `purge` removed. */
+export interface PurgeReport {
+  readonly sessions: number;
+  readonly events: number;
+}
+
+export const DEFAULT_RETENTION_DAYS = 30;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface CreateSessionRequest {
   readonly agent: AgentKind;
@@ -60,6 +76,9 @@ export interface AgentState {
 /** A session loaded in a running agent process. */
 interface LiveSession {
   readonly compensations: SessionCompensations;
+  readonly files: ModifiedFiles;
+  /** `execute` tool calls still running: the branch is read again when one ends. */
+  readonly commands: Set<string>;
   /** `session/prompt` requests not answered yet: a message sent during a turn is queued. */
   inFlight: number;
 }
@@ -101,14 +120,51 @@ export class Bridge {
   /** Bumped by each interruption: a message queued before it is not sent. */
   private readonly interruptions = new Map<string, number>();
   private readonly turns = new Set<Promise<void>>();
+  /** Bumped by each branch read: an older read that ends later is dropped. */
+  private readonly branchReads = new Map<string, number>();
+  private readonly readOnly: ReadOnlyCommands;
   private stopping: Promise<void> | null = null;
 
   constructor(deps: BridgeDeps) {
     this.deps = deps;
     this.journal = new EventJournal(deps.events, deps.clock);
-    for (const record of deps.sessions.readAll()) this.records.set(record.sessionId, record);
+    this.readOnly = new ReadOnlyCommands(deps.shell);
+    this.loadRecords(deps.sessions.readAll());
     for (const connector of deps.connectors) {
       this.runtimes.set(connector.agent, { connector, connection: null, authenticated: null });
+    }
+  }
+
+  /**
+   * Reads the stored sessions. Those stored before ticket 13 get the new fields; their modified
+   * files are found in the journal.
+   */
+  private loadRecords(stored: readonly SessionRecord[]): void {
+    const missing = new Map<string, ModifiedFiles>();
+    const found = new Map<string, string[]>();
+    for (const record of stored as readonly StoredRecord[]) {
+      if (record.modifiedFiles === undefined) missing.set(record.sessionId, new ModifiedFiles());
+    }
+    if (missing.size > 0) {
+      for (const event of this.journal.since(0)) {
+        const files = event.sessionId === null ? undefined : missing.get(event.sessionId);
+        if (files === undefined || event.type !== 'session_update') continue;
+        const changed = files.observe(event.data as AcpUpdate);
+        if (changed.length > 0 && event.sessionId !== null) {
+          found.set(event.sessionId, [...(found.get(event.sessionId) ?? []), ...changed]);
+        }
+      }
+    }
+    for (const record of stored as readonly StoredRecord[]) {
+      this.records.set(record.sessionId, {
+        ...record,
+        requestedBranch: record.requestedBranch ?? null,
+        branchInstructionPending: record.branchInstructionPending ?? false,
+        modifiedFiles:
+          record.modifiedFiles ??
+          withModifiedFiles([], found.get(record.sessionId) ?? [], record.cwd),
+        purgedAt: record.purgedAt ?? null,
+      });
     }
   }
 
@@ -119,7 +175,8 @@ export class Bridge {
   start(): void {
     for (const record of this.records.values()) {
       if (record.status !== 'stopped' && record.status !== 'failed') {
-        this.update(record.sessionId, { status: 'stopped' });
+        // Not an activity of the session: `updatedAt` keeps its last one (retention).
+        this.update(record.sessionId, { status: 'stopped' }, false);
       }
     }
     this.emit({ sessionId: null, type: 'bridge', data: { state: 'started' } });
@@ -179,11 +236,18 @@ export class Bridge {
     return this.deps.workspace.listProjects();
   }
 
+  /**
+   * Creates a session. The bridge never checks a branch out: a requested branch is given to the
+   * agent with its first instruction, and the agent goes to it its own way (ticket 13).
+   */
   async createSession(request: CreateSessionRequest): Promise<SessionSummary> {
     this.assertRunning();
     const { workspace } = this.deps;
     const project = await workspace.resolveProject(request.project);
-    if (request.branch) await workspace.switchBranch(project.cwd, request.branch);
+    const requestedBranch = request.branch ? request.branch : null;
+    if (requestedBranch !== null && !(await workspace.isValidBranchName(requestedBranch))) {
+      throw new BridgeError('bad_request', `Nom de branche invalide : ${requestedBranch}.`);
+    }
     const branch = await workspace.currentBranch(project.cwd);
     const connection = await this.connection(request.agent);
     const sessionId = await this.agentCall(request.agent, () => connection.newSession(project.cwd));
@@ -194,12 +258,16 @@ export class Bridge {
       project: project.name,
       cwd: project.cwd,
       branch,
+      requestedBranch,
+      branchInstructionPending: requestedBranch !== null,
       approvalMode: request.approvalMode,
       status: 'idle',
       title: null,
       createdAt: now,
       updatedAt: now,
       lastError: null,
+      modifiedFiles: [],
+      purgedAt: null,
     };
     // The session is known, live and usable only once its mode is forced: nothing reaches the
     // agent before (Claude would run in the user's `auto`).
@@ -218,7 +286,10 @@ export class Bridge {
     return this.summaryOf(this.recordOf(sessionId));
   }
 
-  /** Loads a session of the history into its agent, so that it can go on. */
+  /**
+   * Loads a session of the history into its agent, so that it can go on. Allowed for a purged
+   * session too: the agent keeps its own history.
+   */
   async resume(sessionId: string): Promise<SessionSummary> {
     this.assertRunning();
     await this.ensureLive(sessionId);
@@ -255,9 +326,12 @@ export class Bridge {
     const connection = await this.connection(record.agent);
     if (interrupted()) return 'cancelled';
     if (live.inFlight > 0) {
-      const injected = await connection.steer(sessionId, text).catch(() => false);
+      const prefix = this.branchPrefixOf(sessionId);
+      const sent = prefix === null ? text : `${prefix}\n\n${text}`;
+      const injected = await connection.steer(sessionId, sent).catch(() => false);
       if (injected) {
-        this.emit({ sessionId, type: 'user_message', data: { text, delivery: 'steering' } });
+        this.branchInstructed(sessionId);
+        this.emit({ sessionId, type: 'user_message', data: messageData(text, 'steering', prefix) });
         return 'steering';
       }
     }
@@ -329,7 +403,9 @@ export class Bridge {
     delivery: Delivery,
   ): void {
     const live = this.liveOf(sessionId);
-    this.emit({ sessionId, type: 'user_message', data: { text, delivery } });
+    const prefix = this.branchPrefixOf(sessionId);
+    this.branchInstructed(sessionId);
+    this.emit({ sessionId, type: 'user_message', data: messageData(text, delivery, prefix) });
     live.inFlight += 1;
     const record = this.recordOf(sessionId);
     this.update(sessionId, {
@@ -337,12 +413,14 @@ export class Bridge {
       status: this.statusOf(sessionId),
       lastError: null,
     });
-    const turn = connection.prompt(sessionId, text).then(
+    const sent = prefix === null ? text : `${prefix}\n\n${text}`;
+    const turn = connection.prompt(sessionId, sent).then(
       (result) => {
         if (this.live.get(sessionId) !== live) return;
         live.inFlight -= 1;
         this.emit({ sessionId, type: 'turn_end', data: result });
         this.update(sessionId, { status: this.statusOf(sessionId) });
+        this.readBranch(sessionId);
       },
       (error: unknown) => {
         if (this.live.get(sessionId) !== live) return;
@@ -352,6 +430,7 @@ export class Bridge {
         const message = `${AGENT_LABELS[record.agent]} : ${messageOf(error)}`;
         this.emit({ sessionId, type: 'session_error', data: { message } });
         this.update(sessionId, { status: 'failed', lastError: message });
+        this.readBranch(sessionId);
       },
     );
     this.turns.add(turn);
@@ -396,6 +475,8 @@ export class Bridge {
     const live = this.goLive(sessionId);
     this.update(sessionId, { status: 'idle', lastError: null });
     this.flushEarly(sessionId);
+    // The agent may have changed the branch since the session was last live.
+    this.readBranch(sessionId);
     return live;
   }
 
@@ -486,6 +567,25 @@ export class Bridge {
     if (update.sessionUpdate === 'session_info_update' && typeof update.title === 'string') {
       this.update(sessionId, { title: update.title });
     }
+    const changed = live.files.observe(relayed);
+    if (changed.length > 0) {
+      const record = this.recordOf(sessionId);
+      const modifiedFiles = withModifiedFiles(record.modifiedFiles, changed, record.cwd);
+      if (modifiedFiles.length > record.modifiedFiles.length)
+        this.update(sessionId, { modifiedFiles });
+    }
+    if (this.commandEnded(live, update)) this.readBranch(sessionId);
+  }
+
+  /** Whether the update ends an `execute` tool call: it may have changed the branch. */
+  private commandEnded(live: LiveSession, update: AcpUpdate): boolean {
+    const id = update.toolCallId;
+    if (typeof id !== 'string') return false;
+    if (update.sessionUpdate === 'tool_call' && update.kind === 'execute') live.commands.add(id);
+    const ended = update.status === 'completed' || update.status === 'failed';
+    if (!ended || !(live.commands.has(id) || update.kind === 'execute')) return false;
+    live.commands.delete(id);
+    return true;
   }
 
   private flushEarly(sessionId: string): void {
@@ -499,6 +599,8 @@ export class Bridge {
     if (live === undefined || this.stopping !== null) {
       return Promise.resolve({ outcome: 'cancelled' });
     }
+    const automatic = this.readOnlyApproval(request);
+    if (automatic !== null) return Promise.resolve(automatic);
     const normalized = live.compensations.approval(request);
     const approval: ApprovalRequest = {
       approvalId: this.deps.ids(),
@@ -510,6 +612,24 @@ export class Bridge {
       this.emit({ sessionId: request.sessionId, type: 'approval_request', data: approval });
       this.update(request.sessionId, { status: this.statusOf(request.sessionId) });
     });
+  }
+
+  /**
+   * In « valider », a command that only reads is approved by the bridge, without asking the
+   * user (ticket 13). Its tool call stays in the feed like any other.
+   */
+  private readOnlyApproval(request: PermissionRequest): PermissionOutcome | null {
+    const record = this.records.get(request.sessionId);
+    if (record?.approvalMode !== 'ask') return null;
+    // « Autoriser une fois », never « toujours » : the next command is judged again.
+    const allow = request.options.find((option) => option.kind === 'allow_once');
+    if (allow === undefined) return null;
+    const command = this.readOnly.readOnlyCommandOf(request.toolCall);
+    if (command === null) return null;
+    this.deps.logger.info(
+      `${record.agent} ${request.sessionId}: read-only command approved by the bridge: ${clip(command)}`,
+    );
+    return { outcome: 'selected', optionId: allow.optionId };
   }
 
   private cancelApprovals(sessionId: string, by: string): void {
@@ -529,14 +649,20 @@ export class Bridge {
   }
 
   private goLive(sessionId: string): LiveSession {
-    const live: LiveSession = { compensations: new SessionCompensations(), inFlight: 0 };
+    const live: LiveSession = {
+      compensations: new SessionCompensations(),
+      files: new ModifiedFiles(),
+      commands: new Set(),
+      inFlight: 0,
+    };
     this.live.set(sessionId, live);
     return live;
   }
 
   private goOffline(sessionId: string, status: SessionStatus, lastError: string | null): void {
     this.live.delete(sessionId);
-    this.update(sessionId, { status, lastError });
+    // Stopped with the bridge: not an activity of the session, `updatedAt` stays (retention).
+    this.update(sessionId, { status, lastError }, status !== 'stopped');
   }
 
   /** The status of a live session, from its turns and its approvals. */
@@ -551,9 +677,91 @@ export class Bridge {
       .map((pending) => pending.request.approvalId);
   }
 
+  /**
+   * The branch prefix of the next instruction, when the session was created with a branch and
+   * nothing was sent to its agent yet.
+   */
+  private branchPrefixOf(sessionId: string): string | null {
+    const record = this.recordOf(sessionId);
+    if (!record.branchInstructionPending || record.requestedBranch === null) return null;
+    return branchInstruction(record.requestedBranch);
+  }
+
+  private branchInstructed(sessionId: string): void {
+    const record = this.recordOf(sessionId);
+    if (!record.branchInstructionPending) return;
+    this.records.set(sessionId, { ...record, branchInstructionPending: false });
+    this.save();
+  }
+
+  /** Reads the branch again in the session folder: the agent may have changed it. */
+  private readBranch(sessionId: string): void {
+    const ticket = (this.branchReads.get(sessionId) ?? 0) + 1;
+    this.branchReads.set(sessionId, ticket);
+    const { cwd } = this.recordOf(sessionId);
+    this.deps.workspace.currentBranch(cwd).then(
+      (branch) => {
+        if (this.branchReads.get(sessionId) !== ticket || this.stopping !== null) return;
+        this.update(sessionId, { branch });
+      },
+      () => {},
+    );
+  }
+
+  /**
+   * Purges the events of the sessions left alone for longer than the retention (30 days by
+   * default, from their last activity): their summary stays listed, with `purgedAt`. A session
+   * that is loading, running or waiting for an approval is never purged; an idle one still
+   * loaded is, its live state is not in the journal. Events of no session (bridge, agents)
+   * older than the retention go too. Run at start, then once a day.
+   */
+  purge(): PurgeReport {
+    if (this.stopping !== null) return { sessions: 0, events: 0 };
+    const now = this.deps.clock.now();
+    const days = this.deps.retentionDays ?? DEFAULT_RETENTION_DAYS;
+    const cutoff = new Date(now.getTime() - days * DAY_MS).toISOString();
+    const expired = new Set<string>();
+    for (const record of this.records.values()) {
+      const busy =
+        this.loading.has(record.sessionId) ||
+        record.status === 'working' ||
+        record.status === 'awaiting_approval';
+      if (!busy && record.updatedAt < cutoff) expired.add(record.sessionId);
+    }
+    const removed = this.journal.remove((event) =>
+      event.sessionId !== null && this.records.has(event.sessionId)
+        ? expired.has(event.sessionId)
+        : event.at < cutoff,
+    );
+    const purgedAt = now.toISOString();
+    const emptied = new Set(removed.map((event) => event.sessionId));
+    let sessions = 0;
+    for (const sessionId of expired) {
+      const record = this.recordOf(sessionId);
+      if (record.purgedAt !== null && !emptied.has(sessionId)) continue;
+      // Not a change of the session: no event, `updatedAt` stays its last activity.
+      this.records.set(sessionId, { ...record, purgedAt });
+      sessions += 1;
+    }
+    if (sessions > 0) this.save();
+    if (removed.length > 0 || sessions > 0) {
+      this.deps.logger.info(
+        `purge: ${sessions} sessions, ${removed.length} events older than ${days} days`,
+      );
+    }
+    return { sessions, events: removed.length };
+  }
+
+  /**
+   * Changes a session and tells the clients. `activity`: whether it counts as an activity of the
+   * session, which moves `updatedAt` (the order of the list, and the start of the retention).
+   */
   private update(
     sessionId: string,
-    changes: Partial<Pick<SessionRecord, 'status' | 'title' | 'lastError'>>,
+    changes: Partial<
+      Pick<SessionRecord, 'status' | 'title' | 'lastError' | 'branch' | 'modifiedFiles'>
+    >,
+    activity = true,
   ): void {
     const record = this.recordOf(sessionId);
     const changed = (Object.keys(changes) as (keyof typeof changes)[]).some(
@@ -562,7 +770,8 @@ export class Bridge {
     if (!changed) {
       return;
     }
-    this.records.set(sessionId, { ...record, ...changes, updatedAt: this.now() });
+    const updatedAt = activity ? this.now() : record.updatedAt;
+    this.records.set(sessionId, { ...record, ...changes, updatedAt });
     this.save();
     this.emitSession(sessionId);
   }
@@ -595,8 +804,9 @@ export class Bridge {
   }
 
   private summaryOf(record: SessionRecord): SessionSummary {
+    const { branchInstructionPending: _internal, ...summary } = record;
     return {
-      ...record,
+      ...summary,
       active: this.live.has(record.sessionId),
       pendingApprovals: this.pendingOf(record.sessionId),
     };
@@ -640,6 +850,28 @@ export class Bridge {
   private now(): string {
     return this.deps.clock.now().toISOString();
   }
+}
+
+/** A session as stored before ticket 13. */
+type StoredRecord = SessionRecord &
+  Partial<
+    Pick<
+      SessionRecord,
+      'requestedBranch' | 'branchInstructionPending' | 'modifiedFiles' | 'purgedAt'
+    >
+  >;
+
+/** What goes before the first instruction of a session created with a branch (ticket 13). */
+export function branchInstruction(branch: string): string {
+  return `Travaille sur la branche ${branch}, crée-la depuis main si elle n’existe pas.`;
+}
+
+function messageData(text: string, delivery: Delivery, prefix: string | null) {
+  return prefix === null ? { text, delivery } : { text, delivery, prefix };
+}
+
+function clip(text: string): string {
+  return text.length > 200 ? `${text.slice(0, 199)}…` : text;
 }
 
 function titleFrom(text: string): string {

@@ -5,13 +5,16 @@ import type {
   IdGenerator,
   Logger,
   SessionStore,
+  ShellParser,
+  ShellToken,
   Workspace,
 } from '../../domain/ports.ts';
 
 /** Events kept in memory. Share one instance between two bridges to simulate a restart. */
 export class MemoryEventStore implements EventStore {
-  readonly events: BridgeEvent[] = [];
+  events: BridgeEvent[] = [];
   readonly journalId: string;
+  private last = 0;
 
   constructor(journalId = 'memory-journal') {
     this.journalId = journalId;
@@ -21,8 +24,18 @@ export class MemoryEventStore implements EventStore {
     return [...this.events];
   }
 
+  lastSeq(): number {
+    return this.last;
+  }
+
   append(event: BridgeEvent): void {
     this.events.push(event);
+    this.last = Math.max(this.last, event.seq);
+  }
+
+  replaceAll(events: readonly BridgeEvent[], lastSeq: number): void {
+    this.events = [...events];
+    this.last = lastSeq;
   }
 }
 
@@ -51,6 +64,11 @@ export class FakeClock implements Clock {
     this.time += 1000;
     return now;
   }
+
+  /** Moves the clock forward, by days. */
+  advanceDays(days: number): void {
+    this.time += days * 24 * 60 * 60 * 1000;
+  }
 }
 
 export function counterIds(prefix = 'id'): IdGenerator {
@@ -58,12 +76,11 @@ export function counterIds(prefix = 'id'): IdGenerator {
   return () => `${prefix}-${next++}`;
 }
 
-/** Projects and branches in memory. */
+/** Projects and branches in memory. A test moves a branch as an agent would. */
 export class FakeWorkspace implements Workspace {
   readonly branches = new Map<string, string | null>([['regie-demo', 'main']]);
-  readonly switches: Array<{ readonly cwd: string; readonly branch: string }> = [];
-  /** Branches `switchBranch` refuses. */
-  readonly refused = new Set<string>();
+  /** Folders whose branch was read. */
+  readonly reads: string[] = [];
 
   async resolveProject(project: string) {
     if (!this.branches.has(project)) {
@@ -72,20 +89,32 @@ export class FakeWorkspace implements Workspace {
     return { name: project, cwd: `/home/dev/projects/${project}` };
   }
 
-  async switchBranch(cwd: string, branch: string): Promise<void> {
-    if (this.refused.has(branch)) {
-      throw new BridgeError('branch_failed', `Impossible de passer sur la branche ${branch}.`);
-    }
-    this.switches.push({ cwd, branch });
-    this.branches.set(cwd.split('/').at(-1) ?? cwd, branch);
+  /** Roughly `git check-ref-format --branch`. */
+  async isValidBranchName(branch: string): Promise<boolean> {
+    return /^(?!-)(?!.*\.\.)(?!.*\/$)[A-Za-z0-9._/-]+$/.test(branch);
   }
 
   async currentBranch(cwd: string): Promise<string | null> {
+    this.reads.push(cwd);
     return this.branches.get(cwd.split('/').at(-1) ?? cwd) ?? null;
   }
 
   async listProjects() {
     return [...this.branches].map(([name, branch]) => ({ name, branch }));
+  }
+}
+
+/** Splits on blanks; `&&`, `||`, `;` and `|` alone are operators. No quote, no glob. */
+export class WordsShellParser implements ShellParser {
+  parse(script: string): readonly ShellToken[] {
+    return script
+      .split(/\s+/)
+      .filter((word) => word !== '')
+      .map((word) =>
+        ['&&', '||', ';', '|'].includes(word)
+          ? { kind: 'operator', value: word }
+          : { kind: 'word', value: word },
+      );
   }
 }
 

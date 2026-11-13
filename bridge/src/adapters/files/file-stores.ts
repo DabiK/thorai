@@ -21,23 +21,26 @@ import type { EventStore, SessionStore } from '../../domain/ports.ts';
  * The events, one JSON line each, in `events.jsonl` of the state folder.
  *
  * - The first line names the journal: `{"journal": "<id>", "version": 1}`. A new file gets a
- *   new id.
+ *   new id. After a purge, it also keeps the last number used: `"lastSeq": 1234`.
  * - Each append is written and synced to the disk (`fdatasync`) before the event goes out: an
  *   event a client received survives a crash of the bridge or of the console.
  * - A line cut by a crash is dropped at the next start: it was never sent.
+ * - A purge rewrites the file at once: a temporary file, synced, then renamed over the journal.
  */
 export class FileEventStore implements EventStore {
   readonly journalId: string;
   private readonly path: string;
-  private readonly events: readonly BridgeEvent[];
-  private readonly fd: number;
+  private events: readonly BridgeEvent[];
+  private last: number;
+  private fd: number;
 
   constructor(stateDir: string, newId: () => string = randomUUID) {
     mkdirSync(stateDir, { recursive: true, mode: 0o700 });
     this.path = join(stateDir, 'events.jsonl');
-    const { journalId, events } = this.load(newId);
+    const { journalId, events, lastSeq } = this.load(newId);
     this.journalId = journalId;
     this.events = events;
+    this.last = Math.max(lastSeq, events.at(-1)?.seq ?? 0);
     this.fd = openSync(this.path, 'a', 0o600);
   }
 
@@ -45,17 +48,35 @@ export class FileEventStore implements EventStore {
     return this.events;
   }
 
+  lastSeq(): number {
+    return this.last;
+  }
+
   append(event: BridgeEvent): void {
     writeSync(this.fd, `${JSON.stringify(event)}\n`);
     fdatasyncSync(this.fd);
+    this.last = Math.max(this.last, event.seq);
+  }
+
+  replaceAll(events: readonly BridgeEvent[], lastSeq: number): void {
+    writeJournal(this.path, { journal: this.journalId, version: 1, lastSeq }, events);
+    closeSync(this.fd);
+    this.fd = openSync(this.path, 'a', 0o600);
+    // The events read at start are not kept twice in memory.
+    this.events = [];
+    this.last = lastSeq;
   }
 
   close(): void {
     closeSync(this.fd);
   }
 
-  private load(newId: () => string): { journalId: string; events: BridgeEvent[] } {
-    let header: string | null = null;
+  private load(newId: () => string): {
+    journalId: string;
+    events: BridgeEvent[];
+    lastSeq: number;
+  } {
+    let header: Header | null = null;
     let first = true;
     const events: BridgeEvent[] = [];
     if (existsSync(this.path)) {
@@ -71,21 +92,36 @@ export class FileEventStore implements EventStore {
       // The last line was cut by a crash: it was never sent, it is dropped.
       if (complete < statSync(this.path).size) truncateSync(this.path, complete);
     }
-    if (header !== null) return { journalId: header, events };
+    const found = header as Header | null;
+    if (found !== null) return { journalId: found.journal, events, lastSeq: found.lastSeq };
     // A new journal, or one written before the header existed: it gets its id.
     const journalId = newId();
-    const temporary = `${this.path}.tmp`;
-    const fd = openSync(temporary, 'w', 0o600);
-    try {
-      writeSync(fd, `${JSON.stringify({ journal: journalId, version: 1 })}\n`);
-      for (const event of events) writeSync(fd, `${JSON.stringify(event)}\n`);
-      fsyncSync(fd);
-    } finally {
-      closeSync(fd);
-    }
-    renameSync(temporary, this.path);
-    return { journalId, events };
+    writeJournal(this.path, { journal: journalId, version: 1 }, events);
+    return { journalId, events, lastSeq: 0 };
   }
+}
+
+interface Header {
+  readonly journal: string;
+  readonly lastSeq: number;
+}
+
+/** Writes a whole journal to a temporary file, syncs it, then renames it over `path`. */
+function writeJournal(
+  path: string,
+  header: Readonly<Record<string, unknown>>,
+  events: readonly BridgeEvent[],
+): void {
+  const temporary = `${path}.tmp`;
+  const fd = openSync(temporary, 'w', 0o600);
+  try {
+    writeSync(fd, `${JSON.stringify(header)}\n`);
+    for (const event of events) writeSync(fd, `${JSON.stringify(event)}\n`);
+    fsyncSync(fd);
+  } finally {
+    closeSync(fd);
+  }
+  renameSync(temporary, path);
 }
 
 /**
@@ -121,10 +157,12 @@ function readLines(path: string, onLine: (line: string) => void): number {
   return complete;
 }
 
-function parseHeader(line: string): string | null {
+function parseHeader(line: string): Header | null {
   try {
-    const header = JSON.parse(line) as { journal?: unknown };
-    return typeof header.journal === 'string' ? header.journal : null;
+    const header = JSON.parse(line) as { journal?: unknown; lastSeq?: unknown };
+    if (typeof header.journal !== 'string') return null;
+    const lastSeq = Number.isInteger(header.lastSeq) ? (header.lastSeq as number) : 0;
+    return { journal: header.journal, lastSeq };
   } catch {
     return null;
   }
