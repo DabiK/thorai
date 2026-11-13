@@ -10,8 +10,15 @@
 #             et adb (cale qui impose la socket privée du serveur adb)
 #   Consignes : bloc thor-android (consignes.md) dans ~dev/.claude/CLAUDE.md et
 #             ~/.codex/AGENTS.md, entre deux marqueurs ; le reste est intact
-#   Claude  : serveur thor_android en portée utilisateur (~dev/.claude.json)
-#   Codex   : bloc [mcp_servers.thor_android] dans ~/.codex/config.toml (Termux)
+#   Claude  : serveur thor_android en portée utilisateur (~dev/.claude.json) ;
+#             outils thor_android, thor-screen et adb autorisés sans validation
+#             (permissions.allow de ~dev/.claude/settings.json, permissions.sh)
+#   Codex   : bloc [mcp_servers.thor_android] dans ~/.codex/config.toml (Termux),
+#             outils approuvés d'office ; adb et thor-screen sans validation
+#             (~/.codex/rules/thor-android.rules)
+#
+# mobile-mcp tourne en mode mobilecli. Pour le mode adb seul, créer
+# ~dev/.config/thor-android/adb-seul (voir README.md) : ce script n'y touche pas.
 set -euo pipefail
 
 HERE=$(cd "$(dirname "$0")" && pwd)
@@ -98,9 +105,10 @@ EOF
   exit 1
 }
 
-echo "4/5 Claude Code : serveur thor_android (portée utilisateur)"
+echo "4/5 Claude Code : serveur thor_android (portée utilisateur), sans validation"
 CLAUDE_ENTRY="{\"type\":\"stdio\",\"command\":\"$LAUNCHER\",\"args\":[],\"env\":{\"ADB_SERVER_SOCKET\":\"$ADB_SOCKET\"}}"
 {
+  cat "$HERE/permissions.sh"
   printf 'want=%q\n' "$CLAUDE_ENTRY"
   cat <<'EOF'
 set -euo pipefail
@@ -113,12 +121,15 @@ else
   fi
   claude mcp add-json --scope user thor_android "$want" </dev/null
 fi
+result=$(claude_allow_put ~/.claude/settings.json)
+echo "    autorisations (~/.claude/settings.json) : $result"
 EOF
 } | debian_sh dev
 
-echo "5/5 Codex : serveur thor_android (~/.codex/config.toml de Termux)"
+echo "5/5 Codex : serveur thor_android (~/.codex/config.toml de Termux), sans validation"
 {
-  printf 'want=%q\n' "$(printf '[mcp_servers.thor_android]\ncommand = "%s"\nenv = { ADB_SERVER_SOCKET = "%s" }' "$LAUNCHER" "$ADB_SOCKET")"
+  printf 'want=%q\n' "$(printf '[mcp_servers.thor_android]\ncommand = "%s"\nenv = { ADB_SERVER_SOCKET = "%s" }\ndefault_tools_approval_mode = "approve"' "$LAUNCHER" "$ADB_SOCKET")"
+  printf 'rules_b64=%q\n' "$(base64 < "$HERE/thor-android.rules" | tr -d '\n')"
   emit_toml_helpers
   cat <<'EOF'
 set -euo pipefail
@@ -138,6 +149,19 @@ else
   fi
   printf '\n%s\n' "$want" >> "$config"
   echo "    ajouté"
+fi
+# Règles d'exécution : adb et thor-screen sans validation.
+rules=$HOME/.codex/rules/thor-android.rules
+mkdir -p "$(dirname "$rules")"
+tmp=$(mktemp "$rules.XXXXXX")
+printf '%s' "$rules_b64" | base64 -d > "$tmp"
+if cmp -s "$tmp" "$rules"; then
+  rm -f "$tmp"
+  echo "    règles déjà posées (~/.codex/rules/thor-android.rules)"
+else
+  chmod 644 "$tmp"
+  mv -f "$tmp" "$rules"
+  echo "    règles posées (~/.codex/rules/thor-android.rules)"
 fi
 EOF
 } | termux_sh

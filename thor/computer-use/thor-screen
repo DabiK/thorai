@@ -7,7 +7,7 @@
 #   thor-screen tap haut|bas X Y            toucher en X, Y (pixels de l'écran)
 #   thor-screen swipe haut|bas X1 Y1 X2 Y2 [MS]   glisser, en MS millisecondes
 #   thor-screen text haut|bas "TEXTE"       saisir dans le champ qui a le focus
-#   thor-screen launch haut|bas PAQUET      lancer l'appli PAQUET sur l'écran (pas app.regie)
+#   thor-screen launch haut|bas PAQUET      lancer l'appli PAQUET sur l'écran
 #
 # Appareil : $ANDROID_SERIAL, sinon celui retenu par start.sh, sinon le seul connecté.
 set -euo pipefail
@@ -94,6 +94,7 @@ case "$cmd" in
   capture)
     [ $# -eq 3 ] || usage
     physical=$(screen_field "$2" 2)
+    mkdir -p "$(dirname "$3")"
     adb_ exec-out screencap -p -d "$physical" > "$3"
     [ "$(head -c 4 "$3" | od -An -c | tr -d ' ')" = "211PNG" ] ||
       die "la capture n'est pas une image PNG (écran $2)."
@@ -122,8 +123,6 @@ case "$cmd" in
     ;;
   launch)
     [ $# -eq 3 ] || usage
-    # Les consignes des agents interdisent tout geste sur Régie.
-    [ "$3" != app.regie ] || die "lancer app.regie est interdit par les consignes : Régie ne répond qu'à l'utilisateur."
     [[ "$3" =~ ^[A-Za-z0-9_.]+$ ]] || die "nom de paquet invalide : $3"
     display=$(screen_field "$2" 1)
     # Activité de lancement : la dernière ligne de resolve-activity --brief.

@@ -1,6 +1,7 @@
 #!/bin/bash
 # Coupe l'accès des agents à Android : retire le serveur thor_android des deux
-# agents et leurs consignes thor-android, arrête le serveur adb et efface ce
+# agents, leurs autorisations sans validation (trois entrées de Claude, règles
+# de Codex) et leurs consignes thor-android, arrête le serveur adb et efface ce
 # que install.sh a posé, y compris la clé adb de la Debian, ainsi que le
 # dossier que mobilecli a pu poser dans les données de Régie. Lancé depuis le
 # Mac. Idempotent.
@@ -22,6 +23,7 @@ failed=()
 
 echo "1/5 Debian (dev) : serveurs, Claude Code, fichiers de dev"
 {
+  cat "$HERE/permissions.sh"
   printf 'wrapper_tag=%q\nsocket_dir=%q\n' "$ADB_WRAPPER_TAG" "$ADB_SOCKET_DIR"
   cat <<'EOF'
 set -uo pipefail
@@ -41,11 +43,21 @@ elif ! jq empty ~/.claude.json </dev/null >/dev/null 2>&1; then
 elif jq -e '.mcpServers.thor_android' ~/.claude.json </dev/null >/dev/null 2>&1; then
   claude mcp remove --scope user thor_android </dev/null || fail "retrait de thor_android de Claude"
 fi
+if ! command -v jq >/dev/null 2>&1; then
+  [ ! -s ~/.claude/settings.json ] ||
+    fail "jq absent : retirer de permissions.allow (~/.claude/settings.json) les entrées $THOR_CLAUDE_ALLOW"
+elif result=$(claude_allow_drop ~/.claude/settings.json </dev/null); then
+  echo "    autorisations de Claude : $result"
+else
+  fail "autorisations de Claude : retirer à la main de permissions.allow (~/.claude/settings.json) les entrées $THOR_CLAUDE_ALLOW"
+fi
 rm -f ~/.local/bin/thor-android-mcp ~/.local/bin/thor-screen || fail "lanceurs"
 if [ -e ~/.local/bin/adb ] && grep -qF "$wrapper_tag" ~/.local/bin/adb; then
   rm -f ~/.local/bin/adb || fail "cale adb"
 fi
 rm -rf "$socket_dir" ~/.local/state/thor-android || fail "dossier de la socket"
+# Journal et pid du démon de mobilecli (stop.sh l'a arrêté).
+rm -rf ~/.mobilecli || fail "dossier ~/.mobilecli"
 rm -f ~/.android/adbkey ~/.android/adbkey.pub || fail "clé adb"
 exit "$rc"
 EOF
@@ -56,7 +68,7 @@ debian_sh root <<'EOF' || failed+=("2/5 /opt/thor-android")
 rm -rf /opt/thor-android
 EOF
 
-echo "3/5 Codex : déclaration thor_android"
+echo "3/5 Codex : déclaration thor_android et règles"
 {
   emit_toml_helpers
   cat <<'EOF'
@@ -66,8 +78,15 @@ if [ -e "$config" ] && grep -q '^[[:space:]]*\[mcp_servers\.thor_android[].]' "$
   drop_thor_android
   echo "    retiré"
 fi
+rules=$HOME/.codex/rules/thor-android.rules
+if [ -e "$rules" ]; then
+  rm -f "$rules"
+  echo "    règles retirées"
+fi
+# Le dossier des règles part s'il est vide (Codex y range aussi les siennes).
+rmdir "$HOME/.codex/rules" 2>/dev/null || true
 EOF
-} | termux_sh || failed+=("3/5 déclaration Codex")
+} | termux_sh || failed+=("3/5 déclaration ou règles de Codex")
 
 echo "4/5 Régie : dossier de mobilecli"
 # En mode mobilecli, mobile-mcp copie son agent JVMTI dans les données de

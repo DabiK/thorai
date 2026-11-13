@@ -1,7 +1,8 @@
 #!/bin/bash
 # Arrête le serveur adb de la Debian lancé par start.sh (ou démarré à la volée
 # par un client adb), celui de la socket privée $ADB_SERVER_SOCKET, et avant
-# lui le serveur de mobilecli sur la console. Ne touche à aucun autre serveur adb.
+# lui le démon de mobilecli dans la Debian et le serveur de mobilecli sur la
+# console. Ne touche à aucun autre serveur adb.
 #
 # Sortie standard : THOR_ANDROID=arrete ou THOR_ANDROID=rien-a-arreter.
 set -uo pipefail
@@ -33,6 +34,14 @@ server_pids() {
   done
   return "$found"
 }
+
+# Le démon de mobilecli dans la Debian (socket Unix ~/.mobilecli/daemon.sock)
+# garde ses agents sur la console entre deux appels, et survit à la session qui
+# l'a lancé : on l'arrête aussi. Il redémarre au prochain appel de mobile-mcp.
+MOBILECLI=$(dirname "$0")/node_modules/@mobilenext/mobilecli-linux-arm64/mobilecli-linux-arm64
+if [ -x "$MOBILECLI" ]; then
+  timeout 5 "$MOBILECLI" daemon stop >/dev/null 2>&1 || true
+fi
 
 if [ -z "$(server_pids)" ]; then
   echo "THOR_ANDROID=rien-a-arreter"

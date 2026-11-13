@@ -1,0 +1,18 @@
+# thor-android : Codex lance adb et thor-screen sans validation (ticket 14,
+# ADR 03). Posé dans ~/.codex/rules/ par thor/computer-use/install.sh, retiré
+# par uninstall.sh. Les exemples match / not_match sont vérifiés par Codex au
+# chargement.
+prefix_rule(
+    pattern = ["adb"],
+    decision = "allow",
+    justification = "Piloter Android sur la console, sans validation.",
+    match = ["adb devices", "adb shell input -d 4 tap 100 200"],
+    not_match = ["adbd", "ls"],
+)
+prefix_rule(
+    pattern = ["thor-screen"],
+    decision = "allow",
+    justification = "Piloter les deux écrans de la console, sans validation.",
+    match = ["thor-screen ids", "thor-screen launch bas app.regie"],
+    not_match = ["thor-screens"],
+)
