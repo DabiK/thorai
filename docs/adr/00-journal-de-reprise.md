@@ -35,6 +35,11 @@
 | 3 | 06, puis 07 et 08 | 05 fusionné |
 | 4 | 09, 10, puis 11 | 08 fusionné |
 
+## Ordre des tickets d'interface (révisé le 14 novembre)
+
+Les tickets qui touchent `android/` passent **un par un**. Ils installent tous le même APK (`app.regie`) sur la seule console, et se marcheraient dessus. L'ordre suit le chemin critique :
+06 → 07 → 08 → 12 → 09 → 10 → 11. Le 08 passe avant le 12, parce qu'il branche la voix dans l'app.
+
 ## Règles d'orchestration
 
 - Une session fraîche par ticket, dans son worktree. Elle teste sur la Thor et ne fusionne pas.
