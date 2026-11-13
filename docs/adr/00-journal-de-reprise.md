@@ -38,6 +38,10 @@
   - Les agents apprennent l'existence de `thor_android` et de `thor-screen` par leurs consignes globales sur la console : `CLAUDE.md` de Claude, `AGENTS.md` de Codex.
   - Le serveur adb de la Debian passe sur une socket Unix privée (`ADB_SERVER_SOCKET`) au lieu de `127.0.0.1:5037`.
 
+- 13 novembre, sur les questions du ticket 01 :
+  - R1 ouvre la validation en attente s'il y en a une, sinon passe à la session suivante.
+  - L'écran du bas de Régie reste affiché quand l'app passe en arrière-plan ; « Quitter » le ferme.
+
 ## Questions en attente
 
 - Nom définitif de l'app (« Régie » est un nom de travail).

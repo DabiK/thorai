@@ -22,6 +22,7 @@ On prend la console et on parle. On voit d'un coup d'œil où en sont toutes ses
 - **L'attention n'est demandée que pour une décision** : une validation, une question de l'agent, une fin de session, un échec. Le reste se consulte.
 - **L'app ne refait pas le travail des agents.** Outils, consignes et réglages restent ceux de Claude Code et Codex. On relaie ce qu'ils exposent. Quand un agent n'expose pas une information, l'app le dit au lieu d'inventer.
 - **Une app qu'on lance, rien au démarrage de la console.** Rien ne démarre au boot. À son lancement, l'app démarre le pont s'il ne tourne pas. Passer l'app en arrière-plan ou éteindre l'écran ne coupe pas une session en cours. « Quitter » arrête le pont et les sessions, avec une confirmation si une session travaille encore.
+- **L'écran du bas reste un tableau de bord.** Quand Régie passe en arrière-plan, son écran du bas reste affiché pendant qu'on regarde autre chose en haut. Seul « Quitter » le ferme.
 - **Une information par zone.** Pas de jargon : on écrit « attend ta validation », pas « permission_request ».
 
 ## Commandes
@@ -33,7 +34,7 @@ On prend la console et on parle. On voit d'un coup d'œil où en sont toutes ses
 | A | Valider, envoyer, ouvrir |
 | B | Retour, annuler, refuser |
 | X, Y | Actions de l'écran, affichées en bas |
-| L1 / R1 | Session précédente / suivante |
+| L1 / R1 | Session précédente / suivante. Sur la vue d'ensemble, R1 ouvre d'abord la validation en attente s'il y en a une |
 | Croix | Se déplacer (cartes, champs, lignes de diff) |
 | Stick droit | Faire défiler |
 | Start | Interrompre la session affichée, ou tout mettre en pause depuis la vue d'ensemble |
