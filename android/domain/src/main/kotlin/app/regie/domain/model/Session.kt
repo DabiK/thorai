@@ -5,10 +5,10 @@ import kotlin.time.Duration
 @JvmInline
 value class SessionId(val value: String)
 
-/** Étape [step] sur [total] du plan de l'agent, avec le libellé de l'étape en cours s'il est connu. */
+/** Étape [step] sur [total] du plan de l'agent (0 : aucune étape commencée), avec le libellé de l'étape en cours s'il est connu. */
 data class Progress(val step: Int, val total: Int, val currentStep: String? = null) {
     init {
-        require(total > 0 && step in 1..total) { "étape $step hors de 1..$total" }
+        require(total > 0 && step in 0..total) { "étape $step hors de 0..$total" }
     }
 }
 
