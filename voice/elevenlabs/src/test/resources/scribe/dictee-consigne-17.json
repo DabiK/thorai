@@ -1,0 +1,30 @@
+{
+  "onOpen": [
+    {
+      "message_type": "session_started",
+      "session_id": "0f2c7c1e5e8a4a0c9d1b2a3c4d5e6f70",
+      "config": {
+        "sample_rate": 16000,
+        "audio_format": "pcm_16000",
+        "language_code": "fr",
+        "model_id": "scribe_v3_live",
+        "commit_strategy": "manual"
+      }
+    }
+  ],
+  "onAudio": [
+    { "message_type": "partial_transcript", "text": "", "turn_probability": 0.01 },
+    { "message_type": "partial_transcript", "text": "", "turn_probability": 0.01 },
+    { "message_type": "partial_transcript", "text": "Mets", "turn_probability": 0.03 },
+    { "message_type": "partial_transcript", "text": "Mets à jour", "turn_probability": 0.04 },
+    { "message_type": "partial_transcript", "text": "Mets à jour le README", "turn_probability": 0.06 },
+    { "message_type": "partial_transcript", "text": "Mets à jour le README avec", "turn_probability": 0.05 },
+    { "message_type": "partial_transcript", "text": "Mets à jour le README avec la commande", "turn_probability": 0.07 },
+    { "message_type": "partial_transcript", "text": "Mets à jour le README avec la commande gradlew", "turn_probability": 0.2 },
+    { "message_type": "final_transcript", "text": "Mets à jour le README avec la commande gradlew check." },
+    { "message_type": "partial_transcript", "text": "Mets à jour le README avec la commande gradlew check", "turn_probability": 0.71 }
+  ],
+  "onCommit": [
+    { "message_type": "committed_transcript", "text": "Mets à jour le README avec la commande gradlew check." }
+  ]
+}

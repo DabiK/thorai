@@ -1,0 +1,20 @@
+01|Ouvre le fichier AgentGateway.kt et ajoute une méthode sendDictation.
+02|Lance npm run check dans le dossier bridge et dis-moi si ça passe.
+03|Crée une branche ticket/05-vue-d-ensemble à partir de main.
+04|Dans SessionEvent, renomme le champ timestamp en createdAt.
+05|Corrige le test unitaire de ApprovalRepository qui échoue sur la CI.
+06|Ajoute un ADR pour le choix de sherpa-onnx dans docs/adr.
+07|Passe le displayId de l'écran bas à quatre dans MainActivity.
+08|Refactorise le ViewModel de la vue Overview avec un StateFlow.
+09|Fais un git diff sur build.gradle.kts et explique les changements.
+10|Vérifie que le WebSocket du pont écoute bien sur 127.0.0.1 avec un jeton.
+11|Ajoute la dépendance kotlinx-coroutines-test dans le module domain.
+12|Lance Codex sur le dépôt regie avec la politique approval on-request.
+13|Remplace le Thread.sleep par un delay dans la coroutine.
+14|Ajoute un log quand Termux démarre le bridge avec proot-distro.
+15|Écris un test JUnit pour le parseur JSON des événements tool_call.
+16|Supprime l'import inutilisé de androidx.compose.material3 dans SessionScreen.
+17|Mets à jour le README avec la commande gradlew check.
+18|Demande à Claude Code de relire la pull request sur le VoiceCommand.
+19|Fais le point à voix haute sur la session SpokenSummary.
+20|Annule le dernier commit et garde les changements dans le working tree.

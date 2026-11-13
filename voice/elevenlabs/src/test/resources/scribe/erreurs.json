@@ -1,0 +1,16 @@
+[
+  { "message_type": "error", "error": "Internal server error" },
+  { "message_type": "auth_error", "error": "Invalid API key" },
+  { "message_type": "quota_exceeded", "error": "This request exceeds your quota" },
+  { "message_type": "commit_throttled", "error": "Too many commits" },
+  { "message_type": "transcriber_error", "error": "Transcriber failed" },
+  { "message_type": "unaccepted_terms", "error": "Accept the terms of service first" },
+  { "message_type": "rate_limited", "error": "Rate limit reached" },
+  { "message_type": "input_error", "error": "Invalid audio chunk" },
+  { "message_type": "invalid_request", "error": "Invalid model_id" },
+  { "message_type": "queue_overflow", "error": "Queue overflow" },
+  { "message_type": "resource_exhausted", "error": "Resource exhausted" },
+  { "message_type": "session_time_limit_exceeded", "error": "Session time limit exceeded" },
+  { "message_type": "chunk_size_exceeded", "error": "Chunk too large" },
+  { "message_type": "insufficient_audio_activity", "error": "Not enough audio" }
+]
