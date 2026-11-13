@@ -9,7 +9,11 @@ import type { ShellParser, ShellToken } from './ports.ts';
  * - Commands may be chained by `&&`, `||`, `;`, `|` or a new line: each one must read only.
  * - Anything else the shell would interpret goes to the user: a redirection (`>`, `<`, `2>&1`),
  *   a substitution (`$(…)`, backticks, `<(…)`), a variable (`$X`), a background job (`&`), a
- *   subshell or a group (`(…)`, `{ …; }`), an assignment (`X=1 cmd`), a comment.
+ *   subshell or a group (`(…)`, `{ …; }`), an assignment (`X=1 cmd`), a comment, a zsh `=cmd`
+ *   expansion or glob qualifier (`*(…)`).
+ * - A glob (`*`, `?`, `[…]`, a zsh `^…`) could expand to a file named like an option
+ *   (`-[e]xec` is `-exec` when such a file exists): refused for the programs whose options can
+ *   write or run something (`globs: false`).
  * - `bash -c script`, `bash -lc script`, `sh -c script`: the script is checked.
  */
 export class ReadOnlyCommands {
@@ -59,8 +63,9 @@ export class ReadOnlyCommands {
 
   private script(script: string, depth: number): boolean {
     if (depth > MAX_DEPTH) return false;
-    const plain = plainScript(script);
-    if (plain === null) return false;
+    const checked = plainScript(script);
+    if (checked === null) return false;
+    const { plain, globbing } = checked;
     const segments: ShellToken[][] = [[]];
     for (const token of this.shell.parse(plain)) {
       if (token.kind === 'other') return false;
@@ -75,10 +80,14 @@ export class ReadOnlyCommands {
     if (segments.length > 1 && segments.at(-1)?.length === 0 && plain.trimEnd().endsWith(';')) {
       segments.pop();
     }
-    return segments.every((segment) => this.command(segment, depth));
+    return segments.every((segment) => this.command(segment, depth, globbing));
   }
 
-  private command(tokens: readonly ShellToken[], depth: number): boolean {
+  /**
+   * `globbing`: the command line has a glob `shell-quote` does not mark (`[…]`, `^…`). Taken
+   * for the whole line: in doubt, the command goes to the user.
+   */
+  private command(tokens: readonly ShellToken[], depth: number, globbing = false): boolean {
     const [first, ...rest] = tokens;
     if (first?.kind !== 'word' || ASSIGNMENT.test(first.value)) return false;
     const args = rest.map((token) => (token.kind === 'other' ? null : token.value));
@@ -89,7 +98,7 @@ export class ReadOnlyCommands {
     const rule = RULES[first.value];
     if (rule === undefined) return false;
     // A glob could expand to a file named like an option (`--pre=…`, `-delete`).
-    if (!rule.globs && rest.some((token) => token.kind === 'glob')) return false;
+    if (!rule.globs && (globbing || rest.some((token) => token.kind === 'glob'))) return false;
     return rule.check(words);
   }
 }
@@ -122,10 +131,12 @@ function shellScript(program: string, args: readonly string[]): string | null {
 /**
  * The command line, checked outside quotes: `null` when the shell would do more than run
  * commands in a row. Unquoted new lines become `;`, line continuations are removed: the parser
- * would otherwise join two lines into one command.
+ * would otherwise join two lines into one command. `globbing`: an unquoted `[`, or `^` at the
+ * start of a word (zsh), which `shell-quote` does not mark as a glob.
  */
-function plainScript(script: string): string | null {
+function plainScript(script: string): { plain: string; globbing: boolean } | null {
   let out = '';
+  let globbing = false;
   let quote: "'" | '"' | null = null;
   let wordStart = true;
   for (let i = 0; i < script.length; i += 1) {
@@ -162,6 +173,9 @@ function plainScript(script: string): string | null {
     }
     if (FORBIDDEN.includes(c)) return null;
     if (c === '#' && wordStart) return null;
+    // zsh: `=cmd` expands to the path of `cmd`.
+    if (c === '=' && wordStart) return null;
+    if (c === '[' || (c === '^' && wordStart)) globbing = true;
     if (c === '&') {
       if (next !== '&') return null;
       out += '&&';
@@ -186,7 +200,7 @@ function plainScript(script: string): string | null {
     out += c;
     wordStart = c === ' ' || c === '\t' || c === ';';
   }
-  return quote === null ? out : null;
+  return quote === null ? { plain: out, globbing } : null;
 }
 
 /** Outside quotes: variables, substitutions, redirections, subshells and groups. */
@@ -291,10 +305,6 @@ const RULES: Readonly<Record<string, Rule>> = {
   echo: anyArgs,
   which: anyArgs,
   stat: anyArgs,
-  // `file -C` compiles a magic file, written in the current folder.
-  file: refusing(false, (arg) => hasShortOption(arg, 'C') || isLongOption(arg, '--compile')),
-  // `tree -o file` writes its output; `-R` writes `00Tree.html` in each folder.
-  tree: refusing(false, (arg) => hasShortOption(arg, 'oR')),
   // `--pre` and `--hostname-bin` run a program, `-z` runs the decompressors.
   rg: refusing(
     false,
