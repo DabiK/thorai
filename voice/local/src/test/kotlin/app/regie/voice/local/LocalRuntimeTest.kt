@@ -4,7 +4,9 @@ import app.regie.voice.api.ProviderStatus
 import app.regie.voice.api.VoiceError
 import app.regie.voice.api.VoiceException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
@@ -139,6 +141,83 @@ class LocalRuntimeTest {
         assertTrue(factory.decoders.first().first.released)
         assertTrue(factory.synthesizers.single().released)
         assertEquals(2, factory.decoders.size)
+    }
+
+    @Test
+    fun `a decoder loaded while its dictation is cancelled is kept, then freed on release`() = runBlocking {
+        lateinit var dictation: Job
+        // The dictation is cancelled while the native decoder loads, as when L2 is released early.
+        val cancelling = object : EngineFactory by factory {
+            override fun decoder(modelDir: File, settings: DecoderSettings): SegmentDecoder =
+                factory.decoder(modelDir, settings).also { dictation.cancel() }
+        }
+        val runtime = LocalRuntime(
+            store(*LocalModels.SPEECH_TO_TEXT.toTypedArray()), cancelling, LocalConfig(hotwords = { hotwords }), Dispatchers.Unconfined,
+        )
+
+        dictation = launch { runtime.recognition {}.close() }
+        dictation.join()
+
+        assertTrue(dictation.isCancelled)
+        runtime.recognition {}.close()
+        assertEquals(1, factory.decoders.size, "the loaded decoder is reused, not loaded twice")
+        runtime.release()
+        assertTrue(factory.decoders.single().first.released, "the decoder leaked")
+    }
+
+    @Test
+    fun `a synthesizer loaded while its speech is cancelled is kept, then freed on release`() = runBlocking {
+        lateinit var speech: Job
+        val cancelling = object : EngineFactory by factory {
+            override fun synthesizer(modelDir: File, threads: Int): SpeechSynthesizer =
+                factory.synthesizer(modelDir, threads).also { speech.cancel() }
+        }
+        val runtime = LocalRuntime(store(*LocalModels.ALL.toTypedArray()), cancelling, LocalConfig(), Dispatchers.Unconfined)
+
+        speech = launch { runtime.synthesizer().close() }
+        speech.join()
+
+        assertTrue(speech.isCancelled)
+        runtime.synthesizer().close()
+        assertEquals(1, factory.synthesizers.size, "the loaded synthesizer is reused, not loaded twice")
+        runtime.release()
+        assertTrue(factory.synthesizers.single().released, "the synthesizer leaked")
+    }
+
+    @Test
+    fun `a segmenter created while its dictation is cancelled is freed`() = runBlocking {
+        lateinit var dictation: Job
+        val cancelling = object : EngineFactory by factory {
+            override fun segmenter(modelDir: File, settings: SegmenterSettings): SpeechSegmenter =
+                factory.segmenter(modelDir, settings).also { dictation.cancel() }
+        }
+        val runtime = LocalRuntime(store(*LocalModels.SPEECH_TO_TEXT.toTypedArray()), cancelling, LocalConfig(), Dispatchers.Unconfined)
+
+        dictation = launch { runtime.recognition {}.close() }
+        dictation.join()
+
+        assertTrue(dictation.isCancelled)
+        assertTrue(factory.segmenters.single().released, "the segmenter leaked")
+        runtime.release()
+        assertTrue(factory.decoders.single().first.released, "the decoder lease was not given back")
+    }
+
+    @Test
+    fun `a preparation cancelled while the synthesizer loads gives the decoder back`() = runBlocking {
+        lateinit var preparation: Job
+        val cancelling = object : EngineFactory by factory {
+            override fun synthesizer(modelDir: File, threads: Int): SpeechSynthesizer =
+                factory.synthesizer(modelDir, threads).also { preparation.cancel() }
+        }
+        val runtime = LocalRuntime(store(*LocalModels.ALL.toTypedArray()), cancelling, LocalConfig(), Dispatchers.Unconfined)
+
+        preparation = launch { runtime.prepareAll {} }
+        preparation.join()
+        runtime.release()
+
+        assertTrue(preparation.isCancelled)
+        assertTrue(factory.decoders.single().first.released, "the decoder leaked")
+        assertTrue(factory.synthesizers.single().released, "the synthesizer leaked")
     }
 
     @Test

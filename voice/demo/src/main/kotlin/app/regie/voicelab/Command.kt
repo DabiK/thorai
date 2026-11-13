@@ -42,6 +42,18 @@ sealed interface Command {
 
         private val folderName = Regex("[A-Za-z0-9_-]+")
 
+        /**
+         * Why [commands] are refused as a whole, or null if they may run. While a bench or a guided
+         * reading runs, a new setting would change it halfway (the local decoder would even reload),
+         * so nothing is applied; only `--es guided stop` alone is accepted, to leave the reading.
+         */
+        fun refusal(commands: List<Command>, benchRunning: Boolean, guidedActive: Boolean): String? = when {
+            commands.isEmpty() || commands == listOf(StopGuided) -> null
+            benchRunning -> "Commande refusée : un banc est en cours, attendre « fini : bench-… »"
+            guidedActive -> "Commande refusée : lecture guidée en cours, la quitter d'abord (--es guided stop)"
+            else -> null
+        }
+
         /** Commands of an intent sent to [component]: none unless it is [ADB_ENTRY]. */
         fun parse(component: String?, string: (String) -> String?, boolean: (String) -> Boolean?): List<Command> =
             if (component == ADB_ENTRY) parse(string, boolean) else emptyList()

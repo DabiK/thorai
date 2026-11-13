@@ -80,6 +80,8 @@ data class UiState(
     val elevenLabs: ElevenLabsUi,
     val bench: BenchUi? = null,
     val guided: GuidedUi? = null,
+    /** Why the last adb command was refused; cleared by the next accepted one. */
+    val refusal: String? = null,
 )
 
 /**
@@ -114,6 +116,7 @@ class VoiceLab(private val context: Context, private val scope: CoroutineScope) 
     private var bench: Job? = null
     private var guided: GuidedReading? = null
     private var guidedStartedAt = ""
+    private var guidedSettings: Map<String, String> = emptyMap()
 
     /** Whether the guided reading is on: B then reads the last sentence again. */
     val guidedActive: Boolean get() = guided != null
@@ -223,7 +226,7 @@ class VoiceLab(private val context: Context, private val scope: CoroutineScope) 
             Log.i(TAG, "dictation ended: ${terminal.javaClass.simpleName}, latency=${latencyMs}ms audio=${measure.audioMs}ms rtf=$rtf")
             // Cancelled by B: the same sentence is read again.
             if (reading != null && reading === guided && reading.current == prompt && terminal !is DictationState.Cancelled) {
-                recordGuided(reading, provider, microphone, terminal, latencyMs, rtf)
+                recordGuided(reading, microphone, terminal, latencyMs, rtf)
             }
         }
     }
@@ -316,6 +319,8 @@ class VoiceLab(private val context: Context, private val scope: CoroutineScope) 
         val reading = GuidedReading(providerId, GuidedReading.prompts(sentences(dir)), dir, vocabulary)
         guided = reading
         guidedStartedAt = timestamp()
+        // Read now: the report gives the settings the reading started with.
+        guidedSettings = benchSettings(provider(providerId)) + ("source" to "microphone")
         mutableUi.update { it.copy(dictation = null, measure = null) }
         showGuided(reading, null, null)
         Log.i(TAG, "guided: ${reading.total} sentences with $providerId, recordings in $dir")
@@ -344,7 +349,6 @@ class VoiceLab(private val context: Context, private val scope: CoroutineScope) 
 
     private fun recordGuided(
         reading: GuidedReading,
-        provider: VoiceProvider,
         capture: CapturingSource,
         terminal: DictationState,
         latencyMs: Long?,
@@ -354,7 +358,7 @@ class VoiceLab(private val context: Context, private val scope: CoroutineScope) 
         Log.i(TAG, "guided: ${describe(item)}")
         var status: String? = null
         if (reading.finished) {
-            val report = reading.report(benchSettings(provider) + ("source" to "microphone"), guidedStartedAt)
+            val report = reading.report(guidedSettings, guidedStartedAt)
             val name = "guided-${reading.provider}-$guidedStartedAt"
             writeReport(filesRoot(), name, report)
             status = "Fini : $name.json, latence médiane ${report.latency?.median?.toLong()} ms, " +
@@ -377,8 +381,10 @@ class VoiceLab(private val context: Context, private val scope: CoroutineScope) 
             Log.w(TAG, "bench already running")
             return
         }
+        val provider = provider(providerId)
+        // Read before the bench starts: the report gives the settings it ran with.
+        val settingsUsed = benchSettings(provider) + mapOf("realtime" to "true", "corpus" to (corpusName ?: "."))
         bench = scope.launch(Dispatchers.Default) {
-            val provider = provider(providerId)
             fun show(line: String, done: Int = 0, total: Int = 0, running: Boolean = true) {
                 mutableUi.update { it.copy(bench = BenchUi(providerId, done, total, line, running)) }
                 Log.i(TAG, "bench: $line")
@@ -410,7 +416,6 @@ class VoiceLab(private val context: Context, private val scope: CoroutineScope) 
                 }
                 show(line, progress.done, progress.total)
             }
-            val settingsUsed = benchSettings(provider) + mapOf("realtime" to "true", "corpus" to (corpusName ?: "."))
             val report = BenchReport(providerId, settingsUsed, startedAt, items)
             val name = "bench-$providerId-" + (corpusName?.let { "$it-" } ?: "") + startedAt
             writeReport(root, name, report)
@@ -437,6 +442,13 @@ class VoiceLab(private val context: Context, private val scope: CoroutineScope) 
     // --- adb commands ---
 
     fun handle(commands: List<Command>) {
+        val refusal = Command.refusal(commands, benchRunning = bench?.isActive == true, guidedActive = guided != null)
+        if (refusal != null) {
+            mutableUi.update { it.copy(refusal = "$refusal (${clock()})") }
+            Log.w(TAG, "$refusal: ${commands.joinToString { it.javaClass.simpleName }}")
+            return
+        }
+        if (commands.isNotEmpty()) mutableUi.update { it.copy(refusal = null) }
         for (command in commands) {
             Log.i(TAG, "command: ${command.javaClass.simpleName}")
             when (command) {
@@ -479,6 +491,8 @@ class VoiceLab(private val context: Context, private val scope: CoroutineScope) 
         private val PRETTY = Json { prettyPrint = true }
 
         private fun timestamp(): String = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.ROOT).format(Date())
+
+        private fun clock(): String = SimpleDateFormat("HH:mm:ss", Locale.ROOT).format(Date())
 
         /** One result, as shown on screen and in logcat. */
         fun describe(item: BenchItem): String =

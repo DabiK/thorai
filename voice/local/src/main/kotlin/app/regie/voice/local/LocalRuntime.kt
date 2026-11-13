@@ -4,6 +4,7 @@ import app.regie.voice.api.VoiceError
 import app.regie.voice.api.VoiceException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
@@ -129,14 +130,16 @@ internal class LocalRuntime(
         val lease = mutex.withLock {
             val shared = decoder?.takeIf { decoderSettings == settings } ?: run {
                 onPreparing(null)
+                // Stored inside the block: if the dictation is cancelled while it loads, withContext
+                // throws and drops the result, but the engine is kept for the next use, then freed by release.
                 load {
                     decoder?.retire()
                     decoder = null
                     decoderSettings = null
-                    SharedEngine(factory.decoder(store.directory(LocalModels.PARAKEET), settings)) { it.release() }
-                }.also {
-                    decoder = it
-                    decoderSettings = settings
+                    SharedEngine(factory.decoder(store.directory(LocalModels.PARAKEET), settings)) { it.release() }.also {
+                        decoder = it
+                        decoderSettings = settings
+                    }
                 }
             }
             shared.lease()
@@ -144,7 +147,8 @@ internal class LocalRuntime(
         val segmenter = try {
             segmenter()
         } catch (e: Throwable) {
-            withContext(engineDispatcher) { lease.close() }
+            // NonCancellable: in a cancelled coroutine, withContext would not even run the block.
+            withContext(NonCancellable + engineDispatcher) { lease.close() }
             throw e
         }
         return RecognitionEngines(lease.engine, segmenter, settings.hotwords, lease)
@@ -152,14 +156,24 @@ internal class LocalRuntime(
 
     override suspend fun segmenter(): SpeechSegmenter {
         install(listOf(LocalModels.SILERO_VAD)) {}
-        return load { factory.segmenter(store.directory(LocalModels.SILERO_VAD), segmenterSettings) }
+        var created: SpeechSegmenter? = null
+        try {
+            return load { factory.segmenter(store.directory(LocalModels.SILERO_VAD), segmenterSettings).also { created = it } }
+        } catch (e: CancellationException) {
+            // Created, then dropped by the cancellation: nobody else will free it.
+            created?.let { withContext(NonCancellable + engineDispatcher) { it.release() } }
+            throw e
+        }
     }
 
     override suspend fun synthesizer(): Lease<SpeechSynthesizer> = mutex.withLock {
         val shared = synthesizer ?: run {
             if (store.missing(LocalModels.TEXT_TO_SPEECH).isNotEmpty()) throw VoiceException(VoiceError.ModelMissing)
-            load { SharedEngine(factory.synthesizer(store.directory(LocalModels.SUPERTONIC), config.synthesisThreads)) { it.release() } }
-                .also { synthesizer = it }
+            // Stored inside the block, as the decoder: a cancelled speech does not lose it.
+            load {
+                SharedEngine(factory.synthesizer(store.directory(LocalModels.SUPERTONIC), config.synthesisThreads)) { it.release() }
+                    .also { synthesizer = it }
+            }
         }
         shared.lease()
     }
@@ -167,8 +181,13 @@ internal class LocalRuntime(
     override suspend fun prepareAll(onProgress: (Float?) -> Unit) {
         install(LocalModels.ALL, onProgress)
         val recognition = recognition(onProgress)
-        val synthesis = synthesizer()
-        withContext(engineDispatcher) {
+        val synthesis = try {
+            synthesizer()
+        } catch (e: Throwable) {
+            withContext(NonCancellable + engineDispatcher) { recognition.close() }
+            throw e
+        }
+        withContext(NonCancellable + engineDispatcher) {
             recognition.close()
             synthesis.close()
         }

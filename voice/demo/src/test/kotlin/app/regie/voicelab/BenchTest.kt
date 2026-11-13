@@ -13,6 +13,7 @@ import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -221,6 +222,29 @@ class CommandTest {
         assertEquals(2, fromShell.size)
         assertEquals(emptyList(), fromAnotherApp)
         assertEquals(emptyList(), Command.parse(null, string = { extras[it] }, boolean = { null }))
+    }
+
+    @Test
+    fun `while a bench runs, a whole command is refused, settings included`() {
+        val commands = parse("hotwords" to false, "bench" to "local")
+
+        assertNull(Command.refusal(commands, benchRunning = false, guidedActive = false))
+        assertEquals(
+            "Commande refusée : un banc est en cours, attendre « fini : bench-… »",
+            Command.refusal(commands, benchRunning = true, guidedActive = false),
+        )
+        assertNotNull(Command.refusal(parse("scribe" to "scribe_v2_realtime"), benchRunning = true, guidedActive = false))
+    }
+
+    @Test
+    fun `during a guided reading, only leaving it is accepted`() {
+        assertEquals(
+            "Commande refusée : lecture guidée en cours, la quitter d'abord (--es guided stop)",
+            Command.refusal(parse("provider" to "local"), benchRunning = false, guidedActive = true),
+        )
+        assertNotNull(Command.refusal(parse("guided" to "stop", "hotwords" to false), benchRunning = false, guidedActive = true))
+        assertNull(Command.refusal(parse("guided" to "stop"), benchRunning = false, guidedActive = true))
+        assertNull(Command.refusal(emptyList(), benchRunning = true, guidedActive = true))
     }
 
     @Test

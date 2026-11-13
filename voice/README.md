@@ -46,6 +46,8 @@ Toutes passent par `adb -s THOR0000000001 shell am start --display 0 -n app.regi
 
 Le suivi s'affiche à l'écran et dans `adb logcat -s VoiceLab`.
 
+Pendant un banc ou une lecture guidée, toute nouvelle commande est refusée, réglages compris, avec un message rouge à l'écran (et dans logcat) : attendre « fini : bench-… », ou quitter la lecture avec `--es guided stop`, envoyé seul. Les réglages notés dans un rapport sont ceux du début du banc ou de la lecture.
+
 ## Banc d'essai
 
 1. Pousser les enregistrements et les consignes :
@@ -58,7 +60,7 @@ Le suivi s'affiche à l'écran et dans `adb logcat -s VoiceLab`.
 
    Les WAV sont en 16 kHz, mono, 16 bits. Chaque WAV va avec la consigne dont le numéro termine son nom : `07.wav` et `consigne-07.wav` vont tous les deux avec `07|…`. Sans `consignes.txt` ni `termes.txt` dans ce dossier, l'appli prend ceux de `voice/corpus/`, embarqués dans l'APK.
 
-2. Lancer : `… --es bench local`, puis `… --es bench elevenlabs`.
+2. Lancer : `… --es bench local`, attendre « fini : bench-… » à l'écran, puis `… --es bench elevenlabs`.
 
 3. Récupérer les rapports :
 
@@ -80,9 +82,10 @@ Le suivi s'affiche à l'écran et dans `adb logcat -s VoiceLab`.
 
 L'appli affiche les consignes de `consignes.txt` une par une ; on maintient L2 et on lit. Chaque dictée est enregistrée telle que le micro l'a captée, puis notée comme dans le banc.
 
-1. Lancer, l'appli sur l'écran du haut :
+1. Lancer, l'appli sur l'écran du haut. Si elle est ouverte sur l'écran du bas (saisie de la clé), la fermer d'abord :
 
    ```bash
+   adb -s THOR0000000001 shell am force-stop app.regie.voicelab
    adb -s THOR0000000001 shell am start --display 0 -n app.regie.voicelab/.Adb --es guided elevenlabs
    ```
 
@@ -100,7 +103,9 @@ L'appli affiche les consignes de `consignes.txt` une par une ; on maintient L2 e
 4. Rejouer exactement les mêmes enregistrements dans l'autre fournisseur, puis comparer les deux rapports :
 
    ```bash
-   adb -s THOR0000000001 shell am start --display 0 -n app.regie.voicelab/.Adb --es bench local --es corpus user
+   adb -s THOR0000000001 shell am start --display 0 -n app.regie.voicelab/.Adb --es guided stop
+   adb -s THOR0000000001 shell am start --display 0 -n app.regie.voicelab/.Adb --ez hotwords true --es bench local --es corpus user
+   # attendre « fini : bench-… » à l'écran
    adb -s THOR0000000001 pull /sdcard/Android/data/app.regie.voicelab/files/ bench/
    ```
 

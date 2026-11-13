@@ -94,7 +94,14 @@ private fun DictationPanel(ui: UiState, modifier: Modifier) {
             Text("Banc ${b.provider} ${b.done}/${b.total}", color = Accent, fontSize = 16.sp)
             Text(b.line, color = Muted, fontSize = 14.sp, maxLines = 2)
         }
+        Refusal(ui)
     }
+}
+
+/** The last adb command refused, if any: it must be seen without logcat. */
+@Composable
+private fun Refusal(ui: UiState) {
+    ui.refusal?.let { Text(it, color = Danger, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 2) }
 }
 
 /** The guided reading: the sentence to read in large, what is heard, the result of the last one. */
@@ -117,6 +124,7 @@ private fun GuidedPanel(ui: UiState, guided: GuidedUi, modifier: Modifier) {
         }
         guided.last?.let { Text("Précédente : ${VoiceLab.describe(it)}", color = Bright, fontSize = 15.sp, maxLines = 2) }
         guided.status?.let { Text(it, color = Accent, fontSize = 15.sp, maxLines = 2) }
+        Refusal(ui)
     }
 }
 
