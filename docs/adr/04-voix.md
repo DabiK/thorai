@@ -243,6 +243,7 @@ Mesuré sur la Thor avec le banc de l'appli d'essai (`--es bench local`), sur le
    - `… .Adb --es guided stop` : quitte la lecture guidée, sinon les commandes suivantes sont refusées ;
    - `… .Adb --ez hotwords false --es bench local --es corpus user` ;
    - `… .Adb --ez hotwords true --es bench local --es corpus user` ;
+   - `… .Adb --es scribe scribe_v3_live --es bench elevenlabs --es corpus user` : v3 Live rejoué dans les mêmes conditions que les autres (la lecture guidée compte la latence depuis le relâcher de L2, le banc depuis la fin du WAV) ;
    - `… .Adb --es scribe scribe_v2_realtime --es bench elevenlabs --es corpus user`.
 
    Une fois le dernier banc fini, remettre les réglages par défaut (Scribe v3 Live, ElevenLabs, termes favorisés pour le repli local) : `… .Adb --es scribe scribe_v3_live --es provider elevenlabs --ez hotwords true`.

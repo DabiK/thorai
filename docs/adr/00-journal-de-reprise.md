@@ -11,6 +11,7 @@
   - 02 : pont ;
   - 03 : accès des agents à Android ;
   - 04 : voix.
+- **13 novembre, ticket 04 (voix) `bloqué`, branche prête à relire.** Le module `voice/` est livré : ElevenLabs, local sherpa-onnx et appli d'essai `app.regie.voicelab`. Le banc local a tourné sur la Thor. Il manque la clé ElevenLabs et la lecture des 20 consignes par l'utilisateur ; la marche à suivre est dans l'ADR 04.
 
 ## Ordre des vagues
 
@@ -35,3 +36,4 @@
 
 - Nom définitif de l'app (« Régie » est un nom de travail).
 - Lecture à voix haute : automatique ou seulement à la demande ? Un réglage est prévu, la valeur par défaut reste à décider.
+- Ticket 04 : mesurer ElevenLabs et la voix de l'utilisateur (marche à suivre dans `docs/adr/04-voix.md`), puis trancher le fournisseur de transcription par défaut.
