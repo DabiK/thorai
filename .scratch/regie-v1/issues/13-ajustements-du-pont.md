@@ -26,9 +26,9 @@ Appliquer trois décisions de l'utilisateur, prises le 13 novembre sur les quest
 
 ## Critères d'acceptation
 
-- Tests unitaires des trois points. `npm run check` est vert.
-- Sur la Thor, une session Codex en mode « valider » lit des fichiers sans demande de validation, et demande bien une validation pour une écriture.
-- Une session créée avec une branche tourne sans `git switch` du pont, et l'agent s'est placé sur la branche demandée.
+- [x] Tests unitaires des trois points. `npm run check` est vert.
+- [x] Sur la Thor, une session Codex en mode « valider » lit des fichiers sans demande de validation, et demande bien une validation pour une écriture.
+- [x] Une session créée avec une branche tourne sans `git switch` du pont, et l'agent s'est placé sur la branche demandée.
 
 ## Rapport
 
