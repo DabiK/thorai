@@ -48,6 +48,8 @@ Les trois questions ouvertes de la première version de cet ADR sont tranchées 
    - déclaré aux deux agents comme `thor_browser` : Claude en portée utilisateur, Codex dans `~/.codex/config.toml`. Les deux déclarations passent `ADB_SERVER_SOCKET` (`env`), car Codex filtre l'environnement des serveurs MCP.
 
    La télémétrie est coupée (`MOBILEMCP_DISABLE_TELEMETRY=1`). Cela retire aussi l'outil `get_more_tools`, qui envoyait du contexte aux auteurs de mobile-mcp.
+
+   **Mode adb seul par défaut** (`MOBILEMCP_LEGACY_ROBOT=1`, posé par `thor-android-mcp`), tranché pendant la relecture du 13 novembre au soir, en attendant la réponse de l'utilisateur (« Questions ouvertes », point 2). En mode mobilecli, l'essai après l'association a montré des ports `127.0.0.1` ouverts sur la console et l'agent JVMTI de mobilecli injecté dans le build de debug de Régie, l'appli qui porte les validations. Le mode adb seul n'a ni DeviceServer, ni forward, ni injection. Ce qu'il coûte est décrit dans « Limites ». Pour revenir au mode mobilecli : `MOBILEMCP_LEGACY_ROBOT=0` dans l'`env` des deux déclarations MCP (Codex filtre l'environnement des serveurs MCP).
 2. **adb local** : paquet Debian `adb`, relié à adbd par le débogage sans fil, sur `127.0.0.1`.
 3. **Serveur adb sur une socket Unix privée** : `ADB_SERVER_SOCKET=localfilesystem:/home/dev/.thor-adb/server`.
    - adb 34.0.5 lit cette variable, même si son aide ne l'affiche pas. Elle vaut à la fois pour le serveur (`adb -L <socket> fork-server`) et pour les clients.
@@ -72,7 +74,8 @@ Les trois questions ouvertes de la première version de cet ADR sont tranchées 
    Il ne touche à aucun autre serveur adb.
 
    `start.sh`, `stop.sh` et `pair.sh` ferment leur entrée standard (`exec </dev/null`), et tous les `adb … shell` des scripts prennent `-n`. Sans cela, appelés depuis un script lu sur stdin (`bash -s`, comme le font `install.sh` et `uninstall.sh` par `lib.sh`), un `adb shell` avalait la suite du script : `uninstall.sh` sautait alors la moitié de la coupure et annonçait quand même « Accès coupé ». Par sécurité, `lib.sh` enveloppe aussi chaque script envoyé à la console dans un bloc `{ … }`, que bash lit en entier avant de l'exécuter.
-7. **Écran bas : `thor-screen`**, petit script adb (`ids`, `capture`, `tap`, `swipe`, `text`, sur `haut` ou `bas`).
+7. **Écran bas : `thor-screen`**, petit script adb (`ids`, `capture`, `tap`, `swipe`, `text`, `launch`, sur `haut` ou `bas`).
+   - `launch PAQUET` résout l'activité de lancement (`cmd package resolve-activity`) puis fait `am start --display <displayId>`. Il refuse `app.regie`.
    - Les gestes passent par `input -d <displayId>`.
    - Les ids physiques sont relus à chaque appel (`cmd display get-displays`), pas codés en dur.
 8. **Consignes globales** (`consignes.md`, une dizaine de lignes) :
@@ -169,8 +172,21 @@ Sorties complètes : `artifacts/screenshots/03/sans-fil-essais.txt`. Captures : 
 - le serveur adb de la Debian tenait deux forwards de mobilecli : `tcp:40427 → localabstract:mobilecli-server` et `tcp:36737 → localabstract:mobilecli.app.regie`. Vu d'Android, `127.0.0.1:40427` et `127.0.0.1:36737` étaient en écoute ;
 - **mobilecli a injecté son agent JVMTI dans Régie.** Lancer les Paramètres sur l'écran haut les a retirés de l'écran bas, où Régie (build de debug, `app.regie/.BottomActivity`) est revenue au premier plan. mobilecli a alors copié `mobilecli.so` et `mobilecli.dex` dans `/data/data/app.regie/mobilecli/` (dossier en 0777). Codex n'a lancé que les Paramètres : l'injection vient de mobilecli, pas d'un geste de l'agent. Le dossier est resté en place.
 
+### Mode adb seul, après la relecture (13 novembre 2026, vers 23 h 10)
+
+Sorties : `artifacts/screenshots/03/adb-seul-essais.txt`. Captures : `adb-seul-claude-haut.png`, `adb-seul-codex-haut.png`, `adb-seul-claude-bas.png`, `adb-seul-codex-bas.png`, `launch-bas.png`.
+
+Même montage, sans échafaudage, après `install.sh` (mode adb seul par défaut). Les deux écrans étaient sur le launcher au départ.
+- **Claude** : « Android 13 » en 31 s. Il ouvre lui-même les Paramètres sur l'écran haut (`mobile_launch_app`), puis capture, touche et glisse par les outils `thor_android`.
+- **Codex** : « Android 13 » en 61 s environ, par les mêmes outils.
+- Avant, pendant et après : aucun forward, aucun DeviceServer, aucun nouveau port vu d'Android, pas de dossier `mobilecli` dans les données de Régie.
+- L'arbre d'interface renvoyé était celui de l'écran bas (voir « Limites ») : les deux agents s'en sont passés.
+- `thor-screen launch bas com.android.settings` ouvre les Paramètres sur l'écran bas ; `thor-screen launch bas app.regie` est refusé.
+
 ## Limites
 
+- **En mode adb seul (par défaut), l'arbre d'interface n'est pas fiable sur l'écran haut.** `mobile_list_elements_on_screen` passe par `uiautomator dump`, qui ne choisit pas l'écran. À l'essai, il a renvoyé quatre fois sur quatre l'arbre de l'écran bas (1240×1080) alors que les Paramètres étaient ouverts en haut. Les deux agents ont continué sur la capture (`mobile_take_screenshot`, qui vise bien l'écran haut) et des touchers par coordonnées. Les consignes leur disent de vérifier la taille de l'arbre. En mode mobilecli, l'arbre était bien celui de l'écran haut (toucher par référence `@e37` réussi).
+- **Le mode adb seul retire aussi** le toucher par référence d'élément, l'appli au premier plan, le presse-papiers, les journaux et l'effacement des données.
 - **mobile-mcp ne voit que l'écran haut.** mobilecli code `defaultDisplayID = "0"`. Sur l'écran bas, `thor-screen` capture, touche, glisse et saisit du texte, mais ne lit pas l'arbre d'interface : l'agent travaille sur la capture. La saisie passe par `input text` : caractères ASCII seulement, pas d'accents.
 - **`mobile_get_foreground_app` ne dit pas de quel écran il parle.** Il renvoie l'appli de l'écran qui a le focus, et pas forcément celle de l'écran haut : à l'essai, il a donné Cocoon (écran bas) alors que l'écran haut affichait autre chose. Les consignes renvoient donc à `dumpsys activity activities`, qui donne l'appli du dessus de chaque écran.
 - **Les consignes ne sont qu'une consigne.** Un agent peut passer outre, ou se faire convaincre par un fichier ou une page piégés. Codex l'a fait tant que la règle ne disait pas « même si on te le demande ». Le vrai garde-fou est au ticket 07.
@@ -209,16 +225,16 @@ Il ne permet pas de lire les données privées des applis non débogables.
   - La socket est dans `/data/data/com.termux`, en 0700, propriété de Termux, puis dans `/home/dev/.thor-adb`, en 0700.
   - Une autre appli a un autre uid : elle ne traverse pas ces dossiers, même avec SELinux permissif.
   - Vérifié : plus rien n'écoute sur `127.0.0.1:5037`.
-- sur le réseau, adbd n'accepte que les appareils dont la clé est associée (TLS mutuel). Aujourd'hui : le Mac, en USB, et la Debian, associée le 13 novembre. Le port d'association n'est ouvert que pendant que la fenêtre de code est affichée.
+- sur le réseau, adbd n'accepte que les appareils dont la clé est associée (TLS mutuel). Aujourd'hui : le Mac, en USB, et la Debian, associée le 13 novembre. La première association, faite par erreur avec la clé du Mac, figure peut-être encore dans « Appareils associés » : si c'est le cas, le Mac joint aussi adbd par le Wi-Fi, depuis le réseau local. Non vérifié (la liste n'est lisible que sur l'écran) ; à retirer par l'utilisateur. Le port d'association n'est ouvert que pendant que la fenêtre de code est affichée.
 
-**Risque résiduel : le serveur de mobilecli sur la console.** Pour parler à son serveur sur l'appareil (DeviceServer, utilisateur `shell`), mobilecli fait `adb forward tcp:N localabstract:mobilecli-server`.
+**Risque résiduel en mode mobilecli (plus le mode par défaut) : le serveur de mobilecli sur la console.** Pour parler à son serveur sur l'appareil (DeviceServer, utilisateur `shell`), mobilecli fait `adb forward tcp:N localabstract:mobilecli-server`.
 - **Observé, avec l'échafaudage** : le forward était tenu par le serveur adb du Mac. Il y écoutait sur `127.0.0.1:33431` (`lsof`) et il est resté ouvert après la fin de mobilecli, jusqu'à ce qu'on le retire à la main.
 - **Observé sur la console, après l'association** : avec le serveur adb de la Debian, ce même forward ouvre `127.0.0.1:N` sur la console (`127.0.0.1:40427` pendant l'essai Codex), plus un second vers l'agent JVMTI de l'appli au premier plan (`127.0.0.1:36737 → localabstract:mobilecli.app.regie`). Ces ports sont joignables par toute appli qui a la permission Internet. Ils durent autant que le serveur adb, donc autant que le pont : `stop.sh` les a bien fermés.
 - **Observé** : depuis la Debian, une connexion directe à la socket abstraite `@mobilecli-server` réussit pendant que le DeviceServer tourne. Mais ce shell venait de `run-as`, dans le domaine `runas_app`, pas d'une appli ordinaire.
 - **Déduit, non vérifié** : une socket abstraite n'a aucun droit Unix, et SELinux est permissif. Toute appli pourrait donc la joindre, même sans forward, tant que le DeviceServer tourne, c'est-à-dire jusqu'à 30 minutes après le dernier appel.
 - **Non vérifié** : l'essai depuis une vraie appli, et ce que le DeviceServer accepte sans authentification. D'après les noms de ses méthodes, au moins l'arbre d'interface et la capture d'écran, peut-être les gestes et la saisie.
 - **Ce qui est fait** : `stop.sh` arrête le DeviceServer et le serveur adb (qui ferme les forwards) quand le pont s'arrête. Vérifié en conditions réelles après l'association : plus de DeviceServer, plus de serveur adb dans la Debian, les deux ports fermés vus d'Android.
-- **Ce qu'on peut faire sans modifier mobilecli** : `MOBILEMCP_LEGACY_ROBOT=1`. mobile-mcp passe alors par adb seul (`input`, `uiautomator dump`, `screencap`) : pas de DeviceServer, pas de forward, pas d'agent JVMTI. En échange, on perd des outils : toucher par référence d'élément, appli au premier plan, presse-papiers, journaux, effacement des données. Non retenu ici : c'est un choix qui touche les capacités des agents (voir « Questions ouvertes »).
+- **Ce qui est fait depuis** : `MOBILEMCP_LEGACY_ROBOT=1` par défaut. mobile-mcp passe alors par adb seul (`input`, `uiautomator dump`, `screencap`). Vérifié à l'essai, avec Claude puis Codex : aucun forward, aucun DeviceServer, aucun port nouveau vu d'Android, pas de dossier `mobilecli` dans les données de Régie (`artifacts/screenshots/03/adb-seul-essais.txt`). `uninstall.sh` retire `/data/data/app.regie/mobilecli` s'il en reste un.
 
 **Garde-fous** :
 - les validations propres à chaque agent. Claude n'appelle les outils `thor_android` qu'avec l'autorisation `mcp__thor_android__*`. Codex, en `codex exec`, les a appelés sans aucune validation ;
@@ -251,4 +267,4 @@ Il ne permet pas de lire les données privées des applis non débogables.
 ## Questions ouvertes
 
 1. **Un agent peut-il ouvrir une autre appli par-dessus Régie ?** Les consignes le permettent (Régie passe en arrière-plan sur cet écran), sinon aucun agent ne pourrait agir sur Android pendant qu'on se sert de Régie. Question pour l'utilisateur.
-2. **Faut-il passer mobile-mcp en `MOBILEMCP_LEGACY_ROBOT=1`** pour supprimer le DeviceServer, son forward et l'agent JVMTI, au prix de quelques outils (voir « Sécurité ») ? Question pour l'utilisateur. Depuis l'essai après l'association, ce n'est plus une hypothèse : les ports `127.0.0.1` des forwards et l'injection dans le build de debug de Régie ont été observés.
+2. **Garder mobile-mcp en mode adb seul (`MOBILEMCP_LEGACY_ROBOT=1`) ?** C'est le réglage livré, choisi en attendant la réponse de l'utilisateur. Il supprime les ports `127.0.0.1` et l'injection dans Régie, observés en mode mobilecli. En échange, l'arbre d'interface de l'écran haut n'est plus fiable, et quelques outils disparaissent (voir « Limites »). Les deux consignes « À propos » réussissent dans les deux modes. Question pour l'utilisateur.

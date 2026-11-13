@@ -7,6 +7,7 @@
 #   thor-screen tap haut|bas X Y            toucher en X, Y (pixels de l'écran)
 #   thor-screen swipe haut|bas X1 Y1 X2 Y2 [MS]   glisser, en MS millisecondes
 #   thor-screen text haut|bas "TEXTE"       saisir dans le champ qui a le focus
+#   thor-screen launch haut|bas PAQUET      lancer l'appli PAQUET sur l'écran (pas app.regie)
 #
 # Appareil : $ANDROID_SERIAL, sinon celui retenu par start.sh, sinon le seul connecté.
 set -euo pipefail
@@ -21,7 +22,7 @@ die() {
 }
 
 usage() {
-  sed -n '5,9p' "$0" | sed 's/^# \{0,1\}//' >&2
+  sed -n '5,10p' "$0" | sed 's/^# \{0,1\}//' >&2
   exit 2
 }
 
@@ -110,6 +111,20 @@ case "$cmd" in
     typed=${3// /%s}
     typed=${typed//\'/\'\\\'\'}
     adb_ shell -n "input -d $display text '$typed'"
+    ;;
+  launch)
+    [ $# -eq 3 ] || usage
+    # Les consignes des agents interdisent tout geste sur Régie.
+    [ "$3" != app.regie ] || die "lancer app.regie est interdit par les consignes : Régie ne répond qu'à l'utilisateur."
+    [[ "$3" =~ ^[A-Za-z0-9_.]+$ ]] || die "nom de paquet invalide : $3"
+    display=$(screen_field "$2" 1)
+    # Activité de lancement : la dernière ligne de resolve-activity --brief.
+    component=$(adb_ shell -n cmd package resolve-activity --brief \
+      -a android.intent.action.MAIN -c android.intent.category.LAUNCHER "$3" |
+      tr -d '\r' | tail -n 1)
+    [[ "$component" == */* ]] || die "aucune activité de lancement pour $3."
+    # -f 0x10000000 : FLAG_ACTIVITY_NEW_TASK.
+    adb_ shell -n am start --display "$display" -f 0x10000000 -n "$component"
     ;;
   *)
     usage

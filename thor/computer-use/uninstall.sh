@@ -1,7 +1,8 @@
 #!/bin/bash
 # Coupe l'accès des agents à Android : retire le serveur thor_android des deux
 # agents et leurs consignes thor-android, arrête le serveur adb et efface ce
-# que install.sh a posé, y compris la clé adb de la Debian. Lancé depuis le
+# que install.sh a posé, y compris la clé adb de la Debian, ainsi que le
+# dossier que mobilecli a pu poser dans les données de Régie. Lancé depuis le
 # Mac. Idempotent.
 #
 # Le paquet Debian adb reste installé : sans clé associée, il ne peut rien.
@@ -19,7 +20,7 @@ require_console
 # dernier. Les échecs sont rappelés à la fin, avec un code de sortie 1.
 failed=()
 
-echo "1/4 Debian (dev) : serveurs, Claude Code, fichiers de dev"
+echo "1/5 Debian (dev) : serveurs, Claude Code, fichiers de dev"
 {
   printf 'wrapper_tag=%q\nsocket_dir=%q\n' "$ADB_WRAPPER_TAG" "$ADB_SOCKET_DIR"
   cat <<'EOF'
@@ -48,14 +49,14 @@ rm -rf "$socket_dir" ~/.local/state/thor-android || fail "dossier de la socket"
 rm -f ~/.android/adbkey ~/.android/adbkey.pub || fail "clé adb"
 exit "$rc"
 EOF
-} | debian_sh dev || failed+=("1/4 serveurs, Claude Code ou fichiers de dev")
+} | debian_sh dev || failed+=("1/5 serveurs, Claude Code ou fichiers de dev")
 
-echo "2/4 /opt/thor-android"
-debian_sh root <<'EOF' || failed+=("2/4 /opt/thor-android")
+echo "2/5 /opt/thor-android"
+debian_sh root <<'EOF' || failed+=("2/5 /opt/thor-android")
 rm -rf /opt/thor-android
 EOF
 
-echo "3/4 Codex : déclaration thor_android"
+echo "3/5 Codex : déclaration thor_android"
 {
   emit_toml_helpers
   cat <<'EOF'
@@ -66,9 +67,26 @@ if [ -e "$config" ] && grep -q '^[[:space:]]*\[mcp_servers\.thor_android[].]' "$
   echo "    retiré"
 fi
 EOF
-} | termux_sh || failed+=("3/4 déclaration Codex")
+} | termux_sh || failed+=("3/5 déclaration Codex")
 
-echo "4/4 Consignes des agents"
+echo "4/5 Régie : dossier de mobilecli"
+# En mode mobilecli, mobile-mcp copie son agent JVMTI dans les données de
+# l'appli débogable au premier plan. On retire ce dossier-là, rien d'autre.
+# Régie absente ou non débogable : run-as refuse, il n'y a rien à faire.
+regie_mobilecli=/data/data/app.regie/mobilecli
+regie_out=$(adb -s "$THOR_SERIAL" shell -n "run-as app.regie sh -c 'if [ ! -e $regie_mobilecli ]; then echo absent; elif rm -rf $regie_mobilecli; then echo removed; else echo failed; fi'" 2>&1) || true
+regie_out=$(tr -d '\r' <<<"$regie_out")
+case "$(tail -n 1 <<<"$regie_out")" in
+  absent) echo "    rien à retirer" ;;
+  removed) echo "    $regie_mobilecli retiré" ;;
+  *run-as:*) echo "    rien à faire : Régie absente ou non débogable ($(tail -n 1 <<<"$regie_out"))" ;;
+  *)
+    printf '    ERREUR : %s\n' "$regie_out" >&2
+    failed+=("4/5 $regie_mobilecli (à retirer à la main : adb shell run-as app.regie rm -rf $regie_mobilecli)")
+    ;;
+esac
+
+echo "5/5 Consignes des agents"
 {
   cat "$HERE/block.sh"
   cat <<'EOF'
@@ -84,7 +102,7 @@ for target in "Claude:$HOME/.claude/CLAUDE.md" "Codex:$HOME/.codex/AGENTS.md"; d
 done
 exit "$rc"
 EOF
-} | debian_sh dev || failed+=("4/4 consignes (bloc à retirer à la main, entre ses deux marqueurs)")
+} | debian_sh dev || failed+=("5/5 consignes (bloc à retirer à la main, entre ses deux marqueurs)")
 
 if [ ${#failed[@]} -gt 0 ]; then
   echo "Coupure incomplète. Étapes en échec :" >&2

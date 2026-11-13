@@ -4,6 +4,12 @@
 # mobilecli) passe par la socket privée du serveur adb ; les déclarations MCP
 # des deux agents la donnent aussi, la valeur ci-dessous sert de repli.
 export MOBILEMCP_DISABLE_TELEMETRY=1
+# Mode « legacy » par défaut : adb seul (input, uiautomator dump, screencap).
+# Le mode mobilecli ouvre des ports 127.0.0.1 sur la console (ses adb forward)
+# et injecte un agent JVMTI dans l'appli débogable au premier plan, dont Régie.
+# MOBILEMCP_LEGACY_ROBOT=0 dans l'env de la déclaration MCP rend ce mode-là
+# (Codex filtre l'environnement : passer par l'env de la déclaration).
+export MOBILEMCP_LEGACY_ROBOT=${MOBILEMCP_LEGACY_ROBOT-1}
 export ADB_SERVER_SOCKET=${ADB_SERVER_SOCKET:-localfilesystem:/home/dev/.thor-adb/server}
 export PATH="/usr/bin:$PATH"
 exec /usr/local/bin/node /opt/thor-android/node_modules/@mobilenext/mobile-mcp/lib/index.js "$@"

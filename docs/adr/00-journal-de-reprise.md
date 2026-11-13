@@ -14,6 +14,7 @@
 
 - **Ticket 03 bloqué** (13 novembre) : mobile-mcp déclaré aux deux agents sous `thor_android`, testé avec un échafaudage. Attend l'association du débogage sans fil par l'utilisateur (`thor/computer-use/README.md`) et deux réponses (ADR 03, « Questions ouvertes »).
 - **Ticket 03, reprise** (13 novembre) : consignes globales des agents posées (`~dev/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, bloc entre marqueurs : `thor_android`, `thor-screen`, ne jamais toucher `app.regie`) ; serveur adb de la Debian sur une socket Unix privée (`/home/dev/.thor-adb/server`), plus rien sur 5037. Essayé par la socket avec un échafaudage retiré depuis. Reste bloqué sur la seule association du débogage sans fil.
+- **Ticket 03 à fusionner** (13 novembre, 23 h) : association faite avec la clé de la Debian. Sur le chemin livré, sans le Mac, la consigne « À propos » réussit avec Claude puis avec Codex. mobile-mcp passe en mode adb seul par défaut (`MOBILEMCP_LEGACY_ROBOT=1`) : en mode mobilecli, des ports `127.0.0.1` s'ouvraient sur la console et mobilecli injectait son agent dans le build de debug de Régie. `pair.sh` refuse un serveur adb relayé. **Reste à faire avec l'utilisateur** : redémarrer la console une fois pour voir si le débogage sans fil revient seul, et retirer l'association du Mac dans « Appareils associés » si elle y est encore.
 
 ## Ordre des vagues
 
@@ -39,4 +40,4 @@
 - Nom définitif de l'app (« Régie » est un nom de travail).
 - Lecture à voix haute : automatique ou seulement à la demande ? Un réglage est prévu, la valeur par défaut reste à décider.
 - Ticket 03 : un agent peut-il ouvrir une autre appli par-dessus Régie (qui passe alors en arrière-plan sur cet écran) ? Les consignes le permettent pour l'instant ; sinon aucun agent ne peut agir sur Android pendant qu'on se sert de Régie.
-- Ticket 03 : passer mobile-mcp en `MOBILEMCP_LEGACY_ROBOT=1` (plus de DeviceServer, de forward TCP ni d'agent JVMTI dans les builds de debug de Régie, mais moins d'outils) ? Voir ADR 03.
+- Ticket 03 : garder mobile-mcp en mode adb seul (`MOBILEMCP_LEGACY_ROBOT=1`, réglage livré) ? Il supprime les ports `127.0.0.1` et l'injection de mobilecli dans Régie, mais l'arbre d'interface de l'écran haut n'est plus fiable et quelques outils disparaissent. Voir ADR 03, « Questions ouvertes ».

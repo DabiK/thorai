@@ -53,7 +53,13 @@ esac
 # pas un serveur de la Debian (socket relayée vers le serveur adb d'une autre
 # machine, par exemple le Mac), c'est la clé de cette machine qui serait
 # associée, et l'accès ne marcherait pas sans elle : on refuse.
-adb start-server >/dev/null 2>&1 || true
+if ! start_err=$(adb start-server 2>&1 >/dev/null); then
+  {
+    echo "Impossible de démarrer le serveur adb de la Debian sur $ADB_SERVER_SOCKET."
+    [ -z "$start_err" ] || echo "$start_err"
+  } >&2
+  exit 1
+fi
 if ! local_server_running; then
   {
     echo "Refus : le serveur adb qui répond sur $ADB_SERVER_SOCKET n'est pas un serveur local de la Debian."

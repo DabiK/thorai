@@ -8,13 +8,16 @@ Claude Code et Codex, dans la Debian de la Thor, voient l'écran d'Android et ag
   - `thor-screen capture haut|bas FICHIER.png` ;
   - `thor-screen tap haut|bas X Y` ;
   - `thor-screen swipe haut|bas X1 Y1 X2 Y2 [ms]` ;
-  - `thor-screen text haut|bas "texte"`, dans le champ qui a le focus. Caractères ASCII seulement : `input text` d'Android ne sait pas taper les accents.
+  - `thor-screen text haut|bas "texte"`, dans le champ qui a le focus. Caractères ASCII seulement : `input text` d'Android ne sait pas taper les accents ;
+  - `thor-screen launch haut|bas PAQUET` : lance l'activité de lancement du paquet sur cet écran. Refuse `app.regie`.
 
   Pas d'arbre d'interface sur l'écran bas : l'agent s'appuie sur la capture.
 
 Les agents l'apprennent par leurs consignes globales ([`consignes.md`](consignes.md)), qui leur interdisent aussi de toucher l'app Régie (`app.regie`).
 
 Le serveur adb de la Debian écoute sur une socket Unix privée, `/home/dev/.thor-adb/server` (`ADB_SERVER_SOCKET=localfilesystem:…`), et plus sur `127.0.0.1:5037` : aucune autre appli de la console ne peut le joindre. Tous les scripts et les déclarations MCP passent par elle. Reste un risque, côté serveur de mobilecli sur la console : voir l'ADR 03, « Sécurité ».
+
+`thor-android-mcp` lance mobile-mcp en mode « legacy » (`MOBILEMCP_LEGACY_ROBOT=1`) : adb seul (`input`, `uiautomator dump`, `screencap`). Le mode par défaut de mobile-mcp, mobilecli, ouvre des ports `127.0.0.1` sur la console et injecte un agent dans l'appli débogable au premier plan, dont le build de debug de Régie. Pour revenir au mode mobilecli, ajouter `MOBILEMCP_LEGACY_ROBOT=0` à l'`env` de la déclaration `thor_android` de l'agent (Codex ne transmet pas l'environnement du shell à ses serveurs MCP).
 
 ## Installer
 
@@ -79,6 +82,7 @@ Pour lancer `adb` à la main dans la Debian, passer par `adb` (la cale de `~/.lo
   Ce script :
   - retire `thor_android` des deux agents et le bloc de consignes de `CLAUDE.md` et d'`AGENTS.md`. Le reste de ces fichiers revient à l'octet près, sauf qu'un fichier sans saut de ligne final en gagne un ; un fichier qui ne contient plus rien après le retrait est effacé, qu'`install.sh` l'ait créé ou qu'il ait déjà été vide avant. Si un bloc ne peut pas être retiré (marqueurs cassés, fichier en lecture seule), le script le signale et finit en erreur, mais coupe quand même tout le reste ;
   - arrête le serveur de mobilecli et le serveur adb ;
-  - efface `/opt/thor-android`, les lanceurs, la cale `adb`, le dossier de la socket et la clé adb de la Debian (`~dev/.android/adbkey`).
+  - efface `/opt/thor-android`, les lanceurs, la cale `adb`, le dossier de la socket et la clé adb de la Debian (`~dev/.android/adbkey`) ;
+  - efface `/data/data/app.regie/mobilecli`, que mobilecli a pu poser dans les données de Régie (par `run-as`, en USB depuis le Mac). Rien d'autre n'est touché dans ces données. Si Régie est absente ou n'est pas débogable, le script le dit et continue.
 
   Le paquet `adb` reste installé.
