@@ -1,6 +1,6 @@
 # ADR 02 — Pilotage des agents par ACP
 
-Statut : accepté, 13 novembre 2026 (ticket 02).
+Statut : accepté, 13 novembre 2026 (ticket 02). Complété le 13 novembre 2026 par le ticket 13 (lectures, branches, conservation).
 
 ## Contexte
 
@@ -109,7 +109,7 @@ Toute commande lancée dans le sandbox échoue donc. Le Landlock historique est 
 
 Conséquences du mode « valider » :
 - Les lectures (`cat`, `rg`) demandent aussi une validation : pas de sandbox, donc tout passe par l'escalade.
-- Le pont peut accepter seul les commandes en lecture seule. C'est une règle produit à trancher avec l'utilisateur.
+- Le pont accepte seul les commandes en lecture seule : décision de l'utilisateur, mise en œuvre au ticket 13 (voir « Ajustements du ticket 13 »).
 - Si le modèle oublie la consigne, il retombe sur un échec bwrap puis une escalade. Rien ne casse, mais l'appel `failed` doit être masqué.
 
 ### Ce que chaque agent expose
@@ -183,6 +183,42 @@ Le contrat est dans `docs/protocole-pont.md`. Choix et constats durables :
   - **Taille** : 826 Mo installés, dont environ 740 Mo de binaires embarqués inutilisés (`claude-agent-sdk-linux-arm64` 346 Mo, `codex-linux-arm64` 391 Mo). Réglé par `--omit=optional` : 91 Mo (voir « Mise en œuvre dans le pont »).
   - **Mises à jour** : une nouvelle version de Claude Code, Codex ou d'un adaptateur peut changer le schéma ou les modes. Les adaptateurs évoluent vite (0.107 et 2.6 en novembre 2026). Les versions restent épinglées et l'app avertit quand on en sort.
   - **Consigne de Codex** : le contournement de bwrap repose sur le modèle. Un modèle qui l'ignore produit à nouveau des appels `failed`, sans casser la session.
-  - **Lectures en mode « valider »** : elles demandent une validation, ce qui peut faire beaucoup de validations. À arbitrer avec l'utilisateur, par exemple en acceptant seul les commandes en lecture seule.
+  - **Lectures en mode « valider »** : elles demandaient une validation chacune. Réglé au ticket 13 : le pont accepte seul les commandes en lecture seule.
   - **Effets de bord** : le mode plan de Claude écrit un fichier dans `~/.claude/plans/`. Les sessions créées restent listées par `session/list`.
 - Non testé : `session/resume`, `close` et `delete`, les serveurs MCP fournis par le client, `authenticate`, ACP v2.
+
+## Ajustements du ticket 13 (13 novembre 2026)
+
+Trois décisions de l'utilisateur sur les questions du ticket 02. Le contrat est dans `docs/protocole-pont.md`.
+
+### Les lectures passent sans validation
+
+- En mode « valider », le pont répond seul aux demandes de validation des commandes en lecture seule, et ne les relaie pas à l'app. L'appel reste dans le fil comme une action ordinaire.
+- **D'où vient la commande** : les deux adaptateurs envoient une `session/request_permission` dont le `toolCall` a `kind: "execute"` et la commande dans `rawInput.command` :
+  - Codex (`codex-acp` 2.6.0, enregistrements `codex-session-untrusted.jsonl`) : `rawInput = {command, cwd}`. L'adaptateur retire le préfixe `bash -lc '…'` du `codex app-server` (`stripShellPrefix`). Un accès réseau ajoute `url`, une demande de permissions `additionalPermissions` : ces demandes remontent ;
+  - Claude (`claude-agent-acp` 0.107.0, `permissionToolCall` de `tool-calls/renderer.js`) : l'outil `Bash` donne `kind: "execute"` et `rawInput` = l'entrée de l'outil (`command`, `description`, `timeout`, `run_in_background`). En mode `default`, Claude accepte déjà seul ses propres lectures sûres ; le pont ne voit que ce qu'il demande ;
+  - tout autre `kind` (édition, plan, outil MCP), ou un `rawInput` avec une autre clé, remonte.
+- **Réponse** : l'option `allow_once` de l'agent (`allow_once` pour Codex, `allow-once` pour Claude), jamais « toujours ». Sans option `allow_once`, la demande remonte.
+- **Règle** : liste fermée de programmes et d'options sûres, enchaînements de lectures seulement ; une redirection, une substitution, une variable, un sous-shell ou une commande qui écrit font tout remonter. Détail dans le protocole, tests commande par commande dans `bridge/src/adapters/shell/shell-quote-parser.test.ts`.
+- **Découpage** : `shell-quote` 1.12.0 (dépendance épinglée, types fournis par le paquet), derrière le port `ShellParser` du domaine (adapter `adapters/shell/`). On ne réécrit pas un analyseur de shell. Comme `shell-quote` est tolérant (une variable devient un mot vide, un commentaire avale la ligne suivante, `\` joint les lignes), le domaine examine d'abord la ligne brute, hors guillemets, et refuse tout ce que le shell interpréterait avant de faire confiance aux mots.
+- **Motifs que `shell-quote` ne marque pas** : il ne signale comme motif que `*` et `?`. Le domaine traite aussi comme motif un `[` hors guillemets et un `^` en début de mot (zsh), et refuse un mot qui commence par `=` (zsh). Relecture du ticket 13 : `find . -[d]elete` ou `git log -[-]output=x` passaient. `file` et `tree` sont retirés de la liste (hors du ticket) : leurs options d'écriture s'abrègent (`file --comp -m x` écrit `x.mgc`). Les autres programmes de la liste, hors `git`, n'ont pas d'option qui écrit ou lance un programme ; pour `git`, les options refusées le sont aussi abrégées ; `rg` n'accepte pas d'abréviation.
+- **Limites connues** :
+  - Codex retire le préfixe `bash`/`sh` avant de nous envoyer la commande. `bash cat notes.md` (exécuter un fichier nommé `cat`) nous arrive donc comme `cat notes.md`. Il faudrait d'abord que ce fichier soit écrit, ce qui demande une validation.
+  - Une lecture peut viser un fichier hors du projet (`cat ~/.codex/config.toml`) : c'est une lecture, elle passe.
+  - `git status` peut lancer un programme si la config du dépôt le demande (`core.fsmonitor`) : il faudrait d'abord écrire cette config, ce qui demande une validation.
+
+### Le pont ne touche plus aux branches
+
+- `session.create` ne fait plus de `git switch` ; l'erreur `branch_failed` disparaît. Une branche demandée est mise en tête du premier message à l'agent : « Travaille sur la branche X, crée-la depuis main si elle n’existe pas. » L'agent choisit comment faire (branche, worktree…). Le nom est seulement vérifié (`git check-ref-format --branch`) : il entre dans la consigne.
+- La consigne de branche est gardée dans `sessions.json` jusqu'au premier message : une session créée sans consigne, puis reprise après un redémarrage, la reçoit quand même.
+- **Branche affichée** : relue dans le dossier de la session (`git symbolic-ref --short HEAD` sur `cwd`) à la création, à la fin de chaque commande de l'agent (`tool_call` `execute` terminé), à la fin de chaque tour, et au rechargement de la session. Le pont n'interroge pas git à chaque `sessions.list` : la liste reste synchrone, et l'app reçoit l'événement `session` quand la branche change.
+- **Limite** : si l'agent crée un worktree dans un autre dossier et y travaille, la branche affichée reste celle de `cwd` (souvent `main`). `requestedBranch` garde la branche demandée, que l'app peut afficher à côté. Suivre le dossier où l'agent travaille vraiment demanderait de lire ses commandes : pas fait.
+
+### Conservation de l'historique
+
+- Détail complet (les événements) pendant 30 jours après la dernière activité de la session (`updatedAt`). Au-delà, ses événements sont effacés du journal, sur disque (réécriture atomique de `events.jsonl` : fichier temporaire synchronisé, puis renommé) et en mémoire. La session reste listée avec son résumé, `modifiedFiles` et `purgedAt` compris.
+- Une session qui charge, qui travaille ou qui attend une validation n'est jamais purgée. Une session chargée mais au repos l'est : son état vivant n'est pas dans le journal.
+- **Numérotation** : la purge laisse des trous, jamais de retour en arrière. L'en-tête de `events.jsonl` garde le dernier numéro (`lastSeq`), même quand les derniers événements sont purgés. Le rattrapage se fait par recherche dans le journal (les numéros ne sont plus contigus).
+- **Activité** : un passage en `stopped` décidé par le pont (arrêt, redémarrage après un plantage) ne change plus `updatedAt`, sinon chaque redémarrage repousserait la purge.
+- **Fichiers modifiés** : relevés dans les éditions terminées de l'agent (diff ou `locations` des appels `edit`, `delete`, `move`). Les sessions enregistrées avant le ticket 13 les retrouvent dans le journal au démarrage. Une écriture par commande shell n'est pas relevée.
+- **Réglage** : `REGIE_BRIDGE_RETENTION_DAYS` (30 par défaut). Le nettoyage tourne au démarrage puis toutes les 24 h, sur un minuteur qui ne retient pas le processus (`unref`). Le superviseur lance le pont par `bash -lc` : la variable peut se mettre dans `/home/dev/.profile`, sans toucher aux scripts de `thor/`.

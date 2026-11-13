@@ -7,7 +7,7 @@ import type { Workspace } from '../../domain/ports.ts';
 
 const run = promisify(execFile);
 
-/** The project folders of `~/projects`, and their git branch. */
+/** The project folders of `~/projects`, and their git branch. It never changes a branch. */
 export class GitWorkspace implements Workspace {
   private readonly root: string;
 
@@ -37,27 +37,17 @@ export class GitWorkspace implements Workspace {
     return { name, cwd };
   }
 
-  async switchBranch(cwd: string, branch: string): Promise<void> {
-    const failed = (detail: string) =>
-      new BridgeError('branch_failed', `Impossible de passer sur la branche ${branch} : ${detail}`);
+  async isValidBranchName(branch: string): Promise<boolean> {
+    // `@{-1}` names the previous branch for `--branch`: not a name the agent could create.
+    if (branch.includes('@{')) return false;
     try {
-      await git(cwd, ['check-ref-format', '--branch', branch]);
+      await run('git', ['check-ref-format', '--branch', branch], {
+        cwd: this.root,
+        timeout: 15_000,
+      });
+      return true;
     } catch {
-      throw failed('nom de branche invalide.');
-    }
-    const exists = await git(cwd, [
-      'rev-parse',
-      '--verify',
-      '--quiet',
-      `refs/heads/${branch}`,
-    ]).then(
-      () => true,
-      () => false,
-    );
-    try {
-      await git(cwd, exists ? ['switch', branch] : ['switch', '-c', branch]);
-    } catch (error) {
-      throw failed(firstLine(error));
+      return false;
     }
   }
 
@@ -88,15 +78,4 @@ export class GitWorkspace implements Workspace {
 async function git(cwd: string, args: readonly string[]): Promise<string> {
   const { stdout } = await run('git', ['-C', cwd, ...args], { timeout: 15_000 });
   return stdout;
-}
-
-function firstLine(error: unknown): string {
-  const stderr = (error as { stderr?: unknown }).stderr;
-  const text = typeof stderr === 'string' && stderr.trim() !== '' ? stderr : String(error);
-  return (
-    text
-      .trim()
-      .split('\n')
-      .find((line) => line.trim() !== '') ?? text
-  );
 }

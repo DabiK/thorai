@@ -8,6 +8,9 @@
  * - REGIE_BRIDGE_TOKEN_FILE (~/.config/regie/bridge-token);
  * - REGIE_BRIDGE_STATE_DIR (~/.local/state/regie/bridge): sessions, events, pid;
  * - REGIE_PROJECTS_DIR (~/projects);
+ * - REGIE_BRIDGE_RETENTION_DAYS (30): days the events of a session are kept after its last
+ *   activity; then only its summary stays. A value that is not a positive number stops the
+ *   bridge at start;
  * - CLAUDE_CODE_EXECUTABLE (~/.local/bin/claude), CODEX_PATH (/usr/local/bin/codex).
  */
 import { randomUUID } from 'node:crypto';
@@ -19,8 +22,10 @@ import { FileEventStore, FileSessionStore } from './adapters/files/file-stores.t
 import { GitWorkspace } from './adapters/files/git-workspace.ts';
 import { lockStateDir } from './adapters/files/state-lock.ts';
 import { StderrLogger } from './adapters/logging/logger.ts';
+import { runNowThenDaily } from './adapters/schedule/daily.ts';
+import { ShellQuoteParser } from './adapters/shell/shell-quote-parser.ts';
 import { listenWs } from './adapters/ws/ws-server.ts';
-import { Bridge } from './domain/bridge.ts';
+import { Bridge, DEFAULT_RETENTION_DAYS } from './domain/bridge.ts';
 import { AGENT_KINDS } from './domain/model.ts';
 
 export const DEFAULT_PORT = 47600;
@@ -31,6 +36,7 @@ const port = Number(env.REGIE_BRIDGE_PORT ?? DEFAULT_PORT);
 const tokenFile = env.REGIE_BRIDGE_TOKEN_FILE ?? join(home, '.config/regie/bridge-token');
 const stateDir = env.REGIE_BRIDGE_STATE_DIR ?? join(home, '.local/state/regie/bridge');
 const projectsDir = env.REGIE_PROJECTS_DIR ?? join(home, 'projects');
+const retentionSetting = env.REGIE_BRIDGE_RETENTION_DAYS ?? String(DEFAULT_RETENTION_DAYS);
 const binaries = {
   claude: env.CLAUDE_CODE_EXECUTABLE ?? join(home, '.local/bin/claude'),
   codex: env.CODEX_PATH ?? '/usr/local/bin/codex',
@@ -57,8 +63,17 @@ function readToken(): string {
   return token;
 }
 
+function readRetentionDays(): number {
+  const days = Number(retentionSetting);
+  if (retentionSetting.trim() === '' || !Number.isFinite(days) || days <= 0) {
+    throw new Error(`REGIE_BRIDGE_RETENTION_DAYS must be a positive number of days`);
+  }
+  return days;
+}
+
 async function main(): Promise<void> {
   const token = readToken();
+  const retentionDays = readRetentionDays();
   // A second bridge stops here, before reading or writing the journal: first the state
   // folder, then the port.
   const unlock = lockStateDir(stateDir);
@@ -79,8 +94,12 @@ async function main(): Promise<void> {
     clock: { now: () => new Date() },
     ids: () => randomUUID(),
     logger,
+    shell: new ShellQuoteParser(),
+    retentionDays,
   });
   bridge.start();
+  // The old events are purged at start, then once a day.
+  runNowThenDaily('purge', () => bridge.purge(), logger);
 
   let stopping = false;
   const pidFile = join(stateDir, 'bridge.pid');

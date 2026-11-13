@@ -41,8 +41,15 @@ export interface SessionRecord {
   readonly project: string;
   /** Absolute path of the project, as the agent sees it. */
   readonly cwd: string;
-  /** Branch checked out when the session was created, `null` outside a git repository. */
+  /**
+   * Branch checked out in `cwd`, read again at the end of each turn and of each command:
+   * `null` outside a git repository. The bridge never checks a branch out (ticket 13).
+   */
   readonly branch: string | null;
+  /** Branch asked at creation, given to the agent with its first instruction. */
+  readonly requestedBranch: string | null;
+  /** Whether the branch instruction still has to go with the next instruction. Not relayed. */
+  readonly branchInstructionPending: boolean;
   readonly approvalMode: ApprovalMode;
   readonly status: SessionStatus;
   /** Title given by the agent, or the start of the first instruction. */
@@ -51,10 +58,14 @@ export interface SessionRecord {
   readonly updatedAt: string;
   /** What went wrong, when `status` is `failed`. */
   readonly lastError: string | null;
+  /** Files the agent changed (its completed edits), relative to `cwd` when inside it. */
+  readonly modifiedFiles: readonly string[];
+  /** When the events of the session were last purged (retention), `null` if never. */
+  readonly purgedAt: string | null;
 }
 
 /** A session as the client sees it. */
-export interface SessionSummary extends SessionRecord {
+export interface SessionSummary extends Omit<SessionRecord, 'branchInstructionPending'> {
   /** Loaded in a running agent process. `false` for the history. */
   readonly active: boolean;
   /** Ids of the approvals waiting for an answer. */
@@ -157,7 +168,6 @@ export type BridgeErrorCode =
   | 'unknown_approval'
   | 'unknown_option'
   | 'bad_project'
-  | 'branch_failed'
   | 'agent_failed'
   | 'shutting_down';
 

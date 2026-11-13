@@ -10,6 +10,7 @@ import {
   MemoryEventStore,
   MemoryLogger,
   MemorySessionStore,
+  WordsShellParser,
 } from '../fake/memory.ts';
 import { HOST, type RunningServer, startWsServer } from './ws-server.ts';
 
@@ -30,6 +31,7 @@ beforeEach(async () => {
     clock: new FakeClock(),
     ids: counterIds('approval'),
     logger: new MemoryLogger(),
+    shell: new WordsShellParser(),
   });
   bridge.start();
   shutdowns = 0;

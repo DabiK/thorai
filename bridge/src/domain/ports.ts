@@ -53,7 +53,14 @@ export interface EventStore {
    */
   readonly journalId: string;
   readAll(): readonly BridgeEvent[];
+  /** The highest number ever stored, even when its event has been purged since. */
+  lastSeq(): number;
   append(event: BridgeEvent): void;
+  /**
+   * Replaces the stored events at once, keeping the journal id and the numbers: used to purge
+   * old events. `lastSeq` is kept, so that numbering never goes back.
+   */
+  replaceAll(events: readonly BridgeEvent[], lastSeq: number): void;
 }
 
 /** The sessions, current and past. */
@@ -66,10 +73,26 @@ export interface SessionStore {
 export interface Workspace {
   /** Resolves a project of the projects root. Rejects any path that leaves it. */
   resolveProject(project: string): Promise<{ readonly name: string; readonly cwd: string }>;
-  /** Checks out `branch`, creating it when it does not exist. */
-  switchBranch(cwd: string, branch: string): Promise<void>;
+  /** Whether `branch` is a valid branch name. The bridge never checks a branch out. */
+  isValidBranchName(branch: string): Promise<boolean>;
+  /** The branch checked out in `cwd`, `null` outside a git repository or on a detached HEAD. */
   currentBranch(cwd: string): Promise<string | null>;
   listProjects(): Promise<readonly ProjectInfo[]>;
+}
+
+/**
+ * A word, a glob (an unquoted word with `*`, `?` or `[`), an operator (`&&`, `|`, `>`…), or
+ * anything else the shell would read (a comment, a variable): `other`, never trusted.
+ */
+export type ShellToken =
+  | { readonly kind: 'word'; readonly value: string }
+  | { readonly kind: 'glob'; readonly value: string }
+  | { readonly kind: 'operator'; readonly value: string }
+  | { readonly kind: 'other' };
+
+/** Splits a shell command line into words and operators, quotes removed. Runs nothing. */
+export interface ShellParser {
+  parse(script: string): readonly ShellToken[];
 }
 
 export interface Clock {

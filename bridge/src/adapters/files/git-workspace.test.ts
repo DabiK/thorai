@@ -53,23 +53,20 @@ describe('GitWorkspace', () => {
     await expect(workspace.resolveProject(project)).rejects.toMatchObject({ code: 'bad_project' });
   });
 
-  it('switches to an existing branch, or creates it', async () => {
-    const cwd = join(root, 'demo');
-    git(cwd, 'branch', 'existing');
-
-    await workspace.switchBranch(cwd, 'existing');
-    expect(await workspace.currentBranch(cwd)).toBe('existing');
-    await workspace.switchBranch(cwd, 'feature/new');
-    expect(await workspace.currentBranch(cwd)).toBe('feature/new');
+  it('accepts a valid branch name, and refuses an invalid one', async () => {
+    await expect(workspace.isValidBranchName('feature/new')).resolves.toBe(true);
+    await expect(workspace.isValidBranchName('ticket/13-ajustements')).resolves.toBe(true);
+    for (const name of ['bad..name', '-x', 'a b', 'x~1', 'x:y', 'fin/', '@{-1}', 'a.lock']) {
+      await expect(workspace.isValidBranchName(name)).resolves.toBe(false);
+    }
   });
 
-  it('fails clearly on an invalid branch name or outside a repository', async () => {
-    await expect(workspace.switchBranch(join(root, 'demo'), 'bad..name')).rejects.toMatchObject({
-      code: 'branch_failed',
-    });
-    await expect(workspace.switchBranch(join(root, 'plain'), 'x')).rejects.toMatchObject({
-      code: 'branch_failed',
-    });
+  it('reads the branch of a repository, and none outside one', async () => {
+    const cwd = join(root, 'demo');
+    git(cwd, 'switch', '-q', '-c', 'feature/x');
+
+    await expect(workspace.currentBranch(cwd)).resolves.toBe('feature/x');
+    await expect(workspace.currentBranch(join(root, 'plain'))).resolves.toBeNull();
   });
 
   it('lists the projects with their branch', async () => {
