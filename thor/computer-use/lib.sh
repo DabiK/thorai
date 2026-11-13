@@ -1,0 +1,47 @@
+# shellcheck shell=bash
+# Fonctions communes aux scripts de thor/computer-use lancés depuis le Mac.
+# À sourcer, pas à exécuter.
+
+THOR_SERIAL=${THOR_SERIAL:-THOR0000000001}
+TERMUX_PREFIX=/data/data/com.termux/files/usr
+TERMUX_HOME=/data/data/com.termux/files/home
+
+# Exécute dans Termux le script bash lu sur l'entrée standard.
+termux_sh() {
+  adb -s "$THOR_SERIAL" shell -T run-as com.termux \
+    "$TERMUX_PREFIX/bin/env" HOME="$TERMUX_HOME" PREFIX="$TERMUX_PREFIX" \
+    TMPDIR="$TERMUX_PREFIX/tmp" PATH="$TERMUX_PREFIX/bin:/system/bin" \
+    LD_PRELOAD="$TERMUX_PREFIX/lib/libtermux-exec.so" LANG=en_US.UTF-8 \
+    "$TERMUX_PREFIX/bin/bash" -s
+}
+
+# Exécute dans la Debian, sous l'utilisateur $1 (dev ou root), le script bash
+# lu sur l'entrée standard. Mêmes montages que le lanceur dev-linux de Termux.
+debian_sh() {
+  adb -s "$THOR_SERIAL" shell -T run-as com.termux \
+    "$TERMUX_PREFIX/bin/env" HOME="$TERMUX_HOME" PREFIX="$TERMUX_PREFIX" \
+    TMPDIR="$TERMUX_PREFIX/tmp" PATH="$TERMUX_PREFIX/bin:/system/bin" \
+    LD_PRELOAD="$TERMUX_PREFIX/lib/libtermux-exec.so" LANG=en_US.UTF-8 \
+    "$TERMUX_PREFIX/bin/proot-distro" login debian --user "$1" \
+    --bind "$TERMUX_HOME/projects:/home/dev/projects" \
+    --bind "$TERMUX_HOME/.codex:/home/dev/.codex" \
+    -- /bin/bash -s
+}
+
+# Écrit sur la sortie standard les commandes bash qui recréent le fichier
+# local $1 en $2 sur la console, avec les droits $3.
+emit_file() {
+  local src=$1 dest=$2 mode=$3
+  printf 'mkdir -p %q\n' "$(dirname "$dest")"
+  printf 'base64 -d > %q <<"__THOR_B64__"\n' "$dest"
+  base64 < "$src" | tr -d '\n'
+  printf '\n__THOR_B64__\n'
+  printf 'chmod %s %q\n' "$mode" "$dest"
+}
+
+require_console() {
+  if ! adb -s "$THOR_SERIAL" get-state >/dev/null 2>&1; then
+    echo "La console $THOR_SERIAL n'est pas visible par adb depuis le Mac." >&2
+    exit 1
+  fi
+}

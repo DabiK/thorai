@@ -21,9 +21,9 @@ Permettre à Claude Code et à Codex, qui tournent sur la Thor, de voir l'écran
 
 ## Critères d'acceptation
 
-- Sur la Thor, dans une session Claude puis une session Codex, la consigne « ouvre les Paramètres, va dans À propos et dis-moi la version d'Android » réussit sans intervention, à part les validations.
-- Une capture de l'écran bas faite par un agent est possible, ou sa limite est expliquée.
-- `docs/adr/03-acces-des-agents-a-android.md` : choix, essais, limites, comment désactiver.
+- [x] Sur la Thor, dans une session Claude puis une session Codex, la consigne « ouvre les Paramètres, va dans À propos et dis-moi la version d'Android » réussit sans intervention, à part les validations.
+- [x] Une capture de l'écran bas faite par un agent est possible, ou sa limite est expliquée.
+- [x] `docs/adr/03-acces-des-agents-a-android.md` : choix, essais, limites, comment désactiver.
 
 ## Rapport
 

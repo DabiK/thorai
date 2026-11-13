@@ -1,0 +1,6 @@
+#!/bin/bash
+# Serveur MCP thor_android : mobile-mcp, épinglé dans /opt/thor-android.
+# La télémétrie de mobile-mcp est coupée.
+export MOBILEMCP_DISABLE_TELEMETRY=1
+export PATH="/usr/bin:$PATH"
+exec /usr/local/bin/node /opt/thor-android/node_modules/@mobilenext/mobile-mcp/lib/index.js "$@"
