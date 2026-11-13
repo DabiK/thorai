@@ -49,8 +49,12 @@ fun MicButton(
             .pointerInput(Unit) {
                 detectTapGestures(onPress = {
                     press()
-                    tryAwaitRelease()
-                    release()
+                    // Un toucher annulé (composition fermée) doit aussi relâcher la gâchette.
+                    try {
+                        tryAwaitRelease()
+                    } finally {
+                        release()
+                    }
                 })
             },
         contentAlignment = Alignment.Center,

@@ -120,4 +120,22 @@ class OverviewControllerTest {
         press(Button.A)
         assertEquals(listOf<OverviewAction>(OverviewAction.OpenSession(SessionId("montage"))), actions)
     }
+
+    @Test
+    fun `the focus stays on the four visible cards when there are more sessions`() {
+        val extra = (1..2).map { mockup.sessions[2].copy(id = SessionId("extra-$it"), pendingApproval = null) }
+        overview.value = extra.fold(mockup.apply(SessionEvent.SessionUpdated(mockup.sessions[1].copy(pendingApproval = null)))) { o, s ->
+            o.apply(SessionEvent.SessionUpdated(s))
+        }
+        assertEquals(6, overview.value.sessions.size)
+
+        press(Button.DOWN)
+        press(Button.DOWN)
+        assertEquals(2, focus)
+        press(Button.RIGHT)
+        press(Button.R1)
+        assertEquals(3, focus)
+        press(Button.A)
+        assertEquals(listOf<OverviewAction>(OverviewAction.OpenSession(SessionId("thor-dev"))), actions)
+    }
 }

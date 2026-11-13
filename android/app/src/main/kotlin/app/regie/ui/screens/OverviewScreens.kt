@@ -31,6 +31,7 @@ import app.regie.domain.model.Overview
 import app.regie.input.Button
 import app.regie.input.Trigger
 import app.regie.overview.ControlState
+import app.regie.overview.OverviewGrid
 import app.regie.ui.components.ApprovalBanner
 import app.regie.ui.components.ButtonChip
 import app.regie.ui.components.MicButton
@@ -45,9 +46,6 @@ interface ControlCallbacks {
     fun onTrigger(trigger: Trigger, held: Boolean)
     fun onOpenApproval()
 }
-
-private const val GRID_COLUMNS = 2
-private const val GRID_ROWS = 2
 
 /** Écran du haut : la vue d'ensemble. En mode un seul écran, la zone du bas devient un panneau en bas. */
 @Composable
@@ -117,15 +115,15 @@ private fun OverviewHeader(overview: Overview) {
 @Composable
 private fun SessionGrid(overview: Overview, control: ControlState, compact: Boolean, modifier: Modifier) {
     val sessions = overview.sessions
-    val focus = control.focusIn(sessions.size)
+    val focus = control.focusIn(sessions.size.coerceAtMost(OverviewGrid.VISIBLE_CARDS))
     Column(
         modifier = modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = if (compact) 12.dp else 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        repeat(GRID_ROWS) { row ->
+        repeat(OverviewGrid.ROWS) { row ->
             Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                repeat(GRID_COLUMNS) { column ->
-                    val index = row * GRID_COLUMNS + column
+                repeat(OverviewGrid.COLUMNS) { column ->
+                    val index = row * OverviewGrid.COLUMNS + column
                     val session = sessions.getOrNull(index)
                     if (session == null) {
                         Spacer(Modifier.weight(1f))

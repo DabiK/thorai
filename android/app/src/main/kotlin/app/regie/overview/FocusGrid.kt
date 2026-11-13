@@ -2,6 +2,13 @@ package app.regie.overview
 
 enum class Direction { UP, DOWN, LEFT, RIGHT }
 
+/** La grille de la vue d'ensemble : 2 × 2 cartes visibles. */
+object OverviewGrid {
+    const val COLUMNS = 2
+    const val ROWS = 2
+    const val VISIBLE_CARDS = COLUMNS * ROWS
+}
+
 /** Déplacement du focus dans une grille de cartes remplie ligne par ligne. Le focus s'arrête aux bords. */
 class FocusGrid(private val columns: Int) {
 

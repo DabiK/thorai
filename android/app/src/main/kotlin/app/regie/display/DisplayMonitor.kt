@@ -38,18 +38,22 @@ class DisplayMonitor(private val manager: DisplayManager) {
         _mode.value = next
     }
 
-    private fun compute(): ScreenMode = DisplayPolicy.choose(manager.displays.map { it.snapshot() }, forceSingle)
+    /** Le display où relancer l'écran du haut, s'il s'est ouvert ailleurs que sur le display par défaut. */
+    fun topScreenTarget(currentDisplayId: Int): Int? = DisplayPolicy.topScreenTarget(currentDisplayId, snapshots())
+
+    private fun compute(): ScreenMode = DisplayPolicy.choose(snapshots(), forceSingle)
+
+    private fun snapshots() = manager.displays.map { it.snapshot() }
 
     private fun Display.snapshot() = DisplaySnapshot(
         id = displayId,
         isDefault = displayId == Display.DEFAULT_DISPLAY,
-        isOn = state in ON_STATES,
+        isOn = DisplayPolicy.isOn(state),
         isPresentation = flags and Display.FLAG_PRESENTATION != 0,
         isPrivate = flags and Display.FLAG_PRIVATE != 0,
     )
 
     private companion object {
         const val TAG = "Regie"
-        val ON_STATES = setOf(Display.STATE_ON, Display.STATE_ON_SUSPEND, Display.STATE_VR)
     }
 }

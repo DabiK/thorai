@@ -34,13 +34,14 @@ Le build tourne sur le JDK par défaut (Temurin 25) et produit du bytecode 17. L
 
 - `TopActivity` : lanceur, `singleTask`, display 0.
 - `BottomActivity` : `singleInstance`, sa propre `taskAffinity`, hors des récents. `TopActivity` la lance par `ActivityOptions.setLaunchDisplayId` et `FLAG_ACTIVITY_NEW_TASK`, à chaque retour au premier plan et à chaque passage en mode deux écrans, si elle n'est pas déjà visible.
+- `TopActivity` ouverte sur un autre display que le 0 (lanceur de l'écran du bas, `am start --display 4`) se ferme et se relance sur le display 0 (`DisplayPolicy.topScreenTarget`).
 - L'écran du bas se ferme seul en mode un seul écran, quand l'écran du haut est détruit, ou si Android l'a déplacé sur un autre écran.
 - L'état partagé vit dans `AppContainer` : la vue d'ensemble (domaine), `OverviewController` (focus et gâchettes maintenues), `InputRouter` et `DisplayMonitor`. Les deux activités l'observent.
 
 ### Écran du bas absent ou éteint
 
 `DisplayMonitor` écoute `DisplayManager` ; `DisplayPolicy`, en Kotlin pur et testée, choisit le mode :
-- le display 4 s'il est allumé (`STATE_ON`, `ON_SUSPEND` ou `VR`) et n'est pas privé ;
+- le display 4 s'il est allumé et n'est pas privé ; seuls `STATE_ON` et `STATE_VR` comptent comme allumés, `OFF`, `DOZE`, `DOZE_SUSPEND` et `ON_SUSPEND` donnent le mode un seul écran ;
 - sinon le premier écran de présentation allumé et public ;
 - sinon le mode un seul écran, où la zone du bas devient un panneau en bas de l'écran haut.
 
@@ -60,7 +61,7 @@ En debug, `am start -n app.regie/.TopActivity --ez force_single_screen true|fals
 ### Commandes sur la vue d'ensemble
 
 Elles suivent le tableau « Commandes » du PRD, et appellent les cas d'usage vides de `domain/usecase/Commands.kt` :
-- croix : focus dans la grille 2×2, arrêté aux bords ;
+- croix : focus dans la grille 2×2, arrêté aux bords et limité aux 4 cartes affichées ;
 - A : ouvrir la session qui a le focus ;
 - X : nouvelle session ;
 - Y : point à voix haute ;
@@ -89,4 +90,9 @@ Les événements suivent ainsi le même chemin que la vraie manette, gâchettes 
 ## Conséquences
 
 - Les tickets suivants ajoutent leurs écrans derrière `OverviewController`, ou à côté, et branchent leurs cas d'usage à la place des cas vides.
-- Le mode un seul écran n'a été essayé que forcé : la Thor n'a pas été éteinte ni débranchée. La réaction réelle de l'écran du bas éteint (état `OFF` ou écran retiré) reste à observer.
+- Le mode un seul écran n'a été essayé que forcé. Relevé le 13 novembre, en lecture seule : le display 4 (« Screen-2 ») est `state ON, committedState ON`. Aucune clé de `settings` système, sécurisée ou globale ne l'éteint (`dual_screen_display_mode` n'y figure pas). L'extinction passe par l'assistant d'Odin, `com.odin.dualscreen.assistant` 1.3 (`ScreenUtil.closeSecondaryScreen`, mode « Only bottom screen »). Son code ne dit pas si l'écran passe à `OFF`, est retiré ou garde `ON` avec une luminosité nulle. Ce dernier cas échapperait à `DisplayPolicy`.
+- Test réel, à faire par l'utilisateur :
+  1. Régie ouverte, éteindre l'écran du bas par l'assistant d'écran double d'Odin.
+  2. Relever `adb -s THOR0000000001 shell dumpsys display | grep -E 'Screen-2.*state'` et `adb -s THOR0000000001 logcat -d -s Regie`, qui doit montrer `mode d'écran : Single`.
+  3. Vérifier que le panneau apparaît en bas de l'écran haut.
+  4. Rallumer l'écran du bas et vérifier que l'écran du bas de Régie revient.

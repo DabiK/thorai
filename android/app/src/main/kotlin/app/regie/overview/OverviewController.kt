@@ -26,12 +26,15 @@ class OverviewController(
     private val overview: StateFlow<Overview>,
     private val dispatch: (OverviewAction) -> Unit,
 ) {
-    private val grid = FocusGrid(columns = 2)
+    private val grid = FocusGrid(columns = OverviewGrid.COLUMNS)
     private val _state = MutableStateFlow(ControlState())
     val state: StateFlow<ControlState> = _state.asStateFlow()
 
     private val sessions get() = overview.value.sessions
-    private val focused get() = sessions.getOrNull(_state.value.focusIn(sessions.size))
+
+    /** Seules les cartes affichées peuvent recevoir le focus. */
+    private val visibleCount get() = sessions.size.coerceAtMost(OverviewGrid.VISIBLE_CARDS)
+    private val focused get() = sessions.getOrNull(currentFocus())
 
     fun handle(input: GamepadInput) {
         when (input) {
@@ -54,12 +57,12 @@ class OverviewController(
             Button.DOWN -> moveFocus(Direction.DOWN)
             Button.LEFT -> moveFocus(Direction.LEFT)
             Button.RIGHT -> moveFocus(Direction.RIGHT)
-            Button.L1 -> setFocus(grid.previous(currentFocus(), sessions.size))
+            Button.L1 -> setFocus(grid.previous(currentFocus(), visibleCount))
             Button.R1 ->
                 if (overview.value.firstPendingApproval != null) {
                     openPendingApproval()
                 } else {
-                    setFocus(grid.next(currentFocus(), sessions.size))
+                    setFocus(grid.next(currentFocus(), visibleCount))
                 }
             Button.A -> focused?.let { dispatch(OverviewAction.OpenSession(it.id)) }
             Button.X -> dispatch(OverviewAction.NewSession)
@@ -82,9 +85,9 @@ class OverviewController(
         )
     }
 
-    private fun currentFocus() = _state.value.focusIn(sessions.size)
+    private fun currentFocus() = _state.value.focusIn(visibleCount)
 
-    private fun moveFocus(direction: Direction) = setFocus(grid.move(currentFocus(), direction, sessions.size))
+    private fun moveFocus(direction: Direction) = setFocus(grid.move(currentFocus(), direction, visibleCount))
 
     private fun setFocus(index: Int) = _state.update { it.copy(focusedIndex = index) }
 }

@@ -15,8 +15,15 @@ import kotlinx.coroutines.launch
 /** Écran du haut (display 0). Il lance l'écran du bas quand celui-ci est allumé. */
 class TopActivity : GamepadActivity() {
 
+    /** Cette instance s'est ouverte sur le mauvais écran et a passé la main à une autre. */
+    private var relaunched = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        container.displays.topScreenTarget(display.displayId)?.let { target ->
+            relaunchOn(target)
+            return
+        }
         applyDebugExtras(intent)
         container.topAlive.value = true
 
@@ -41,8 +48,21 @@ class TopActivity : GamepadActivity() {
     }
 
     override fun onDestroy() {
-        if (isFinishing) container.topAlive.value = false
+        if (isFinishing && !relaunched) container.topAlive.value = false
         super.onDestroy()
+    }
+
+    /**
+     * Ouverte sur un autre écran (lanceur de l'écran du bas, `am start --display 4`) :
+     * on se ferme d'abord, pour que `singleTask` ne nous retrouve pas, puis on se relance.
+     */
+    private fun relaunchOn(displayId: Int) {
+        relaunched = true
+        finish()
+        startActivity(
+            Intent(intent).setClass(this, TopActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            ActivityOptions.makeBasic().setLaunchDisplayId(displayId).toBundle(),
+        )
     }
 
     private fun launchBottom(displayId: Int) {

@@ -1,7 +1,11 @@
 package app.regie.display
 
+import android.view.Display
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class DisplayPolicyTest {
 
@@ -47,5 +51,35 @@ class DisplayPolicyTest {
         val other = bottom.copy(id = 2)
 
         assertEquals(ScreenMode.Dual(bottomDisplayId = 4), DisplayPolicy.choose(listOf(top, other, bottom), forceSingle = false))
+    }
+
+    @Test
+    fun `only a fully lit screen counts as on`() {
+        assertTrue(DisplayPolicy.isOn(Display.STATE_ON))
+        listOf(Display.STATE_OFF, Display.STATE_DOZE, Display.STATE_DOZE_SUSPEND, Display.STATE_ON_SUSPEND, Display.STATE_UNKNOWN)
+            .forEach { assertFalse(DisplayPolicy.isOn(it), "état $it") }
+    }
+
+    @Test
+    fun `a bottom screen in a low power state gives the single mode`() {
+        listOf(Display.STATE_OFF, Display.STATE_DOZE, Display.STATE_DOZE_SUSPEND, Display.STATE_ON_SUSPEND).forEach { state ->
+            val dimmed = bottom.copy(isOn = DisplayPolicy.isOn(state))
+            assertEquals(ScreenMode.Single, DisplayPolicy.choose(listOf(top, dimmed), forceSingle = false), "état $state")
+        }
+    }
+
+    @Test
+    fun `the top screen opened on display 4 moves back to display 0`() {
+        assertEquals(0, DisplayPolicy.topScreenTarget(currentDisplayId = 4, displays = listOf(top, bottom)))
+    }
+
+    @Test
+    fun `the top screen already on display 0 stays put`() {
+        assertNull(DisplayPolicy.topScreenTarget(currentDisplayId = 0, displays = listOf(top, bottom)))
+    }
+
+    @Test
+    fun `the top screen stays where it is when display 0 is unknown`() {
+        assertNull(DisplayPolicy.topScreenTarget(currentDisplayId = 4, displays = listOf(bottom)))
     }
 }
