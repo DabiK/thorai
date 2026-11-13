@@ -75,7 +75,7 @@ Pour lancer `adb` à la main dans la Debian, passer par `adb` (la cale de `~/.lo
   thor/computer-use/uninstall.sh
   ```
   Ce script :
-  - retire `thor_android` des deux agents et le bloc de consignes de `CLAUDE.md` et d'`AGENTS.md`. Le reste de ces fichiers revient à l'octet près, sauf qu'un fichier sans saut de ligne final en gagne un ; un fichier qu'`install.sh` avait créé et qui reste vide est effacé. Si un bloc ne peut pas être retiré (marqueurs cassés, fichier en lecture seule), le script le signale et finit en erreur, mais coupe quand même tout le reste ;
+  - retire `thor_android` des deux agents et le bloc de consignes de `CLAUDE.md` et d'`AGENTS.md`. Le reste de ces fichiers revient à l'octet près, sauf qu'un fichier sans saut de ligne final en gagne un ; un fichier qui ne contient plus rien après le retrait est effacé, qu'`install.sh` l'ait créé ou qu'il ait déjà été vide avant. Si un bloc ne peut pas être retiré (marqueurs cassés, fichier en lecture seule), le script le signale et finit en erreur, mais coupe quand même tout le reste ;
   - arrête le serveur de mobilecli et le serveur adb ;
   - efface `/opt/thor-android`, les lanceurs, la cale `adb`, le dossier de la socket et la clé adb de la Debian (`~dev/.android/adbkey`).
 

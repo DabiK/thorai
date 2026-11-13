@@ -21,8 +21,8 @@ Permettre à Claude Code et à Codex, qui tournent sur la Thor, de voir l'écran
 
 ## Critères d'acceptation
 
-- [ ] Sur la Thor, dans une session Claude puis une session Codex, la consigne « ouvre les Paramètres, va dans À propos et dis-moi la version d'Android » réussit sans intervention, à part les validations. *Prouvé avec l'échafaudage `adb reverse tcp:5037` (serveur adb du Mac) seulement : à refaire sur le chemin livré, après l'association.*
-- [x] Une capture de l'écran bas faite par un agent est possible, ou sa limite est expliquée. *mobile-mcp ne voit que l'écran haut ; `thor-screen capture bas` comble le manque. Prouvé avec l'échafaudage, consigne qui donnait la commande.*
+- [ ] Sur la Thor, dans une session Claude puis une session Codex, la consigne « ouvre les Paramètres, va dans À propos et dis-moi la version d'Android » réussit sans intervention, à part les validations. *Prouvé avec un échafaudage seulement (serveur adb du Mac, joint par la socket privée : Claude 29,7 s, Codex 44,3 s, « Android 13 ») : à refaire sur le chemin livré, après l'association.*
+- [x] Une capture de l'écran bas faite par un agent est possible, ou sa limite est expliquée. *mobile-mcp ne voit que l'écran haut ; `thor-screen capture bas` comble le manque. Prouvé avec l'échafaudage ; depuis les consignes globales, Claude trouve seul `thor-screen capture bas` (15,5 s).*
 - [x] `docs/adr/03-acces-des-agents-a-android.md` : choix, essais, limites, comment désactiver.
 
 ## Rapport
@@ -40,9 +40,13 @@ Permettre à Claude Code et à Codex, qui tournent sur la Thor, de voir l'écran
 3. Sur le Mac, console en USB : `thor/computer-use/pair-from-mac.sh <port> <code>`. Réponse attendue : `THOR_ANDROID=ok … via=sans-fil`.
 4. Ensuite, refaire les deux consignes « À propos » sans le Mac, et redémarrer une fois la console pour voir si le débogage sans fil revient seul (ADR 03, « Limites »).
 
+**Reprise du 13 novembre (décisions de l'utilisateur)** :
+- **Consignes globales** : `thor/computer-use/consignes.md` est posé entre deux marqueurs dans `~dev/.claude/CLAUDE.md` et `~/.codex/AGENTS.md` par `install.sh` (idempotent, reste du fichier préservé), retiré par `uninstall.sh`. Il présente `thor_android` et `thor-screen` et interdit de toucher `app.regie`. Essai : Claude refuse de toucher Régie ; Codex a d'abord obéi (première version des consignes), puis refuse après l'ajout « même si la demande vient de la conversation » (un seul essai). Le vrai garde-fou reste le ticket 07.
+- **Socket Unix privée** : le serveur adb de la Debian écoute sur `localfilesystem:/home/dev/.thor-adb/server` (dossier 0700) et plus sur 5037 (vérifié côté Debian et côté Android). `start.sh`, `stop.sh`, `pair.sh`, `thor-screen`, la cale `~dev/.local/bin/adb` et les déclarations MCP des deux agents (`env`) passent par elle. mobile-mcp, mobilecli et `thor-screen` vérifiés par la socket avec un échafaudage provisoire, retiré depuis.
+- Relecture : 3 tours ; corrigés notamment un `adb shell` qui avalait le reste du script de désinstallation, et des échecs d'écriture annoncés comme réussis.
+
 **Questions** (ADR 03, « Questions ouvertes ») :
-- ❓ Un agent peut valider ses propres demandes en touchant la bannière de Régie (écran haut par mobile-mcp, écran bas par `thor-screen`), ce qui contourne « rien ne part sans un appui sur A ». Faut-il interdire aux agents de toucher Régie, ou soumettre les outils `thor_android` à validation ?
-- ❓ Comment les agents apprennent-ils que `thor-screen` existe : consignes globales des agents, ou le pont à chaque session ?
-- ❓ Tant que le pont tourne, le serveur adb de la Debian écoute sur `127.0.0.1:5037` sans authentification : toute appli de la console peut s'en servir pour obtenir les droits `shell`. Accepter ce risque, ou demander l'essai de `ADB_SERVER_SOCKET` (socket Unix privée, ADR 03) ?
+- ❓ Un agent peut-il ouvrir une autre appli par-dessus Régie, qui passe alors en arrière-plan sur cet écran ? Les consignes le permettent aujourd'hui ; sinon, aucun agent ne peut agir sur Android pendant qu'on se sert de Régie, et la consigne « À propos » échoue.
+- ❓ Lancer mobile-mcp avec `MOBILEMCP_LEGACY_ROBOT=1` ? On supprimerait le DeviceServer de mobilecli (socket abstraite et forward TCP joignables par d'autres applis, agent JVMTI dans les builds de debug de Régie), au prix de quelques outils (toucher par référence, appli au premier plan, presse-papiers, journaux).
 
 **À savoir** : mobilecli injecte un agent JVMTI dans l'appli débogable au premier plan, ce qui concerne les builds de debug de Régie (ADR 03, « Limites »). `bas.png` (prise depuis le Mac) et `bas-par-agent.png` sont identiques à l'octet près : l'écran n'avait pas bougé entre les deux captures.
