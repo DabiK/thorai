@@ -165,6 +165,9 @@ export type BridgeErrorCode =
   | 'unknown_approval'
   | 'unknown_option'
   | 'bad_project'
+  | 'bad_project_name'
+  | 'project_exists'
+  | 'project_init_failed'
   | 'agent_failed'
   | 'shutting_down';
 

@@ -27,7 +27,7 @@ internal data class BridgeEvent(
 
 /** Ce que le pont envoie : une réponse à une requête, ou un événement. */
 internal sealed interface Incoming {
-    data class Response(val id: Long?, val result: JsonObject?, val error: String?) : Incoming
+    data class Response(val id: Long?, val result: JsonObject?, val error: String?, val errorMessage: String? = null) : Incoming
 
     data class Event(val event: BridgeEvent) : Incoming
 }
@@ -45,6 +45,7 @@ internal object Frames {
             id = root.long("id"),
             result = root.obj("result"),
             error = root.obj("error")?.string("code"),
+            errorMessage = root.obj("error")?.string("message"),
         )
     }
 

@@ -114,6 +114,22 @@ class BridgeAgentGatewayTest {
         }
     }
 
+    @Test fun `new project flag crosses websocket and collisions are certain readable refusals`() {
+        val bridge = FakeBridge(); upgrade(bridge); val gateway = gateway()
+        withGateway(gateway) {
+            val ws = bridge.socket(); val hello = bridge.next("hello")
+            ws.send(helloResult(hello.long("id")!!, "j", 0, ""))
+            gateway.connection.first { it == BridgeConnection.Connected }
+            val creation = async { gateway.createSession(app.regie.domain.model.NewSessionDraft(app.regie.domain.model.Agent.CODEX, "meteo", newProject = true)) }
+            val request = bridge.next("session.create")
+            assertEquals("true", request.obj("params")!!["newProject"].toString())
+            ws.send("""{"id":${request.long("id")},"error":{"code":"project_exists","message":"Le dossier existe déjà."}}""")
+            val result = creation.await()
+            assertTrue(!result.uncertain)
+            assertEquals("Le dossier existe déjà.", result.error)
+        }
+    }
+
     @Test
     fun `voice launch uses project catalog and creates once with plan mode`() {
         val bridge = FakeBridge()

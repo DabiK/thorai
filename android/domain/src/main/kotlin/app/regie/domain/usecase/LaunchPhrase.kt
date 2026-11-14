@@ -4,6 +4,10 @@ import app.regie.domain.model.VoiceIntent
 
 /** A bounded launch header; the instruction after `pour` is preserved verbatim. */
 internal fun launchPhrase(text: String): VoiceIntent? {
+    val newProject = Regex("(?:lance|démarre|demarre) (Claude|Codex) sur (?:un )?nouveau projet (?:qui s['’]appelle|appelé|nommé) (.+?)(?:,? pour (.+))?", RegexOption.IGNORE_CASE)
+        .matchEntire(text.trim().trimEnd('.', '!', '?'))
+    if (newProject != null) return VoiceIntent("launch", agent = newProject.groupValues[1], project = newProject.groupValues[2],
+        instruction = newProject.groupValues[3].ifBlank { null }, newProject = true)
     val match = Regex("(?:lance|démarre|demarre) (Claude|Codex) sur ([\\p{L}\\p{N}_.-]+)(.*)", RegexOption.IGNORE_CASE)
         .matchEntire(text.trim().trimEnd('.', '!', '?')) ?: return null
     val rest = match.groupValues[3]

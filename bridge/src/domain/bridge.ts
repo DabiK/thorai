@@ -31,6 +31,7 @@ import type {
   ShellParser,
   Workspace,
 } from './ports.ts';
+import { projectFolderName } from './project-name.ts';
 import { ReadOnlyCommands } from './read-only-command.ts';
 import { withSummaryRequest } from './written-summary.ts';
 
@@ -62,6 +63,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export interface CreateSessionRequest {
   readonly agent: AgentKind;
   readonly project: string;
+  readonly newProject?: boolean | undefined;
   readonly branch?: string | undefined;
   readonly approvalMode: ApprovalMode;
   readonly prompt?: string | undefined;
@@ -250,11 +252,14 @@ export class Bridge {
   async createSession(request: CreateSessionRequest): Promise<SessionSummary> {
     this.assertRunning();
     const { workspace } = this.deps;
-    const project = await workspace.resolveProject(request.project);
+    const projectName = request.newProject ? projectFolderName(request.project) : request.project;
     const requestedBranch = request.branch ? request.branch : null;
     if (requestedBranch !== null && !(await workspace.isValidBranchName(requestedBranch))) {
       throw new BridgeError('bad_request', `Nom de branche invalide : ${requestedBranch}.`);
     }
+    const project = request.newProject
+      ? await workspace.createProject(projectName, 'main')
+      : await workspace.resolveProject(projectName);
     const branch = await workspace.currentBranch(project.cwd);
     const connection = await this.connection(request.agent);
     const sessionId = await this.agentCall(request.agent, () => connection.newSession(project.cwd));

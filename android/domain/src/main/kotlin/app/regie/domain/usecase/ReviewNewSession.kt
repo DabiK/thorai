@@ -5,34 +5,42 @@ import app.regie.domain.port.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 
-/** Owns the draft until explicit confirmation; no git operation is available through its port. */
+/** Owns the draft until explicit confirmation; the bridge creates only explicitly requested projects. */
 class ReviewNewSession(private val gateway: AgentGateway, private val capture: DictationCapture,
     private val scope: CoroutineScope, private val openSession: (SessionId) -> Unit) {
     private val mutable = MutableStateFlow(NewSessionForm())
     val state = mutable.asStateFlow()
     private var job: Job? = null
     private var recording: Job? = null
+    private var catalogJob: Job? = null
     private var held = false
 
     fun open(seed: NewSessionDraft? = null, heard: String = "") {
         if (state.value.sending) return
-        job?.cancel(); cancelCapture()
-        mutable.value = NewSessionForm(visible = true, heard = heard, loading = true, agent = seed?.agent, project = seed?.project,
+        job?.cancel(); catalogJob?.cancel(); cancelCapture()
+        mutable.value = NewSessionForm(visible = true, heard = heard, loading = true, agent = seed?.agent, project = seed?.project, newProject = seed?.newProject == true, projectName = if (seed?.newProject == true) seed.project else "",
             branchChoice = if (seed?.newBranch == true) BranchChoice.NEW else if (seed?.branch != null) BranchChoice.EXISTING else BranchChoice.CURRENT,
             branch = seed?.branch.orEmpty(), base = seed?.baseBranch.orEmpty(), instruction = seed?.instruction.orEmpty(), approvalMode = seed?.approvalMode ?: "plan")
-        job = scope.launch {
-            val projects = loadCatalog()
-            val branches = projects.singleOrNull { it.name == seed?.project }?.branches.orEmpty()
-            fun canonical(ref: String) = branches.firstOrNull { it == ref } ?: branches.singleOrNull { it.equals(ref, ignoreCase = true) } ?: ref
-            mutable.value = state.value.copy(projects = projects, loading = false,
-                branch = if (seed?.newBranch == true) state.value.branch else canonical(state.value.branch), base = canonical(state.value.base),
-                notice = if (projects.isEmpty()) "Projets indisponibles. Reviens à la régie puis réessaie." else "")
+        catalogJob = scope.launch {
+            gateway.connection.collectLatest { connection ->
+                if (!state.value.visible || state.value.sending || state.value.uncertain) return@collectLatest
+                mutable.value = state.value.copy(loading = true, catalogAvailable = false)
+                val catalog = loadCatalog()
+                val projects = catalog.orEmpty()
+                if (state.value.sending || !state.value.visible) return@collectLatest
+                val branches = projects.singleOrNull { it.name == state.value.project }?.branches.orEmpty()
+                fun canonical(ref: String) = branches.firstOrNull { it == ref } ?: branches.singleOrNull { it.equals(ref, ignoreCase = true) } ?: ref
+                mutable.value = state.value.copy(projects = projects, loading = false,
+                    catalogAvailable = connection == BridgeConnection.Connected && catalog != null,
+                    branch = if (state.value.branchChoice == BranchChoice.NEW) state.value.branch else canonical(state.value.branch), base = canonical(state.value.base))
+            }
         }
     }
 
-    private suspend fun loadCatalog(): List<ProjectChoice> = try { gateway.projectCatalog() }
-        catch (e: CancellationException) { throw e } catch (_: Exception) { emptyList() }
+    private suspend fun loadCatalog(): List<ProjectChoice>? = try { gateway.projectCatalog() }
+        catch (e: CancellationException) { throw e } catch (_: Exception) { null }
 
     fun select(field: NewSessionField) { if (state.value.editable && field in state.value.fields) mutable.value = state.value.copy(field = field) }
     fun move(delta: Int) { val s = state.value; select(s.fields[(s.fields.indexOf(s.field) + delta).coerceIn(0, s.fields.lastIndex)]) }
@@ -46,7 +54,10 @@ class ReviewNewSession(private val gateway: AgentGateway, private val capture: D
         }
         mutable.value = when (s.field) {
             NewSessionField.AGENT -> s.copy(agent = next(Agent.entries, s.agent))
-            NewSessionField.PROJECT -> s.copy(project = next(s.projects.map { it.name }, s.project), branchChoice = BranchChoice.CURRENT, branch = "", base = "")
+            NewSessionField.PROJECT -> {
+                val choice = next(s.projects.map { it.name } + "", if (s.newProject) "" else s.project)
+                s.copy(project = choice?.takeIf { it.isNotEmpty() }, newProject = choice == "", projectName = "", branchChoice = BranchChoice.CURRENT, branch = "", base = "")
+            }
             NewSessionField.BRANCH -> {
                 val choices = listOf(BranchChoice.CURRENT to "") + s.selectedProject?.branches.orEmpty().map { BranchChoice.EXISTING to it } + listOf(BranchChoice.NEW to "")
                 val value = next(choices, s.branchChoice to if (s.branchChoice == BranchChoice.EXISTING) s.branch else "")!!
@@ -57,13 +68,14 @@ class ReviewNewSession(private val gateway: AgentGateway, private val capture: D
             NewSessionField.INSTRUCTION -> s
         }.copy(notice = "")
     }
+    fun editProjectName(text: String) { if (state.value.editable && state.value.newProject) mutable.value = state.value.copy(projectName = text, project = projectFolderName(text), notice = "") }
     fun editInstruction(text: String) { if (state.value.editable) mutable.value = state.value.copy(instruction = text, notice = "") }
     fun editBranch(text: String) { if (state.value.editable && state.value.branchChoice == BranchChoice.NEW) mutable.value = state.value.copy(branch = text, notice = "") }
     fun record() {
         val s = state.value
         if (!s.editable) return
         held = true
-        mutable.value = s.copy(capturing = true, partial = "", notice = "Relâche L2 pour relire la consigne.")
+        mutable.value = s.copy(capturing = true, partial = "", notice = if (s.dictatingName) "Relâche L2 pour relire le nom du projet." else "Relâche L2 pour relire la consigne.")
         capture.start(listOfNotNull(s.project) + s.selectedProject?.branches.orEmpty())
         recording = scope.launch { capture.state.collect(::applyCapture) }
     }
@@ -81,8 +93,11 @@ class ReviewNewSession(private val gateway: AgentGateway, private val capture: D
         if (event.complete || event.error != null) {
             val valid = event.error == null && event.text.isNotBlank()
             mutable.value = state.value.copy(capturing = false, finalizing = false, level = 0f,
-                instruction = if (valid) event.text.trim() else s.instruction,
-                field = NewSessionField.INSTRUCTION, notice = event.error ?: if (valid) "Consigne remplacée. Relis avant A." else "Aucune parole reconnue. Consigne conservée.")
+                instruction = if (valid && !s.dictatingName) event.text.trim() else s.instruction,
+                projectName = if (valid && s.dictatingName) event.text.trim().trimEnd('.', '!', '?') else s.projectName,
+                project = if (valid && s.dictatingName) projectFolderName(event.text.trim().trimEnd('.', '!', '?')) else s.project,
+                field = if (s.dictatingName) NewSessionField.PROJECT else NewSessionField.INSTRUCTION,
+                notice = event.error ?: if (valid) "${if (s.dictatingName) "Nom" else "Consigne"} remplacé. Relis avant A." else "Aucune parole reconnue. Texte conservé.")
             recording?.cancel(); recording = null
         }
     }
@@ -92,14 +107,19 @@ class ReviewNewSession(private val gateway: AgentGateway, private val capture: D
         if (s.sending) return
         if (s.capturing || s.finalizing) {
             cancelCapture(); mutable.value = s.copy(capturing = false, finalizing = false, partial = "", level = 0f, notice = "Dictée annulée.")
-        } else { job?.cancel(); cancelCapture(); mutable.value = NewSessionForm() }
+        } else { job?.cancel(); catalogJob?.cancel(); cancelCapture(); mutable.value = NewSessionForm() }
     }
     fun launch() {
         val s = state.value
         if (!s.canLaunch) return
         mutable.value = s.copy(sending = true, notice = "Lancement…")
         job = scope.launch {
-            val checked = s.copy(projects = loadCatalog())
+            val catalog = loadCatalog()
+            if (catalog == null) {
+                mutable.value = state.value.copy(sending = false, catalogAvailable = false, notice = "Projets indisponibles. Vérifie la connexion au pont.")
+                return@launch
+            }
+            val checked = s.copy(projects = catalog)
             if (checked.problem != null) {
                 mutable.value = checked.copy(sending = false, notice = "Projet ou branche indisponible. ${checked.problem}")
                 return@launch
@@ -110,14 +130,14 @@ class ReviewNewSession(private val gateway: AgentGateway, private val capture: D
                 BranchChoice.NEW -> "Crée une nouvelle branche ${s.branch.ifBlank { "au nom de ton choix" }} depuis ${s.base}, puis place-toi dessus avant d’exécuter la consigne. Si le nom existe déjà, demande confirmation."
             }
             val prompt = listOfNotNull(branchInstruction, s.instruction.takeIf { it.isNotBlank() }).joinToString("\n\n").ifBlank { null }
-            val request = NewSessionDraft(s.agent!!, s.project!!, instruction = prompt, approvalMode = s.approvalMode)
+            val request = NewSessionDraft(s.agent!!, s.project!!, instruction = prompt, approvalMode = s.approvalMode, newProject = s.newProject)
             val result = try { gateway.createSession(request) }
                 catch (e: CancellationException) { throw e } catch (_: Exception) { SessionCreation(uncertain = true) }
             if (result.id != null) {
                 mutable.value = NewSessionForm(); openSession(result.id)
             } else mutable.value = state.value.copy(sending = false, uncertain = result.uncertain,
                 notice = if (result.uncertain) "Création incertaine. Reviens à la régie pour vérifier ; aucun renvoi automatique."
-                    else "Session non créée. Vérifie le pont puis réessaie.")
+                    else result.error ?: "Session non créée. Vérifie le pont puis réessaie.")
         }
     }
 }

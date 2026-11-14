@@ -76,6 +76,10 @@
 
 - **14 novembre, ticket 11, relecture après fed500e** : diff complet relu en solo, aucun autre blocage fonctionnel ; pas à pas corrigé pour rouvrir la fiche avant L2, anciennes campagnes distinguées des nouveaux essais. Aucun code/test changé après les portes vertes et l’essai matériel. Preuves `scroll-relecture.txt` ; statut à fusionner maintenu.
 
+- **14 novembre, ticket 15 à fusionner (solo Codex)** : fiche rechargée à la connexion/reconnexion, choix Nouveau projet et nom L2/R2, normalisation et création atomique du dossier Git vide sur main, insets partagés (ADR 02/05/13, protocole). Android 304 tests + lint, pont 283 + typage/lint verts. Thor : connexion tardive, croix, WAV Thomas/local, création réelle meteo-du-matin et fichier par Codex sans commit, collisions, un/deux écrans. Aucun Claude ni permission/reboot. Vraie voix et extinction physique au pas à pas dans artifacts/screenshots/15/essai-thor.txt. Première livraison fa2a9d3 ; relecture et arrêt détaillés ci-dessous.
+
+- **14 novembre, ticket 15, correction de relecture solo** : partiel du nom maintenu sur Projet, refus de collision explicite malgré « Nom remplacé ». Deux régressions Compose rouges puis vertes ; Android 306 tests + lint, pont 283 + typage/lint verts. APK réinstallé, R2/L2 WAV local et refus en un/deux écrans (20–23) ; aucun nouvel agent. Quitter a arrêté l’unique Codex d’essai et le pont à 10:36:56 Paris ; jeton restauré, vraie source micro/deux écrans remis, forward retiré. Diff main...HEAD relu, aucun autre blocage. Ticket à fusionner ; vrai micro et extinction physique au pas à pas utilisateur.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

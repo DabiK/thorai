@@ -23,7 +23,8 @@ export const paramsSchemas = {
   'sessions.list': z.object({}),
   'session.create': z.object({
     agent: z.enum(AGENT_KINDS),
-    project: z.string().min(1).max(200),
+    project: z.string().max(200),
+    newProject: z.boolean().optional(),
     branch: z.string().min(1).max(200).nullish(),
     approvalMode: z.enum(APPROVAL_MODES),
     prompt: z.string().max(100_000).nullish(),

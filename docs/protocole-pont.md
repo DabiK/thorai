@@ -79,7 +79,7 @@ Les requêtes sont traitées en parallèle : les réponses peuvent arriver dans 
 | --- | --- | --- |
 | `hello` | `since?`, `journal?` | état du pont, puis le flux d'événements (voir plus haut) |
 | `sessions.list` | — | `{sessions}` : en cours et historique, la plus récente d'abord |
-| `session.create` | `agent`, `project`, `branch?`, `approvalMode`, `prompt?` | `{session}` ; le pont ne change pas de branche (voir plus bas) |
+| `session.create` | `agent`, `project`, `newProject?`, `branch?`, `approvalMode`, `prompt?` | `{session}` ; le pont ne change pas de branche (voir plus bas) |
 | `session.prompt` | `sessionId`, `text` | `{delivery}` |
 | `session.cancel` | `sessionId` | `{}` |
 | `session.resume` | `sessionId` | `{session}`, rechargée dans son agent |
@@ -104,6 +104,8 @@ La fiche du ticket 11 exprime branche existante/nouvelle et base dans `prompt` s
 
 - `agent` : `claude` ou `codex`.
 - `project` : un dossier de `~/projects`. Tout chemin qui en sort est refusé (`..`, chemin absolu, lien vers l'extérieur).
+- `newProject` (booléen facultatif, faux par défaut, ticket 15) : crée un **nouveau** dossier directement dans `~/projects`, puis lance l’agent dedans. Le domaine normalise `project` : minuscules, accents décomposables retirés, espaces/tirets/underscores/apostrophes regroupés en tirets, tirets de bord retirés. Résultat ASCII alphanumérique avec tirets, 1 à 80 caractères. Chemins, points et autres symboles sont refusés, jamais supprimés silencieusement. Exemple : `Météo du Jour` → `meteo-du-jour`.
+  Le dossier est réservé par `mkdir` non récursif (collision atomique), puis `git init --initial-branch main --template=`. Aucun commit ni fichier de projet, seulement `.git`. L’agent reçoit ensuite `prompt`. Un dossier, fichier ou lien déjà présent est refusé sans modification. Si Git ou l’agent échoue après la création, le dossier est conservé ; aucun effacement ni réemploi automatique. Une réponse perdue reste incertaine : vérifier la régie et le dossier avant une autre demande.
 - `branch` (facultatif) : **le pont ne touche pas aux branches**, c'est l'agent qui les gère (ticket 13). Le pont met en tête du premier message envoyé à l'agent :
 
   ```
@@ -284,6 +286,9 @@ Le découpage de la commande passe par `shell-quote` 1.12 (adapter `adapters/she
 | `unknown_session` | `sessionId` inconnu |
 | `unknown_approval` | la validation n'attend plus (déjà réglée, ou tour interrompu) |
 | `unknown_option` | `optionId` non proposé par l'agent |
+| `bad_project_name` | nom de nouveau projet vide, trop long ou invalide ; aucun agent lancé |
+| `project_exists` | le chemin du nouveau projet existe déjà ; aucun agent lancé |
+| `project_init_failed` | dossier créé, mais initialisation Git échouée ; conserver et vérifier le dossier |
 | `bad_project` | projet hors de `~/projects` ou introuvable |
 | `agent_failed` | l'agent n'a pas démarré, ou a refusé la demande (le message de l'agent suit) |
 | `shutting_down` | le pont s'arrête |

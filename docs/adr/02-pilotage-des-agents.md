@@ -222,3 +222,21 @@ Trois décisions de l'utilisateur sur les questions du ticket 02. Le contrat est
 - **Activité** : un passage en `stopped` décidé par le pont (arrêt, redémarrage après un plantage) ne change plus `updatedAt`, sinon chaque redémarrage repousserait la purge.
 - **Fichiers modifiés** : relevés dans les éditions terminées de l'agent (diff ou `locations` des appels `edit`, `delete`, `move`). Les sessions enregistrées avant le ticket 13 les retrouvent dans le journal au démarrage. Une écriture par commande shell n'est pas relevée.
 - **Réglage** : `REGIE_BRIDGE_RETENTION_DAYS` (30 par défaut). Le nettoyage tourne au démarrage puis toutes les 24 h, sur un minuteur qui ne retient pas le processus (`unref`). Le superviseur lance le pont par `bash -lc` : la variable peut se mettre dans `/home/dev/.profile`, sans toucher aux scripts de `thor/`.
+
+
+## Ticket 15 — Créer un projet explicitement
+
+`session.create` accepte `newProject: true`. Le domaine normalise et valide le nom
+(contrat dans `docs/protocole-pont.md`), puis appelle le port `Workspace.createProject`
+avec la branche initiale `main`. L’adapter réserve un enfant direct de la racine
+par `mkdir` non récursif ; une collision, même concurrente ou sur un lien, échoue.
+`git init --initial-branch main --template=` n’ajoute aucun fichier de projet ni
+commit. La branche initiale fait partie de cette création demandée par l’utilisateur ;
+Régie ne change toujours aucune branche existante. Toute consigne de branche reste
+confiée à l’agent. Le domaine garde la règle, l’adapter effectue les accès disque/Git.
+
+Échec après réservation : conserver le dossier et informer, sans suppression
+risquant d’effacer le travail d’un agent. Accusé perdu : pas de renvoi automatique.
+Tests isolés : domaine avec faux workspace/agents, vrai Git dans des dossiers
+jetables, contrat WebSocket local. Aucun service réel dans la porte de qualité.
+API mkdir vérifiée avec Context7 Node 24.22.2 (`docs-node.txt`, ticket 15).

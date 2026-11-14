@@ -10,6 +10,86 @@ import kotlin.test.*
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class NewSessionTest {
+    @Test fun `catalog failure is unavailable and never permits a new creation`() = runTest {
+        val gateway = FormGateway(); val form = ReviewNewSession(gateway, FormCapture(), backgroundScope) {}
+        gateway.catalogFailure = true
+        form.open(NewSessionDraft(Agent.CODEX, "meteo", newProject = true)); runCurrent()
+        assertFalse(form.state.value.canLaunch)
+        assertEquals("Pont injoignable · reconnexion…", form.state.value.projectLabel)
+        gateway.catalogFailure = false
+        form.open(NewSessionDraft(Agent.CODEX, "meteo", newProject = true)); runCurrent()
+        gateway.catalogFailure = true
+        form.launch(); runCurrent()
+        assertTrue(gateway.creations.isEmpty())
+    }
+
+    @Test fun `new project validation rejects paths empty names and collisions before sending`() = runTest {
+        val gateway = FormGateway(); val capture = FormCapture()
+        val form = ReviewNewSession(gateway, capture, backgroundScope) {}
+        for (name in listOf("", "  ", "../escape", "/tmp/test", "a/b", "😸", "a".repeat(81), "--", "demo")) {
+            form.open(NewSessionDraft(Agent.CODEX, name, newProject = true)); runCurrent()
+            form.launch(); runCurrent()
+            assertFalse(form.state.value.canLaunch, name)
+            assertTrue(gateway.creations.isEmpty(), name)
+        }
+        form.open(NewSessionDraft(Agent.CODEX, "meteo", instruction = "Conserver", newProject = true)); runCurrent()
+        form.select(NewSessionField.PROJECT); form.record(); form.back()
+        capture.events.value = CaptureState(text = "Tardif", complete = true); runCurrent()
+        assertEquals("meteo", form.state.value.project)
+        form.change(-1); assertEquals("demo", form.state.value.project)
+        form.change(1); assertTrue(form.state.value.newProject)
+        assertNull(form.state.value.project)
+    }
+
+    @Test fun `last project choice dictates its name separately and sends a new project only on A`() = runTest {
+        val gateway = FormGateway(); val capture = FormCapture()
+        val form = ReviewNewSession(gateway, capture, backgroundScope) {}
+        form.open(NewSessionDraft(Agent.CODEX, "demo", instruction = "Lis le dossier")); runCurrent()
+        form.select(NewSessionField.PROJECT); form.change(1)
+        assertFalse(form.state.value.canLaunch)
+        form.record(); capture.events.value = CaptureState(text = "Météo du Jour", complete = true); runCurrent()
+        form.launch(); assertTrue(gateway.creations.isEmpty())
+        form.finish(); runCurrent()
+        assertEquals("meteo-du-jour", form.state.value.project)
+        assertEquals("Lis le dossier", form.state.value.instruction)
+        form.launch(); form.launch(); runCurrent()
+        assertEquals(listOf(NewSessionDraft(Agent.CODEX, "meteo-du-jour", instruction = "Lis le dossier", newProject = true)), gateway.creations)
+    }
+
+    @Test fun `R2 names a new project without requiring it in the catalog`() = runTest {
+        val interpret = InterpretVoiceCommand(VoiceCommandModel { _, _ -> error("fixed rule expected") })
+        val result = interpret("lance Codex sur un nouveau projet qui s'appelle météo pour lire le dossier", VoiceCommandContext(emptyList(), null, null, emptyList()))
+        val draft = assertIs<VoiceCommand.Launch>(result.command).draft
+        assertEquals("meteo", draft.project)
+        assertEquals("lire le dossier", draft.instruction)
+        assertTrue(draft.newProject)
+    }
+
+    @Test fun `open form refreshes when bridge connects and reconnects without losing edits`() = runTest {
+        val gateway = FormGateway()
+        gateway.link.value = BridgeConnection.Connecting
+        gateway.catalog = emptyList()
+        val form = ReviewNewSession(gateway, FormCapture(), backgroundScope) {}
+        form.open(); runCurrent()
+        gateway.catalog = listOf(ProjectChoice("first"), ProjectChoice("second"))
+        gateway.link.value = BridgeConnection.Connected; runCurrent()
+        assertEquals(listOf("first", "second"), form.state.value.projects.map { it.name })
+        form.select(NewSessionField.PROJECT); form.change(1); form.change(1)
+        assertEquals("second", form.state.value.project)
+        form.editInstruction("Garder ceci")
+        gateway.link.value = BridgeConnection.Connecting; runCurrent()
+        gateway.catalog += ProjectChoice("third")
+        gateway.link.value = BridgeConnection.Connected; runCurrent()
+        assertEquals(3, form.state.value.projects.size)
+        assertEquals("second", form.state.value.project)
+        assertEquals("Garder ceci", form.state.value.instruction)
+        form.back()
+        gateway.catalog = emptyList()
+        gateway.link.value = BridgeConnection.Connecting; runCurrent()
+        gateway.link.value = BridgeConnection.Connected; runCurrent()
+        assertFalse(form.state.value.visible)
+    }
+
     @Test fun `three launch phrases preserve branch base mode and instruction without a model`() = runTest {
         val interpret = InterpretVoiceCommand(VoiceCommandModel { _, _ -> null })
         val context = VoiceCommandContext(emptyList(), null, null, listOf("demo"))
@@ -225,10 +305,13 @@ private class FormCapture : DictationCapture {
     override fun cancel() = Unit
 }
 private class FormGateway : AgentGateway by StubGateway() {
+    val link = MutableStateFlow<BridgeConnection>(BridgeConnection.Connected)
+    override val connection = link
     var catalog = listOf(ProjectChoice("demo", "main", listOf("main", "develop")))
     val creations = mutableListOf<NewSessionDraft>()
     var result = SessionCreation(SessionId("created"))
     var pending: CompletableDeferred<SessionCreation>? = null
-    override suspend fun projectCatalog() = catalog
+    var catalogFailure = false
+    override suspend fun projectCatalog(): List<ProjectChoice> { if (catalogFailure) error("offline"); return catalog }
     override suspend fun createSession(draft: NewSessionDraft): SessionCreation { creations += draft; return pending?.await() ?: result }
 }
