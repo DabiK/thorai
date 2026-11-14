@@ -86,6 +86,8 @@
 
 - **14 novembre, ticket 16, corrections de revue (solo Codex)** : sur Mac, `ask`/`auto-edit`/`plan` passent en ACP `read-only` dans le domaine, configuration initiale comprise ; PRoot inchangé (ADR 14). Régressions rouges puis vertes ; shell et apply_patch réels refusés par B puis autorisés par A, auto-edit autorise seulement l’édition. Captures PNG entièrement vérifiées et décodées, fixtures réelles, troncatures et mutation du décodage détectées. Android 310 tests + lint, pont 286 + typage/lint, scripts 13 tests verts. Trois commandes rejouées, quatre Codex arrêtés, aucun Claude ; Thor absente, vérifications physiques dans `artifacts/screenshots/16/revision-validation.txt`. Relecture après fb74fe2 : assertion de reprise renforcée pour exclure un ancien appel, mutation détectée ; portes repassées et historique sur les deux écrans après réinstallation sans nouvel agent (18). Pont/app/AVD arrêtés. Statut à fusionner.
 
+- **14 novembre, ticket 17 à fusionner (solo Codex)** : Tout autoriser explicite, options modèle/réflexion ACP à la création et en session, mode visible, plan/reprise/Start et autres sélecteurs exposés (ADR 02, protocole). Android 316 tests + lint, pont 295 + typage/lint verts. Thor absente ; émulateur deux écrans, vrai Codex : apply_patch et shell avec redirection sans validation, Sol/low → Terra/high confirmé dans les turn_context, plan puis retour, reprise et interruption. Aucun Claude ni sous-agent ; vérifications physiques et Claude dans artifacts/screenshots/17/essai-emulateur.txt. Première passe corrigée : listes remplacées, accusé de réglage vérifié, rollback et aide sans masquer la consigne. Relecture après commit à consigner.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

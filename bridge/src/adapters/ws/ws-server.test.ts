@@ -238,3 +238,44 @@ describe('the WebSocket server', () => {
     await client.close();
   });
 });
+
+it('relays advertised options, creation selections and acknowledged live changes', async () => {
+  codex.initialOptions = [
+    {
+      id: 'model',
+      name: 'Model',
+      type: 'select',
+      category: 'model',
+      currentValue: 'one',
+      options: [
+        { value: 'one', name: 'One' },
+        { value: 'two', name: 'Two' },
+      ],
+    },
+  ];
+  const client = new Client();
+  const catalogue = await client.call('agent.options', { agent: 'codex' });
+  expect(catalogue).toMatchObject({
+    result: { configOptions: [{ id: 'model', currentValue: 'one' }] },
+  });
+  const created = await client.call('session.create', {
+    agent: 'codex',
+    project: 'regie-demo',
+    approvalMode: 'allow-all',
+    configValues: { model: 'two' },
+  });
+  const { sessionId } = (created.result as { session: { sessionId: string } }).session;
+  expect(created).toMatchObject({
+    result: { session: { configOptions: [{ currentValue: 'two' }] } },
+  });
+  expect(
+    await client.call('session.configure', { sessionId, configId: 'model', value: 'one' }),
+  ).toMatchObject({ result: { session: { configOptions: [{ currentValue: 'one' }] } } });
+  expect(await client.call('session.configure', { sessionId, approvalMode: 'plan' })).toMatchObject(
+    { result: { session: { approvalMode: 'plan' } } },
+  );
+  expect(
+    await client.call('session.configure', { sessionId, configId: 'model', value: 'unknown' }),
+  ).toMatchObject({ error: { code: 'unknown_option' } });
+  await client.close();
+});

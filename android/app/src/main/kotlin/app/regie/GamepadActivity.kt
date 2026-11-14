@@ -125,13 +125,16 @@ abstract class GamepadActivity : ComponentActivity() {
                     val dictation by container.dictation.state.collectAsStateWithLifecycle()
                     val command by container.voiceCommand.state.collectAsStateWithLifecycle()
                     val newSession by container.newSession.collectAsStateWithLifecycle()
+                    val sessionSettings by container.sessionSettings.collectAsStateWithLifecycle()
                     val settingsOpen by container.settingsOpen.collectAsStateWithLifecycle()
                     val settings by container.voiceSettings.collectAsStateWithLifecycle()
                     val mode by container.displays.mode.collectAsStateWithLifecycle()
                     val controlsHere = this@GamepadActivity is BottomActivity || mode == ScreenMode.Single
                     val button: (Button) -> Unit = { container.handleInput(GamepadInput.Pressed(it)) }
                     val held: (Boolean) -> Unit = { container.touchTrigger(Trigger.L2, it) }
-                    if (settingsOpen && controlsHere) {
+                    if (sessionSettings.visible) {
+                        app.regie.ui.screens.SessionSettingsScreen(sessionSettings, button, container::selectSessionSetting)
+                    } else if (settingsOpen && controlsHere) {
                         VoiceSettingsScreen(settings, container::selectVoice, container::saveVoiceKey,
                             { microphonePermission.launch(Manifest.permission.RECORD_AUDIO) }, container::closeVoiceSettings, container::saveCommandKey)
                     } else if (command.visible) {
@@ -146,6 +149,10 @@ abstract class GamepadActivity : ComponentActivity() {
                         else DictationTopScreen(dictation, current.sessions.firstOrNull { it.id == dictation.target?.sessionId }, mode == ScreenMode.Single, button, held, container::openVoiceSettings, ThreadScroll(container.dictationScroll, container.dictationVelocity))
                     } else Column(Modifier.fillMaxSize()) {
                         if (controlsHere) Row(Modifier.fillMaxWidth().background(Palette.background).padding(horizontal = 16.dp, vertical = 4.dp)) {
+                            if (screen is Screen.Session) {
+                                BasicText("→ Options de la session", style = sans(12.sp, color = Palette.text), modifier = Modifier.tappable(container::openSessionSettings))
+                                Spacer(Modifier.weight(1f))
+                            }
                             BasicText("Réglages voix", style = sans(11.sp, color = Palette.textSubtle), modifier = Modifier.tappable(container::openVoiceSettings))
                         }
                         Box(Modifier.weight(1f)) {

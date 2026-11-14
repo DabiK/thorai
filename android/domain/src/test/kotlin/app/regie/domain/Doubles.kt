@@ -1,5 +1,6 @@
 package app.regie.domain
 
+import app.regie.domain.model.*
 import app.regie.domain.model.Agent
 import app.regie.domain.model.AgentVersion
 import app.regie.domain.model.Approval
@@ -25,6 +26,19 @@ class StubGateway(
     var bridgeUp: Boolean = true,
     var shutdownHeard: Boolean = true,
 ) : AgentGateway {
+    var options = emptyList<SessionOption>()
+    override suspend fun agentOptions(agent: Agent, values: Map<String, String>): List<SessionOption> {
+        options = options.map { it.copy(currentValue = values[it.id] ?: it.currentValue) }
+        return options
+    }
+    var settingsWait: kotlinx.coroutines.CompletableDeferred<SettingsResult>? = null
+    val configurations = mutableListOf<Pair<SessionId, SessionSetting>>()
+    override suspend fun configureSession(id: SessionId, setting: SessionSetting): SettingsResult {
+        configurations += id to setting
+        return settingsWait?.await() ?: SettingsResult.APPLIED
+    }
+    val resumed = mutableListOf<SessionId>()
+    override suspend fun resumeSession(id: SessionId): SettingsResult { resumed += id; return SettingsResult.APPLIED }
     var projectNames = emptyList<String>()
     var creation = app.regie.domain.model.SessionCreation()
     val creations = mutableListOf<app.regie.domain.model.NewSessionDraft>()

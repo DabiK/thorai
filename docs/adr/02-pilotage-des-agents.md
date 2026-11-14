@@ -240,3 +240,85 @@ risquant d’effacer le travail d’un agent. Accusé perdu : pas de renvoi auto
 Tests isolés : domaine avec faux workspace/agents, vrai Git dans des dossiers
 jetables, contrat WebSocket local. Aucun service réel dans la porte de qualité.
 API mkdir vérifiée avec Context7 Node 24.22.2 (`docs-node.txt`, ticket 15).
+
+## Ticket 17 — Permissions explicites et options du CLI
+
+Décision du 14 novembre 2026. `allow-all` devient un choix de premier rang à la
+création et en session : **Tout autoriser**. Il force `bypassPermissions` pour
+Claude et `agent-full-access` pour Codex (`never`, `danger-full-access`, Mac comme
+PRoot). Les autres libellés sont « Plan d’abord », « Modifs auto » et « Je valide
+chaque action » ; l’exception des lectures automatiques est expliquée à l’écran.
+Une demande résiduelle dans Tout autoriser reçoit `allow_once`, y compris celles
+déjà en attente lors du changement. Sans cette option, elle est annulée sans
+question. Aucune permission durable de l’utilisateur n’est écrite.
+
+### Documentation vérifiée et versions conservées
+
+Consultation Context7 (`library`, puis `docs`) de Claude Agent ACP et du protocole,
+le 14 novembre ; liens officiels ouverts également. Pour Codex, Context7 retourne
+encore l’ancien adapter Rust Zed : ses signatures ne sont pas extrapolées à notre
+paquet. Référence retenue : [README officiel codex-acp](https://github.com/agentclientprotocol/codex-acp)
+et code distribué de **2.6.0**, `ModelConfigOption`, `CollaborationModeConfig`,
+`setConfigOption`. Claude reste **0.107.0**, SDK client **2.6.0**. Aucun agent Claude
+lancé pour cette vérification ; sa documentation et les faux couvrent le contrat.
+
+| Capacité ACP v1 | Claude Agent ACP | Codex ACP |
+| --- | --- | --- |
+| Modèle | `model`, catégorie `model`, liste du SDK | `model`, catégorie `model`, liste du serveur Codex |
+| Réflexion | `effort`, catégorie `thought_level`, dépend du modèle ; peut être absent | `reasoning_effort`, catégorie `thought_level`, niveaux supportés par le modèle |
+| Plan | `session/set_mode`, valeur `plan` | permission native + `collaboration_mode=plan`, puis `default` en sortant |
+| Autres sélecteurs | notamment fast, agent, selon ce qu’expose la session | `fast-mode` observé sur le banc |
+| Interrompre / reprendre | `session/cancel` / `session/load` | mêmes méthodes |
+
+Sources : [configuration ACP v1](https://agentclientprotocol.com/protocol/v1/session-config-options),
+[Claude Agent ACP](https://github.com/agentclientprotocol/claude-agent-acp).
+Les réponses de création/reprise/changement contiennent `configOptions` ; chaque
+`config_option_update` remplace la liste entière. Le pont les perdait avant ce
+ticket. L’adapter les relaie maintenant au domaine, qui conserve et valide les
+choix. Pas de catalogue de modèles dans l’app, pas de changement de version.
+
+### Découverte avant A et changements confirmés
+
+ACP expose les listes dans une **session**, pas dans `initialize`. `agent.options`
+ouvre donc une session de découverte par agent, à la racine des projets. Aucun
+prompt, aucun outil, aucun projet créé et aucune carte Régie avant A. Cette session
+peut figurer comme session vide dans l’historique propre du CLI ; elle est fermée
+avec le processus du pont. Ce choix remplace la formule absolue « aucune création
+avant A » de l’ADR 13 : aucun **travail** ne démarre avant A. Il évite de figer ou
+inventer les listes et permet de découvrir l’effort après changement du modèle.
+
+Les sélections sont revérifiées sur la vraie session, modèle puis effort, avant le
+premier message. Si un choix disparaît ou n’est pas confirmé, aucun tour ne part.
+Les choix effectifs sont persistés avec le résumé et restaurés après `session/load`.
+Les changements sont sérialisés ; un prompt attend un réglage en cours. Un échec
+partiel d’entrée en plan tente de remettre le mode précédent. Une réponse perdue
+n’est jamais réémise automatiquement. Le protocole détaille les erreurs et le
+format normalisé, sans métadonnées de compte.
+
+### Interface et vérification
+
+Les exports locaux `Lancer.dc.html` et `Session.dc.html` ont été lus intégralement
+(mêmes chemins que les tickets 11/06 ; aucune connexion Artifact disponible pour
+vérifier la fraîcheur distante). Les lignes, couleurs, polices et actions épinglées
+sont conservées. Modèle/réflexion viennent s’ajouter à la fiche défilable. Le mode,
+modèle et effort effectifs restent sous l’en-tête du fil. Droite ou « Options de la
+session » ouvre le panneau : croix pour choisir/modifier, A applique un réglage,
+B ferme. « Reprendre cette session » apparaît pour l’historique ; Start conserve
+l’interruption existante. Les sélecteurs supplémentaires exposés sont accessibles
+dans ce panneau, sans inventer de booléens ou fonctionnalités absentes.
+
+Tests d’abord : transport ACP, domaine pont, protocole WebSocket, domaine Android,
+puis passerelle réelle face à un faux pont. Régressions supplémentaires : valeur
+non confirmée, effort retiré après modèle, retour arrière du mode, changements
+spontanés de l’agent, doubles A et résultat incertain. Tests sans service/agent/
+console ; banc réel distinct dans `artifacts/screenshots/17/`.
+
+Essai Codex sur l’émulateur à deux écrans : création d’un nouveau projet avec
+Tout autoriser / 6.1 Sol / Low ; édition apply_patch et commande shell avec
+redirection sans `approval_request` ; changement par la manette en 6.1 Terra / High.
+Les `turn_context` du vrai Codex confirment modèle, effort, `never` et accès complet,
+au-delà de l’affichage ACP. Plan puis retour, reprise après arrêt du pont, affichage
+un écran et interruption Start (`stopReason: cancelled`) vérifiés. Thor absente,
+aucun Claude lancé. Le premier texte long injecté par `adb input text` a été tronqué
+(comportement déjà relevé au ticket 11) ; la consigne complète a été transmise par
+WebSocket pour vérifier les actions, sans prétendre tester la voix humaine.

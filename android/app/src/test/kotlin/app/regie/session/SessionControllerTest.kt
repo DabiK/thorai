@@ -59,6 +59,12 @@ class SessionControllerTest {
 
     private fun press(button: Button) = controller.handle(GamepadInput.Pressed(button))
 
+    @Test fun `right opens settings for the displayed session`() {
+        show("atelier")
+        press(Button.RIGHT)
+        assertEquals(listOf<SessionAction>(SessionAction.OpenSettings(SessionId("atelier"))), actions)
+    }
+
     private fun show(id: String) {
         current = SessionId(id)
         live.value = LiveSession.of(sessions.single { it.id.value == id }, SessionThread.EMPTY)

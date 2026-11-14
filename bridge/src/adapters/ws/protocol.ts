@@ -12,6 +12,7 @@ export const requestSchema = z.object({
 });
 
 const sessionId = z.string().min(1).max(200);
+const configValues = z.record(z.string().min(1).max(200), z.string().min(1).max(500));
 const seq = z.number().int().min(0);
 
 export const paramsSchemas = {
@@ -20,11 +21,25 @@ export const paramsSchemas = {
     journal: z.string().max(100).nullish(),
     client: z.string().max(100).optional(),
   }),
+  'agent.options': z.object({ agent: z.enum(AGENT_KINDS), configValues: configValues.optional() }),
+  'session.configure': z
+    .object({
+      sessionId,
+      approvalMode: z.enum(APPROVAL_MODES).optional(),
+      configId: z.string().min(1).max(200).optional(),
+      value: z.string().min(1).max(500).optional(),
+    })
+    .refine((p) =>
+      p.approvalMode !== undefined
+        ? p.configId === undefined && p.value === undefined
+        : p.configId !== undefined && p.value !== undefined,
+    ),
   'sessions.list': z.object({}),
   'session.create': z.object({
     agent: z.enum(AGENT_KINDS),
     project: z.string().max(200),
     newProject: z.boolean().optional(),
+    configValues: configValues.optional(),
     branch: z.string().min(1).max(200).nullish(),
     approvalMode: z.enum(APPROVAL_MODES),
     prompt: z.string().max(100_000).nullish(),

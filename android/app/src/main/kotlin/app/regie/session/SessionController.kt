@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.update
 sealed interface SessionAction {
     /** L1 / R1 : passer à une session voisine. */
     data class Open(val id: SessionId) : SessionAction
+    data class OpenSettings(val id: SessionId) : SessionAction
     data class OpenDiff(val id: SessionId) : SessionAction
 
     /** R1 : ouvrir la validation en attente. */
@@ -164,7 +165,8 @@ class SessionController(
                 ?: overview.value.neighboursOf(id)?.next?.let { dispatch(SessionAction.Open(it.id)) }
             Button.UP -> _scrollSteps.tryEmit(-1)
             Button.DOWN -> _scrollSteps.tryEmit(1)
-            Button.LEFT, Button.RIGHT -> Unit
+            Button.RIGHT -> dispatch(SessionAction.OpenSettings(id))
+            Button.LEFT -> Unit
         }
     }
 

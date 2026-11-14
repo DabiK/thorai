@@ -160,6 +160,12 @@ fun SessionTopScreen(
     val now by rememberNow()
     Column(Modifier.fillMaxSize().background(Palette.background).imePadding()) {
         SessionHeader(live?.session, live, now, callbacks)
+        live?.session?.let { session ->
+            val labels = listOf(app.regie.domain.model.approvalModeLabel(session.approvalMode)) +
+                session.configOptions.filter { it.category in listOf("model", "thought_level") }.map { it.valueLabel } + "→ Options"
+            BasicText(labels.joinToString(" · "), style = sans(12.sp, color = Palette.textMuted), maxLines = 2,
+                modifier = Modifier.fillMaxWidth().tappable { callbacks.onButton(Button.RIGHT) }.bottomDivider().padding(horizontal = 20.dp, vertical = 7.dp))
+        }
         Row(Modifier.weight(1f).fillMaxWidth()) {
             Box(Modifier.weight(1f).fillMaxHeight()) {
                 when {

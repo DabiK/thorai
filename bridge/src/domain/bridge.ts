@@ -33,6 +33,7 @@ import type {
 } from './ports.ts';
 import { projectFolderName } from './project-name.ts';
 import { ReadOnlyCommands } from './read-only-command.ts';
+import { editableOptions, type SessionOption, sessionOptions } from './session-options.ts';
 import { withSummaryRequest } from './written-summary.ts';
 
 export interface BridgeDeps {
@@ -69,6 +70,7 @@ export interface CreateSessionRequest {
   readonly branch?: string | undefined;
   readonly approvalMode: ApprovalMode;
   readonly prompt?: string | undefined;
+  readonly configValues?: Readonly<Record<string, string>> | undefined;
 }
 
 /** What the bridge knows of an agent's process, beyond its versions. */
@@ -128,6 +130,9 @@ export class Bridge {
   /** Bumped by each branch read: an older read that ends later is dropped. */
   private readonly branchReads = new Map<string, number>();
   private readonly readOnly: ReadOnlyCommands;
+  private readonly options = new Map<string, readonly SessionOption[]>();
+  private readonly probes = new Map<AgentKind, Promise<string>>();
+  private readonly configuring = new Map<string, Promise<unknown>>();
   private stopping: Promise<void> | null = null;
 
   constructor(deps: BridgeDeps) {
@@ -285,7 +290,15 @@ export class Bridge {
     };
     // The session is known, live and usable only once its mode is forced: nothing reaches the
     // agent before (Claude would run in the user's `auto`).
-    const failure = await this.applyMode(record, connection);
+    let failure = await this.applyMode(record, connection);
+    if (failure === null) {
+      try {
+        await this.applySelections(sessionId, request.configValues ?? {}, connection);
+      } catch (error) {
+        failure = new BridgeError('agent_failed', messageOf(error));
+      }
+    }
+    record = { ...record, configOptions: this.options.get(sessionId) ?? [] };
     if (failure !== null) record = { ...record, status: 'failed', lastError: failure.message };
     this.records.set(sessionId, record);
     if (failure === null) this.goLive(sessionId);
@@ -308,6 +321,123 @@ export class Bridge {
     this.assertRunning();
     await this.ensureLive(sessionId);
     return this.summaryOf(this.recordOf(sessionId));
+  }
+
+  /** One no-prompt discovery session per agent; closed with the adapter, never in Régie's history. */
+  async agentOptions(
+    agent: AgentKind,
+    values: Readonly<Record<string, string>> = {},
+  ): Promise<readonly SessionOption[]> {
+    this.assertRunning();
+    let probe = this.probes.get(agent);
+    if (probe === undefined) {
+      probe = (async () => {
+        const cwd = await this.deps.workspace.configurationDirectory();
+        const connection = await this.connection(agent);
+        const id = await this.agentCall(agent, () => connection.newSession(cwd));
+        this.early.delete(id);
+        return id;
+      })();
+      this.probes.set(agent, probe);
+      void probe.catch(() => this.probes.delete(agent));
+    }
+    const id = await probe;
+    return this.serialSettings(id, async () => {
+      await this.applySelections(id, values, await this.connection(agent));
+      this.early.delete(id);
+      return editableOptions(this.options.get(id) ?? []);
+    });
+  }
+
+  private serialSettings<T>(id: string, action: () => Promise<T>): Promise<T> {
+    const previous = this.configuring.get(id) ?? Promise.resolve();
+    const next = previous.catch(() => {}).then(action);
+    this.configuring.set(id, next);
+    void next
+      .finally(() => {
+        if (this.configuring.get(id) === next) this.configuring.delete(id);
+      })
+      .catch(() => {});
+    return next;
+  }
+
+  private async applySelections(
+    id: string,
+    values: Readonly<Record<string, string>>,
+    connection: AgentConnection,
+  ): Promise<void> {
+    // Models may replace the effort choices; validate each against the latest acknowledgement.
+    const entries = Object.entries(values).sort(([a], [b]) => {
+      const options = this.options.get(id) ?? [];
+      return (
+        Number(options.find((o) => o.id === b)?.category === 'model') -
+        Number(options.find((o) => o.id === a)?.category === 'model')
+      );
+    });
+    for (const [configId, value] of entries) {
+      const option = editableOptions(this.options.get(id) ?? []).find((o) => o.id === configId);
+      if (!option?.options.some((o) => o.value === value))
+        throw new BridgeError('unknown_option', `Option indisponible : ${configId} / ${value}.`);
+      if (option.currentValue !== value) {
+        await connection.setConfig(id, configId, value);
+        if (this.options.get(id)?.find((o) => o.id === configId)?.currentValue !== value) {
+          throw new BridgeError('agent_failed', `L’agent n’a pas confirmé ${configId} / ${value}.`);
+        }
+      }
+    }
+  }
+
+  /** Changes acknowledged by ACP, serialized per session. No optimistic value is published. */
+  configureSession(
+    sessionId: string,
+    settings: {
+      approvalMode?: ApprovalMode | undefined;
+      configId?: string | undefined;
+      value?: string | undefined;
+    },
+  ): Promise<SessionSummary> {
+    return this.serialSettings(sessionId, async () => {
+      this.assertRunning();
+      await this.ensureLive(sessionId);
+      const record = this.recordOf(sessionId);
+      const connection = await this.connection(record.agent);
+      if (settings.approvalMode !== undefined) {
+        const failure = await this.applyMode(
+          { ...record, approvalMode: settings.approvalMode },
+          connection,
+        );
+        if (failure !== null) {
+          const rollback = await this.applyMode(record, connection);
+          if (rollback !== null)
+            this.update(sessionId, {
+              status: 'failed',
+              lastError: `Changement de mode incertain : ${failure.message}`,
+            });
+          throw failure;
+        }
+        if (
+          record.agent === 'codex' &&
+          record.approvalMode === 'plan' &&
+          settings.approvalMode !== 'plan'
+        ) {
+          try {
+            await connection.setConfig(sessionId, 'collaboration_mode', 'default');
+          } catch (error) {
+            await this.applyMode(record, connection);
+            throw error;
+          }
+        }
+        this.update(sessionId, { approvalMode: settings.approvalMode });
+        for (const pending of [...this.approvals.values()]) {
+          if (pending.request.sessionId !== sessionId) continue;
+          const outcome = this.automaticApproval(pending.request);
+          if (outcome !== null) this.resolveApproval(pending, outcome, 'mode_change');
+        }
+      } else if (settings.configId !== undefined && settings.value !== undefined) {
+        await this.applySelections(sessionId, { [settings.configId]: settings.value }, connection);
+      } else throw new BridgeError('bad_request', 'Choisis un réglage.');
+      return this.summaryOf(this.recordOf(sessionId));
+    });
   }
 
   /**
@@ -335,6 +465,7 @@ export class Bridge {
     const interrupted = () => (this.interruptions.get(sessionId) ?? 0) !== interruption;
     if (interrupted()) return 'cancelled';
     this.assertRunning();
+    await this.configuring.get(sessionId);
     const record = this.recordOf(sessionId);
     const live = await this.ensureLive(sessionId);
     const connection = await this.connection(record.agent);
@@ -479,7 +610,22 @@ export class Bridge {
     } finally {
       this.replaying.delete(sessionId);
     }
-    const failure = await this.applyMode(record, connection);
+    let failure = await this.applyMode(record, connection);
+    if (failure === null) {
+      try {
+        await this.applySelections(
+          sessionId,
+          Object.fromEntries(
+            editableOptions(record.configOptions ?? []).flatMap((o) =>
+              o.currentValue === null ? [] : [[o.id, o.currentValue]],
+            ),
+          ),
+          connection,
+        );
+      } catch (error) {
+        failure = new BridgeError('agent_failed', messageOf(error));
+      }
+    }
     if (failure !== null || this.stopping !== null) {
       this.early.delete(sessionId);
       if (failure === null) throw new BridgeError('shutting_down', 'Le pont s’arrête.');
@@ -554,6 +700,7 @@ export class Bridge {
     exit: { readonly code: number | null; readonly signal: string | null },
   ): void {
     runtime.connection = null;
+    this.probes.delete(runtime.connector.agent);
     const agent = runtime.connector.agent;
     const expected = this.stopping !== null;
     if (!expected) {
@@ -569,7 +716,40 @@ export class Bridge {
   }
 
   private onUpdate(sessionId: string, update: AcpUpdate): void {
+    if (update.sessionUpdate === 'config_option_update') {
+      const options = sessionOptions(update.configOptions);
+      this.options.set(sessionId, options);
+      const record = this.records.get(sessionId);
+      if (record && JSON.stringify(record.configOptions) !== JSON.stringify(options))
+        this.update(sessionId, { configOptions: options });
+    }
     const live = this.live.get(sessionId);
+    if (live !== undefined && !this.configuring.has(sessionId)) {
+      const record = this.recordOf(sessionId);
+      const options = this.options.get(sessionId) ?? [];
+      const nativeMode =
+        update.sessionUpdate === 'current_mode_update'
+          ? update.currentModeId
+          : update.sessionUpdate === 'config_option_update'
+            ? options.find((o) => o.category === 'mode' || o.id === 'mode')?.currentValue
+            : undefined;
+      let approvalMode = record.approvalMode;
+      if (
+        typeof nativeMode === 'string' &&
+        nativeMode !== modeIdFor(record.agent, approvalMode, this.deps.codexSandbox)
+      ) {
+        const match = (['ask', 'auto-edit', 'allow-all', 'plan'] as const).find(
+          (mode) => modeIdFor(record.agent, mode, this.deps.codexSandbox) === nativeMode,
+        );
+        if (match !== undefined) approvalMode = match;
+      }
+      if (record.agent === 'codex' && update.sessionUpdate === 'config_option_update') {
+        const collaboration = options.find((o) => o.id === 'collaboration_mode')?.currentValue;
+        if (collaboration === 'plan') approvalMode = 'plan';
+        else if (collaboration === 'default' && approvalMode === 'plan') approvalMode = 'ask';
+      }
+      if (approvalMode !== record.approvalMode) this.update(sessionId, { approvalMode });
+    }
     if (live === undefined) {
       // The replayed history is already in the journal. Anything else waits for the session
       // to go live.
@@ -637,7 +817,11 @@ export class Bridge {
    */
   private automaticApproval(request: PermissionRequest): PermissionOutcome | null {
     const record = this.records.get(request.sessionId);
-    if (record === undefined || record.approvalMode === 'allow-all') return null;
+    if (record === undefined) return null;
+    if (record.approvalMode === 'allow-all') {
+      const once = request.options.find((option) => option.kind === 'allow_once');
+      return once ? { outcome: 'selected', optionId: once.optionId } : { outcome: 'cancelled' };
+    }
     // « Autoriser une fois », never « toujours » : the next command is judged again.
     const allow = request.options.find((option) => option.kind === 'allow_once');
     if (allow === undefined) return null;
@@ -779,7 +963,16 @@ export class Bridge {
   private update(
     sessionId: string,
     changes: Partial<
-      Pick<SessionRecord, 'status' | 'title' | 'lastError' | 'branch' | 'modifiedFiles'>
+      Pick<
+        SessionRecord,
+        | 'status'
+        | 'title'
+        | 'lastError'
+        | 'branch'
+        | 'modifiedFiles'
+        | 'approvalMode'
+        | 'configOptions'
+      >
     >,
     activity = true,
   ): void {

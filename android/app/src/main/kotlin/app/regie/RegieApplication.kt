@@ -57,6 +57,8 @@ import app.regie.overview.OverviewAction
 import app.regie.overview.OverviewController
 import app.regie.overview.OverviewGrid
 import app.regie.session.Screen
+import app.regie.domain.usecase.ReviewSessionSettings
+import app.regie.domain.model.SessionSettingsReview
 import app.regie.session.SessionAction
 import app.regie.session.SessionController
 import kotlinx.coroutines.CoroutineScope
@@ -112,6 +114,10 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
 
     private val voicePreferences = VoicePreferences(app)
     val voiceSettings = voicePreferences.state
+    private var settingsReview: ReviewSessionSettings? = null
+    val sessionSettings = MutableStateFlow(SessionSettingsReview())
+    fun selectSessionSetting(index: Int) { settingsReview?.select(index) }
+    fun openSessionSettings() { (screen.value as? Screen.Session)?.let { settingsReview?.open(it.id) } }
     val settingsOpen = MutableStateFlow(false)
     private val localVoice = LocalVoiceProvider(File(app.filesDir, "voice-models"), LocalConfig(hotwords = { true }))
     private val cloudVoice = ElevenLabsVoiceProvider(ElevenLabsConfig(apiKey = voicePreferences::apiKey))
@@ -179,6 +185,18 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
         if (input is GamepadInput.Scroll && input.velocity == 0f) {
             diffVelocity.value = 0f
             newSessionVelocity.value = 0f
+        }
+        if (sessionSettings.value.visible) {
+            if (input is GamepadInput.Pressed) when (input.button) {
+                Button.UP -> settingsReview?.move(-1)
+                Button.DOWN -> settingsReview?.move(1)
+                Button.LEFT -> settingsReview?.change(-1)
+                Button.RIGHT -> settingsReview?.change(1)
+                Button.A -> settingsReview?.apply()
+                Button.B -> settingsReview?.close()
+                else -> Unit
+            }
+            return
         }
         if (settingsOpen.value) {
             if (input == GamepadInput.Pressed(Button.B)) closeVoiceSettings()
@@ -381,6 +399,7 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
             StartUp(chosen, androidAccess, launcher).also { startUp = it }.report
         }
         gateway = chosen
+        settingsReview = ReviewSessionSettings(chosen, scope).also { review -> scope.launch { review.state.collect { sessionSettings.value = it } } }
         reviewNewSession = ReviewNewSession(chosen, capture, scope) { openSession(it) }.also { review ->
             scope.launch { review.state.collect { newSession.value = it } }
         }
@@ -464,6 +483,7 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
         // Jamais le texte d'un message dans le journal.
         Log.i(TAG, "action : ${if (action is SessionAction.Send) "Send(${action.id})" else action}")
         when (action) {
+            is SessionAction.OpenSettings -> settingsReview?.open(action.id)
             is SessionAction.OpenDiff -> navigate(Screen.Diff(action.id))
             is SessionAction.Open -> navigate(Screen.Session(action.id))
             SessionAction.Back -> navigate(Screen.Overview)
@@ -490,6 +510,7 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
     /** Change d'écran : les gâchettes tenues sont relâchées, rien de la session précédente ne reste. */
     private fun navigate(to: Screen) {
         if (_screen.value == to) return
+        settingsReview?.close()
         controller.releaseTriggers()
         sessionController.releaseTriggers()
         sessionController.reset()

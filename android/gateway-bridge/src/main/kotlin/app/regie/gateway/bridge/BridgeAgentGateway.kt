@@ -1,5 +1,6 @@
 package app.regie.gateway.bridge
 
+import app.regie.domain.model.*
 import app.regie.domain.model.Approval
 import app.regie.domain.model.ApprovalId
 import app.regie.domain.model.ApprovalReply
@@ -177,6 +178,28 @@ class BridgeAgentGateway(
         }
     }
 
+    override suspend fun agentOptions(agent: Agent, values: Map<String, String>): List<SessionOption> {
+        val result = call("agent.options", buildJsonObject {
+            put("agent", agent.name.lowercase(java.util.Locale.ROOT))
+            put("configValues", buildJsonObject { values.forEach { (id, value) -> put(id, value) } })
+        })
+        if (result !is CallResult.Accepted) throw java.io.IOException("Options de l’agent indisponibles")
+        return decodeOptions(result.value["configOptions"])
+    }
+
+    override suspend fun configureSession(id: SessionId, setting: SessionSetting): SettingsResult = settingsResult(call("session.configure", buildJsonObject {
+        put("sessionId", id.value)
+        setting.approvalMode?.let { put("approvalMode", it) }
+        setting.configId?.let { put("configId", it) }
+        setting.value?.let { put("value", it) }
+    }))
+    override suspend fun resumeSession(id: SessionId): SettingsResult = settingsResult(call("session.resume", buildJsonObject { put("sessionId", id.value) }))
+    private fun settingsResult(result: CallResult): SettingsResult = when (result) {
+        is CallResult.Accepted -> if (result.value.obj("session") != null) SettingsResult.APPLIED else SettingsResult.UNKNOWN
+        CallResult.Unknown -> SettingsResult.UNKNOWN
+        else -> SettingsResult.REFUSED
+    }
+
     override suspend fun projects(): List<String> = try { projectCatalog().map { it.name } }
         catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { emptyList() }
 
@@ -199,6 +222,7 @@ class BridgeAgentGateway(
             put("project", draft.project)
             if (draft.newProject) put("newProject", true)
             put("approvalMode", draft.approvalMode)
+            if (draft.configValues.isNotEmpty()) put("configValues", buildJsonObject { draft.configValues.forEach { (id, value) -> put(id, value) } })
             draft.branch?.let { put("branch", it) }
             draft.instruction?.let { put("prompt", it) }
         })
@@ -362,6 +386,10 @@ class BridgeAgentGateway(
                         is Incoming.Response -> {
                             val id = incoming.id ?: continue
                             calls.remove(id)?.let { reply ->
+                                incoming.result?.takeIf { it.obj("session") != null }?.let {
+                                    state.onResponse("session.snapshot", JsonObject(emptyMap()), it)
+                                    publish()
+                                }
                                 reply.complete(
                                     when {
                                         incoming.error in setOf("bad_project_name", "project_exists", "project_init_failed", "bad_project") -> CallResult.ProjectRefused(incoming.errorMessage ?: "Projet refusé par le pont.")

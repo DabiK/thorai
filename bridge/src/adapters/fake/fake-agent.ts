@@ -41,6 +41,7 @@ export class FakeAgentConnector implements AgentConnector {
   connectError: Error | null = null;
   /** When set, `setMode` fails with it. */
   setModeError: Error | null = null;
+  setConfigError: Error | null = null;
   /** Updates replayed by `loadSession`, as an agent does. */
   history: AcpUpdate[] = [];
   /** How long `loadSession` and `setMode` take, as on the Thor. */
@@ -48,6 +49,9 @@ export class FakeAgentConnector implements AgentConnector {
   setModeDelayMs = 0;
   /** Sent by the agent while `setMode` runs (Claude sends `config_option_update`). */
   onSetMode: AcpUpdate[] = [];
+  initialOptions: Record<string, unknown>[] = [];
+  configResponses = new Map<string, Record<string, unknown>[]>();
+  private readonly options = new Map<string, Record<string, unknown>[]>();
   connections = 0;
   private handlers: AgentHandlers | null = null;
   private exit: Deferred<Exit> | null = null;
@@ -78,10 +82,23 @@ export class FakeAgentConnector implements AgentConnector {
     const connection: AgentConnection = {
       newSession: async (cwd) => {
         record('newSession', cwd);
-        return `${this.agent}-session-${this.nextSession++}`;
+        const id = `${this.agent}-session-${this.nextSession++}`;
+        this.options.set(id, structuredClone(this.initialOptions));
+        if (this.initialOptions.length)
+          handlers.update(id, {
+            sessionUpdate: 'config_option_update',
+            configOptions: this.options.get(id),
+          });
+        return id;
       },
       loadSession: async (sessionId, cwd) => {
         record('loadSession', sessionId, cwd);
+        this.options.set(sessionId, structuredClone(this.initialOptions));
+        if (this.initialOptions.length)
+          handlers.update(sessionId, {
+            sessionUpdate: 'config_option_update',
+            configOptions: this.options.get(sessionId),
+          });
         for (const update of this.history) handlers.update(sessionId, update);
         await sleep(this.loadDelayMs);
       },
@@ -93,6 +110,19 @@ export class FakeAgentConnector implements AgentConnector {
       },
       setConfig: async (sessionId, configId, value) => {
         record('setConfig', sessionId, configId, value);
+        if (this.setConfigError) throw this.setConfigError;
+        const options = this.options.get(sessionId);
+        if (options?.length) {
+          this.options.set(
+            sessionId,
+            this.configResponses.get(`${configId}:${value}`) ??
+              options.map((o) => (o.id === configId ? { ...o, currentValue: value } : o)),
+          );
+          handlers.update(sessionId, {
+            sessionUpdate: 'config_option_update',
+            configOptions: this.options.get(sessionId),
+          });
+        }
       },
       prompt: (sessionId, text) => {
         record('prompt', sessionId, text);

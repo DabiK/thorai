@@ -92,6 +92,7 @@ internal class BridgeState {
     fun onResponse(method: String, params: JsonObject, result: JsonObject): Boolean {
         when (method) {
             "hello" -> return Hello.parse(result)?.let { onHello(it, params.long("since")) } ?: false
+            "session.snapshot" -> result.obj("session")?.let(::updateMeta)
             "agents.versions" -> onVersions(result)
             "session.events" -> params.string("sessionId")?.let { id ->
                 onHistory(id, result.array("events")?.mapNotNull(Frames::parseEvent).orEmpty())
@@ -287,6 +288,7 @@ internal class BridgeState {
                 pendingApproval = pending,
                 lastError = m.lastError,
                 modifiedFiles = m.modifiedFiles,
+                approvalMode = m.approvalMode, configOptions = m.configOptions,
             )
         }
     }
@@ -322,6 +324,7 @@ internal class BridgeState {
         val lastError: String?,
         val pendingApprovals: List<String>,
         val modifiedFiles: List<String>,
+        val approvalMode: String, val configOptions: List<app.regie.domain.model.SessionOption>,
     ) {
         companion object {
             fun parse(data: JsonObject): Meta? = Meta(
@@ -337,6 +340,7 @@ internal class BridgeState {
                 lastError = data.string("lastError")?.let(::oneLine),
                 pendingApprovals = data.array("pendingApprovals")?.strings().orEmpty(),
                 modifiedFiles = data.array("modifiedFiles")?.strings().orEmpty(),
+                approvalMode = data.string("approvalMode") ?: "unknown", configOptions = decodeOptions(data["configOptions"]),
             )
         }
     }
