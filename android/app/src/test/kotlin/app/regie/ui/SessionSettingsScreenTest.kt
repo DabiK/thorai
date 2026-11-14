@@ -23,6 +23,23 @@ import kotlin.time.Instant
 @Config(sdk = [33], application = Application::class, qualifiers = "w538dp-h468dp-land-mdpi")
 class SessionSettingsScreenTest {
     @get:Rule val compose = createEmptyComposeRule()
+    @Test fun `interrupt stays visible and clickable while applying then disappears when idle`() {
+        val session = Session(SessionId("s"), Agent.CODEX, "demo", null, null, SessionStatus.WORKING, true,
+            Instant.fromEpochMilliseconds(0), Instant.fromEpochMilliseconds(0), approvalMode = "ask")
+        val state = mutableStateOf(SessionSettingsReview(visible = true, session = session))
+        val buttons = mutableListOf<Button>()
+        Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
+            host.setup().get().setContent { RegieTheme { SessionSettingsScreen(state.value, { buttons += it }, {}) } }
+            compose.onNodeWithText("Start · Interrompre").assertIsDisplayed().assertIsEnabled().performClick()
+            compose.runOnIdle { state.value = state.value.copy(busy = true) }
+            compose.onNodeWithText("Start · Interrompre").assertIsDisplayed().assertIsEnabled().performClick()
+            compose.onNodeWithText("Application…").assertIsDisplayed().assertIsNotEnabled()
+            compose.onNodeWithText("B · Fermer").assertIsDisplayed().assertIsNotEnabled()
+            assertEquals(listOf(Button.START, Button.START), buttons)
+            compose.runOnIdle { state.value = state.value.copy(session = session.copy(status = SessionStatus.IDLE)) }
+            compose.onNodeWithText("Start · Interrompre").assertDoesNotExist()
+        }
+    }
     @Test fun `small screen keeps selected option and explicit apply visible without optimistic mode`() {
         val session = Session(SessionId("s"), Agent.CODEX, "demo", null, null, SessionStatus.IDLE, true,
             Instant.fromEpochMilliseconds(0), Instant.fromEpochMilliseconds(0), approvalMode = "ask",

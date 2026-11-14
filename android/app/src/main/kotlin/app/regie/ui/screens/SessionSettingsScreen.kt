@@ -47,6 +47,8 @@ fun SessionSettingsScreen(state: SessionSettingsReview, onButton: (Button) -> Un
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             BasicText(if (state.busy) "Application…" else "A · Appliquer", style = sans(15.sp, 600, if (state.canApply) Palette.text else Palette.textSubtle),
                 modifier = Modifier.clickable(enabled = state.canApply) { onButton(Button.A) }.padding(12.dp))
+            if (state.canInterrupt) BasicText("Start · Interrompre", style = sans(14.sp),
+                modifier = Modifier.clickable { onButton(Button.START) }.padding(12.dp))
             BasicText("B · Fermer", style = sans(14.sp), modifier = Modifier.clickable(enabled = !state.busy) { onButton(Button.B) }.padding(12.dp))
         }
     }

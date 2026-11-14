@@ -277,7 +277,12 @@ sélecteurs par `configId`/`value`. L’app propose modèle/réflexion dans la f
 les autres sélecteurs exposés (par exemple Fast mode) dans les options en session.
 
 Chaque liste reçue remplace intégralement la précédente, y compris à vide. Les
-options manquantes sont signalées comme non exposées. Les anciens résumés sans
+options manquantes sont signalées comme non exposées. Lors d’une reprise, les listes
+reçues sont provisoires jusqu’au succès du chargement, du mode et de toutes les
+sélections. En cas d’échec, `configOptions` conserve les sélections sauvegardées
+pour la prochaine tentative, même après redémarrage du pont. Pour une session
+inactive, ce champ ne confirme donc pas une restauration réussie. Les listes
+provisoires ne remplacent pas le résumé persisté. Les anciens résumés sans
 ce champ restent lisibles ; une reprise recharge les choix. Un changement produit
 un événement `session` et relaie l’événement ACP ; le résultat contient la même
 configuration confirmée. Les changements sont sérialisés par session ; un message

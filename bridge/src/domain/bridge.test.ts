@@ -1330,6 +1330,53 @@ describe('agent provided choices', () => {
     const resumed = await world.bridge.resume(session.sessionId);
     expect(resumed.configOptions?.map((o) => o.currentValue)).toEqual(['large', 'high']);
   });
+  it.each(['mode', 'model', 'effort'])(
+    'preserves all saved choices after a temporary %s restoration failure and retries after restart',
+    async (failure) => {
+      world.codex.initialOptions = choices;
+      const session = await world.bridge.createSession({
+        agent: 'codex',
+        project: 'regie-demo',
+        approvalMode: 'allow-all',
+        configValues: { model: 'large', effort: 'high' },
+      });
+      await world.bridge.shutdown();
+      world.restart();
+      if (failure === 'mode') world.codex.setModeError = new Error('Temporarily unavailable');
+      else if (failure === 'model')
+        world.codex.setConfigError = new Error('Temporarily unavailable');
+      else
+        world.codex.configResponses.set('effort:high', [
+          { ...choices[0], currentValue: 'large' },
+          choices[1]!,
+        ]);
+      await expect(world.bridge.resume(session.sessionId)).rejects.toMatchObject({
+        code: 'agent_failed',
+      });
+      expect(world.bridge.listSessions()[0]).toMatchObject({
+        active: false,
+        status: 'failed',
+        approvalMode: 'allow-all',
+      });
+      expect(world.bridge.listSessions()[0]?.configOptions?.map((o) => o.currentValue)).toEqual([
+        'large',
+        'high',
+      ]);
+      expect(world.codex.callsOf('prompt')).toEqual([]);
+      await world.bridge.shutdown();
+      world.restart();
+      world.codex.setModeError = null;
+      world.codex.setConfigError = null;
+      world.codex.configResponses.clear();
+      const resumed = await world.bridge.resume(session.sessionId);
+      expect(resumed).toMatchObject({ active: true, status: 'idle', lastError: null });
+      expect(resumed.configOptions?.map((o) => o.currentValue)).toEqual(['large', 'high']);
+      expect(world.codex.callsOf('setConfig').slice(-2)).toEqual([
+        [session.sessionId, 'model', 'large'],
+        [session.sessionId, 'effort', 'high'],
+      ]);
+    },
+  );
   it('rejects unadvertised values, replaces lists on update and reports the acknowledged value', async () => {
     world.codex.initialOptions = choices;
     const session = await world.bridge.createSession({

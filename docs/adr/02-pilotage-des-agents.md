@@ -335,3 +335,22 @@ et un scope injectés pour tester le parcours entier sans agent ni console.
 Régression initiale rouge puis verte ; mutation bloquant Start pendant `busy`
 détectée ; session au repos couverte. Essai réel Codex sur les deux écrans :
 Droite puis Start, `turn_end cancelled`, preuves `review-start-*` du ticket 17.
+
+### Correction de revue — restauration interrompue et action visible
+
+Pendant une reprise, les listes ACP reçues restent provisoires dans le domaine.
+Le résumé persisté conserve toutes les sélections précédentes jusqu’au succès
+de `session/load`, du mode et de chaque option. Un refus temporaire, y compris
+après restauration du modèle mais avant l’effort, ne remplace donc pas les choix
+par les valeurs par défaut. Une nouvelle tentative, même après redémarrage du
+pont, restaure les mêmes sélections. La session reste inactive en cas d’échec.
+Le protocole explicite que les options d’une session inactive sont les dernières
+sélections sauvegardées, pas la confirmation d’une reprise aboutie.
+
+Le panneau Options affiche « Start · Interrompre » comme action tactile pendant
+un tour, également pendant « Application… ». Il réutilise `SessionStatus.isBusy`
+dans le modèle du domaine et le routage Start existant ; A et B gardent leurs
+protections pendant le réglage. L’action disparaît au repos. API Compose vérifiée
+par Context7 (`library`, puis `docs`), source officielle :
+https://developer.android.com/reference/kotlin/androidx/compose/foundation/clickable.modifier
+Preuves rouges/vertes et essai réel : `artifacts/screenshots/17/review-resume.txt`.

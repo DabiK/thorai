@@ -92,6 +92,8 @@
 
 - **14 novembre, ticket 17, relecture après e846a42** : diff main...HEAD relu en solo, aucun nouveau blocage ; mutation de garde busy détectée puis retirée, trois régressions vertes, preuves et limites vérifiées. La session Codex d’essai est stopped sans erreur, aucun appareil ADB restant après fermeture du banc. Aucun code/test modifié depuis les portes et essais verts. Statut à fusionner maintenu ; détail review-start-relecture.txt.
 
+- **14 novembre, ticket 17, correction de revue reprise/options (solo Codex)** : sélections sauvegardées conservées jusqu’au succès complet de la reprise, même après un refus partiel et un redémarrage ; trois régressions rouges puis vertes. Action tactile « Start · Interrompre » visible dans Options, y compris pendant busy, test Compose rouge puis vert. Android 320 tests + lint, pont 300 + typage/lint verts. Thor absente : émulateur deux écrans, même Codex repris en Terra/high/Tout autoriser, interruption tactile cancelled seq 1911 (captures review-interrupt-30–33). Agent/pont/AVD arrêtés ; aucun Claude ni sous-agent. ADR 02/protocole et pas à pas Thor complétés, statut à fusionner. Échecs ACP temporaires et busy couverts uniquement par les tests isolés.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

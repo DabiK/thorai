@@ -34,6 +34,7 @@ data class SessionSettingsReview(
             editableSessionOptions(session.configOptions).map { SettingsRow(it.id, it.label, it.currentValue, it.options) } +
             if (!session.active) listOf(SettingsRow("resume", "Reprendre cette session", null, emptyList())) else emptyList()
     }.orEmpty()
+    val canInterrupt: Boolean get() = session?.status?.isBusy == true
     val row: SettingsRow? get() = rows.getOrNull(selected)
     val canApply: Boolean get() = !busy && !uncertain && row != null && (row!!.id == "resume" || value != row!!.current && row!!.choices.any { it.value == value })
 }

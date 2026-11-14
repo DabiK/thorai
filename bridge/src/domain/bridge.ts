@@ -644,7 +644,11 @@ export class Bridge {
       throw failure;
     }
     const live = this.goLive(sessionId);
-    this.update(sessionId, { status: 'idle', lastError: null });
+    this.update(sessionId, {
+      status: 'idle',
+      lastError: null,
+      configOptions: this.options.get(sessionId) ?? [],
+    });
     this.flushEarly(sessionId);
     // The agent may have changed the branch since the session was last live.
     this.readBranch(sessionId);
@@ -731,7 +735,13 @@ export class Bridge {
       const options = sessionOptions(update.configOptions);
       this.options.set(sessionId, options);
       const record = this.records.get(sessionId);
-      if (record && JSON.stringify(record.configOptions) !== JSON.stringify(options))
+      // Offline updates are provisional: a failed load must keep every saved selection
+      // for the next attempt, including after a bridge restart.
+      if (
+        this.live.has(sessionId) &&
+        record &&
+        JSON.stringify(record.configOptions) !== JSON.stringify(options)
+      )
         this.update(sessionId, { configOptions: options });
     }
     const live = this.live.get(sessionId);

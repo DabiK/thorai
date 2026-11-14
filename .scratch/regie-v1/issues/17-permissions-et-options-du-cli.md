@@ -34,32 +34,35 @@ Retours de l'utilisateur, le 14 novembre :
 - Sur l'émulateur (ticket 16) avec une vraie session Codex :
   - [x] en « Tout autoriser », une écriture et une commande passent sans aucune demande → `artifacts/screenshots/17/acceptance.txt`, `events-final.json` (apply_patch et printf avec redirection, zéro approval_request) ;
   - [x] le changement de modèle et de niveau de réflexion en cours de session est pris en compte → captures 09–11 et `codex-turn-contexts.json` (Sol/low → Terra/high, never/danger-full-access).
-- [x] Les portes de qualité sont vertes → Android `./gradlew check` (319 tests + lint), pont `npm run check` (297 tests + typage/lint).
+- [x] Les portes de qualité sont vertes → Android `./gradlew check` (320 tests + lint), pont `npm run check` (300 tests + typage/lint).
 
 - [x] Start interrompt depuis les options, même pendant un réglage → `SessionSettingsInputTest`, mutation busy détectée ; vrai Codex `turn_end cancelled` seq 1463.
+
+- [x] Une reprise temporairement refusée conserve toutes les sélections jusqu’à la réussite → trois régressions rouges/vertes, `review-resume-*.txt` (mode/modèle/effort, nouvelle tentative après redémarrage).
+- [x] Options annonce Start et propose le tactile pendant un tour, même pendant un réglage → `SessionSettingsScreenTest`, captures review-interrupt-30–33, vrai Codex cancelled seq 1911.
 
 ## Rapport
 
 STATUT: done
-RÉSUMÉ: Tout autoriser, modèles et réflexion ACP disponibles à la création et en session.
-Start interrompt aussi depuis les options, même pendant l’application d’un réglage.
+RÉSUMÉ: Une reprise échouée conserve désormais les choix sauvegardés jusqu’au succès complet.
+Options affiche « Start · Interrompre », utilisable au tactile même pendant un réglage.
+Ticket maintenu à fusionner, sans push ni fusion.
 CRITÈRES:
-- [x] Permissions explicites → mapping testé ; acceptance.txt et events-final.json.
-- [x] Modèle/réflexion effectifs → captures 09–11, codex-turn-contexts.json.
-- [x] Plan/reprise → captures 12/15 ; Start dans les options → captures review-start-26–28, seq 1463 cancelled.
-- [x] Start pendant busy → SessionSettingsInputTest, mutation détectée ; session au repos protégée.
-- [x] Protocole/domaine et portes vertes → docs/protocole-pont.md, review-start-*-check.txt.
-PORTE DE QUALITÉ: Android 319 tests + lint ; pont 297 tests + typage/lint, verts.
-THOR: absente ; émulateur deux écrans, pont Mac, vrai Codex interrompu depuis Options.
-Agent d’essai, pont et émulateur arrêtés ; aucun Claude lancé.
-REVIEW: constat bloquant Start corrigé ; test rouge puis vert, mutation busy détectée.
-Relecture complète main...HEAD consignée dans review-start-relecture.txt.
-DÉCISIONS PRISES: ADR 02 précisé ; routage vers le contrôleur existant, sans nouvelle règle produit.
-POUR L’UTILISATEUR: suivre essai-emulateur.txt, étapes 1–8 : installer sur Thor,
-créer en Tout autoriser, dicter édition/commande, changer modèle/effort, plan/reprise ;
-pendant un tour : Droite puis Start, B pour voir Interrompue ; refaire après A sur un réglage.
-Contrôler manette/micro/écrans physiques ; Claude quand le quota le permet.
+- [x] Permissions, modèle/réflexion, plan/reprise → preuves précédentes acceptance.txt, captures 09–15.
+- [x] Reprise après refus temporaire → 3 tests rouges/verts, mode/modèle/effort et redémarrage.
+- [x] Start visible/tactile et pendant busy → tests Compose/composition, vrai Codex cancelled seq 1911.
+- [x] Protocole et domaine → docs/protocole-pont.md, portes vertes.
+PORTE DE QUALITÉ: Android ./gradlew check : 320 tests + lint ; pont npm run check : 300 tests + typage/lint.
+THOR: absente ; émulateur deux écrans et pont Mac, reprise Terra/high/Tout autoriser,
+interruption tactile depuis Options. Codex, pont et émulateur arrêtés ; aucun Claude lancé.
+REVIEW: perte des sélections reproduite/corrigée ; action Start manquante ajoutée et testée.
+DÉCISIONS PRISES: ADR 02 précisé ; options provisoires jusqu’au succès, règle d’interruption existante.
+POUR L’UTILISATEUR: 1. Rebrancher Thor, installer pont puis app (essai-emulateur.txt).
+2. Créer Codex/Tout autoriser, dicter une édition et une commande ; vérifier zéro validation.
+3. Changer modèle/effort, passer en plan puis revenir ; quitter/rouvrir et reprendre.
+4. Pendant un tour, ouvrir Options puis Start ; refaire au tactile et pendant Application….
+5. Vérifier micro/manette/deux écrans physiques ; refaire avec Claude quand le quota le permet.
 QUESTIONS: aucune.
-CAPTURES: artifacts/screenshots/17/ ; nouvelles review-start-26haut/bas.png à 28haut/bas.png.
-HORS PÉRIMÈTRE: saisie longue adb tronquée déjà relevée au ticket 11 ; vraie voix non testée.
-Le cas busy est testé avec un accusé suspendu, pas forcé sur le vrai agent.
+CAPTURES: artifacts/screenshots/17/review-interrupt-30bas.png et review-interrupt-33haut.png.
+HORS PÉRIMÈTRE: saisie longue adb tronquée déjà relevée ; voix physique non testée.
+Échec temporaire ACP et busy couverts par tests isolés, pas forcés sur l’agent réel.
