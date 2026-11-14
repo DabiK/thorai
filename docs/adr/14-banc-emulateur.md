@@ -4,7 +4,7 @@ Statut : accepté, 14 novembre 2026 (ticket 16).
 
 ## Décision
 
-Le banc utilise un AVD dédié **Regie_Thor**, Android 36 ARM64 Google Play,
+Le banc utilise un AVD dédié **Regie_Thor**, Android 16 (API 36) ARM64 Google Play,
 1920×1080 et 1240×1080 à 369 dpi (les pixels et dp de la Thor). Il ne modifie
 aucun autre AVD. Le port console par défaut est 5580. Le second écran est ajouté
 par `adb emu multidisplay add 1 1240 1080 369 0` après le boot et la disponibilité
@@ -18,6 +18,9 @@ Le pont tourne à la demande sur `127.0.0.1:47600`, avec les mêmes dépendances
 Projets, historique, jeton et journaux sont dans `~/Documents/regie-sandbox` ;
 `REGIE_BENCH_DIR` permet un autre dossier. Jeton généré avec 256 bits d'aléa,
 fichier 0600, transmis par stdin à `run-as app.regie`, jamais par un extra d'intent.
+Le chemin source du pont est conservé dans `bridge-root` : un autre worktree
+ne le réutilise pas silencieusement. Après modification du pont, le redémarrer
+explicitement avec `bridge-mac.sh stop` puis `bridge-mac.sh`.
 Les scripts refusent de piloter un appareil physique ou un AVD d'un autre nom.
 Un port occupé par un autre pont n'est jamais libéré de force. Un échec transitoire
 `Address already in use` de `adb reverse` est réessayé pendant 90 secondes au plus,
@@ -35,7 +38,7 @@ Sur macOS seulement, la configuration de l'adapter Codex n'injecte plus la
 consigne Linux/PRoot imposant l'escalade : le sandbox natif est utilisable.
 Les modes ACP et les règles métier du pont restent inchangés. Les identifiants
 Codex du Mac sont réutilisés, sans copie ni modification. Claude est installé
-comme dépendance du pont mais **la démo n'en lance aucun processus**.
+comme dépendance du pont mais **la démo ne lance aucune session Claude** (le pont relève seulement sa version).
 
 Troisième commande : `emu-install.sh` installe uniquement app.regie, accorde les
 notifications sur cet AVD contrôlé, ouvre une session Codex en mode « valider »

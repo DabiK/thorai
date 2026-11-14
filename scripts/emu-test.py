@@ -50,6 +50,21 @@ esac
         return subprocess.run(['bash', str(ROOT / name), *args], env=self.env,
                               capture_output=True, text=True)
 
+    def test_bridge_refuses_to_reuse_a_bridge_from_another_worktree(self):
+        bench = self.folder / 'bench'
+        bench.mkdir()
+        (bench / 'bridge-token').write_text('f' * 64)
+        (bench / 'bridge-root').write_text('/another/worktree\n')
+        self.env['REGIE_BENCH_DIR'] = str(bench)
+        for name in ['curl', 'node', 'npm']:
+            stub = self.folder / name
+            stub.write_text('#!/bin/bash\nexit 0\n')
+            stub.chmod(0o755)
+        result = self.run_script('bridge-mac.sh')
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn('worktree', result.stderr)
+        self.assertNotIn('reverse tcp:', self.calls.read_text())
+
     def test_reverse_retries_a_transient_busy_port_without_removing_other_listeners(self):
         result = subprocess.run(['bash', '-c', 'source "$1"; reverse_bridge', 'bench',
                                  str(ROOT / 'emu-common.sh')], env=self.env,

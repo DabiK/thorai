@@ -4,6 +4,10 @@ source "$(dirname "$0")/emu-common.sh"
 umask 077
 mkdir -p "$REGIE_BENCH/projects" "$REGIE_BENCH/state"
 export REGIE_BENCH_DIR="$REGIE_BENCH"
+# The authenticated control client also needs ws when entering a fresh worktree.
+if [[ ! -f "$REGIE_ROOT/bridge/node_modules/ws/package.json" ]]; then
+    (cd "$REGIE_ROOT/bridge" && npm ci)
+fi
 if [[ "${1:-}" == stop ]]; then
     node "$REGIE_ROOT/scripts/emu-client.mjs" stop
     exit
@@ -14,6 +18,10 @@ if [[ ! -f "$REGIE_BENCH/bridge-token" ]]; then
 fi
 chmod 600 "$REGIE_BENCH/bridge-token"
 if curl --silent --fail --max-time 2 http://127.0.0.1:47600/health >/dev/null; then
+    if [[ ! -f "$REGIE_BENCH/bridge-root" ]] || [[ "$(cat "$REGIE_BENCH/bridge-root")" != "$REGIE_ROOT" ]]; then
+        echo 'Pont actif issu d’un autre worktree ou non identifié : bridge-mac.sh stop, puis bridge-mac.sh pour utiliser ce worktree.' >&2
+        exit 1
+    fi
     node "$REGIE_ROOT/scripts/emu-client.mjs" ping || {
         echo 'Le port 47600 appartient à un autre pont ou le jeton ne correspond pas. Aucun processus arrêté.' >&2; exit 1;
     }
@@ -31,6 +39,7 @@ else
     export REGIE_BRIDGE_STATE_DIR="$REGIE_BENCH/state" REGIE_PROJECTS_DIR="$REGIE_BENCH/projects"
     export CODEX_PATH="${CODEX_PATH:-$(command -v codex)}"
     [[ -x "$CODEX_PATH" ]] || { echo 'Codex est absent du PATH.' >&2; exit 1; }
+    printf '%s\n' "$REGIE_ROOT" > "$REGIE_BENCH/bridge-root"
     python3 - "$REGIE_ROOT/bridge" "$REGIE_BENCH/bridge.log" <<'SPAWN'
 import subprocess, sys
 with open(sys.argv[2], 'a') as log:
