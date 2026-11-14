@@ -26,7 +26,7 @@ fun SessionSettingsScreen(state: SessionSettingsReview, onButton: (Button) -> Un
         BasicText("En cours : ${approvalModeLabel(state.session?.approvalMode.orEmpty())}", style = sans(13.sp, color = Palette.textMuted))
         LazyColumn(Modifier.weight(1f), state = list, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             itemsIndexed(state.rows) { index, row ->
-                val value = if (index == state.selected) state.value else row.current
+                val value = if (index == state.selected) state.value else state.replacements[row.id] ?: row.current
                 Row(Modifier.fillMaxWidth().focusOutline(index == state.selected, 10.dp)
                     .background(Palette.surface, RoundedCornerShape(10.dp)).clickable(enabled = !state.busy) { onSelect(index) }
                     .heightIn(min = 44.dp).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -37,7 +37,8 @@ fun SessionSettingsScreen(state: SessionSettingsReview, onButton: (Button) -> Un
         }
         if (state.session?.configOptions.isNullOrEmpty()) BasicText("Modèle et réflexion : non exposés. Reprends une ancienne session pour les actualiser.", style = sans(12.sp, color = Palette.textMuted))
         if (state.row?.id == "approvalMode") BasicText(approvalModeHelp(state.value.orEmpty()), style = sans(12.sp, color = Palette.textMuted))
-        BasicText(state.notice.ifEmpty { "↑ ↓ choisir · ← → modifier · A appliquer" }, style = sans(12.sp, color = Palette.textMuted), maxLines = 3)
+        if (state.replacements.isNotEmpty()) BasicText("${state.replacements.size} choix préparés · A confirme l’ensemble pour reprendre.", style = sans(12.sp, color = Palette.textMuted))
+        BasicText(state.notice.ifEmpty { if (state.session?.active == false) "Prépare les remplacements avec ↑ ↓ et ← →, puis A. B les abandonne." else "↑ ↓ choisir · ← → modifier · A appliquer" }, style = sans(12.sp, color = Palette.textMuted), maxLines = 3)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             BarAction("↑", "Précédent") { onButton(Button.UP) }
             BarAction("↓", "Suivant") { onButton(Button.DOWN) }

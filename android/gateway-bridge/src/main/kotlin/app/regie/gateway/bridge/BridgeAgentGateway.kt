@@ -192,6 +192,9 @@ class BridgeAgentGateway(
         setting.approvalMode?.let { put("approvalMode", it) }
         setting.configId?.let { put("configId", it) }
         setting.value?.let { put("value", it) }
+        if (setting.configValues.isNotEmpty()) put("configValues", buildJsonObject {
+            setting.configValues.forEach { (configId, value) -> put(configId, value) }
+        })
     }))
     override suspend fun resumeSession(id: SessionId): SettingsResult = settingsResult(call("session.resume", buildJsonObject { put("sessionId", id.value) }))
     private fun settingsResult(result: CallResult): SettingsResult = when (result) {

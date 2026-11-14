@@ -100,6 +100,8 @@
 
 - **14 novembre, ticket 17, relecture après 6e07e59** : diff main...HEAD relu en solo (domaine, adapters, Android, tests, preuves), aucun autre blocage trouvé. Ancien modèle simulé et essais réels distingués ; catalogue après erreurs identiques couvert par régression rouge/verte. Fins de journaux nettoyées, aucun code/test changé après les portes et essais verts ; détail `review-catalog-relecture.txt`. Ticket maintenu à fusionner.
 
+- **14 novembre, ticket 17, correction de revue remplacements conjoints (solo Codex)** : configValues remplace modèle et effort ensemble avant restauration ; autres sélections et refus temporaires préservés. Android prépare plusieurs lignes avant A, B abandonne ; relâchement du stick transmis à Session derrière Options. Régressions rouges/vertes domaine, WS, passerelle, UI et composition ; option sans sélection sauvegardée corrigée aussi. Pont 305 tests + typage/lint, Android 326 + lint verts. Thor absente ; vrai Codex sur émulateur deux écrans, deux retraits simulés dans la sauvegarde du banc, un A confirme Sol/low/Tout autoriser, REPRISE_CONJOINTE_OK seq 2069 puis reprise après redémarrage. Agent/pont/AVD arrêtés, aucun Claude ni sous-agent. ADR 02/protocole complétés ; preuves review-joint.txt et captures 46–51. Statut à fusionner, stick/micro physiques au pas à pas utilisateur.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

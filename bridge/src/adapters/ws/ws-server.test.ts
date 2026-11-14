@@ -320,3 +320,53 @@ it('publishes refreshed choices on repeated failed resumes and accepts an explic
   expect(codex.callsOf('prompt')).toEqual([]);
   await client.close();
 });
+
+it('accepts joint resume replacements and rejects mixed or empty configuration payloads', async () => {
+  const option = (id: string, value: string) => ({
+    id,
+    name: id,
+    type: 'select',
+    category: id === 'model' ? 'model' : 'thought_level',
+    currentValue: value,
+    options: [{ value, name: value }],
+  });
+  codex.initialOptions = [option('model', 'old'), option('effort', 'high')];
+  const client = new Client();
+  await client.call('hello');
+  const created = await client.call('session.create', {
+    agent: 'codex',
+    project: 'regie-demo',
+    approvalMode: 'allow-all',
+  });
+  const { sessionId } = (created.result as { session: { sessionId: string } }).session;
+  codex.crash();
+  await settle();
+  codex.initialOptions = [option('model', 'new'), option('effort', 'low')];
+  expect(await client.call('session.resume', { sessionId })).toMatchObject({
+    error: { code: 'agent_failed' },
+  });
+  for (const invalid of [
+    { configValues: {} },
+    { configValues: { model: 'new' }, configId: 'effort', value: 'low' },
+    { configValues: { model: 'new' }, approvalMode: 'ask' },
+  ])
+    expect(await client.call('session.configure', { sessionId, ...invalid })).toHaveProperty(
+      'error',
+    );
+  expect(
+    await client.call('session.configure', {
+      sessionId,
+      configValues: { model: 'new', effort: 'low' },
+    }),
+  ).toMatchObject({
+    result: {
+      session: {
+        active: true,
+        approvalMode: 'allow-all',
+        configOptions: [{ currentValue: 'new' }, { currentValue: 'low' }],
+      },
+    },
+  });
+  expect(codex.callsOf('prompt')).toEqual([]);
+  await client.close();
+});

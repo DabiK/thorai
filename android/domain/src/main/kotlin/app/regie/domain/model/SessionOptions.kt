@@ -23,11 +23,12 @@ fun approvalModeHelp(mode: String): String = when (mode) {
 }
 fun editableSessionOptions(options: List<SessionOption>) = options.filter { it.id !in listOf("mode", "collaboration_mode") && it.category !in listOf("mode", "collaboration_mode") }
 enum class SettingsResult { APPLIED, REFUSED, UNKNOWN }
-data class SessionSetting(val approvalMode: String? = null, val configId: String? = null, val value: String? = null)
+data class SessionSetting(val approvalMode: String? = null, val configId: String? = null, val value: String? = null, val configValues: Map<String, String> = emptyMap())
 data class SettingsRow(val id: String, val label: String, val current: String?, val choices: List<OptionValue>)
 data class SessionSettingsReview(
     val visible: Boolean = false, val session: Session? = null, val selected: Int = 0,
     val value: String? = null, val busy: Boolean = false, val uncertain: Boolean = false, val notice: String = "",
+    val replacements: Map<String, String> = emptyMap(),
 ) {
     val rows: List<SettingsRow> get() = session?.let { session ->
         listOf(SettingsRow("approvalMode", "Validation", session.approvalMode, approvalModes.map { OptionValue(it, approvalModeLabel(it)) })) +
@@ -36,5 +37,11 @@ data class SessionSettingsReview(
     }.orEmpty()
     val canInterrupt: Boolean get() = session?.status?.isBusy == true
     val row: SettingsRow? get() = rows.getOrNull(selected)
-    val canApply: Boolean get() = !busy && !uncertain && row != null && (row!!.id == "resume" || value != row!!.current && row!!.choices.any { it.value == value })
+    val applyingReplacements: Boolean get() = session?.active == false && replacements.isNotEmpty() && row?.id != "approvalMode"
+    val canApply: Boolean get() = !busy && !uncertain && row != null && if (applyingReplacements) {
+        editableSessionOptions(session!!.configOptions).all { option ->
+            val choice = replacements[option.id] ?: option.currentValue
+            choice == null || option.options.any { it.value == choice }
+        }
+    } else (row!!.id == "resume" || value != row!!.current && row!!.choices.any { it.value == value })
 }

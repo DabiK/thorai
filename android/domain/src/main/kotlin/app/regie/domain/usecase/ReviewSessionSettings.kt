@@ -5,7 +5,7 @@ import app.regie.domain.port.AgentGateway
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
-/** Keeps the reviewed target fixed; only A sends one setting and only ACP confirms it. */
+/** Keeps the reviewed target fixed; A confirms live settings or all prepared resume replacements. */
 class ReviewSessionSettings(private val gateway: AgentGateway, private val scope: CoroutineScope) {
     private val mutable = MutableStateFlow(SessionSettingsReview())
     val state = mutable.asStateFlow()
@@ -22,21 +22,25 @@ class ReviewSessionSettings(private val gateway: AgentGateway, private val scope
                 val index = next.rows.indexOfFirst { it.id == old.row?.id }.takeIf { it >= 0 } ?: 0
                 val selected = next.copy(selected = index)
                 val preserve = old.row?.id == selected.row?.id && old.value != old.row?.current && selected.row?.choices?.any { it.value == old.value } == true
-                mutable.value = selected.copy(value = if (preserve) old.value else selected.row?.current)
+                mutable.value = selected.copy(value = selected.replacements[selected.row?.id] ?: if (preserve) old.value else selected.row?.current)
             }
         }
     }
     fun select(index: Int) {
         val s = state.value
         if (s.busy || index !in s.rows.indices) return
-        mutable.value = s.copy(selected = index, value = s.rows[index].current, notice = "")
+        mutable.value = s.copy(selected = index, value = s.replacements[s.rows[index].id] ?: s.rows[index].current, notice = "")
     }
     fun move(delta: Int) = select((state.value.selected + delta).coerceIn(0, state.value.rows.lastIndex.coerceAtLeast(0)))
     fun change(delta: Int) {
         val s = state.value; val choices = s.row?.choices.orEmpty()
         if (s.busy || s.uncertain || choices.isEmpty()) return
         val index = choices.indexOfFirst { it.value == s.value }
-        mutable.value = s.copy(value = choices[Math.floorMod(index + delta, choices.size)].value, notice = "A pour appliquer · B pour fermer.")
+        val value = choices[Math.floorMod(index + delta, choices.size)].value
+        val replacements = if (s.session?.active == false && s.row?.id != "approvalMode") {
+            if (value == s.row!!.current) s.replacements - s.row!!.id else s.replacements + (s.row!!.id to value)
+        } else s.replacements
+        mutable.value = s.copy(value = value, replacements = replacements, notice = "A pour appliquer · B pour fermer.")
     }
     fun close() { if (!state.value.busy) { observing?.cancel(); mutable.value = SessionSettingsReview() } }
     fun apply() {
@@ -45,10 +49,12 @@ class ReviewSessionSettings(private val gateway: AgentGateway, private val scope
         mutable.value = s.copy(busy = true, notice = "Application…")
         scope.launch {
             val result = try {
-                if (row.id == "resume") gateway.resumeSession(session.id)
+                if (s.applyingReplacements) gateway.configureSession(session.id, SessionSetting(configValues = s.replacements))
+                else if (row.id == "resume") gateway.resumeSession(session.id)
                 else gateway.configureSession(session.id, if (row.id == "approvalMode") SessionSetting(approvalMode = s.value) else SessionSetting(configId = row.id, value = s.value))
             } catch (e: CancellationException) { throw e } catch (_: Exception) { SettingsResult.UNKNOWN }
             mutable.value = state.value.copy(busy = false, uncertain = result == SettingsResult.UNKNOWN,
+                replacements = if (result == SettingsResult.APPLIED) emptyMap() else state.value.replacements,
                 notice = when (result) {
                     SettingsResult.APPLIED -> if (row.id == "resume") "Session reprise · prête à recevoir un message." else "Réglage confirmé par l’agent · prochains messages."
                     SettingsResult.REFUSED -> "Réglage refusé ou indisponible."

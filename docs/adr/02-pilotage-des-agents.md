@@ -377,3 +377,30 @@ couvre deux catalogues successifs malgré la même erreur. Le domaine Android
 couvre le choix puis A lorsque la valeur sauvegardée ne figure plus dans la liste.
 Pas de nouvelle API de bibliothèque ni de changement d’adapter ACP.
 Preuves et essai Codex réel : `artifacts/screenshots/17/review-catalog.txt`.
+
+
+### Correction de revue — remplacements conjoints à la reprise
+
+`session.configure` accepte également une table `configValues` non vide, exclusive
+des deux formes précédentes. Le domaine substitue tous les remplacements explicites
+avant la restauration : modèle d’abord, puis effort et autres options selon les
+catalogues confirmés par ACP. Ni l’ancien modèle ni l’ancien effort ne bloque ainsi
+le remplacement de l’autre. Les sélections non modifiées restent obligatoires et
+persistées ; aucun prompt avant succès complet. Un refus temporaire conserve le
+mode et toutes les anciennes sélections, même après redémarrage.
+
+Pour une session inactive, le domaine Android conserve les choix préparés entre
+les lignes ; ils sont visibles et comptés comme préparés, sans remplacer les valeurs
+confirmées. A envoie une seule requête pour l’ensemble, depuis une option ou
+Reprendre. Il reste désactivé tant qu’une sélection indisponible n’a pas de remplacement.
+B abandonne les choix non confirmés ; un résultat incertain interdit le renvoi
+automatique. Les changements d’une session active et le mode restent unitaires.
+Ce choix prolonge le mécanisme de remplacement explicite, sans nouveau catalogue
+ni API ACP. Pas de nouvelle API de bibliothèque ; schéma et sérialisation réutilisent
+les primitives déjà présentes. Export local Session.dc.html relu ; export distant
+inaccessible, aucune refonte visuelle.
+
+Le relâchement du stick droit est transmis au contrôleur Session avant le routage
+vers Options, comme pour les vitesses Diff et Nouvelle session. La régression de
+composition couvre Scroll(1), Options, Scroll(0), B ; aucune règle agent dans l’app.
+Preuves : `artifacts/screenshots/17/review-joint-*`.

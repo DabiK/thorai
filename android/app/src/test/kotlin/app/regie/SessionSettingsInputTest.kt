@@ -29,6 +29,22 @@ class SessionSettingsInputTest {
 
     @Test fun `Start in session options does not interrupt an idle session`() = verifyInterruption(status = SessionStatus.IDLE)
 
+    @Test fun `stick release inside Options stops session scrolling after B`() = runTest {
+        val gateway = SettingsInputGateway(SessionStatus.IDLE)
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        val container = AppContainer(app, app.getSystemService(DisplayManager::class.java), backgroundScope) { gateway }
+        container.topStarted.value = true
+        container.start(replay = true); container.openSession(gateway.target); runCurrent()
+        container.handleInput(GamepadInput.Scroll(1f))
+        assertEquals(1f, container.sessionController.scrollVelocity.value)
+        container.handleInput(GamepadInput.Pressed(Button.RIGHT)); runCurrent()
+        assertTrue(container.sessionSettings.value.visible)
+        container.handleInput(GamepadInput.Scroll(0f))
+        container.handleInput(GamepadInput.Pressed(Button.B)); runCurrent()
+        assertFalse(container.sessionSettings.value.visible)
+        assertEquals(0f, container.sessionController.scrollVelocity.value)
+    }
+
     private fun verifyInterruption(busy: Boolean = false, status: SessionStatus = SessionStatus.WORKING) = runTest {
         val gateway = SettingsInputGateway(status)
         val app = ApplicationProvider.getApplicationContext<Application>()

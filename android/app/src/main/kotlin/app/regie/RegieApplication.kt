@@ -187,6 +187,7 @@ class AppContainer(
     fun handleInput(input: GamepadInput) {
         // A release belongs to the physical stick even while an overlay owns the inputs.
         if (input is GamepadInput.Scroll && input.velocity == 0f) {
+            sessionController.handle(input)
             diffVelocity.value = 0f
             newSessionVelocity.value = 0f
         }

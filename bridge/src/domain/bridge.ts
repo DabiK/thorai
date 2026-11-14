@@ -394,21 +394,26 @@ export class Bridge {
       approvalMode?: ApprovalMode | undefined;
       configId?: string | undefined;
       value?: string | undefined;
+      configValues?: Readonly<Record<string, string>> | undefined;
     },
   ): Promise<SessionSummary> {
     return this.serialSettings(sessionId, async () => {
       this.assertRunning();
+      const selections =
+        settings.configValues ??
+        (settings.configId !== undefined && settings.value !== undefined
+          ? { [settings.configId]: settings.value }
+          : undefined);
       if (
         settings.approvalMode === undefined &&
-        settings.configId !== undefined &&
-        settings.value !== undefined &&
+        selections !== undefined &&
         !this.live.has(sessionId)
       ) {
         // A concurrent resume may still be restoring the old choices. Let it settle
         // before retrying with the explicit replacement, never send a prompt here.
         await this.loading.get(sessionId)?.catch(() => {});
         if (!this.live.has(sessionId)) {
-          await this.ensureLive(sessionId, { [settings.configId]: settings.value });
+          await this.ensureLive(sessionId, selections);
           return this.summaryOf(this.recordOf(sessionId));
         }
       }
@@ -442,8 +447,8 @@ export class Bridge {
           const outcome = this.automaticApproval(pending.request);
           if (outcome !== null) this.resolveApproval(pending, outcome, 'mode_change');
         }
-      } else if (settings.configId !== undefined && settings.value !== undefined) {
-        await this.applySelections(sessionId, { [settings.configId]: settings.value }, connection);
+      } else if (selections !== undefined) {
+        await this.applySelections(sessionId, selections, connection);
       } else throw new BridgeError('bad_request', 'Choisis un réglage.');
       return this.summaryOf(this.recordOf(sessionId));
     });

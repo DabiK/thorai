@@ -138,6 +138,22 @@ class BridgeAgentGatewayTest {
         }
     }
 
+    @Test fun `joint replacements cross the gateway in one configuration request`() {
+        val bridge = FakeBridge(); upgrade(bridge); val gateway = gateway()
+        withGateway(gateway) {
+            val ws = bridge.socket(); val hello = bridge.next("hello")
+            ws.send(helloResult(hello.long("id")!!, "j", 0, ""))
+            gateway.connection.first { it == BridgeConnection.Connected }
+            val change = async { gateway.configureSession(SessionId("s"), SessionSetting(configValues = mapOf("model" to "new", "effort" to "low"))) }
+            val request = bridge.next("session.configure")
+            assertEquals("new", request.obj("params")!!.obj("configValues")?.string("model"))
+            assertEquals("low", request.obj("params")!!.obj("configValues")?.string("effort"))
+            val session = sessionJson("s", "idle", "2026-11-14T00:00:00Z")
+            ws.send("""{"id":${request.long("id")},"result":{"session":$session}}""")
+            assertEquals(SettingsResult.APPLIED, change.await())
+        }
+    }
+
     @Test fun `new project flag crosses websocket and collisions are certain readable refusals`() {
         val bridge = FakeBridge(); upgrade(bridge); val gateway = gateway()
         withGateway(gateway) {

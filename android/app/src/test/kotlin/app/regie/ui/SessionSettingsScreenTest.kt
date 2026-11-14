@@ -40,6 +40,24 @@ class SessionSettingsScreenTest {
             compose.onNodeWithText("Start · Interrompre").assertDoesNotExist()
         }
     }
+    @Test fun `prepared replacements stay visible on other rows and A announces joint confirmation`() {
+        val session = Session(SessionId("s"), Agent.CODEX, "demo", null, null, SessionStatus.FAILED, false,
+            Instant.fromEpochMilliseconds(0), Instant.fromEpochMilliseconds(0), approvalMode = "allow-all",
+            configOptions = listOf(
+                SessionOption("model", "Model", "model", "old", listOf(OptionValue("new", "New model"))),
+                SessionOption("effort", "Effort", "thought_level", "high", listOf(OptionValue("low", "Low")))))
+        val state = SessionSettingsReview(visible = true, session = session, selected = 2, value = "low",
+            replacements = mapOf("model" to "new", "effort" to "low"))
+        val buttons = mutableListOf<Button>()
+        Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
+            host.setup().get().setContent { RegieTheme { SessionSettingsScreen(state, { buttons += it }, {}) } }
+            compose.onNodeWithText("New model").assertIsDisplayed()
+            compose.onNodeWithText("Low").assertIsDisplayed()
+            compose.onNodeWithText("2 choix préparés · A confirme l’ensemble pour reprendre.").assertIsDisplayed()
+            compose.onNodeWithText("A · Appliquer").assertIsEnabled().performClick()
+            assertEquals(listOf(Button.A), buttons)
+        }
+    }
     @Test fun `small screen keeps selected option and explicit apply visible without optimistic mode`() {
         val session = Session(SessionId("s"), Agent.CODEX, "demo", null, null, SessionStatus.IDLE, true,
             Instant.fromEpochMilliseconds(0), Instant.fromEpochMilliseconds(0), approvalMode = "ask",

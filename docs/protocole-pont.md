@@ -81,7 +81,7 @@ Les requêtes sont traitées en parallèle : les réponses peuvent arriver dans 
 | `sessions.list` | — | `{sessions}` : en cours et historique, la plus récente d'abord |
 | `session.create` | `agent`, `project`, `newProject?`, `branch?`, `approvalMode`, `configValues?`, `prompt?` | `{session}` ; le pont ne change pas de branche (voir plus bas) |
 | `agent.options` | `agent`, `configValues?` | `{configOptions}` : choix actuels de l’agent, sans tour |
-| `session.configure` | `sessionId` et soit `approvalMode`, soit `configId` + `value` | `{session}` après confirmation ACP |
+| `session.configure` | `sessionId` et soit `approvalMode`, soit `configId` + `value`, soit `configValues` non vide | `{session}` après confirmation ACP |
 | `session.prompt` | `sessionId`, `text` | `{delivery}` |
 | `session.cancel` | `sessionId` | `{}` |
 | `session.resume` | `sessionId` | `{session}`, rechargée dans son agent |
@@ -290,6 +290,15 @@ l’agent ne remplacent jamais les sélections persistées.
 
 Si un modèle sauvegardé disparaît, `session.configure` avec `configId` et `value`
 permet de choisir explicitement un remplacement dans le catalogue actualisé.
+Si plusieurs sélections ont disparu, `configValues: {"model": "nouveau", "effort": "low"}`
+les remplace ensemble lors de la même reprise. Ces trois formes de requête sont
+mutuellement exclusives ; une table vide est refusée. Le modèle est appliqué en
+premier, puis les autres choix sont vérifiés contre chaque réponse ACP actualisée.
+Seules les valeurs explicitement fournies remplacent les sélections sauvegardées.
+Dans Options, une session inactive conserve les modifications d’une ligne à
+l’autre ; A confirme tous les remplacements préparés (également depuis Reprendre),
+B les abandonne. Le mode reste un réglage distinct. Le bouton A attend que chaque
+sélection sauvegardée indisponible ait reçu un remplacement proposé par l’agent.
 La reprise substitue ce choix à l’ancien et restaure le mode et les autres
 sélections avant activation. Aucun message ne part avant le succès complet.
 Un refus garde la session inactive et toutes les anciennes sélections ; un succès

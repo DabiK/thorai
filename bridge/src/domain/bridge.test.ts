@@ -1457,6 +1457,72 @@ describe('agent provided choices', () => {
       expect(reloaded.configOptions?.map((o) => o.currentValue)).toEqual([replacement, 'high']);
     },
   );
+  it('confirms joint replacements after both saved model and effort disappear, preserving other choices', async () => {
+    const extra = {
+      id: 'extra',
+      name: 'Extra',
+      type: 'select',
+      currentValue: 'off',
+      options: [
+        { value: 'off', name: 'Off' },
+        { value: 'on', name: 'On' },
+      ],
+    };
+    world.codex.initialOptions = [...choices, extra];
+    const session = await world.bridge.createSession({
+      agent: 'codex',
+      project: 'regie-demo',
+      approvalMode: 'allow-all',
+      configValues: { model: 'large', effort: 'high', extra: 'on' },
+    });
+    await world.bridge.shutdown();
+    world.restart();
+    world.codex.initialOptions = [
+      { ...choices[0], currentValue: 'new', options: [{ value: 'new', name: 'New' }] },
+      { ...choices[1], currentValue: 'low', options: [{ value: 'low', name: 'Low' }] },
+      extra,
+    ];
+    await expect(world.bridge.resume(session.sessionId)).rejects.toThrow('model / large');
+    await expect(
+      world.bridge.configureSession(session.sessionId, { configId: 'model', value: 'new' }),
+    ).rejects.toThrow('effort / high');
+    await expect(
+      world.bridge.configureSession(session.sessionId, { configId: 'effort', value: 'low' }),
+    ).rejects.toThrow('model / large');
+    const replacements = { configValues: { effort: 'low', model: 'new' } };
+    // Failure restoring the other option must not commit either replacement.
+    world.codex.setConfigError = new Error('Temporary refusal');
+    await expect(world.bridge.configureSession(session.sessionId, replacements)).rejects.toThrow(
+      'Temporary refusal',
+    );
+    expect(world.bridge.listSessions()[0]).toMatchObject({
+      active: false,
+      approvalMode: 'allow-all',
+    });
+    expect(world.bridge.listSessions()[0]?.configOptions?.map((o) => o.currentValue)).toEqual([
+      'large',
+      'high',
+      'on',
+    ]);
+    expect(world.codex.callsOf('prompt')).toEqual([]);
+    await world.bridge.shutdown();
+    world.restart();
+    world.codex.setConfigError = null;
+    const resumed = await world.bridge.configureSession(session.sessionId, replacements);
+    expect(resumed).toMatchObject({ active: true, approvalMode: 'allow-all', lastError: null });
+    expect(resumed.configOptions?.map((o) => o.currentValue)).toEqual(['new', 'low', 'on']);
+    await expect(world.bridge.prompt(session.sessionId, 'Continue jointly')).resolves.toBe(
+      'prompt',
+    );
+    expect(world.codex.callsOf('prompt')).toEqual([
+      [session.sessionId, withSummaryRequest('Continue jointly')],
+    ]);
+    world.codex.endTurn(session.sessionId);
+    await world.bridge.shutdown();
+    world.restart();
+    const reloaded = await world.bridge.resume(session.sessionId);
+    expect(reloaded.configOptions?.map((o) => o.currentValue)).toEqual(['new', 'low', 'on']);
+  });
   it('rejects unadvertised values, replaces lists on update and reports the acknowledged value', async () => {
     world.codex.initialOptions = choices;
     const session = await world.bridge.createSession({

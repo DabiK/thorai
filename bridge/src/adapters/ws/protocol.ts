@@ -28,11 +28,16 @@ export const paramsSchemas = {
       approvalMode: z.enum(APPROVAL_MODES).optional(),
       configId: z.string().min(1).max(200).optional(),
       value: z.string().min(1).max(500).optional(),
+      configValues: configValues.optional(),
     })
     .refine((p) =>
       p.approvalMode !== undefined
-        ? p.configId === undefined && p.value === undefined
-        : p.configId !== undefined && p.value !== undefined,
+        ? p.configId === undefined && p.value === undefined && p.configValues === undefined
+        : p.configValues !== undefined
+          ? Object.keys(p.configValues).length > 0 &&
+            p.configId === undefined &&
+            p.value === undefined
+          : p.configId !== undefined && p.value !== undefined,
     ),
   'sessions.list': z.object({}),
   'session.create': z.object({
