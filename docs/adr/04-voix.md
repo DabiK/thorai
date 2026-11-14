@@ -1,10 +1,10 @@
 # ADR 04 — La voix : ports, ElevenLabs, alternative locale
 
-Statut : en cours, 13 novembre 2026 (ticket 04). La phase 1 a posé les ports, la voix factice et ElevenLabs. La phase 2 a ajouté `:local` (sherpa-onnx) et l'appli d'essai `:demo`. Restent les mesures, faites par l'utilisateur sur la Thor.
+Statut : accepté, ticket 04 fusionné. Choix actuel : transcription locale par défaut, aucune lecture à voix haute dans Régie (ADR 09/10). Les essais humains et cloud non réalisés restent identifiés dans les rapports ; ils ne conditionnent plus le choix du fournisseur. Le détail ci-dessous retrace le laboratoire du 13 novembre, y compris sa synthèse vocale.
 
 ## Contexte
 
-- Le PRD (« Voix ») demande trois ports : transcription en flux avec partiels, langue et termes à favoriser ; synthèse en flux ; détection de parole sur l'appareil. ElevenLabs est le fournisseur par défaut, une alternative locale et gratuite se choisit par un réglage.
+- Le PRD (« Voix ») demande trois ports : transcription en flux avec partiels, langue et termes à favoriser ; synthèse en flux ; détection de parole sur l'appareil. ElevenLabs était le choix initial ; il a été remplacé par le local par défaut après l’essai utilisateur du 13 novembre.
 - La Thor n'a aucun moteur de reconnaissance ni de synthèse Android (`docs/thor.md`, « Voix ») : tout passe par nos adapters.
 - L'ADR 01 place la voix dans un build Gradle séparé, `voice/`, inclus par l'app en composite build.
 - La dictée se fait en maintenant L2 : début d'appui = début de dictée, relâcher = fin de parole.
@@ -200,7 +200,7 @@ Statut : en cours, 13 novembre 2026 (ticket 04). La phase 1 a posé les ports, l
 
 ## Ce qui reste
 
-- Les mesures, sur la Thor, avec les 20 consignes lues par l'utilisateur, puis la recommandation du fournisseur par défaut.
+- Les mesures, sur la Thor, avec les 20 consignes lues par l'utilisateur, pour mesurer la qualité sur une voix humaine ; le fournisseur local est déjà décidé.
 - Remplacer les fixtures Scribe par une capture réelle : cela demande la clé de l'utilisateur.
 - Piste à évaluer avec les mesures : la `keyterm_library` de Scribe v3 Live (jusqu'à 10 000 termes de 50 caractères, envoyée dans le premier morceau d'audio). Elle lèverait la limite de 50 termes et de 20 caractères, par exemple pour `kotlinx-coroutines-test`.
 
@@ -222,12 +222,15 @@ Mesuré sur la Thor avec le banc de l'appli d'essai (`--es bench local`), sur le
 - **La latence locale est très bonne** : la transcription du dernier segment tient en un quart de seconde, sur l'appareil, sans réseau.
 - Scribe n'a pas pu être mesuré : la clé reste à saisir par l'utilisateur. Le connecteur ElevenLabs de la session ne propose que `eleven_scribe_v1` en différé, qui ne représente pas v3 Live ; on ne l'a pas utilisé.
 
-### Recommandation
+### Recommandation initiale, remplacée après l’essai utilisateur
+
+Le local est désormais le défaut retenu, avec termes favorisés dans Régie (ADR 09).
+La comparaison cloud ci-dessous est facultative et historique.
 
 - **Fournisseur par défaut : ElevenLabs, Scribe v3 Live** (choix du PRD), **sous réserve** de la mesure de l'utilisateur. Le local reconnaît mal les termes de code, alors que c'est le cœur des consignes ; Scribe v3 Live accepte 50 keyterms, ou une bibliothèque de termes. Si Scribe ne fait pas nettement mieux que 22 / 45 sur les termes avec la vraie voix, il faut revoir ce choix.
 - **Repli local : activer les termes favorisés par défaut.** Ils font gagner 8 points de WER et 8 termes, pour environ 55 ms de latence en plus.
 
-### Marche à suivre pour l'utilisateur
+### Banc comparatif facultatif du laboratoire (hors installation de Régie)
 
 1. **Saisir la clé**, sur l'écran du bas, qui est tactile : `adb -s THOR0000000001 shell am force-stop app.regie.voicelab`, puis `adb -s THOR0000000001 shell am start --display 4 -n app.regie.voicelab/.MainActivity`. Toucher « ElevenLabs » dans « Fournisseur » (pas celui de « Lecture guidée du corpus », plus bas), coller la clé dans « Clé ElevenLabs », toucher « Enregistrer la clé » : « Clé enregistrée (chiffrée) » s'affiche. Toucher « Charger les voix » et en choisir une, française de préférence.
 2. **Vérifier la synthèse** : toucher « Lire » ; « Couper (L2/R2) » ou L2 coupe la voix.

@@ -2,6 +2,8 @@
 
 Statut : accepté, 14 novembre 2026 (ticket 11).
 
+> Précision actuelle : le ticket 17 (ADR 02) ajoute modèle, réflexion et Tout autoriser. Une session ACP de découverte sans prompt peut être ouverte avant A ; aucun travail ni projet ne démarre avant confirmation.
+
 ## Parcours et domaine
 
 `ReviewVoiceCommand` transmet un lancement reconnu à `ReviewNewSession` après le

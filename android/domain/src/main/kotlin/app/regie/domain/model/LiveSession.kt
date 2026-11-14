@@ -35,10 +35,10 @@ sealed interface ThreadLine {
 data class ModifiedFile(val path: String, val changes: LineChanges?)
 
 /**
- * Le point sur une session (« point à voix haute ») : ce que l'agent a exposé, rien d'autre.
+ * Les faits exposés par une session, sans synthèse vocale : ce que l'agent a exposé, rien d'autre.
  * [lastSentence] : la dernière phrase de l'agent.
  */
-data class SpokenSummary(
+data class SessionSummary(
     val status: SessionStatus,
     val progress: Progress?,
     val lastAction: LastAction?,
@@ -68,8 +68,8 @@ data class LiveSession(
     /** Start n'interrompt qu'une session qui travaille ou attend une validation. */
     val canInterrupt: Boolean get() = session.status.isBusy
 
-    val summary: SpokenSummary
-        get() = SpokenSummary(
+    val summary: SessionSummary
+        get() = SessionSummary(
             status = session.status,
             progress = session.progress,
             lastAction = session.lastAction,

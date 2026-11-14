@@ -1,4 +1,4 @@
-# ADR 19 — Garder la configuration native des agents dans les sessions ACP
+# ADR 16 — Garder la configuration native des agents dans les sessions ACP
 
 Statut : accepté, 14 novembre 2026 (ticket 19).
 

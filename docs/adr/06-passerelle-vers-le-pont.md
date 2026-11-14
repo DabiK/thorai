@@ -109,13 +109,13 @@ Marche à suivre affichée selon la cause : permission RUN_COMMAND, Termux absen
 - Si une session est `working` ou `awaiting_approval` : « N sessions travaillent encore. Quitter les arrête. » A confirme, B annule, au doigt aussi.
 - Puis `bridge.shutdown` (3 s au plus pour la réponse) ; sans réponse, `regie-bridge-stop` par RUN_COMMAND. Puis les deux écrans se ferment et le processus s'arrête.
 
-### Passerelle factice sur la console
+### Passerelle factice — tests et émulateur seulement
 
-En debug, au premier lancement du processus :
+Mécanisme historique de debug, réservé aux tests : ne pas l’activer sur la Thor de l’utilisateur. Sur un émulateur contrôlé, au premier lancement du processus :
 
 ```
-adb -s THOR0000000001 shell am force-stop app.regie
-adb -s THOR0000000001 shell am start -n app.regie/.TopActivity --ez fake_gateway true
+adb -s emulator-5580 shell am force-stop app.regie
+adb -s emulator-5580 shell am start -n app.regie/.TopActivity --ez fake_gateway true
 ```
 
 Rien ne part vers Termux : ni permission demandée, ni démarrage, ni débogage sans fil.

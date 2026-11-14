@@ -60,11 +60,13 @@ En debug, `am start -n app.regie/.TopActivity --ez force_single_screen true|fals
 
 ### Commandes sur la vue d'ensemble
 
-Elles suivent le tableau « Commandes » du PRD, et appellent les cas d'usage vides de `domain/usecase/Commands.kt` :
+Elles suivent le tableau « Commandes » du PRD. Au ticket 01, elles appelaient des
+cas d’usage vides ; les tickets suivants les ont raccordées aux cas du domaine
+par la racine de composition. Le dernier vestige vide a été retiré au ticket 20 :
 - croix : focus dans la grille 2×2, arrêté aux bords et limité aux 4 cartes affichées ;
 - A : ouvrir la session qui a le focus ;
 - X : nouvelle session ;
-- Y : point à voix haute ;
+- Y : point écrit depuis le ticket 12 (ADR 10) ;
 - Start : tout mettre en pause ;
 - L2 et R2 maintenues : dictée et ordre vocal ;
 - R1 : ouvrir la première validation en attente (maquette, ticket 05), ou session suivante s'il n'y en a pas ;

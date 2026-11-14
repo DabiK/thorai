@@ -2,6 +2,8 @@
 
 Statut : accepté, 14 novembre 2026 (ticket 06).
 
+> État actuel : les points sont écrits (ADR 10), le diff et la fiche sont livrés (ADR 12/13), et le fil suit les règles de la session tout-en-un (ADR 15). Les cas vides et le nom SpokenSummary ci-dessous appartiennent à l’historique du ticket 06 ; le modèle de faits s’appelle désormais SessionSummary.
+
 ## Contexte
 
 Le ticket 06 livre l'écran 3 de la maquette : suivre une session en direct (le fil, le plan, les fichiers modifiés), lui écrire, l'interrompre, passer à la voisine, revenir à la régie. Le port `AgentGateway` de l'ADR 06 ne publiait que les sessions ; rien pour le fil, l'envoi d'un message ni l'interruption.

@@ -50,7 +50,7 @@ class ElevenLabsTextToSpeechTest {
             MockResponse.Builder().body(Buffer().write(Pcm16.toLittleEndian(pcm))).throttleBody(3_001, 1, TimeUnit.MILLISECONDS).build(),
         )
 
-        val frames = runBlocking { withTimeout(10_000) { ElevenLabsTextToSpeech(config()).synthesize("Bonjour USER", SpeechRequest("fr")).toList() } }
+        val frames = runBlocking { withTimeout(10_000) { ElevenLabsTextToSpeech(config()).synthesize("Bonjour tout le monde", SpeechRequest("fr")).toList() } }
 
         assertTrue(frames.size > 1, "streamed in several frames")
         assertTrue(frames.all { it.format == AudioFormat(22_050) })
@@ -61,7 +61,7 @@ class ElevenLabsTextToSpeechTest {
         assertEquals("pcm_22050", request.url.queryParameter("output_format"))
         assertEquals("test-key", request.headers["xi-api-key"])
         val body = Json.parseToJsonElement(request.body!!.utf8()).jsonObject
-        assertEquals("Bonjour USER", body["text"]!!.jsonPrimitive.content)
+        assertEquals("Bonjour tout le monde", body["text"]!!.jsonPrimitive.content)
         assertEquals("eleven_flash_v2_5", body["model_id"]!!.jsonPrimitive.content)
         assertEquals("fr", body["language_code"]!!.jsonPrimitive.content)
     }

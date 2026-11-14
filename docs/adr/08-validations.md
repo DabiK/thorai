@@ -2,6 +2,8 @@
 
 Statut : accepté, 14 novembre 2026 (ticket 07).
 
+> État actuel : les niveaux incluent Tout autoriser (ADR 02, ticket 17). Sur le Mac, les modes Codex encadrés utilisent read-only (ADR 14) ; le tableau ci-dessous décrit la Debian/PRoot initiale. Depuis le ticket 18, R1 dans le fil reste dans la file de sa session (ADR 15).
+
 ## Décisions
 
 - `Approval` conserve commande exacte, justification, dossier, cibles, plan, contenu avant/après et options ACP. A choisit `allow_once`, B `reject_once`. X n'est disponible que pour l'identifiant `allow_for_session` de type `allow_always`. Les options Claude `allow-with-updates` et Codex `accept_execpolicy_amendment` peuvent modifier une permission durable : jamais assimilées à « cette session ».
@@ -34,8 +36,9 @@ Le mode Codex `agent` reste écarté : son examen automatique peut aussi autoris
 
 ## Interface et références
 
-La consultation distante du canvas a échoué. Export local retrouvé et lu en entier :
-`/tmp/regie-reference{Validation,Lancer}.dc.html`.
+La consultation distante du canvas a échoué. Fichiers lus en entier dans un export
+local du canvas : `project/{Validation,Lancer}.dc.html`. Le cache local n’est pas
+versionné ; son ancien chemin personnel a été retiré au ticket 20.
 Empreintes conservées dans `artifacts/screenshots/07/maquette-sha256.txt` ; fraîcheur distante non vérifiée.
 
 Structure reprise : en-tête agent/projet, commande ou fichier en pleine largeur avec contour ambre, justification, cibles, autres demandes en bas ; grand A clair, X conditionnel et B sur l'écran inférieur. Avant/après et plan sont défilables par croix/stick. Mode un écran : actions compactes sous le contenu. Les effets et justifications absents sont annoncés, jamais inférés d'une commande. La mention « lu à voix haute » est omise conformément à la décision du 14 novembre.

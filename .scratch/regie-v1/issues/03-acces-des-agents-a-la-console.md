@@ -1,6 +1,6 @@
 # 03 — Accès des agents à la console (computer use)
 
-Statut : fait (une question produit en attente, appliquée ensuite par l'orchestrateur)
+Statut : fait (questions produit closes par le ticket 14 ; vérification après redémarrage avec l’utilisateur)
 Bloqué par : une question produit pour l'utilisateur (un agent peut-il ouvrir une appli par-dessus Régie ?), voir « Rapport »
 Possède : `thor/computer-use/`, `docs/adr/03-*`, la déclaration MCP correspondante dans la configuration des deux agents
 

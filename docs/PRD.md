@@ -1,6 +1,6 @@
 # PRD — Régie, poste de pilotage vocal de Claude Code et Codex sur l'AYN Thor
 
-Statut : version de travail du 13 novembre 2026, première version installable.
+Statut : version installable, consolidée le 14 novembre 2026 après les tickets 15 à 19. Les décisions datées du journal remplacent les intentions antérieures de la maquette.
 
 ## Problème
 
@@ -30,7 +30,7 @@ On prend la console et on parle. On voit d'un coup d'œil où en sont toutes ses
 | Entrée | Action |
 | --- | --- |
 | L2 maintenu | Dicter un message à la session affichée (ou un commentaire sur la ligne de diff sélectionnée) |
-| R2 maintenu | Donner un ordre vocal : « lance Claude sur atelier », « où en est Codex ? », « approuve », « mets tout en pause » |
+| R2 maintenu | Donner un ordre vocal : « lance Claude sur météo », « où en est Codex ? », « approuve », « mets tout en pause » |
 | A | Valider, envoyer, ouvrir |
 | B | Retour, annuler, refuser |
 | X, Y | Actions de l'écran, affichées en bas |
@@ -77,13 +77,17 @@ Chaque lot correspond à un ou plusieurs tickets.
   - les sessions continuent quand l'app passe en arrière-plan ;
   - historique et reprise ;
   - démarré par l'app à son lancement, jamais au boot.
-- **Accès des agents à la console** : Claude et Codex peuvent voir l'écran d'Android et agir dessus (computer use), avec des outils existants.
+- **Accès des agents à la console** : Claude et Codex peuvent voir et piloter tout Android, les deux écrans et Régie comprise, sans validation des gestes (décision du ticket 14).
 - **Voix** :
   - **Transcription** : en français en direct, avec le vocabulaire du dépôt.
   - **Pas de lecture à voix haute** (décision de l'utilisateur, 14 novembre) : les résumés sont écrits à l'écran.
-  - **Fournisseurs** : la voix locale et gratuite par défaut (transcription et synthèse) ; ElevenLabs reste branchable par un réglage.
+  - **Fournisseurs** : transcription locale et gratuite par défaut ; ElevenLabs en option. Les ports de synthèse restent dans le module voix et son laboratoire, sans lecture dans Régie.
 - **Vue d'ensemble, session en direct, validations, diff, nouvelle session** : comme décrits dans les parcours.
 - **Ordres vocaux (R2)** : règles fixes pour les ordres courants, plus un petit modèle de langage quand la phrase est ambiguë.
+- **Nouveau projet** : création explicite d’un dépôt Git vide sur main, nom relu et collisions refusées ; les changements de branches existantes restent confiés à l’agent (ticket 15).
+- **Options natives** : modèle, réflexion et sélecteurs ACP exposés, à la création et en session ; Plan d’abord, Modifs auto, Je valide chaque action et Tout autoriser (ticket 17).
+- **Session tout-en-un** : validations de la session dans son fil, options sur le bas, détails d’actions dépliables, dates et suivi du défilement (ticket 18).
+- **Configuration native** : MCP, consignes et permissions restent résolus par les agents, sans copie par le pont (ticket 19).
 - **Points écrits et notifications** :
   - fin de session, validation demandée, ou point d'avancement à la demande (Y), sous forme de résumé écrit ;
   - aucune lecture à voix haute.
@@ -93,7 +97,7 @@ Chaque lot correspond à un ou plusieurs tickets.
 - **Port de transcription** : un flux de texte partiel puis final, la langue, et une liste de termes à favoriser (fichiers, fonctions et branches du dépôt).
 - **Port de synthèse** : du texte en audio, en flux.
 - **Détection de parole** : sur l'appareil.
-- **Fournisseur par défaut : la voix locale**, gratuite et hors ligne (sherpa-onnx), pour la transcription comme pour la synthèse. L'utilisateur l'a essayée le 13 novembre et la trouve très bonne.
+- **Fournisseur par défaut : la voix locale**, gratuite et hors ligne (sherpa-onnx), choisie après l’essai du 13 novembre. Régie prépare uniquement la transcription ; la synthèse reste disponible pour le laboratoire voix.
 - **ElevenLabs en option** (Scribe pour la transcription, Flash pour la synthèse), si la voix locale déçoit. L'utilisateur saisit lui-même sa clé dans l'app.
 - **Pas de reconnaissance vocale système** : la Thor n'a aucun service de reconnaissance ni de synthèse Google. On ne peut donc pas compter sur ceux d'Android.
 
@@ -111,5 +115,5 @@ Chaque lot correspond à un ou plusieurs tickets.
 - **Les protocoles des agents bougent.** Il faut figer les versions testées.
 - **Android peut tuer les processus de Termux.** Termux est exempté de l'économie de batterie et le tueur de processus fantômes est coupé, mais une mise à jour système peut rétablir ces réglages.
 - **Une connexion locale est joignable par toutes les applis de la console** : un jeton est obligatoire.
-- **La sandbox de Codex est désactivée** dans la Debian. Les validations de l'app sont le vrai garde-fou.
+- **La sandbox de Codex est désactivée** dans la Debian. Les validations ne sont pas une frontière de sécurité : les agents peuvent piloter Régie et ses boutons, et le mode Tout autoriser ne demande aucune confirmation.
 - **Le contenu dicté part chez le fournisseur de voix** quand on utilise le cloud.
