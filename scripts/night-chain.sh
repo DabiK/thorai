@@ -72,7 +72,7 @@ $findings"
 		(cd android && ./gradlew check -q) >>"$LOG" 2>&1 || gate=1
 	fi
 	if echo "$changed" | grep -q '^bridge/'; then
-		(cd bridge && npm run check) >>"$LOG" 2>&1 || gate=1
+		(cd bridge && npm ci --no-audit --no-fund && npm run check) >>"$LOG" 2>&1 || gate=1
 	fi
 	[ $gate = 0 ] || { git reset -q --hard ORIG_HEAD; stop "$NN rouge sur main après fusion, fusion annulée"; }
 
