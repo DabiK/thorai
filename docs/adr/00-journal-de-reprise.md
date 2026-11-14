@@ -121,6 +121,8 @@
 
 - **14 novembre, ticket 18, correction de revue carte/options (solo Codex)** : A/X/B et indications R1/Gauche masqués dans la carte quand les options capturent ces touches ; actions tactiles conservées. Trois régressions intégrées rouges/vertes, un/deux écrans, 351 tests Android + lint verts. Thor absente : vrai Codex sur émulateur, mode appliqué sans répondre, B restaure les raccourcis, toucher autorise la demande 3207 (résolution 3210), modèle Astra → Terra confirmé depuis le bas. Agent/pont/AVD arrêtés, aucun Claude ni sous-agent. ADR 18 et pas à pas Thor complétés ; preuves options-essai.txt. Statut à fusionner maintenu.
 
+- **14 novembre, ticket 18, relecture après f70a59e (solo Codex)** : diff main...HEAD et preuves confrontés aux critères ; aucun autre blocage identifié. Régression des raccourcis sensible, trois décisions tactiles et navigation de carte couvertes ; demande Codex résolue une seule fois au toucher. Une fin de trace nettoyée, aucun code/test changé après les 351 tests + lint et l'essai verts. Banc arrêté ; détail options-relecture.txt. Statut à fusionner maintenu.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

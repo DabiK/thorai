@@ -44,12 +44,12 @@ CRITÈRES:
 - [x] Aucun faux A/X/B dans la carte pendant Options → trois régressions intégrées rouges puis vertes, un/deux écrans.
 PORTE DE QUALITÉ: android/./gradlew check vert ; 351 tests, zéro échec/ignoré, lint vert (options-android-check.txt).
 THOR: absente ; émulateur deux écrans + mode un écran forcé, vrai Codex, touches et toucher injectés. Banc arrêté.
-REVIEW: blocage corrigé ; même incohérence R1/Gauche traitée dans la carte, clics de test précédés du défilement nécessaire.
+REVIEW: diff main...HEAD relu après f70a59e ; R1/Gauche corrigés aussi dans la carte, trace nettoyée, aucun autre blocage (options-relecture.txt).
 DÉCISIONS PRISES: ADR 18 complété ; masquage visuel seulement, callbacks et règles du domaine conservés.
 POUR L'UTILISATEUR:
 1. Rebrancher THOR0000000001 ; scripts/thor-install.sh ; ouvrir Régie et traiter les permissions demandées.
 2. Lancer Codex en mode validation et demander une commande ; Droite ouvre les options : carte sans A/X/B.
-3. Préparer un mode puis A : réglage appliqué, commande toujours en attente ; X sans effet ; B ferme et restaure A/X/B.
+3. Préparer Modifs auto puis A : réglage appliqué, commande toujours en attente ; X sans effet ; B ferme et restaure A/X/B.
 4. Réouvrir les options et toucher Autoriser une fois ; répéter avec Refuser puis Cette session sur une édition qui le propose.
 5. Changer modèle/réflexion depuis le bas, confirmer A ; vérifier le brouillon conservé et Envoyer sans faux raccourci A.
 6. Sur une nouvelle demande, maintenir R2, dire « approuve », relâcher puis A ; refaire « refuse », B annule la relecture.
