@@ -45,3 +45,6 @@ Bloqué par : 06, 08
   WAV local relu puis effacé, un/deux écrans (identity-30–34). Les mutations de
   blocs sont vérifiées par tests de domaine, pas rejouées sur la console.
   Aucun agent relancé ; 34 sessions inchangées et inactives, pont quitté à 04:52:39.
+- Relecture solo après 0e347e2 : diff contre main, séparation domaine/adapters/UI,
+  sensibilité des deux régressions et preuves du critère vérifiés. Aucun autre
+  constat bloquant ; git diff --check vert, aucun changement de code après la porte.
