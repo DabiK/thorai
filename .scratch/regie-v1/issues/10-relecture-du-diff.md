@@ -29,10 +29,10 @@ CRITÈRES:
 - [x] Sélection conservée au resync → DiffRecoveryTest rouge puis vert ; mutation vers l’identité locale détectée (recovery-red-identity.txt).
 - [x] Crash sans fin de tour → DiffRecoveryTest : erreur et réponse partielle, queued sans réponse, rechargement et absence de faux arrêt.
 - [x] Explication liée à sa demande persistante → QueuedExplanationReviewTest et ResyncedExplanationTest restent verts.
-PORTE DE QUALITÉ: cd android && ./gradlew check vert ; 276 tests, aucun échec/ignoré, lint vert (recovery-android-check.txt).
+PORTE DE QUALITÉ: cd android && ./gradlew check vert ; 277 tests, aucun échec/ignoré, lint vert (recovery-final-check.txt).
 THOR: APK réinstallé ; même Codex repris, Y/A ligne 2, adapter arrêté après le début de réponse ; texte partiel/erreur visibles en un/deux écrans (56–57).
-Quitter a fermé app/pont à 05:29:56 ; aucun agent d’essai restant. Cet arrêt émet session_error : crash sans fin explicite et resync exact prouvés par tests, pas sur console. Aucun Claude ni permission accordée.
-REVIEW: Deux constats reproduits puis corrigés ; l’identité locale seule ne suffit pas, le test de mutation le vérifie. Relecture finale après commit à consigner.
+Contrôle final : navigation/Y annulé (60–61), Quitter a fermé app/pont à 05:33:49 ; aucun agent d’essai restant. Cet arrêt émet session_error : crash sans fin explicite et resync exact prouvés par tests, pas sur console. Aucun Claude ni permission accordée.
+REVIEW: Deux constats reproduits puis corrigés ; l’identité locale seule ne suffit pas, le test de mutation le vérifie. Diff main...f284d9a relu ; test ajouté pour l’arrêt avant accusé (mutation détectée), aucun autre blocage.
 DÉCISIONS PRISES: ADR 12 complété : identité ACP persistante, sélection conservée et actions suspendues pendant chargement, fin sur arrêt connu.
 POUR L’UTILISATEUR:
 1. Ouvrir Régie ; accorder si nécessaire RUN_COMMAND et le microphone via Réglages voix. Aucun droit accordé cette nuit.
@@ -42,7 +42,7 @@ POUR L’UTILISATEUR:
 5. Y prépare une explication sans envoi ; A demande. Lire la réponse, défiler, puis B. Aucun son attendu.
 6. Éteindre physiquement l’écran inférieur via l’assistant Odin : vérifier le panneau sur l’écran haut, puis rallumer et vérifier son retour. Quitter Régie.
 QUESTIONS: aucune décision produit en attente.
-CAPTURES: artifacts/screenshots/10/recovery-54–58 ; preuve vocale historique 04–09.
+CAPTURES: artifacts/screenshots/10/recovery-54–58 et recovery-60–61 ; preuve vocale historique 04–09.
 HORS PÉRIMÈTRE: WrittenSummary.of (ticket 12) utilise encore le dernier message par position : risque pour les bilans queued déjà signalé, non corrigé ici.
 
 Détails des passages et preuves : artifacts/screenshots/10/essai-thor.txt.

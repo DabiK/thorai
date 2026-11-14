@@ -3,6 +3,7 @@ package app.regie.gateway.bridge
 import app.regie.domain.model.*
 import app.regie.domain.port.AgentGateway
 import app.regie.domain.usecase.ReviewDiff
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -25,6 +26,7 @@ class DiffRecoveryTest {
         val content = MutableStateFlow(SessionThread.EMPTY)
         val sessions = MutableStateFlow(emptyList<Session>())
         var delivery = Delivery.PROMPT
+        var receipt: CompletableDeferred<Delivery>? = null
         val gateway = object : AgentGateway by ReplayAgentGateway() {
             override val sessions = this@Fixture.sessions
             override fun thread(id: SessionId) = content
@@ -33,7 +35,7 @@ class DiffRecoveryTest {
                     put("text", text); put("delivery", delivery.name.lowercase())
                 })
                 reload()
-                return delivery
+                return receipt?.await() ?: delivery
             }
         }
         init { state.onHello(hello, null); reload() }
@@ -119,6 +121,26 @@ class DiffRecoveryTest {
         fixture.stop("stopped"); runCurrent()
         assertTrue(review.state.value.explanation!!.ended)
         assertEquals("Session arrêtée avant la fin de l’explication.", review.state.value.explanation!!.reply)
+        review.close()
+    }
+
+    @Test fun `crash before delayed receipt ends on acknowledgement without another event`() = runTest {
+        val fixture = Fixture()
+        val receipt = CompletableDeferred<Delivery>()
+        fixture.receipt = receipt
+        val review = ReviewDiff(fixture.gateway, backgroundScope)
+        review.open(SessionId("s")); runCurrent()
+        review.explain(); review.confirmExplanation(); runCurrent()
+        fixture.reply(); runCurrent()
+        fixture.stop(); runCurrent()
+        assertTrue(review.state.value.explanation!!.sending)
+        receipt.complete(Delivery.UNKNOWN); runCurrent()
+        assertFalse(review.state.value.explanation!!.sending)
+        assertEquals(Delivery.UNKNOWN, review.state.value.explanation!!.delivery)
+        assertTrue(review.state.value.explanation!!.ended)
+        assertEquals("Ce bloc initialise\n\nÉchec : Codex s’est arrêté.", review.state.value.explanation!!.reply)
+        review.confirmExplanation(); runCurrent()
+        assertEquals(1, fixture.history.count { it.type == "user_message" })
         review.close()
     }
 

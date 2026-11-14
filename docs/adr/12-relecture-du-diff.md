@@ -208,3 +208,11 @@ Thor : même Codex repris, Y/A ligne 2, SIGTERM ciblé sur son adapter après le
 morceau ; réponse partielle et erreur affichées, un/deux écrans (56–57), retour sur la
 ligne 2 (58). Cet arrêt réel émet `session_error` avant `active=false` : le cas sans
 aucune fin explicite est prouvé par test uniquement, comme la resynchronisation exacte.
+
+Relecture après f284d9a : cinquième régression pour l’arrêt reçu avant l’accusé
+(ici UNKNOWN). L’erreur et le partiel apparaissent au retour de l’accusé, sans autre
+événement ni second envoi. Retirer le recalcul au retour d’envoi fait échouer ce test
+(recovery-red-receipt.txt). Code de production inchangé, porte finale : 277 tests + lint.
+API du test vérifiée avec Context7, library puis docs :
+[CompletableDeferred](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines/-completable-deferred.html)
+et `await`/`complete` ; extraits dans recovery-docs-deferred.txt.
