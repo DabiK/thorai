@@ -1,6 +1,6 @@
 # 21 — Passe sur les textes et l'interface : moins de mots, les bons libellés, une seule voix
 
-Statut : à fusionner
+Statut : fait
 Bloqué par : 20
 Possède : `android/` (textes et composants d'interface), `README.md` (captures et libellés cités)
 
