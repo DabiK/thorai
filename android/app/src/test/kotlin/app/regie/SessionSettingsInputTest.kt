@@ -7,6 +7,7 @@ import app.regie.domain.model.*
 import app.regie.domain.port.AgentGateway
 import app.regie.input.Button
 import app.regie.input.GamepadInput
+import app.regie.session.Screen
 import app.regie.session.SessionNotice
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
@@ -43,6 +44,37 @@ class SessionSettingsInputTest {
         container.handleInput(GamepadInput.Pressed(Button.B)); runCurrent()
         assertFalse(container.sessionSettings.value.visible)
         assertEquals(0f, container.sessionController.scrollVelocity.value)
+    }
+
+    @Test fun `inline A X B answer only the displayed session without navigating or sending draft`() = runTest {
+        val gateway = SettingsInputGateway(SessionStatus.WORKING)
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        val container = AppContainer(app, app.getSystemService(DisplayManager::class.java), backgroundScope) { gateway }
+        fun request(id: String, session: SessionId = gateway.target) = Approval(ApprovalId(id), session,
+            ApprovalKind.COMMAND, "touch $id", options = listOf(
+                ApprovalOption("once", ApprovalOptionKind.ALLOW_ONCE, "Once"),
+                ApprovalOption("allow_for_session", ApprovalOptionKind.ALLOW_ALWAYS, "Session"),
+                ApprovalOption("reject", ApprovalOptionKind.REJECT_ONCE, "Reject")))
+        val first = request("first")
+        val second = request("second")
+        gateway.approvals.value = listOf(request("other", SessionId("other")), first, second)
+        container.start(replay = true); container.openSession(gateway.target); runCurrent()
+        container.sessionController.onDraftChange("never send on approval")
+        container.handleInput(GamepadInput.Pressed(Button.A)); runCurrent()
+        gateway.approvals.value = gateway.approvals.value.filter { it.id != first.id }; runCurrent()
+        container.handleInput(GamepadInput.Pressed(Button.A)); runCurrent()
+        assertEquals(listOf(first.id to "once"), gateway.answers)
+        assertEquals(Screen.Session(gateway.target), container.screen.value)
+        container.handleInput(GamepadInput.Pressed(Button.R1)); runCurrent()
+        container.handleInput(GamepadInput.Pressed(Button.X)); runCurrent()
+        assertEquals(listOf(first.id to "once", second.id to "allow_for_session"), gateway.answers)
+        val third = request("third")
+        gateway.approvals.value = listOf(third); runCurrent()
+        container.handleInput(GamepadInput.Pressed(Button.R1)); runCurrent()
+        container.handleInput(GamepadInput.Pressed(Button.B)); runCurrent()
+        assertEquals(third.id to "reject", gateway.answers.last())
+        assertEquals(Screen.Session(gateway.target), container.screen.value)
+        assertEquals("never send on approval", container.sessionController.draft.value)
     }
 
     private fun verifyInterruption(busy: Boolean = false, status: SessionStatus = SessionStatus.WORKING) = runTest {
@@ -97,6 +129,7 @@ private class SettingsInputGateway(private val status: SessionStatus) : AgentGat
     override val approvals = MutableStateFlow(emptyList<Approval>())
     override val agents = MutableStateFlow(emptyList<AgentVersion>())
     override val connection = MutableStateFlow<BridgeConnection>(BridgeConnection.Connected)
+    val answers = mutableListOf<Pair<ApprovalId, String>>()
     val interrupted = mutableListOf<SessionId>()
     val configured = mutableListOf<Pair<SessionId, SessionSetting>>()
     val settingResult = CompletableDeferred<SettingsResult>()
@@ -110,5 +143,5 @@ private class SettingsInputGateway(private val status: SessionStatus) : AgentGat
     override suspend fun isBridgeUp() = true
     override suspend fun shutdownBridge() = error("No shutdown expected")
     override suspend fun sendMessage(id: SessionId, text: String): Delivery = error("No prompt expected")
-    override suspend fun answerApproval(id: ApprovalId, optionId: String): ApprovalReply = error("No approval expected")
+    override suspend fun answerApproval(id: ApprovalId, optionId: String): ApprovalReply { answers += id to optionId; return ApprovalReply.ACCEPTED }
 }

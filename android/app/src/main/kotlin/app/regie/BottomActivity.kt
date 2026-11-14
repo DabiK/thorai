@@ -34,7 +34,12 @@ class BottomActivity : GamepadActivity() {
                 val live by container.live.collectAsStateWithLifecycle()
                 val control by container.sessionController.state.collectAsStateWithLifecycle()
                 val draft by container.sessionController.draft
-                SessionBottomScreen(live, overview.neighboursOf(shown.id), control, draft, sessionCallbacks)
+                val approval by container.inlineApproval.collectAsStateWithLifecycle()
+                val options by container.sessionSettings.collectAsStateWithLifecycle()
+                val panel: (@androidx.compose.runtime.Composable () -> Unit)? = if (options.visible) ({
+                    app.regie.ui.screens.SessionSettingsScreen(options, { container.handleInput(GamepadInput.Pressed(it)) }, container::selectSessionSetting, compact = true)
+                }) else null
+                SessionBottomScreen(live, overview.neighboursOf(shown.id), control, draft, sessionCallbacks, approval = approval, onDecision = container::answerInline, onNextApproval = container::nextInlineApproval, onDismissApproval = container::dismissInlineApproval, options = panel)
             },
         )
 

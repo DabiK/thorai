@@ -159,14 +159,13 @@ class SessionController(
                 _state.update { it.copy(notice = SessionNotice.Interrupting) }
                 dispatch(SessionAction.Interrupt(id))
             }
-            // R1 donne la priorité à la validation en attente.
+            // The inline review handles this session’s approvals; otherwise visit its neighbour.
             Button.L1 -> overview.value.neighboursOf(id)?.previous?.let { dispatch(SessionAction.Open(it.id)) }
-            Button.R1 -> overview.value.firstPendingApproval?.let { dispatch(SessionAction.OpenApproval(it.approval.id)) }
-                ?: overview.value.neighboursOf(id)?.next?.let { dispatch(SessionAction.Open(it.id)) }
+            Button.R1 -> overview.value.neighboursOf(id)?.next?.let { dispatch(SessionAction.Open(it.id)) }
             Button.UP -> _scrollSteps.tryEmit(-1)
             Button.DOWN -> _scrollSteps.tryEmit(1)
             Button.RIGHT -> dispatch(SessionAction.OpenSettings(id))
-            Button.LEFT -> Unit
+            Button.LEFT -> _scrollSteps.tryEmit(0)
         }
     }
 

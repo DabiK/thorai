@@ -112,7 +112,7 @@ class SessionControllerTest {
     }
 
     @Test
-    fun `R1 opens a waiting approval from another session before moving to a neighbour`() {
+    fun `R1 visits the neighbour instead of a separate approval page for another session`() {
         val approval = Approval(ApprovalId("a"), SessionId("montage"), ApprovalKind.COMMAND, "rm x")
         overview.value = Overview.of(sessions.map { if (it.id.value == "montage") it.copy(pendingApproval = approval) else it }, emptyList())
         show("atelier")
@@ -120,7 +120,7 @@ class SessionControllerTest {
 
         press(Button.R1)
 
-        assertEquals(listOf<SessionAction>(SessionAction.OpenApproval(approval.id)), actions)
+        assertEquals(listOf<SessionAction>(SessionAction.Open(SessionId("atelier-meubles"))), actions)
     }
 
     @Test
@@ -277,11 +277,11 @@ class SessionControllerTest {
         assertEquals("", controller.draft.value)
     }
     @Test
-    fun `R1 opens pending approval before moving to a neighbour`() {
+    fun `R1 leaves the inline approval to the session review when there is no neighbour`() {
         val request = Approval(ApprovalId("a"), sessions.first().id, ApprovalKind.COMMAND, "touch x")
         overview.value = Overview.of(listOf(sessions.first().copy(pendingApproval = request)), emptyList())
         press(Button.R1)
-        assertEquals(listOf<SessionAction>(SessionAction.OpenApproval(request.id)), actions)
+        assertTrue(actions.isEmpty())
     }
 
 }

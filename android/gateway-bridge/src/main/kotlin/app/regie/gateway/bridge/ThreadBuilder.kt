@@ -34,6 +34,8 @@ import kotlinx.serialization.json.JsonObject
  * Pas thread-safe, comme [BridgeState].
  */
 internal class ThreadBuilder(private val cwd: () -> String?, private val maxEntries: Int = MAX_ENTRIES) {
+    private var eventTime: kotlin.time.Instant? = null
+    private val timestamps = mutableMapOf<Long, kotlin.time.Instant>()
     private var nextId = 0L
     private var lastSequence = -1L
     private val items = ArrayDeque<Item>()
@@ -47,6 +49,8 @@ internal class ThreadBuilder(private val cwd: () -> String?, private val maxEntr
 
     fun clear() {
         items.clear()
+        timestamps.clear()
+        eventTime = null
         calls.clear()
         plan = null
         context = null
@@ -57,6 +61,7 @@ internal class ThreadBuilder(private val cwd: () -> String?, private val maxEntr
     }
 
     fun apply(event: BridgeEvent) {
+        eventTime = event.at
         lastSequence = event.seq
         val data = event.data
         when (event.type) {
@@ -74,6 +79,7 @@ internal class ThreadBuilder(private val cwd: () -> String?, private val maxEntr
             }
             "session_update" -> applyUpdate(data)
         }
+        eventTime = null
     }
 
     fun addUserMessage(text: String, delivery: String? = null, sequence: Long = lastSequence + 1) {
@@ -102,6 +108,7 @@ internal class ThreadBuilder(private val cwd: () -> String?, private val maxEntr
 
     fun snapshot(loaded: Boolean) = SessionThread(
         entries = items.map { it.entry() },
+        timestamps = timestamps.toMap(),
         plan = plan,
         context = context,
         loaded = loaded,
@@ -124,7 +131,7 @@ internal class ThreadBuilder(private val cwd: () -> String?, private val maxEntr
             "tool_call_update" -> update.string("toolCallId")?.let { id ->
                 if (update.obj("_meta")?.obj("regie")?.string("hidden") != null) {
                     // Échec du sandbox de Codex, déjà relayé : l'app retire cet appel (ADR 02).
-                    calls.remove(id)?.let(items::remove)
+                    calls.remove(id)?.let { timestamps.remove(it.entry().id); items.remove(it) }
                 } else {
                     calls[id]?.merge(update) ?: add(Call(nextId++, id).also { calls[id] = it; it.merge(update) })
                 }
@@ -139,9 +146,11 @@ internal class ThreadBuilder(private val cwd: () -> String?, private val maxEntr
     }
 
     private fun add(item: Item) {
+        eventTime?.let { timestamps[item.entry().id] = it }
         items.addLast(item)
         while (items.size > maxEntries) {
             val dropped = items.removeFirst()
+            timestamps.remove(dropped.entry().id)
             if (dropped is Call) calls.remove(dropped.toolCallId)
             completedMessages.remove(dropped.entry().id)
         }
@@ -231,6 +240,7 @@ internal class ThreadBuilder(private val cwd: () -> String?, private val maxEntr
             changes = diffs.values.takeIf { it.isNotEmpty() }?.reduce(LineChanges::plus),
             status = status,
             result = output?.let(::lastLine),
+            output = output?.toString(),
             files = (paths + diffs.keys).map { ModifiedFile(it, diffs[it]) },
             diffs = fragments.values.flatten(),
             persistentId = toolCallId,

@@ -32,6 +32,7 @@ import app.regie.domain.model.Delivery
 import app.regie.domain.model.LiveSession
 import app.regie.domain.model.Overview
 import app.regie.domain.port.AgentGateway
+import app.regie.domain.port.DictationCapture
 import app.regie.domain.usecase.DictatedMessages
 import app.regie.domain.usecase.InterruptSession
 import app.regie.domain.usecase.KeepBridgeUp
@@ -94,6 +95,7 @@ class AppContainer(
     private val app: Application,
     displayManager: DisplayManager,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
+    captureOverride: DictationCapture? = null,
     private val gatewayFactory: (() -> AgentGateway)? = null,
 ) {
 
@@ -127,7 +129,7 @@ class AppContainer(
     private val cloudVoice = ElevenLabsVoiceProvider(ElevenLabsConfig(apiKey = voicePreferences::apiKey))
     /** Debug-only WAV replay uses the real provider and the same review/delivery path. */
     var debugVoiceWav: File? = null
-    private val capture = VoiceCapture(
+    private val capture: DictationCapture = captureOverride ?: VoiceCapture(
         { if (voiceSettings.value.provider == DictationProvider.LOCAL) localVoice.speechToText else cloudVoice.speechToText },
         { debugVoiceWav?.let { WavAudioSource.fromFile(it, realtime = true) } ?: ForegroundMicrophone(app) }, scope,
     )
@@ -154,7 +156,8 @@ class AppContainer(
         val approval = when (shown) {
             Screen.Approval -> approvalReview.value.request
             Screen.Overview -> overview.value.firstPendingApproval?.approval
-            is Screen.Session, is Screen.Diff -> null
+            is Screen.Session -> inlineApproval.value.request?.takeIf { it.sessionId == shown.id }
+            is Screen.Diff -> null
         }
         voiceCommand.start(VoiceCommandContext(overview.value.sessions.toList(), current, approval, projects))
     }
@@ -261,7 +264,20 @@ class AppContainer(
         when (_screen.value) {
             Screen.Overview -> controller.handle(input)
             Screen.Approval -> approvalController.handle(input)
-            is Screen.Session -> sessionController.handle(input)
+            is Screen.Session -> {
+                val review = inlineApproval.value
+                val request = review.request?.takeIf { it.sessionId == _screen.value.sessionId }
+                if (request != null && input is GamepadInput.Pressed && input.button in setOf(Button.A, Button.X, Button.B, Button.R1, Button.LEFT)) {
+                    when (input.button) {
+                        Button.A -> answerInline(request.id, ApprovalDecision.ONCE)
+                        Button.X -> answerInline(request.id, ApprovalDecision.SESSION)
+                        Button.B -> if (review.pending || review.sending) answerInline(request.id, ApprovalDecision.REJECT) else sessionController.handle(input)
+                        Button.R1 -> nextInlineApproval()
+                        Button.LEFT -> if (!review.pending && !review.sending) dismissInlineApproval() else sessionController.handle(input)
+                        else -> Unit
+                    }
+                } else sessionController.handle(input)
+            }
             is Screen.Diff -> handleDiffInput(input)
         }
     }
@@ -298,6 +314,16 @@ class AppContainer(
             }
         }
     }
+    private var inlineApprovals: ReviewApprovals? = null
+    val inlineApproval = MutableStateFlow(ApprovalReview())
+    fun answerInline(id: ApprovalId, decision: ApprovalDecision) {
+        val review = inlineApprovals ?: return
+        if (review.state.value.request?.id != id || review.state.value.request?.sessionId != _screen.value.sessionId) return
+        scope.launch { review.answer(decision, expectedId = id) }
+    }
+    fun dismissInlineApproval() { inlineApprovals?.dismissResolved() }
+    fun nextInlineApproval() { inlineApprovals?.next() }
+
     private var reviewApprovals: ReviewApprovals? = null
     val approvalReview = MutableStateFlow(ApprovalReview())
     val approvalController = ApprovalController(
@@ -310,6 +336,8 @@ class AppContainer(
         reviewApprovals?.open(id)
         navigate(Screen.Approval)
     }
+
+    fun openOverview() { navigate(Screen.Overview) }
 
     fun openSession(id: SessionId, summary: Boolean = false) {
         navigate(Screen.Session(id))
@@ -416,6 +444,9 @@ class AppContainer(
             if (connection == BridgeConnection.Connected) projects = chosen.projects()
         } }
 
+        val inline = ReviewApprovals(chosen, scope, answer)
+        inlineApprovals = inline
+        scope.launch { inline.state.collect { inlineApproval.value = it } }
         val review = ReviewApprovals(chosen, scope, answer)
         deliverDictation = DeliverDictation(SendMessage(chosen, dictated), answer)
         reviewApprovals = review
@@ -440,6 +471,7 @@ class AppContainer(
         scope.launch {
             _screen.collectLatest { screen ->
                 _live.value = null
+                screen.sessionId?.let { inline.followSession(it) }
                 screen.sessionId?.let { id -> openSession(id).collect { _live.value = it } }
             }
         }

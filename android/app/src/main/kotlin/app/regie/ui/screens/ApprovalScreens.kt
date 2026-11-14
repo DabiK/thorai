@@ -140,16 +140,16 @@ fun ApprovalBottomScreen(review: ApprovalReview, onButton: (Button) -> Unit, com
 }
 
 @Composable
-private fun DecisionButton(key: String, label: String, enabled: Boolean, modifier: Modifier, primary: Boolean = false, onClick: () -> Unit) {
+internal fun DecisionButton(key: String?, label: String, enabled: Boolean, modifier: Modifier, primary: Boolean = false, onClick: () -> Unit) {
     Row(modifier.height(if (primary) 68.dp else 48.dp).background(if (primary && enabled) Palette.text else Palette.surface, RoundedCornerShape(14.dp)).then(if (enabled) Modifier.tappable(onClick) else Modifier).padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        BasicText(key, style = mono(14.sp, 600, if (primary && enabled) Palette.background else if (enabled) Palette.text else Palette.textSubtle))
+        if (key != null) BasicText(key, style = mono(14.sp, 600, if (primary && enabled) Palette.background else if (enabled) Palette.text else Palette.textSubtle))
         BasicText(label, style = sans(if (primary) 17.sp else 13.sp, weight = if (primary) 600 else 400, color = if (primary && enabled) Palette.background else if (enabled) Palette.text else Palette.textSubtle))
     }
 }
 
-private fun approvalNotice(review: ApprovalReview): String = when {
+internal fun approvalNotice(review: ApprovalReview, shortcutsEnabled: Boolean = true): String = when {
     review.sending -> "Réponse en cours…"
-    review.answer?.reply == ApprovalReply.ACCEPTED -> "Réponse reçue. R1 ouvre la demande suivante."
+    review.answer?.reply == ApprovalReply.ACCEPTED -> if (shortcutsEnabled && review.queue.any { it.id != review.request?.id }) "Réponse reçue. R1 ouvre la demande suivante." else "Réponse reçue."
     review.answer?.reply == ApprovalReply.UNKNOWN -> "Réponse non confirmée. Vérifie le fil de la session avant de poursuivre."
     review.answer?.reply == ApprovalReply.NOT_SENT -> "Réponse non envoyée. Tu peux réessayer."
     review.answer?.reply == ApprovalReply.UNAVAILABLE || !review.pending -> "Cette demande n’est plus disponible."
