@@ -354,3 +354,26 @@ protections pendant le réglage. L’action disparaît au repos. API Compose vé
 par Context7 (`library`, puis `docs`), source officielle :
 https://developer.android.com/reference/kotlin/androidx/compose/foundation/clickable.modifier
 Preuves rouges/vertes et essai réel : `artifacts/screenshots/17/review-resume.txt`.
+
+### Correction de revue — modèle sauvegardé retiré du catalogue
+
+Un remplacement explicite via `session.configure` est intégré aux sélections à
+restaurer avant de rendre la session active. La reprise ne tente donc plus
+l’ancien modèle d’abord. Le mode et les autres sélections restent obligatoires ;
+une erreur ne persiste ni le remplacement ni les valeurs par défaut provisoires.
+Aucun fallback automatique : un prompt seul continue de refuser la reprise.
+
+Le domaine sépare le catalogue courant des sélections persistées : les résumés
+inactifs envoyés à l’app exposent les nouvelles listes avec les anciennes valeurs
+sélectionnées. Une option disparue reste visible sans choix disponible. Les mises
+à jour publient un événement même après une erreur identique, afin de permettre
+le remplacement depuis le panneau déjà ouvert. Après redémarrage, une reprise
+recharge ce catalogue ; le dernier choix confirmé atelier sauvegardé.
+
+Régressions avec FakeAgentConnector : remplacement par un modèle existant ou
+nouveau, refus temporaire du remplacement, refus d’une valeur inventée, maintien
+de l’effort, reprise après redémarrage et prompt effectif. Le contrat WebSocket
+couvre deux catalogues successifs malgré la même erreur. Le domaine Android
+couvre le choix puis A lorsque la valeur sauvegardée ne figure plus dans la liste.
+Pas de nouvelle API de bibliothèque ni de changement d’adapter ACP.
+Preuves et essai Codex réel : `artifacts/screenshots/17/review-catalog.txt`.

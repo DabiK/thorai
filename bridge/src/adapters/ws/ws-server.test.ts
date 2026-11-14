@@ -279,3 +279,44 @@ it('relays advertised options, creation selections and acknowledged live changes
   ).toMatchObject({ error: { code: 'unknown_option' } });
   await client.close();
 });
+
+it('publishes refreshed choices on repeated failed resumes and accepts an explicit replacement', async () => {
+  const model = {
+    id: 'model',
+    name: 'Model',
+    type: 'select',
+    category: 'model',
+    currentValue: 'large',
+    options: [{ value: 'large', name: 'Large' }],
+  };
+  codex.initialOptions = [model];
+  const client = new Client();
+  await client.call('hello');
+  const created = await client.call('session.create', {
+    agent: 'codex',
+    project: 'regie-demo',
+    approvalMode: 'allow-all',
+  });
+  const { sessionId } = (created.result as { session: { sessionId: string } }).session;
+  codex.crash();
+  await settle();
+  for (const replacement of ['small', 'new']) {
+    codex.initialOptions = [
+      { ...model, currentValue: replacement, options: [{ value: replacement, name: replacement }] },
+    ];
+    expect(await client.call('session.resume', { sessionId })).toMatchObject({
+      error: { code: 'agent_failed' },
+    });
+    expect(client.events.filter((e) => e.type === 'session').at(-1)?.data).toMatchObject({
+      active: false,
+      configOptions: [{ currentValue: 'large', options: [{ value: replacement }] }],
+    });
+  }
+  expect(
+    await client.call('session.configure', { sessionId, configId: 'model', value: 'new' }),
+  ).toMatchObject({
+    result: { session: { active: true, configOptions: [{ currentValue: 'new' }] } },
+  });
+  expect(codex.callsOf('prompt')).toEqual([]);
+  await client.close();
+});

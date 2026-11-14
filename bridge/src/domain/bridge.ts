@@ -398,6 +398,20 @@ export class Bridge {
   ): Promise<SessionSummary> {
     return this.serialSettings(sessionId, async () => {
       this.assertRunning();
+      if (
+        settings.approvalMode === undefined &&
+        settings.configId !== undefined &&
+        settings.value !== undefined &&
+        !this.live.has(sessionId)
+      ) {
+        // A concurrent resume may still be restoring the old choices. Let it settle
+        // before retrying with the explicit replacement, never send a prompt here.
+        await this.loading.get(sessionId)?.catch(() => {});
+        if (!this.live.has(sessionId)) {
+          await this.ensureLive(sessionId, { [settings.configId]: settings.value });
+          return this.summaryOf(this.recordOf(sessionId));
+        }
+      }
       await this.ensureLive(sessionId);
       const record = this.recordOf(sessionId);
       const connection = await this.connection(record.agent);
@@ -593,12 +607,15 @@ export class Bridge {
     void turn.finally(() => this.turns.delete(turn));
   }
 
-  private ensureLive(sessionId: string): Promise<LiveSession> {
+  private ensureLive(
+    sessionId: string,
+    replacements: Readonly<Record<string, string>> = {},
+  ): Promise<LiveSession> {
     const live = this.live.get(sessionId);
     if (live !== undefined) return Promise.resolve(live);
     let loading = this.loading.get(sessionId);
     if (loading === undefined) {
-      loading = this.load(sessionId).finally(() => this.loading.delete(sessionId));
+      loading = this.load(sessionId, replacements).finally(() => this.loading.delete(sessionId));
       this.loading.set(sessionId, loading);
     }
     return loading;
@@ -608,7 +625,10 @@ export class Bridge {
    * Loads a session into its agent, then forces its mode. It goes live only then: until both
    * are done, no message reaches the agent and the session is not `active`.
    */
-  private async load(sessionId: string): Promise<LiveSession> {
+  private async load(
+    sessionId: string,
+    replacements: Readonly<Record<string, string>>,
+  ): Promise<LiveSession> {
     const record = this.recordOf(sessionId);
     const connection = await this.connection(record.agent);
     this.early.delete(sessionId);
@@ -626,11 +646,14 @@ export class Bridge {
       try {
         await this.applySelections(
           sessionId,
-          Object.fromEntries(
-            editableOptions(record.configOptions ?? []).flatMap((o) =>
-              o.currentValue === null ? [] : [[o.id, o.currentValue]],
+          {
+            ...Object.fromEntries(
+              editableOptions(record.configOptions ?? []).flatMap((o) =>
+                o.currentValue === null ? [] : [[o.id, o.currentValue]],
+              ),
             ),
-          ),
+            ...replacements,
+          },
           connection,
         );
       } catch (error) {
@@ -743,6 +766,7 @@ export class Bridge {
         JSON.stringify(record.configOptions) !== JSON.stringify(options)
       )
         this.update(sessionId, { configOptions: options });
+      else if (record && !this.live.has(sessionId)) this.emitSession(sessionId);
     }
     const live = this.live.get(sessionId);
     if (live !== undefined && !this.configuring.has(sessionId)) {
@@ -1039,8 +1063,28 @@ export class Bridge {
 
   private summaryOf(record: SessionRecord): SessionSummary {
     const { branchInstructionPending: _internal, ...summary } = record;
+    const latest = this.options.get(record.sessionId);
+    const saved = record.configOptions ?? [];
+    // An unsuccessful load still discovers choices. Show those choices without
+    // replacing the saved intent with the agent's provisional defaults.
+    const configOptions =
+      !this.live.has(record.sessionId) && latest !== undefined
+        ? [
+            ...latest.map((option) => {
+              const selection = saved.find((o) => o.id === option.id);
+              return selection ? { ...option, currentValue: selection.currentValue } : option;
+            }),
+            ...saved
+              .filter((o) => !latest.some((n) => n.id === o.id))
+              .map((o) => ({
+                ...o,
+                options: [],
+              })),
+          ]
+        : saved;
     return {
       ...summary,
+      configOptions,
       active: this.live.has(record.sessionId),
       pendingApprovals: this.pendingOf(record.sessionId),
     };

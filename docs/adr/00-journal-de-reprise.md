@@ -96,6 +96,8 @@
 
 - **14 novembre, ticket 17, relecture après be2b89a** : diff main...HEAD et preuves relus en solo ; aucun nouveau blocage trouvé. Persistance/reprise partielle et bouton tactile/busy couverts par les régressions rouges/vertes. Aucun code/test modifié après les portes et l’essai verts. Session Codex stopped sans erreur, banc arrêté, statut à fusionner ; détail review-resume-relecture.txt.
 
+- **14 novembre, ticket 17, correction de revue catalogue (solo Codex)** : remplacement explicite d’un modèle sauvegardé disparu avant restauration, catalogue actualisé séparé des sélections persistées ; refus temporaires préservés. Deux régressions domaine, contrat WS après deux erreurs identiques, choix Android puis A. Pont 303 tests + typage/lint, Android 321 + lint verts. Thor absente ; vrai Codex sur émulateur deux écrans, ancien modèle simulé dans la seule sauvegarde d’une session de banc : Sol/low/Tout autoriser confirmé par A, REPRISE_OK puis nouvelle reprise après arrêt du pont. Agent/pont/AVD arrêtés, aucun Claude ni sous-agent. ADR 02/protocole complétés ; preuves `review-catalog.txt`, captures 42–45. Chargement à froid : fermer/rouvrir Options après résultat incertain. Statut à fusionner ; vérifications Thor au rapport.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

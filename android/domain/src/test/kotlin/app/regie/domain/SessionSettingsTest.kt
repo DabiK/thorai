@@ -57,6 +57,25 @@ class SessionSettingsTest {
         assertEquals(listOf(id), gateway.resumed)
         assertTrue(gateway.sent.isEmpty())
     }
+
+    @Test fun `blocked resume offers refreshed models while preserving the removed selection until A`() = runTest {
+        val gateway = StubGateway()
+        val id = SessionId("old")
+        gateway.sessions.value = listOf(session("old", active = false).copy(configOptions = listOf(
+            model.copy(currentValue = "removed", options = listOf(OptionValue("replacement", "Replacement"))),
+            effort,
+        )))
+        val review = ReviewSessionSettings(gateway, backgroundScope)
+        review.open(id); runCurrent()
+        review.select(review.state.value.rows.indexOfFirst { it.id == "remote-model" })
+        assertEquals("removed", review.state.value.value)
+        review.change(1)
+        assertEquals("replacement", review.state.value.value)
+        assertTrue(gateway.configurations.isEmpty())
+        review.apply(); runCurrent()
+        assertEquals(listOf(id to SessionSetting(configId = "remote-model", value = "replacement")), gateway.configurations)
+        assertTrue(gateway.sent.isEmpty())
+    }
 }
 
 private class SettingsCapture : DictationCapture {

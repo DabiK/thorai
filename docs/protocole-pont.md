@@ -279,11 +279,23 @@ les autres sélecteurs exposés (par exemple Fast mode) dans les options en sess
 Chaque liste reçue remplace intégralement la précédente, y compris à vide. Les
 options manquantes sont signalées comme non exposées. Lors d’une reprise, les listes
 reçues sont provisoires jusqu’au succès du chargement, du mode et de toutes les
-sélections. En cas d’échec, `configOptions` conserve les sélections sauvegardées
-pour la prochaine tentative, même après redémarrage du pont. Pour une session
-inactive, ce champ ne confirme donc pas une restauration réussie. Les listes
-provisoires ne remplacent pas le résumé persisté. Les anciens résumés sans
-ce champ restent lisibles ; une reprise recharge les choix. Un changement produit
+sélections. En cas d’échec, le résumé persisté conserve les sélections sauvegardées
+pour la prochaine tentative, même après redémarrage du pont. Le résumé envoyé à
+l’app conserve ces `currentValue`, mais publie les listes de choix actualisées
+par ACP, même si l’erreur est identique à la tentative précédente. Une option
+sauvegardée qui n’est plus exposée garde sa valeur avec une liste de choix vide.
+Pour une session inactive, `currentValue` ne confirme donc pas une restauration
+réussie ; il peut être absent de la liste disponible. Les valeurs provisoires de
+l’agent ne remplacent jamais les sélections persistées.
+
+Si un modèle sauvegardé disparaît, `session.configure` avec `configId` et `value`
+permet de choisir explicitement un remplacement dans le catalogue actualisé.
+La reprise substitue ce choix à l’ancien et restaure le mode et les autres
+sélections avant activation. Aucun message ne part avant le succès complet.
+Un refus garde la session inactive et toutes les anciennes sélections ; un succès
+persiste les choix confirmés, y compris le remplacement. Il n’y a aucun choix de
+modèle de secours automatique. Les anciens résumés sans `configOptions`
+restent lisibles ; une reprise recharge les choix. Un changement produit
 un événement `session` et relaie l’événement ACP ; le résultat contient la même
 configuration confirmée. Les changements sont sérialisés par session ; un message
 attend un réglage déjà en cours. Aucun renvoi automatique après une réponse perdue.
