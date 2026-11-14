@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
  * par WebSocket ; la passerelle factice rejoue des enregistrements du vrai pont.
  */
 interface AgentGateway {
+    suspend fun projectCatalog(): List<app.regie.domain.model.ProjectChoice> = projects().map { app.regie.domain.model.ProjectChoice(it) }
     suspend fun projects(): List<String> = emptyList()
     suspend fun createSession(draft: app.regie.domain.model.NewSessionDraft): app.regie.domain.model.SessionCreation = app.regie.domain.model.SessionCreation()
 

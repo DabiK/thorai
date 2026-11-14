@@ -1,6 +1,6 @@
 # 11 — Nouvelle session à la voix
 
-Statut : en attente
+Statut : à fusionner
 Bloqué par : 09
 
 ## Objectif
@@ -21,4 +21,42 @@ Bloqué par : 09
 
 ## Critères d'acceptation
 
-- Sur la Thor, trois phrases différentes produisent la bonne fiche, et la session lancée tourne sur la bonne branche.
+- [x] Sur la Thor, trois phrases différentes produisent la bonne fiche, et la session lancée tourne sur la bonne branche. Preuve synthétique locale : corpus 01/02/05, captures 05–07/16/20, journaux session1-events.json, session2-final-events.json, session3-events.json et git-after-new.txt. Lecture humaine restant à vérifier ci-dessous.
+
+
+## Rapport
+
+- Fiche R2 et X, correction croix/L2, lancement A vers le direct et annulation B livrés.
+- Règles dans ReviewNewSession ; catalogue de branches en lecture seule, intention
+  Git dans la consigne uniquement. ADR 13 ; aucun sous-agent utilisé.
+- Constat bloquant transmis : déjà corrigé dans le socle du ticket 10 (b868609).
+  ResyncedExplanationTest réexécuté vert ; mutation ramenant les identifiants locaux
+  détectée rouge, fichier restauré avant la porte complète. Aucun correctif à dupliquer.
+- Portes : Android 294 tests + lint, pont 271 tests + typage/lint, tous verts.
+- Thor : APK réinstallé, WAV Thomas/local et sendevent, trois fiches rejouées,
+  correction du niveau, redictée, collision de branche, un/deux écrans ; aucune
+  nouvelle session pendant la reprise. Journaux des trois vrais lancements Codex
+  précédents relus : main, lecture, travail depuis lecture. Aucun Claude lancé.
+- Les quatre Codex d'essai laissés ouverts ont été arrêtés par Quitter, ainsi que le
+  pont, à 09:04:35 Paris. Aucune permission, clé, installation tierce ni reboot.
+- Relecture : contrôles de resync effectifs ; corrections antérieures des prompts
+  de branche, du premier R2, du maintien tactile et du lancement en attente conservées.
+- Limites : phrase « essai / modifs auto » mal transcrite et refusée ; le troisième
+  succès emploie « travail / tout valider ». Aucun taux de reconnaissance humaine.
+- Captures et méthode complète : artifacts/screenshots/11/essai-thor.txt.
+
+### Vérification avec l'utilisateur
+
+1. Ouvrir Régie et accorder le micro si demandé. R2 : « Lance Codex sur test pour
+   lire la branche courante ». Relire, puis B.
+2. R2 : « Lance Codex sur test, branche lecture, tout valider, pour afficher la
+   branche courante ». Corriger le niveau à la croix ; L2 redicte la consigne.
+3. A : vérifier le direct, autoriser le changement demandé par Codex, vérifier lecture.
+4. R2 : « Lance Codex sur test, nouvelle branche matin depuis lecture, tout valider,
+   pour afficher la branche courante ». Employer un nom absent ; vérifier la base,
+   A puis autorisation de Codex ; vérifier la branche obtenue.
+5. X depuis la régie : fiche vide ; B annule. Éteindre/rallumer physiquement l'écran
+   bas pour vérifier le repli. Quitter pour arrêter les sessions.
+
+Statut à fusionner selon la consigne nocturne : tout ce qui ne dépend pas de
+l'utilisateur est vert. Le micro réel et l'extinction physique restent à vérifier.

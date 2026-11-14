@@ -46,7 +46,7 @@ import app.regie.console.AndroidApprovalNotifications
 import app.regie.domain.usecase.OpenSession
 import app.regie.domain.usecase.Quit
 import app.regie.domain.usecase.SendMessage
-import app.regie.domain.usecase.StartNewSession
+import app.regie.domain.usecase.ReviewNewSession
 import app.regie.domain.usecase.StartUp
 import app.regie.domain.usecase.StartUpReport
 import app.regie.gateway.bridge.BridgeAgentGateway
@@ -127,7 +127,7 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
     private var executeVoiceCommand: ExecuteVoiceCommand? = null
     private var projects: List<String> = emptyList()
     val voiceCommand = ReviewVoiceCommand(capture, InterpretVoiceCommand(MistralCommandModel(voicePreferences::commandKey)),
-        { command -> executeVoiceCommand?.invoke(command) ?: "Pont indisponible" }, scope)
+        { command -> executeVoiceCommand?.invoke(command) ?: "Pont indisponible" }, scope, onLaunch = { draft, text -> openNewSession(draft, text) }, loadProjects = { gateway?.projects().orEmpty() })
     val commandScroll = kotlinx.coroutines.flow.MutableSharedFlow<Int>(extraBufferCapacity = 16)
     val commandVelocity = MutableStateFlow(0f)
 
@@ -197,6 +197,7 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
             }
             return
         }
+        if (newSession.value.visible) { handleNewSession(input); return }
         if (dictation.state.value.visible) {
             when (input) {
                 is GamepadInput.TriggerDown -> if (input.trigger == Trigger.L2) dictation.record()
@@ -289,7 +290,33 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
 
     fun selectApproval(id: ApprovalId) { reviewApprovals?.open(id) }
 
-    private val startNewSession = StartNewSession()
+    private var reviewNewSession: ReviewNewSession? = null
+    val newSession = MutableStateFlow(NewSessionForm())
+    fun openNewSession(draft: NewSessionDraft? = null, text: String = "") { reviewNewSession?.open(draft, text) }
+    fun selectNewSessionField(field: NewSessionField) { reviewNewSession?.select(field) }
+    fun editNewInstruction(text: String) { reviewNewSession?.editInstruction(text) }
+    fun editNewBranch(text: String) { reviewNewSession?.editBranch(text) }
+
+    private fun handleNewSession(input: GamepadInput) {
+        val review = reviewNewSession ?: return
+        when (input) {
+            is GamepadInput.TriggerDown -> when (input.trigger) {
+                Trigger.L2 -> review.record()
+                Trigger.R2 -> if (review.state.value.editable) startVoiceCommand()
+            }
+            is GamepadInput.TriggerUp -> if (input.trigger == Trigger.L2) review.finish()
+            is GamepadInput.Pressed -> when (input.button) {
+                Button.A -> review.launch()
+                Button.B -> review.back()
+                Button.UP -> review.move(-1)
+                Button.DOWN -> review.move(1)
+                Button.LEFT -> review.change(-1)
+                Button.RIGHT -> review.change(1)
+                else -> Unit
+            }
+            is GamepadInput.Scroll -> Unit
+        }
+    }
 
     val controller = OverviewController(overview, ::execute)
     val sessionController = SessionController(live, overview, current = { _screen.value.sessionId }, ::execute)
@@ -339,6 +366,9 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
             StartUp(chosen, WirelessDebuggingAccess(app), launcher).also { startUp = it }.report
         }
         gateway = chosen
+        reviewNewSession = ReviewNewSession(chosen, capture, scope) { openSession(it) }.also { review ->
+            scope.launch { review.state.collect { newSession.value = it } }
+        }
         reviewDiff = ReviewDiff(chosen, scope).also { review -> scope.launch { review.state.collect { diffReview.value = it } } }
         val answer = AnswerApproval(chosen)
         executeVoiceCommand = ExecuteVoiceCommand(chosen, answer) { openSession(it) }
@@ -462,7 +492,7 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
         OverviewAction.StopVoiceCommand -> stopVoiceCommand()
         is OverviewAction.OpenSession -> navigate(Screen.Session(action.id))
         is OverviewAction.OpenApproval -> openApproval(action.id)
-        OverviewAction.NewSession -> startNewSession()
+        OverviewAction.NewSession -> openNewSession()
         is OverviewAction.ShowSummary -> action.target?.let { openSession(it, summary = true) }
         OverviewAction.PauseAll -> { scope.launch { executeVoiceCommand?.invoke(VoiceCommand.Pause(overview.value.sessions.map { it.id })) }; Unit }
         OverviewAction.Quit -> quitNow()

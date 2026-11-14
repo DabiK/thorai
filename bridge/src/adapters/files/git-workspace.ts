@@ -103,6 +103,15 @@ export class GitWorkspace implements Workspace {
       projects.map(async (name) => ({
         name,
         branch: await this.currentBranch(resolve(this.root, name)),
+        branches: (
+          await git(resolve(this.root, name), [
+            'for-each-ref',
+            '--format=%(refname:short)',
+            'refs/heads',
+          ]).catch(() => '')
+        )
+          .split('\n')
+          .filter(Boolean),
       })),
     );
   }

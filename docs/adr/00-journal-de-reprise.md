@@ -68,6 +68,8 @@
 
 - **14 novembre, ticket 10, correction sélection resync et arrêt agent (solo Codex)** : instantané incomplet conservé, identité persistante ACP des éditions, fin d’explication sur arrêt connu avec texte partiel et erreur. DiffRecoveryTest rouge puis vert et mutation d’identité détectée ; Android 277 tests + lint verts après relecture ; course arrêt avant accusé ajoutée et mutation détectée. Thor : même Codex repris, Y/A ligne 2, arrêt ciblé de son adapter après début de réponse, erreur/partiel un-deux écrans (recovery-56–57), sélection retrouvée (58). Le vrai arrêt émet session_error ; absence de toute fin et resync exact couverts hors console. Aucun Claude ni permission ; ADR 12 complété. Statut à fusionner, vrai micro/extinction physique au pas à pas utilisateur.
 
+- **14 novembre, ticket 11 à fusionner (reprise solo Codex)** : fiche R2/X, croix/L2, A/direct/B, branches et base transmises à l’agent (ADR 13). Travail non commité repris ; 294 tests Android + lint et 271 tests pont + typage/lint verts. Constat resync déjà corrigé dans le socle 10 : régression verte et mutation détectée. Thor : trois phrases WAV Thomas/local, vrais lancements Codex vérifiés sur main, lecture et travail depuis lecture ; relecture des preuves puis nouveaux essais de fiche/correction/collision/un-deux écrans. Quatre Codex précédents et pont arrêtés par Quitter à 09:04:35 Paris. Aucun Claude, permission ni reboot. Vraie voix et extinction physique au pas à pas du ticket et artifacts/screenshots/11/essai-thor.txt.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

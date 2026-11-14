@@ -154,6 +154,7 @@ export interface AgentVersions {
 }
 
 export interface ProjectInfo {
+  readonly branches?: readonly string[];
   readonly name: string;
   readonly branch: string | null;
 }

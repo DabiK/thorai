@@ -71,8 +71,8 @@ describe('GitWorkspace', () => {
 
   it('lists the projects with their branch', async () => {
     await expect(workspace.listProjects()).resolves.toEqual([
-      { name: 'demo', branch: 'main' },
-      { name: 'plain', branch: null },
+      { name: 'demo', branch: 'main', branches: ['main'] },
+      { name: 'plain', branch: null, branches: [] },
     ]);
   });
 });
@@ -91,4 +91,23 @@ it('reads files functions and branches without following links or reading ignore
   );
   expect(terms).not.toContain('secretName');
   expect(terms).not.toContain('externalSecret');
+});
+
+it('lists all local branch choices without changing HEAD or the worktree', async () => {
+  const cwd = join(root, 'demo');
+  git(cwd, 'branch', 'feature/existing');
+  writeFileSync(join(cwd, 'a.txt'), 'uncommitted work');
+  await expect(workspace.listProjects()).resolves.toContainEqual({
+    name: 'demo',
+    branch: 'main',
+    branches: ['feature/existing', 'main'],
+  });
+  expect(
+    execFileSync('git', ['-C', cwd, 'symbolic-ref', '--short', 'HEAD'], {
+      encoding: 'utf8',
+    }).trim(),
+  ).toBe('main');
+  expect(execFileSync('git', ['-C', cwd, 'diff'], { encoding: 'utf8' })).toContain(
+    'uncommitted work',
+  );
 });

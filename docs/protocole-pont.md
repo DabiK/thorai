@@ -87,8 +87,14 @@ Les requêtes sont traitées en parallèle : les réponses peuvent arriver dans 
 | `approval.answer` | `approvalId`, `optionId` | `{}` |
 | `approvals.list` | — | `{approvals}` : validations en attente |
 | `agents.versions` | — | `{agents}` : versions installées et testées |
-| `projects.list` | — | `{projects}` : dossiers de `~/projects`, avec leur branche |
+| `projects.list` | — | `{projects}` : dossiers de `~/projects`, avec `name`, `branch` courante et `branches?` locales (lecture seule) |
 | `bridge.shutdown` | — | `{}`, puis le pont s'arrête (voir « Arrêt ») |
+
+`projects.list` peut fournir `branches: ["main", "feature/x"]` pour chaque projet.
+Ce champ ajouté au ticket 11 est facultatif pour les anciens clients/ponts ; sans lui,
+l’app ne propose que la branche courante connue. Aucun checkout ni création Git.
+La fiche du ticket 11 exprime branche existante/nouvelle et base dans `prompt` sans
+`branch`, pour éviter le préfixe historique « depuis main » décrit ci-dessous.
 
 ### Créer une session
 
