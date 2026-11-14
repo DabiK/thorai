@@ -79,3 +79,5 @@ Vérification supplémentaire avec l'utilisateur :
 3. Réactiver « Validations », revenir dans Régie puis remettre le haut en arrière-plan sans répondre à la demande : une notification doit apparaître pour cette même demande.
 4. Toucher cette notification, vérifier la bonne demande, répondre puis vérifier son retrait. Refaire un passage en arrière-plan : aucune alerte pour la demande résolue.
 5. Effectuer ensuite l'essai Claude commande/édition A/B décrit plus haut, quand le quota le permet.
+
+Relecture solo après `4b42673` : diff contre `main` examiné (domaine, ports, adapters, UI, tests, contrat et preuves). Le test échoue bien si le contrôle du canal disparaît ; aucune règle métier ajoutée hors du domaine ni changement visuel. Correction documentaire de l'ancien « Deux niveaux » dans le protocole, désormais trois plus le mode historique ; retrait d'une ligne vide finale de la trace npm. Portes toujours vertes, APK installé identique au code final. `git diff --check main...HEAD` propre après correction.

@@ -214,7 +214,7 @@ Silences : Claude peut rester 30 s sans rien envoyer pendant une longue réponse
 
 ## Modes de validation
 
-Deux niveaux dans l'app. Le pont les traduit en modes ACP, et les réapplique après chaque `session/load` :
+Trois niveaux produit, plus `allow-all` conservé pour les sessions existantes. Le pont les traduit en modes ACP, et les réapplique après chaque `session/load` :
 
 | `approvalMode` | Claude | Codex |
 | --- | --- | --- |
