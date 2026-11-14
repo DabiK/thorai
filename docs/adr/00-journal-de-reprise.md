@@ -58,6 +58,8 @@
 
 - **14 novembre, ticket 10 à fusionner (solo Codex)** : diff par fichier/édition, croix/stick, commentaire L2 contextualisé, Y puis A pour explication écrite (ADR 12). 261 tests Android + lint verts. Thor : vrai Codex, WAV Thomas/local, seuil.ts ligne 1 passé de 70 à 80, double A protégé, réponse d’explication, tactile/un-deux écrans. Coordonnées d’extrait explicitement distinguées ; aucune reconstruction Git. Un seul Codex lancé puis arrêté par Quitter, aucun Claude ni permission. Vraie voix et extinction physique restent au pas à pas `artifacts/screenshots/10/essai-thor.txt`.
 
+- **14 novembre, ticket 10, relecture solo terminée** : sélection hors champ au bord du fichier, relâchement du stick dans les panneaux voix et Markdown de l’explication corrigés, quatre régressions rouges puis vertes. 265 tests Android + lint verts. APK réinstallé ; Thor : retour sélection, même Codex repris pour une seule nouvelle explication, un/deux écrans, réglages pendant défilement. Quitter arrête le Codex et le pont à 04:44:27 locale ; zéro session active, aucun Claude. ADR 12 et preuves 15–28 complétés. Statut à fusionner maintenu ; vrai micro et extinction physique au pas à pas utilisateur.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

@@ -34,6 +34,7 @@ data class DiffReview(
     val lineIndex: Int = 0,
     val loading: Boolean = true,
     val explanation: DiffExplanation? = null,
+    val selectionRevision: Long = 0,
 ) {
     val file: DiffFile? get() = files.getOrNull(fileIndex)
     val rows: List<DiffSelection> get() = file?.blocks.orEmpty().flatMap { block -> block.lines.indices.map { DiffSelection(block, it) } }
@@ -78,13 +79,13 @@ class ReviewDiff(private val gateway: AgentGateway, private val scope: Coroutine
     fun close() { generation++; observing?.cancel(); observing = null; thread = SessionThread.EMPTY; mutable.value = DiffReview() }
     fun moveLine(delta: Int) {
         val state = mutable.value
-        mutable.value = state.copy(lineIndex = (state.lineIndex + delta).coerceIn(0, (state.rows.size - 1).coerceAtLeast(0)))
+        mutable.value = state.copy(selectionRevision = state.selectionRevision + 1, lineIndex = (state.lineIndex + delta).coerceIn(0, (state.rows.size - 1).coerceAtLeast(0)))
     }
     fun moveFile(delta: Int) = selectFile(mutable.value.fileIndex + delta)
     fun selectFile(index: Int) {
         val state = mutable.value
         if (state.files.isEmpty() || state.explanation != null) return
-        mutable.value = state.copy(fileIndex = index.coerceIn(0, state.files.lastIndex), lineIndex = 0)
+        mutable.value = state.copy(fileIndex = index.coerceIn(0, state.files.lastIndex), lineIndex = 0, selectionRevision = state.selectionRevision + 1)
     }
     fun commentTarget(): DictationTarget.DiffComment? {
         val state = mutable.value

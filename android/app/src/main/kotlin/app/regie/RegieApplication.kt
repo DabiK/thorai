@@ -174,6 +174,8 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
     }
 
     fun handleInput(input: GamepadInput) {
+        // A release belongs to the physical stick even while an overlay owns the inputs.
+        if (input is GamepadInput.Scroll && input.velocity == 0f) diffVelocity.value = 0f
         if (settingsOpen.value) {
             if (input == GamepadInput.Pressed(Button.B)) closeVoiceSettings()
             return

@@ -59,9 +59,9 @@ class ReviewDiffTest {
         review.open(SessionId("s")); runCurrent()
         review.explain()
         val request = review.state.value.explanation!!
-        assertTrue(request.prompt.contains("a.kt"))
-        assertTrue(request.prompt.contains("const limit = 70"))
-        assertTrue(request.prompt.contains("40"))
+        assertEquals("Explique-moi ce bloc, sans modifier les fichiers. Réponds en français par écrit.\n" +
+            "a.kt · ligne 40\nÉdition historique exposée par l’agent ; numéros ancien/nouveau.\n" +
+            "Extrait autour de la sélection :\n-/40 + const limit = 70", request.prompt)
         assertTrue(gateway.sent.isEmpty())
         review.confirmExplanation(); review.confirmExplanation(); runCurrent()
         assertEquals(listOf(SessionId("s") to request.prompt), gateway.sent)
@@ -117,6 +117,19 @@ class ReviewDiffTest {
         assertEquals(listOf(SessionId("s") to prompt, SessionId("s") to prompt), gateway.sent)
         review.confirmExplanation(); runCurrent()
         assertEquals(2, gateway.sent.size)
+        review.close()
+    }
+
+    @Test fun `navigation at the first line still requests that selection be revealed`() = runTest {
+        val gateway = StubGateway()
+        gateway.sessions.value = listOf(session("s"))
+        gateway.threadOf(SessionId("s")).value = SessionThread(listOf(edit(1)), loaded = true)
+        val review = ReviewDiff(gateway, backgroundScope)
+        review.open(SessionId("s")); runCurrent()
+        val before = review.state.value.selectionRevision
+        review.moveLine(-1)
+        assertEquals(0, review.state.value.lineIndex)
+        assertTrue(review.state.value.selectionRevision > before)
         review.close()
     }
 

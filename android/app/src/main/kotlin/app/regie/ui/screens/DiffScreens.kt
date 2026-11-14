@@ -119,7 +119,7 @@ fun DiffScreen(review: DiffReview, bottom: Boolean, single: Boolean, velocity: S
     }
     val list = rememberLazyListState()
     val speed = with(LocalDensity.current) { 500.dp.toPx() }
-    LaunchedEffect(review.file?.path, review.lineIndex) {
+    LaunchedEffect(review.file?.path, review.lineIndex, review.selectionRevision) {
         val index = review.lineIndex
         val visible = list.layoutInfo.visibleItemsInfo
         if (visible.none { it.index == index } || visible.lastOrNull()?.index == index) list.scrollToItem(index)
@@ -173,6 +173,11 @@ private fun explanationStatus(value: DiffExplanation): String = when {
         else explanation.reply.ifBlank { explanationStatus(explanation) }
     LazyColumn(state = list, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp)) {
         item { BasicText("Explique-moi ce bloc", style = sans(18.sp, weight = 600), modifier = Modifier.padding(bottom = 12.dp)) }
-        items(text.lines().size) { index -> BasicText(text.lines()[index].ifEmpty { " " }, style = sans(15.sp, lineHeight = 22.sp)) }
+        if (explanation.reply.isNotBlank()) {
+            item { AgentText(ThreadLine.AgentText(0, explanation.reply, streaming = !explanation.ended)) }
+        } else {
+            val lines = text.lines()
+            items(lines.size) { index -> BasicText(lines[index].ifEmpty { " " }, style = sans(15.sp, lineHeight = 22.sp)) }
+        }
     }
 }

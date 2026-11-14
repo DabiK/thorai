@@ -78,3 +78,24 @@ commentaire reçu une seule fois, seuil réellement passé de 70 à 80, explicat
 retournée, croix/stick/tactile/un-deux écrans. Pas de Claude, permission, reboot,
 installation autre que `app.regie`. Preuves et pas à pas :
 `artifacts/screenshots/10/essai-thor.txt`. Le microphone humain reste à essayer.
+
+## Relecture solo après commit
+
+Relecture de `git diff main...bec880e` (base `1ec1415`), puis des corrections :
+
+- La croix au bord du fichier doit ramener la sélection hors champ, même si le numéro
+  ne change pas. `selectionRevision` signale ce geste au défilement Compose ; deux
+  régressions domaine/UI rouges puis vertes. Le stick reste un défilement libre.
+- Le relâchement du stick reste traité lorsqu’un panneau voix intercepte les entrées.
+  Il ne laisse plus de vitesse périmée au retour dans le diff. Régression de la racine
+  de composition sous Robolectric, sans démarrer passerelle, voix ni service.
+- La réponse d’explication réutilise le rendu Markdown du fil, y compris son curseur
+  pendant la réponse. Régression Compose rouge puis verte sur la réponse terminée.
+- Le test de demande d’explication vérifie maintenant le message entier contre un
+  attendu littéral (instruction, chemin, ligne et bloc), pas seulement des sous-chaînes.
+
+Porte finale : **265 tests Android, zéro échec ni ignoré, lint vert**. APK réinstallé,
+Thor : sélection ramenée en vue (15–16), Codex repris pour une seule nouvelle demande
+après deux A (seq 3006), Markdown réel en un/deux écrans (23–24), réglages voix ouverts
+pendant un mouvement puis relâchement et retour stables (25–27). Quitter a de nouveau
+arrêté l’unique session d’essai et le pont à 04:44:27 locale. Aucun autre agent lancé.

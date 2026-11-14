@@ -3,6 +3,7 @@ package app.regie.ui
 import android.app.Application
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import app.regie.domain.model.*
@@ -41,4 +42,32 @@ class DiffScreenTest {
             compose.runOnIdle { assertEquals(listOf(1), files); assertEquals(listOf(Button.Y), buttons) }
         }
     }
+    @Test fun `a repeated selection brings an offscreen first line back into view`() {
+        val review = mutableStateOf(DiffReview(SessionId("s"), "demo", listOf(
+            DiffFile("a.kt", listOf(DiffBlock("1", (0..70).map { DiffLine(DiffKind.ADDED, "row$it", null, it + 1) }, true)), LineChanges(71, 0)),
+        ), loading = false))
+        Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
+            host.setup().get().setContent { RegieTheme {
+                DiffScreen(review.value, false, false, MutableStateFlow(0f), {}, {}, {})
+            } }
+            compose.onNodeWithText("row0").assertIsDisplayed()
+            compose.onNode(hasScrollAction()).performScrollToIndex(45)
+            compose.onNodeWithText("row0").assertDoesNotExist()
+            compose.runOnIdle { review.value = review.value.copy(selectionRevision = 1) }
+            compose.onNodeWithText("row0").assertIsDisplayed()
+        }
+    }
+
+    @Test fun `explanation renders agent Markdown and keeps return action on a single screen`() {
+        val review = DiffReview(explanation = DiffExplanation("Question", "a.kt ligne 1", delivery = Delivery.PROMPT, reply = "Le seuil **80** remplace `70`.", ended = true))
+        Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
+            host.setup().get().setContent { RegieTheme {
+                DiffScreen(review, false, true, MutableStateFlow(0f), {}, {}, {})
+            } }
+            compose.onNodeWithText("Le seuil 80 remplace 70.").assertIsDisplayed()
+            compose.onNodeWithText("Revenir au diff").assertIsDisplayed()
+            compose.onNodeWithText("Demander").assertDoesNotExist()
+        }
+    }
+
 }

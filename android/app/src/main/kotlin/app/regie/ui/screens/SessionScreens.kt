@@ -444,7 +444,7 @@ private fun UserMessage(line: ThreadLine.UserMessage) {
  * termine son dernier bloc.
  */
 @Composable
-private fun AgentText(line: ThreadLine.AgentText) {
+internal fun AgentText(line: ThreadLine.AgentText) {
     val blocks = remember(line.text) { Markdown.parse(line.text) }
     val style = sans(13.5.sp, color = Palette.agentText, lineHeight = 20.25.sp)
     val codeStyle = mono(12.sp, color = Palette.agentText, lineHeight = 17.sp)
