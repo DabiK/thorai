@@ -41,7 +41,7 @@ CRITÈRES:
 - [ ] Consigne française avec noms de fichiers reçue après relecture avec chacun des deux fournisseurs → clé ElevenLabs, permission micro et vraie voix utilisateur manquantes ; ASR local imparfait sur WAV Thomas.
 PORTE DE QUALITÉ: Android ./gradlew check : 217 tests + lint ; voice ./gradlew check : 127 + lint ; bridge npm run check : 268 + typage/lint, verts.
 THOR: app.regie réinstallée ; WAV Thomas sur vrai moteur local, complément au toucher puis correction du mot choisi à la croix ; retour en deux écrans. Brouillon effacé sans envoi, aucun agent lancé, pont arrêté par Quitter à 03:24:21 locale.
-REVIEW: défaut compact reproduit et corrigé ; tests UI vérifiant maintien, relâchement et niveau ; critère des deux fournisseurs toujours décoché. Relecture finale après commit à consigner.
+REVIEW: main 9fa98afe...df2e237 relu en solo : domaine/adapters, confirmation, tests et captures confrontés au PRD/à la maquette. Défaut compact corrigé, aucune autre anomalie bloquante établie ; preuve des deux fournisseurs toujours manquante et critère décoché.
 DÉCISIONS PRISES: micro 58 dp et niveau 32 dp côte à côte dans le panneau compact ; dépendance de test Compose sous le BOM existant ; ADR 09 complété, aucune décision produit nouvelle.
 POUR L'UTILISATEUR: suivre artifacts/screenshots/08/essai-thor.txt, étapes 1–9 : autoriser micro, tester local et B/L2, saisir la clé, refaire avec ElevenLabs ; conserver texte relu et message reçu pour chaque fournisseur. Haut Thor non tactile : gestes du panneau compact injectés par adb.
 QUESTIONS: aucune décision produit en attente.
