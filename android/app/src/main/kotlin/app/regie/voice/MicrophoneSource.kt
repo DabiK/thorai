@@ -62,4 +62,3 @@ class MicrophoneSource(private val context: Context) : AudioSource {
         const val FRAME_MS = 100
     }
 }
-
