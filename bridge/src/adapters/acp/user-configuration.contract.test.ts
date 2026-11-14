@@ -22,7 +22,9 @@ const root = resolve(import.meta.dirname, '../../..');
 const fixture = join(root, 'fixtures/mcp/probe.mjs');
 const port = Number(process.env.REGIE_MCP_CONTRACT_PORT ?? '47619');
 const binaries = {
-  codex: process.env.CODEX_PATH ?? join(homedir(), '.local/bin/codex'),
+  codex:
+    process.env.CODEX_PATH ??
+    (process.platform === 'darwin' ? join(homedir(), '.local/bin/codex') : '/usr/local/bin/codex'),
   claude: process.env.CLAUDE_CODE_EXECUTABLE ?? join(homedir(), '.local/bin/claude'),
 };
 type ProbeRecord = {
@@ -104,17 +106,19 @@ it('discovers user MCPs in Régie; Codex calls one before and after reload, Clau
           .filter(Boolean)
           .map((line) => JSON.parse(line))
       : [];
-  for (const dir of [codexDir, claudeDir, project, state]) mkdirSync(dir, { recursive: true });
-  const auth = join(process.env.CODEX_HOME ?? join(homedir(), '.codex'), 'auth.json');
-  // Reuse login without copying a credential; never edit the user's actual config.
-  symlinkSync(auth, join(codexDir, 'auth.json'));
-  writeFileSync(
-    join(codexDir, 'AGENTS.md'),
-    `For every regie_probe call, set marker to ${marker}. Never use subagents.\n`,
-  );
-  writeFileSync(
-    join(codexDir, 'config.toml'),
-    `
+  let env: NodeJS.ProcessEnv;
+  function prepare() {
+    for (const dir of [codexDir, claudeDir, project, state]) mkdirSync(dir, { recursive: true });
+    const auth = join(process.env.CODEX_HOME ?? join(homedir(), '.codex'), 'auth.json');
+    // Reuse login without copying a credential; never edit the user's actual config.
+    symlinkSync(auth, join(codexDir, 'auth.json'));
+    writeFileSync(
+      join(codexDir, 'AGENTS.md'),
+      `For every regie_probe call, set marker to ${marker}. Never use subagents.\n`,
+    );
+    writeFileSync(
+      join(codexDir, 'config.toml'),
+      `
 model_reasoning_effort = "low"
 [mcp_servers.regie_contract]
 command = ${JSON.stringify(process.execPath)}
@@ -122,43 +126,44 @@ args = ${JSON.stringify([fixture, log, 'codex'])}
 default_tools_approval_mode = "approve"
 startup_timeout_sec = 20
 `,
-  );
-  const env = {
-    ...process.env,
-    CODEX_HOME: codexDir,
-    CLAUDE_CONFIG_DIR: claudeDir,
-    // Any accidental Claude model request is impossible, including through stored auth.
-    ANTHROPIC_BASE_URL: 'http://127.0.0.1:1',
-    ANTHROPIC_API_KEY: 'regie-contract-no-inference',
-    CLAUDE_CODE_EXECUTABLE: binaries.claude,
-    CODEX_PATH: binaries.codex,
-    REGIE_BRIDGE_PORT: String(port),
-    REGIE_BRIDGE_STATE_DIR: state,
-    REGIE_BRIDGE_TOKEN_FILE: join(bench, 'token'),
-    REGIE_PROJECTS_DIR: join(bench, 'projects'),
-  };
-  writeFileSync(join(bench, 'token'), token, { mode: 0o600 });
-  writeFileSync(
-    join(claudeDir, 'settings.json'),
-    JSON.stringify({ permissions: { allow: ['mcp__regie_contract__*'] } }),
-  );
-  execFileSync(
-    binaries.claude,
-    [
-      'mcp',
-      'add-json',
-      '--scope',
-      'user',
-      'regie_contract',
-      JSON.stringify({
-        type: 'stdio',
-        command: process.execPath,
-        args: [fixture, log, 'claude'],
-      }),
-    ],
-    { env, encoding: 'utf8', timeout: 30_000 },
-  );
-  execFileSync('git', ['init', '-q', '-b', 'main', project]);
+    );
+    env = {
+      ...process.env,
+      CODEX_HOME: codexDir,
+      CLAUDE_CONFIG_DIR: claudeDir,
+      // Any accidental Claude model request is impossible, including through stored auth.
+      ANTHROPIC_BASE_URL: 'http://127.0.0.1:1',
+      ANTHROPIC_API_KEY: 'regie-contract-no-inference',
+      CLAUDE_CODE_EXECUTABLE: binaries.claude,
+      CODEX_PATH: binaries.codex,
+      REGIE_BRIDGE_PORT: String(port),
+      REGIE_BRIDGE_STATE_DIR: state,
+      REGIE_BRIDGE_TOKEN_FILE: join(bench, 'token'),
+      REGIE_PROJECTS_DIR: join(bench, 'projects'),
+    };
+    writeFileSync(join(bench, 'token'), token, { mode: 0o600 });
+    writeFileSync(
+      join(claudeDir, 'settings.json'),
+      JSON.stringify({ permissions: { allow: ['mcp__regie_contract__*'] } }),
+    );
+    execFileSync(
+      binaries.claude,
+      [
+        'mcp',
+        'add-json',
+        '--scope',
+        'user',
+        'regie_contract',
+        JSON.stringify({
+          type: 'stdio',
+          command: process.execPath,
+          args: [fixture, log, 'claude'],
+        }),
+      ],
+      { env, encoding: 'utf8', timeout: 30_000 },
+    );
+    execFileSync('git', ['init', '-q', '-b', 'main', project]);
+  }
   let child: ChildProcess | undefined;
   let rpc: Awaited<ReturnType<typeof client>> | undefined;
   let stderr = '';
@@ -166,8 +171,6 @@ startup_timeout_sec = 20
   const evidence: Record<string, unknown> = {
     port,
     profile: 'temporary user config dirs; original configs untouched',
-    codex: execFileSync(binaries.codex, ['--version'], { encoding: 'utf8' }).trim(),
-    claude: execFileSync(binaries.claude, ['--version'], { encoding: 'utf8' }).trim(),
   };
   async function start() {
     child = spawn(process.execPath, ['src/main.ts'], {
@@ -214,6 +217,13 @@ startup_timeout_sec = 20
     );
   }
   try {
+    prepare();
+    for (const [agent, binary] of Object.entries(binaries)) {
+      evidence[agent] = execFileSync(binary, ['--version'], {
+        encoding: 'utf8',
+        timeout: 30_000,
+      }).trim();
+    }
     await start();
     const claude = await rpc?.call<{ session: { sessionId: string } }>('session.create', {
       agent: 'claude',

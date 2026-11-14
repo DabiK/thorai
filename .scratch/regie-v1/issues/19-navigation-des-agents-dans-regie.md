@@ -29,7 +29,7 @@ Dans un terminal, Claude et Codex pilotent bien Android (ticket 14).
 
 ## Critères d'acceptation
 
-- Sur le Mac (pont du ticket 16), une session Codex lancée par Régie liste et appelle un outil MCP déclaré dans `~/.codex/config.toml`. Même chose pour Claude, sans dépenser de quota : vérifier seulement la liste des outils au démarrage.
+- [x] Sur le Mac (pont du ticket 16), une session Codex lancée par Régie liste et appelle un outil MCP déclaré dans `~/.codex/config.toml`. Même chose pour Claude, sans dépenser de quota : vérifier seulement la liste des outils au démarrage.
 
 ## Livraison et preuves
 
@@ -59,7 +59,7 @@ CRITÈRES:
 - [ ] Geste Android → Thor absente ; essai physique ci-dessous.
 PORTE DE QUALITÉ: npm run check vert : 288 tests, typage et lint ; contrat Mac dédié vert.
 THOR: adb devices vide. Aucun essai émulateur, conformément à la réservation du ticket 17.
-REVIEW: assertions du contrat renforcées : appel MCP réel et reçu dans la réponse, reprise excluant les anciens événements.
+REVIEW: diff main...HEAD relu en solo ; appel MCP/réponse/reprise vérifiés. Mutation approve→prompt détectée ; nettoyage du banc corrigé si la préparation échoue.
 DÉCISIONS PRISES: ADR 19 ; garder le chargement natif, profils temporaires pour ne pas perturber le ticket 17.
 POUR L'UTILISATEUR:
 1. Rebrancher la Thor ; vérifier adb devices, série THOR0000000001.
@@ -69,5 +69,5 @@ POUR L'UTILISATEUR:
 5. Vérifier les gestes réels, la bonne version et aucune validation Android ; scripts/thor-shot.sh artifacts/screenshots/19.
 6. Quitter, rouvrir, reprendre la session, refaire l'essai puis Quitter pour tout arrêter.
 QUESTIONS: aucune décision produit en attente.
-CAPTURES: aucune image ; preuves Mac dans artifacts/screenshots/19/{contract.json,contract-run.txt,bridge.txt,check.txt,unit-red.txt}.
+CAPTURES: aucune image ; preuves Mac dans artifacts/screenshots/19/ (contrat, portes, mutation, relecture, arrêt).
 HORS PÉRIMÈTRE: association adb perdue déjà signalée aux tickets 14/11 ; cause actuelle non vérifiable sans Thor.

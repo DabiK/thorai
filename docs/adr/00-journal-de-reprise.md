@@ -88,6 +88,8 @@
 
 - **14 novembre, ticket 19 à fusionner (solo Codex)** : configuration native MCP/consignes/permissions vérifiée sur pont Mac isolé 47619 ; sources Claude explicites à new/load (ADR 19), aucune copie de configuration. 288 tests pont + typage/lint verts ; contrat réel : inventaires Claude sans prompt et Codex, appel MCP Codex sans validation avec marqueur AGENTS.md, nouvel appel après arrêt/reprise. Sessions/ponts/MCP arrêtés. Thor absente ; émulateur et 47600 laissés au ticket 17. Panne physique non reproduite : pas à pas console dans le ticket et ADR 19, preuves artifacts/screenshots/19/. Relecture après commit détaillée à la suite.
 
+- **14 novembre, ticket 19, relecture solo après bd0231d** : diff main...HEAD relu ; contrat sensible aux permissions prouvé par mutation approve→prompt (demande de validation détectée). Nettoyage des profils temporaires étendu aux erreurs de préparation ; chemin Codex par défaut compatible avec la Debian. 288 tests + typage/lint et contrat Mac repassés verts, inventaires sans prompt Claude et deux appels Codex avant/après reprise ; tous les processus d’essai arrêtés. Aucun changement Android/thor ni usage de l’émulateur/47600 ; statut à fusionner, vérification physique différée selon la consigne.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

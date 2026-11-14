@@ -88,7 +88,10 @@ MCP doivent avoir disparu, puis les profils temporaires sont retirés.
 
 La porte `npm run check` ne lance aucun agent. Le test unitaire échange avec
 un faux serveur ACP et vérifie les paramètres de création/reprise des deux
-agents. Preuves : `artifacts/screenshots/19/`.
+agents. Un contre-essai remplace seulement `approve` par `prompt` dans le
+profil factice : le contrat échoue sur `approval_request`. La permission native
+est donc réellement discriminante. Le réglage est restauré puis le contrat
+repassé au vert. Preuves : `artifacts/screenshots/19/`.
 
 ## Vérification physique au retour de l'utilisateur
 
