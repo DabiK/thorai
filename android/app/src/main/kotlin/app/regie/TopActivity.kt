@@ -13,6 +13,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import app.regie.console.TermuxBridgeLauncher
 import app.regie.display.ScreenMode
 import app.regie.ui.screens.OverviewTopScreen
+import app.regie.ui.screens.SessionTopScreen
 import kotlinx.coroutines.launch
 
 /** Écran du haut (display 0). Il lance l'écran du bas quand celui-ci est allumé. */
@@ -40,10 +41,19 @@ class TopActivity : GamepadActivity() {
         container.topAlive.value = true
         askRunCommandPermission()
 
-        setScreen { overview, control ->
-            val mode by container.displays.mode.collectAsStateWithLifecycle()
-            OverviewTopScreen(overview, control, singleScreen = mode == ScreenMode.Single, callbacks = callbacks)
-        }
+        setScreen(
+            overview = { overview, control ->
+                val mode by container.displays.mode.collectAsStateWithLifecycle()
+                OverviewTopScreen(overview, control, singleScreen = mode == ScreenMode.Single, callbacks = callbacks)
+            },
+            session = { shown, overview ->
+                val mode by container.displays.mode.collectAsStateWithLifecycle()
+                val live by container.live.collectAsStateWithLifecycle()
+                val control by container.sessionController.state.collectAsStateWithLifecycle()
+                val draft by container.sessionController.draft
+                SessionTopScreen(live, gone = overview.neighboursOf(shown.id) == null, control, draft, singleScreen = mode == ScreenMode.Single, scroll = threadScroll, callbacks = sessionCallbacks)
+            },
+        )
 
         lifecycleScope.launch {
             // Repris à chaque retour au premier plan et à chaque changement d'écran.

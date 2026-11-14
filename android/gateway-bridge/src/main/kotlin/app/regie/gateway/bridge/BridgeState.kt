@@ -12,6 +12,7 @@ import app.regie.domain.model.Progress
 import app.regie.domain.model.Session
 import app.regie.domain.model.SessionId
 import app.regie.domain.model.SessionStatus
+import app.regie.domain.model.SessionThread
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -140,6 +141,20 @@ internal class BridgeState {
 
     fun sessions(): List<Session> = records.values.mapNotNull { it.toSession() }
 
+    /** Le fil d'une session ; `null` si elle est inconnue. [loaded] : son journal a été lu. */
+    fun thread(sessionId: String, loaded: Boolean): SessionThread? = records[sessionId]?.thread?.snapshot(loaded)
+
+    fun knows(sessionId: String) = sessionId in records
+
+    /**
+     * Ajoute au fil un message envoyé, ou une interruption, sans passer par le pont : la passerelle
+     * factice n'en a pas. Faux si la session est inconnue.
+     */
+    fun addLocalMessage(sessionId: String, text: String): Boolean =
+        records[sessionId]?.thread?.addUserMessage(text) != null
+
+    fun addLocalInterruption(sessionId: String): Boolean = records[sessionId]?.thread?.addInterruption() != null
+
     /** Les [count] premières sessions de la vue d'ensemble : celles dont on charge le journal. */
     fun firstSessions(count: Int): List<String> =
         sessions().sortedWith(Overview.order).take(count).map { it.id.value }
@@ -177,6 +192,9 @@ internal class BridgeState {
         /** Appels d'outils, du plus ancien au plus récent commencé. */
         private val calls = LinkedHashMap<String, ToolCall>()
 
+        /** Le fil complet, pour l'écran de la session. */
+        val thread = ThreadBuilder(cwd = { meta.cwd })
+
         fun touch(at: Instant?) {
             if (at != null && (lastEventAt == null || at > lastEventAt!!)) lastEventAt = at
         }
@@ -185,9 +203,16 @@ internal class BridgeState {
             lastEventAt = null
             plan = null
             calls.clear()
+            thread.clear()
         }
 
         fun applyActivity(event: BridgeEvent) {
+            thread.apply(event)
+            if (event.type == "turn_end") {
+                val cancelled = event.data.string("stopReason") == "cancelled"
+                calls.replaceAll { _, call -> call.endTurn(cancelled) }
+                return
+            }
             if (event.type != "session_update") return
             val update = event.data
             when (update.string("sessionUpdate")) {
@@ -227,12 +252,17 @@ internal class BridgeState {
                 lastAction = lastCall?.let { LastAction(it.description!!, it.status) },
                 pendingApproval = pending,
                 lastError = m.lastError,
+                modifiedFiles = m.modifiedFiles,
             )
         }
     }
 
     private data class ToolCall(val title: String?, val command: String?, val status: ActionStatus?) {
         val description: String? get() = command ?: title
+
+        /** Fin du tour : une action pas finie est interrompue, ou n'a plus de statut. */
+        fun endTurn(cancelled: Boolean) =
+            if (status == ActionStatus.PENDING || status == ActionStatus.IN_PROGRESS) copy(status = if (cancelled) ActionStatus.INTERRUPTED else null) else this
 
         fun merge(update: JsonObject) = ToolCall(
             title = update.string("title")?.let(::oneLine) ?: title,
@@ -257,6 +287,7 @@ internal class BridgeState {
         val updatedAt: Instant,
         val lastError: String?,
         val pendingApprovals: List<String>,
+        val modifiedFiles: List<String>,
     ) {
         companion object {
             fun parse(data: JsonObject): Meta? = Meta(
@@ -270,9 +301,8 @@ internal class BridgeState {
                 active = data.boolean("active") ?: false,
                 updatedAt = data.instant("updatedAt") ?: data.instant("createdAt") ?: Instant.fromEpochMilliseconds(0),
                 lastError = data.string("lastError")?.let(::oneLine),
-                pendingApprovals = data.array("pendingApprovals")
-                    ?.mapNotNull { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content }
-                    .orEmpty(),
+                pendingApprovals = data.array("pendingApprovals")?.strings().orEmpty(),
+                modifiedFiles = data.array("modifiedFiles")?.strings().orEmpty(),
             )
         }
     }
@@ -309,7 +339,7 @@ internal class BridgeState {
             else -> null
         }
 
-        private fun actionStatusOf(status: String?): ActionStatus? = when (status) {
+        internal fun actionStatusOf(status: String?): ActionStatus? = when (status) {
             "pending" -> ActionStatus.PENDING
             "in_progress" -> ActionStatus.IN_PROGRESS
             "completed" -> ActionStatus.COMPLETED
@@ -329,7 +359,7 @@ internal class BridgeState {
         }
 
         /** La commande d'un appel d'outil (`rawInput.command`, texte ou liste d'arguments). */
-        private fun commandOf(rawInput: JsonObject): String? = when (val command = rawInput["command"]) {
+        internal fun commandOf(rawInput: JsonObject): String? = when (val command = rawInput["command"]) {
             is JsonPrimitive -> command.takeIf { it.isString }?.content
             is JsonArray -> command.mapNotNull { (it as? JsonPrimitive)?.content }.joinToString(" ")
             else -> null
@@ -339,9 +369,9 @@ internal class BridgeState {
             toolCall.array("locations")?.objects()?.firstNotNullOfOrNull { it.string("path") }
                 ?: toolCall.array("content")?.objects()?.firstNotNullOfOrNull { it.string("path") }
 
-        private fun relativeTo(path: String, cwd: String?): String =
+        internal fun relativeTo(path: String, cwd: String?): String =
             if (cwd != null && path.startsWith("$cwd/")) path.removePrefix("$cwd/") else path
 
-        private fun oneLine(text: String): String = text.replace(SPACES, " ").trim()
+        internal fun oneLine(text: String): String = text.replace(SPACES, " ").trim()
     }
 }

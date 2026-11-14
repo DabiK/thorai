@@ -1,11 +1,14 @@
 package app.regie
 
 import android.os.Bundle
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import app.regie.display.ScreenMode
 import app.regie.ui.screens.OverviewBottomScreen
+import app.regie.ui.screens.SessionBottomScreen
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
@@ -19,7 +22,15 @@ class BottomActivity : GamepadActivity() {
             return
         }
 
-        setScreen { overview, control -> OverviewBottomScreen(overview, control, callbacks) }
+        setScreen(
+            overview = { overview, control -> OverviewBottomScreen(overview, control, callbacks) },
+            session = { shown, overview ->
+                val live by container.live.collectAsStateWithLifecycle()
+                val control by container.sessionController.state.collectAsStateWithLifecycle()
+                val draft by container.sessionController.draft
+                SessionBottomScreen(live, overview.neighboursOf(shown.id), control, draft, sessionCallbacks)
+            },
+        )
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.CREATED) {

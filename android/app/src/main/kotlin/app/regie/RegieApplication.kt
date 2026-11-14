@@ -7,14 +7,19 @@ import android.util.Log
 import app.regie.console.TermuxBridgeLauncher
 import app.regie.console.WirelessDebuggingAccess
 import app.regie.display.DisplayMonitor
+import app.regie.domain.model.Delivery
+import app.regie.domain.model.LiveSession
 import app.regie.domain.model.Overview
 import app.regie.domain.port.AgentGateway
+import app.regie.domain.usecase.DictatedMessages
+import app.regie.domain.usecase.InterruptSession
 import app.regie.domain.usecase.KeepBridgeUp
 import app.regie.domain.usecase.ObserveOverview
 import app.regie.domain.usecase.OpenApproval
 import app.regie.domain.usecase.OpenSession
 import app.regie.domain.usecase.PauseAll
 import app.regie.domain.usecase.Quit
+import app.regie.domain.usecase.SendMessage
 import app.regie.domain.usecase.SpeakSummary
 import app.regie.domain.usecase.StartDictation
 import app.regie.domain.usecase.StartNewSession
@@ -29,12 +34,16 @@ import app.regie.input.InputRouter
 import app.regie.overview.OverviewAction
 import app.regie.overview.OverviewController
 import app.regie.overview.OverviewGrid
+import app.regie.session.Screen
+import app.regie.session.SessionAction
+import app.regie.session.SessionController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -51,9 +60,9 @@ class RegieApplication : Application() {
 }
 
 /**
- * Racine de composition, unique pour le processus : les deux activités partagent
- * la vue d'ensemble, le contrôleur, le routeur d'entrées et le mode d'écran.
- * C'est le seul endroit qui choisit la passerelle vers les agents (ADR 06).
+ * Racine de composition, unique pour le processus : les deux activités partagent l'écran affiché
+ * (vue d'ensemble ou session), la vue d'ensemble, la session ouverte, les contrôleurs, le routeur
+ * d'entrées et le mode d'écran. C'est le seul endroit qui choisit la passerelle vers les agents (ADR 06).
  */
 class AppContainer(private val app: Application, displayManager: DisplayManager) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -61,9 +70,19 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
     private val _overview = MutableStateFlow(Overview.EMPTY)
     val overview: StateFlow<Overview> = _overview.asStateFlow()
 
+    private val _screen = MutableStateFlow<Screen>(Screen.Overview)
+    val screen: StateFlow<Screen> = _screen.asStateFlow()
+
+    /** La session affichée, `null` sur la vue d'ensemble, pendant l'ouverture, ou si elle a disparu. */
+    private val _live = MutableStateFlow<LiveSession?>(null)
+    val live: StateFlow<LiveSession?> = _live.asStateFlow()
+
     private var gateway: AgentGateway? = null
     private var startUp: StartUp? = null
     private var quit: Quit? = null
+    private var sendMessage: SendMessage? = null
+    private var interruptSession: InterruptSession? = null
+    private val dictated = DictatedMessages()
     private var startUpJob: Job? = null
     private var keepBridgeUpJob: Job? = null
 
@@ -71,14 +90,21 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
     private val stopDictation = StopDictation()
     private val startVoiceCommand = StartVoiceCommand()
     private val stopVoiceCommand = StopVoiceCommand()
-    private val openSession = OpenSession()
     private val openApproval = OpenApproval()
     private val startNewSession = StartNewSession()
     private val speakSummary = SpeakSummary()
     private val pauseAll = PauseAll()
 
     val controller = OverviewController(overview, ::execute)
-    val inputRouter = InputRouter(controller::handle)
+    val sessionController = SessionController(live, overview, current = { (_screen.value as? Screen.Session)?.id }, ::execute)
+
+    /** La manette va à l'écran affiché. */
+    val inputRouter = InputRouter { input ->
+        when (_screen.value) {
+            Screen.Overview -> controller.handle(input)
+            is Screen.Session -> sessionController.handle(input)
+        }
+    }
     val displays = DisplayMonitor(displayManager)
 
     /** L'écran du haut existe : l'écran du bas se ferme quand il disparaît. */
@@ -123,6 +149,9 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
         }
         gateway = chosen
         quit = Quit(chosen, launcher)
+        sendMessage = SendMessage(chosen, dictated)
+        interruptSession = InterruptSession(chosen)
+        val openSession = OpenSession(chosen, dictated)
         Log.i(TAG, "passerelle : ${if (replay) "factice (enregistrements du pont)" else "pont"}")
 
         scope.launch { chosen.maintainConnection() }
@@ -131,6 +160,13 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
                 _overview.value = it
                 // Dans la même passe : jamais une image où le focus pointe une autre session.
                 controller.syncFocus()
+            }
+        }
+        // La session affichée : son fil est chargé à l'ouverture, puis suivi en direct.
+        scope.launch {
+            _screen.collectLatest { screen ->
+                _live.value = null
+                if (screen is Screen.Session) openSession(screen.id).collect { _live.value = it }
             }
         }
         // Le pont s'est tu en cours de route : Régie le relance, à chaque échéance, tant qu'un de
@@ -166,12 +202,46 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
         dispatch(action)
     }
 
+    private fun execute(action: SessionAction) {
+        // Jamais le texte d'un message dans le journal.
+        Log.i(TAG, "action : ${if (action is SessionAction.Send) "Send(${action.id})" else action}")
+        when (action) {
+            is SessionAction.Open -> navigate(Screen.Session(action.id))
+            SessionAction.Back -> navigate(Screen.Overview)
+            is SessionAction.Send -> scope.launch {
+                val delivery = sendMessage?.invoke(action.id, action.text) ?: Delivery.NOT_SENT
+                Log.i(TAG, "message : $delivery")
+                sessionController.onDelivered(action.id, action.text, delivery)
+            }
+            is SessionAction.Interrupt -> scope.launch {
+                val shown = _live.value?.takeIf { it.session.id == action.id } ?: return@launch
+                val heard = interruptSession?.invoke(shown) ?: return@launch
+                Log.i(TAG, "interruption : ${if (heard) "envoyée" else "refusée"}")
+                sessionController.onInterrupted(action.id, heard)
+            }
+            is SessionAction.SpeakSummary -> speakSummary(action.id)
+            is SessionAction.StartDictation -> startDictation(action.id)
+            SessionAction.StopDictation -> stopDictation()
+            SessionAction.StartVoiceCommand -> startVoiceCommand()
+            SessionAction.StopVoiceCommand -> stopVoiceCommand()
+        }
+    }
+
+    /** Change d'écran : les gâchettes tenues sont relâchées, rien de la session précédente ne reste. */
+    private fun navigate(to: Screen) {
+        if (_screen.value == to) return
+        controller.releaseTriggers()
+        sessionController.releaseTriggers()
+        sessionController.reset()
+        _screen.value = to
+    }
+
     private fun dispatch(action: OverviewAction) = when (action) {
         is OverviewAction.StartDictation -> startDictation(action.target)
         OverviewAction.StopDictation -> stopDictation()
         OverviewAction.StartVoiceCommand -> startVoiceCommand()
         OverviewAction.StopVoiceCommand -> stopVoiceCommand()
-        is OverviewAction.OpenSession -> openSession(action.id)
+        is OverviewAction.OpenSession -> navigate(Screen.Session(action.id))
         is OverviewAction.OpenApproval -> openApproval(action.id)
         OverviewAction.NewSession -> startNewSession()
         is OverviewAction.SpeakSummary -> speakSummary(action.target)

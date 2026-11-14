@@ -2,7 +2,10 @@ package app.regie.gateway.bridge
 
 import app.regie.domain.model.ActionStatus
 import app.regie.domain.model.BridgeConnection
+import app.regie.domain.model.Delivery
 import app.regie.domain.model.LastAction
+import app.regie.domain.model.SessionId
+import app.regie.domain.model.ThreadEntry
 import app.regie.domain.model.Session
 import app.regie.domain.model.SessionStatus
 import app.regie.domain.model.UnreachableReason
@@ -10,8 +13,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -44,13 +49,14 @@ class BridgeAgentGatewayTest {
     @AfterTest
     fun stop() = server.close()
 
-    private fun gateway(unreachableAfter: Int = 2) = BridgeAgentGateway(
+    private fun gateway(unreachableAfter: Int = 2, requestTimeout: kotlin.time.Duration = 2.seconds) = BridgeAgentGateway(
         baseUrl = server.url("/").toString(),
         token = { token },
         retryDelay = { 20.milliseconds },
         unreachableAfter = unreachableAfter,
         historyCount = 4,
         shutdownTimeout = 2.seconds,
+        requestTimeout = requestTimeout,
         log = { lines += it },
     )
 
@@ -391,6 +397,184 @@ class BridgeAgentGatewayTest {
             assertEquals(BridgeConnection.Unreachable(UnreachableReason.NOT_RESPONDING), gateway.connection.value)
             assertTrue(lines.any { it.contains("tenue moins de 10s, tentative 1") }, lines.toString())
             assertTrue(lines.any { it.contains("tenue moins de 10s, tentative 2") }, lines.toString())
+        }
+    }
+
+    /** Connecté, une seule session « s » affichée et son journal (vide) chargé. */
+    private suspend fun connected(bridge: FakeBridge, gateway: BridgeAgentGateway): WebSocket {
+        val hello = bridge.next("hello")
+        val socket = bridge.socket()
+        socket.send(helloResult(hello.long("id")!!, "j", lastSeq = 10, sessions = sessionJson("s", "working", "2026-11-13T21:00:10Z")))
+        val history = bridge.next("session.events")
+        socket.send("""{"id":${history.long("id")},"result":{"events":[]}}""")
+        withTimeout(5.seconds) { gateway.connection.first { it == BridgeConnection.Connected } }
+        return socket
+    }
+
+    @Test
+    fun `a message goes to the session and says how it left`() {
+        val bridge = FakeBridge()
+        upgrade(bridge)
+        val gateway = gateway()
+
+        withGateway(gateway) {
+            val socket = connected(bridge, gateway)
+
+            val sent = async { gateway.sendMessage(SessionId("s"), "Arrête-toi après le premier fichier.") }
+            val prompt = bridge.next("session.prompt")
+            assertEquals("s", prompt.obj("params")?.string("sessionId"))
+            assertEquals("Arrête-toi après le premier fichier.", prompt.obj("params")?.string("text"))
+            socket.send("""{"id":${prompt.long("id")},"result":{"delivery":"steering"}}""")
+            assertEquals(Delivery.STEERING, sent.await())
+
+            val queued = async { gateway.sendMessage(SessionId("s"), "Et ensuite ?") }
+            socket.send("""{"id":${bridge.next("session.prompt").long("id")},"result":{"delivery":"queued"}}""")
+            assertEquals(Delivery.QUEUED, queued.await())
+
+            val refused = async { gateway.sendMessage(SessionId("zz"), "?") }
+            socket.send("""{"id":${bridge.next("session.prompt").long("id")},"error":{"code":"unknown_session","message":"Session inconnue."}}""")
+            assertEquals(Delivery.NOT_SENT, refused.await())
+        }
+    }
+
+    @Test
+    fun `a message echoed in the thread before disconnection is never reported as not sent`() {
+        val bridge = FakeBridge()
+        upgrade(bridge)
+        val gateway = gateway()
+        withGateway(gateway) {
+            val socket = connected(bridge, gateway)
+            val thread = gateway.thread(SessionId("s")).stateIn(this)
+            val sent = async { gateway.sendMessage(SessionId("s"), "Relance les tests") }
+            bridge.next("session.prompt")
+            socket.send(
+                """{"event":{"seq":11,"at":"2026-11-13T21:00:11Z","sessionId":"s","type":"user_message",
+                   "data":{"text":"Relance les tests","delivery":"prompt"}}}""",
+            )
+            withTimeout(5.seconds) {
+                thread.first { t -> t.entries.any { it is ThreadEntry.UserMessage && it.text == "Relance les tests" } }
+            }
+            val reconnected = FakeBridge()
+            upgrade(reconnected)
+            socket.close(1001, "accusé perdu")
+            assertEquals(Delivery.UNKNOWN, sent.await())
+            val hello = reconnected.next("hello")
+            assertEquals(11, hello.obj("params")?.long("since"))
+            val nextSocket = reconnected.socket()
+            nextSocket.send(helloResult(hello.long("id")!!, "j", lastSeq = 11, sessions = sessionJson("s", "working", "2026-11-13T21:00:11Z")))
+            val request = reconnected.requests.receive()
+            assertEquals("agents.versions", request.string("method"))
+            nextSocket.send(versions(request.long("id")!!))
+            withTimeout(5.seconds) { gateway.agents.first { it.isNotEmpty() } }
+            assertTrue(reconnected.requests.tryReceive().isFailure, "aucun prompt rejoué après reconnexion")
+            assertEquals(1, thread.value.entries.filterIsInstance<ThreadEntry.UserMessage>().size)
+            coroutineContext.cancelChildren()
+        }
+    }
+
+    @Test
+    fun `a disconnect without an echo leaves delivery unknown too`() {
+        val bridge = FakeBridge()
+        upgrade(bridge)
+        val gateway = gateway()
+        withGateway(gateway) {
+            val socket = connected(bridge, gateway)
+            val sent = async { gateway.sendMessage(SessionId("s"), "x") }
+            bridge.next("session.prompt")
+            socket.close(1001, "coupure")
+            assertEquals(Delivery.UNKNOWN, sent.await())
+        }
+    }
+
+    @Test
+    fun `a timed out message is unknown and a late reply does not resend it`() {
+        val bridge = FakeBridge()
+        upgrade(bridge)
+        val gateway = gateway(requestTimeout = 1.seconds)
+        withGateway(gateway) {
+            val socket = connected(bridge, gateway)
+            val sent = async { gateway.sendMessage(SessionId("s"), "x") }
+            val prompt = bridge.next("session.prompt")
+            assertEquals(Delivery.UNKNOWN, sent.await())
+            socket.send("""{"id":${prompt.long("id")},"result":{"delivery":"prompt"}}""")
+            val interrupted = async { gateway.interrupt(SessionId("s")) }
+            val cancel = bridge.requests.receive()
+            assertEquals("session.cancel", cancel.string("method"))
+            socket.send("""{"id":${cancel.long("id")},"result":{}}""")
+            assertTrue(interrupted.await())
+            assertTrue(bridge.requests.tryReceive().isFailure)
+        }
+    }
+
+    @Test
+    fun `an unspecified bridge failure does not prove non delivery`() {
+        val bridge = FakeBridge()
+        upgrade(bridge)
+        val gateway = gateway()
+        withGateway(gateway) {
+            val socket = connected(bridge, gateway)
+            val sent = async { gateway.sendMessage(SessionId("s"), "x") }
+            val prompt = bridge.next("session.prompt")
+            socket.send("""{"id":${prompt.long("id")},"error":{"code":"internal_error","message":"Erreur"}}""")
+            assertEquals(Delivery.UNKNOWN, sent.await())
+        }
+    }
+
+    @Test
+    fun `interrupting sends session cancel`() {
+        val bridge = FakeBridge()
+        upgrade(bridge)
+        val gateway = gateway()
+
+        withGateway(gateway) {
+            val socket = connected(bridge, gateway)
+
+            val interrupted = async { gateway.interrupt(SessionId("s")) }
+            val cancel = bridge.next("session.cancel")
+            assertEquals("s", cancel.obj("params")?.string("sessionId"))
+            socket.send("""{"id":${cancel.long("id")},"result":{}}""")
+            assertTrue(interrupted.await())
+        }
+    }
+
+    @Test
+    fun `without a connection, nothing is sent`() = runBlocking {
+        assertEquals(Delivery.NOT_SENT, gateway().sendMessage(SessionId("s"), "x"))
+        assertFalse(gateway().interrupt(SessionId("s")))
+    }
+
+    @Test
+    fun `opening a session beyond the cards shown loads its journal, then follows it live`() {
+        val bridge = FakeBridge()
+        upgrade(bridge)
+        val gateway = gateway()
+
+        withGateway(gateway) {
+            val hello = bridge.next("hello")
+            val socket = bridge.socket()
+            val shown = (1..4).map { sessionJson("a$it", "idle", "2026-11-13T21:00:0${it}Z") }
+            val old = sessionJson("h", "stopped", "2026-11-13T20:00:00Z", active = false)
+            socket.send(helloResult(hello.long("id")!!, "j", lastSeq = 20, sessions = (shown + old).joinToString(",")))
+            (1..4).map { bridge.next("session.events") }.forEach { socket.send("""{"id":${it.long("id")},"result":{"events":[]}}""") }
+
+            val thread = gateway.thread(SessionId("h")).stateIn(this)
+            val load = bridge.next("session.events")
+            assertEquals("h", load.obj("params")?.string("sessionId"))
+            socket.send(
+                """{"id":${load.long("id")},"result":{"events":[
+                   {"seq":5,"at":"2026-11-13T20:00:00Z","sessionId":"h","type":"user_message","data":{"text":"Lis notes.md","delivery":"prompt"}},
+                   {"seq":6,"at":"2026-11-13T20:00:01Z","sessionId":"h","type":"session_update","data":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"Je "}}}]}}""",
+            )
+            val loaded = withTimeout(5.seconds) { thread.first { it.loaded } }
+            assertEquals(listOf("Lis notes.md"), loaded.entries.filterIsInstance<ThreadEntry.UserMessage>().map { it.text })
+
+            socket.send(
+                """{"event":{"seq":21,"at":"2026-11-13T21:01:00Z","sessionId":"h","type":"session_update",
+                   "data":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"lis."}}}}""",
+            )
+            val live = withTimeout(5.seconds) { thread.first { t -> t.entries.any { it is ThreadEntry.AgentText && it.text == "Je lis." } } }
+            assertEquals(2, live.entries.size)
+            coroutineContext.cancelChildren()
         }
     }
 }

@@ -24,9 +24,6 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -49,9 +46,12 @@ import app.regie.overview.ControlState
 import app.regie.overview.OverviewGrid
 import app.regie.overview.QuitStep
 import app.regie.ui.components.ApprovalBanner
-import app.regie.ui.components.ButtonChip
+import app.regie.ui.components.BarAction
 import app.regie.ui.components.MicButton
+import app.regie.ui.components.Notice
 import app.regie.ui.components.SessionCard
+import app.regie.ui.components.bottomDivider
+import app.regie.ui.components.topDivider
 import app.regie.ui.theme.Palette
 import app.regie.ui.theme.mono
 import app.regie.ui.theme.sans
@@ -205,24 +205,6 @@ private fun hintText(hint: BridgeHint) = when (hint) {
     BridgeHint.RESTARTING -> R.string.bridge_hint_restarting
 }
 
-@Composable
-private fun Notice(title: String, text: String, color: Color) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Palette.surface, RoundedCornerShape(12.dp))
-            .padding(horizontal = 12.dp, vertical = 9.dp),
-        verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Box(Modifier.padding(top = 5.dp).size(7.dp).background(color, CircleShape))
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            BasicText(title, style = sans(13.sp, weight = 600, color = color))
-            BasicText(text, style = sans(12.sp, color = Palette.textMuted, lineHeight = 17.sp))
-        }
-    }
-}
-
 /** Confirmation de « Quitter » (A confirme, B annule, au doigt aussi), puis l'arrêt en cours. */
 @Composable
 private fun QuitPrompt(step: QuitStep, callbacks: ControlCallbacks) {
@@ -260,7 +242,7 @@ private fun QuitPrompt(step: QuitStep, callbacks: ControlCallbacks) {
 
 /** Ticks d'une seconde, pour que l'ancienneté avance à l'écran. */
 @Composable
-private fun rememberNow(): State<Instant> = produceState(Clock.System.now()) {
+internal fun rememberNow(): State<Instant> = produceState(Clock.System.now()) {
     while (true) {
         delay(1_000)
         value = Clock.System.now()
@@ -356,19 +338,6 @@ private fun QuitAction(onClick: () -> Unit) {
 }
 
 @Composable
-private fun BarAction(button: String, label: String, onClick: () -> Unit) {
-    ButtonChip(
-        button = button,
-        label = label,
-        modifier = Modifier.clickable(
-            interactionSource = remember { MutableInteractionSource() },
-            indication = null,
-            onClick = onClick,
-        ),
-    )
-}
-
-@Composable
 private fun micTitle(control: ControlState): String = stringResource(
     when {
         Trigger.L2 in control.heldTriggers -> R.string.mic_l2_held
@@ -377,14 +346,7 @@ private fun micTitle(control: ControlState): String = stringResource(
     },
 )
 
-private fun micTitleColor(control: ControlState) = if (control.heldTriggers.isEmpty()) Palette.text else Palette.mic
+private fun micTitleColor(control: ControlState) = micTitleColor(control.heldTriggers)
 
-private fun Modifier.topDivider() = drawBehind {
-    drawLine(Palette.divider, Offset(0f, 0.5f), Offset(size.width, 0.5f), strokeWidth = 1.dp.toPx())
-}
-
-private fun Modifier.bottomDivider() = drawBehind {
-    val y = size.height - 0.5f
-    drawLine(Palette.divider, Offset(0f, y), Offset(size.width, y), strokeWidth = 1.dp.toPx())
-}
+internal fun micTitleColor(held: Set<Trigger>) = if (held.isEmpty()) Palette.text else Palette.mic
 

@@ -33,6 +33,7 @@
     <string name="action_status_in_progress">en cours</string>
     <string name="action_status_completed">terminée</string>
     <string name="action_status_failed">échouée</string>
+    <string name="action_status_interrupted">interrompue</string>
 
     <string name="version_untested">version non testée</string>
 
@@ -69,4 +70,76 @@
     <string name="quit_confirm">Quitter</string>
     <string name="quit_cancel">Annuler</string>
     <string name="quit_stopping">Arrêt des sessions et du pont…</string>
+    <!-- Session en direct (écran 3 de la maquette). -->
+    <string name="session_breadcrumb">Régie ›</string>
+    <string name="session_status_since">%1$s · %2$s</string>
+    <string name="session_context">contexte %d %%</string>
+    <string name="thread_opening">Ouverture de la session…</string>
+    <string name="session_gone">Cette session n\'est plus dans la régie.</string>
+    <string name="thread_loading">Chargement du fil…</string>
+    <string name="thread_empty">Rien dans le fil pour l\'instant.</string>
+    <string name="thread_you">Toi</string>
+    <string name="thread_you_dictated">Toi, dicté</string>
+    <string name="thread_read">lu</string>
+    <string name="thread_reading">lit</string>
+    <string name="thread_edited">modifié</string>
+    <string name="thread_editing">modifie</string>
+    <string name="thread_ran">lancé</string>
+    <string name="thread_running">lance</string>
+    <string name="thread_action">action</string>
+    <plurals name="thread_files">
+        <item quantity="one">%d fichier</item>
+        <item quantity="many">%d fichiers</item>
+        <item quantity="other">%d fichiers</item>
+    </plurals>
+    <string name="run_pending">en attente</string>
+    <string name="run_in_progress">en cours</string>
+    <string name="run_succeeded">réussi</string>
+    <string name="run_failed">échoué</string>
+    <string name="run_interrupted">interrompu</string>
+    <string name="thread_turn_failed">Le tour a échoué.</string>
+    <string name="thread_turn_failed_with">Le tour a échoué : %s</string>
+    <string name="thread_interrupted">Interrompue</string>
+    <string name="thread_awaiting">attend ta validation : %s</string>
+    <string name="thread_awaiting_no_subject">attend ta validation</string>
+    <string name="plan_title">Plan</string>
+    <string name="files_title">Fichiers modifiés</string>
+    <string name="files_none">Aucune édition suivie</string>
+    <string name="files_none_hint">Les fichiers écrits par une commande n\'y figurent pas.</string>
+
+    <string name="mic_session_hold_l2">Maintiens L2 pour lui parler</string>
+    <string name="mic_session_hint">Il en tient compte à la prochaine étape, sans tout arrêter.</string>
+    <string name="message_placeholder">Écrire un message</string>
+    <string name="message_send">Envoyer</string>
+    <string name="action_see_diff">Voir le diff</string>
+    <plurals name="diff_files">
+        <item quantity="one">%d fichier</item>
+        <item quantity="many">%d fichiers</item>
+        <item quantity="other">%d fichiers</item>
+    </plurals>
+    <string name="action_interrupt">Interrompre</string>
+    <string name="action_back_to_overview">Retour à la régie</string>
+    <string name="action_back_short">Retour</string>
+    <string name="action_speak_summary_short">Point</string>
+
+    <!-- Avis brefs, à la place de la phrase sous le micro. -->
+    <string name="notice_diff_unavailable">Le diff ne se consulte pas encore dans Régie.</string>
+    <string name="notice_sending">Envoi…</string>
+    <string name="delivery_prompt">Message envoyé.</string>
+    <string name="delivery_steering">Pris en compte en cours de route.</string>
+    <string name="delivery_queued">En attente de la fin du tour.</string>
+    <string name="delivery_cancelled">Pas parti : la session a été interrompue.</string>
+    <string name="delivery_unknown">Envoi non confirmé. Vérifie le fil avant de renvoyer.</string>
+    <string name="delivery_not_sent">Le message n\'est pas parti.</string>
+    <string name="notice_interrupting">Interruption demandée…</string>
+    <string name="notice_interrupted">Interruption envoyée.</string>
+    <string name="notice_interrupt_failed">Le pont n\'a pas pu l\'interrompre.</string>
+
+    <!-- Point écrit (Y), en attendant le point à voix haute. -->
+    <string name="summary_title">Le point</string>
+    <string name="summary_close">Y ou B pour fermer</string>
+    <string name="summary_last_action">Dernière action : %s</string>
+    <string name="summary_files">Fichiers modifiés : %s</string>
+    <string name="summary_no_files">Aucune édition suivie (les fichiers écrits par une commande n\'y figurent pas)</string>
+    <string name="summary_last_sentence">Dernière phrase : « %s »</string>
 </resources>

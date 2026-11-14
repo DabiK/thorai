@@ -30,6 +30,8 @@ dependencies {
     api(project(":domain"))
     implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
+    // Lignes ajoutées et retirées d'un diff (ADR 07).
+    implementation(libs.java.diff.utils)
 
     testImplementation(libs.kotlin.test.junit)
     testImplementation(libs.kotlinx.coroutines.test)

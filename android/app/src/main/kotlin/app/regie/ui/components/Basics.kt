@@ -79,28 +79,32 @@ fun statusColor(status: SessionStatus): Color = when (status) {
     SessionStatus.FAILED -> Palette.failed
 }
 
+@Composable
+fun statusLabel(status: SessionStatus): String = stringResource(
+    when (status) {
+        SessionStatus.WORKING -> R.string.status_working
+        SessionStatus.AWAITING_APPROVAL -> R.string.status_awaiting_approval
+        SessionStatus.IDLE -> R.string.status_idle
+        SessionStatus.STOPPED -> R.string.status_stopped
+        SessionStatus.FAILED -> R.string.status_failed
+    },
+)
+
+/** Point d'état : plein, creux pour une session arrêtée. */
+@Composable
+fun StatusDot(status: SessionStatus) {
+    val dot = Modifier.size(7.dp)
+    val color = statusColor(status)
+    Box(if (status == SessionStatus.STOPPED) dot.border(1.5.dp, color, CircleShape) else dot.background(color, CircleShape))
+}
+
 /** Pastille d'état : point coloré et libellé. Arrêtée, le point est creux. */
 @Composable
 fun StatusPill(status: SessionStatus) {
     val color = statusColor(status)
-    val label = stringResource(
-        when (status) {
-            SessionStatus.WORKING -> R.string.status_working
-            SessionStatus.AWAITING_APPROVAL -> R.string.status_awaiting_approval
-            SessionStatus.IDLE -> R.string.status_idle
-            SessionStatus.STOPPED -> R.string.status_stopped
-            SessionStatus.FAILED -> R.string.status_failed
-        },
-    )
+    val label = statusLabel(status)
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        val dot = Modifier.size(7.dp)
-        Box(
-            if (status == SessionStatus.STOPPED) {
-                dot.border(1.5.dp, color, CircleShape)
-            } else {
-                dot.background(color, CircleShape)
-            },
-        )
+        StatusDot(status)
         BasicText(label, style = sans(12.sp, color = color))
     }
 }

@@ -191,6 +191,7 @@ private fun actionStatusLabel(status: ActionStatus): String = stringResource(
         ActionStatus.IN_PROGRESS -> R.string.action_status_in_progress
         ActionStatus.COMPLETED -> R.string.action_status_completed
         ActionStatus.FAILED -> R.string.action_status_failed
+        ActionStatus.INTERRUPTED -> R.string.action_status_interrupted
     },
 )
 
