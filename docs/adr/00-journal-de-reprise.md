@@ -40,6 +40,8 @@
 
 - **14 novembre, ticket 07, correction de revue R1** : retour à la première validation après la dernière, dans le domaine. Régression `[a, b]` ouverte sur `b` rouge puis verte ; file vide et réponse déjà donnée couvertes. 199 tests Android + lint, 266 tests pont + typage/lint verts. Thor : deux nouvelles demandes Codex, intent sur la dernière puis boucle R1 par `sendevent`, un/deux écrans, double refus protégé, commandes refusées et fichiers absents. Sessions d'essai et pont arrêtés par Quitter ; aucun Claude ni permission accordée. ADR 08 précisé, captures 23–28 et preuves `review-r1-*`. Ticket maintenu à `à fusionner`.
 
+- **14 novembre, ticket 08 à fusionner (solo Codex)** : composite voice, local par défaut, ElevenLabs réglable avec clé chiffrée, dictée L2/relecture A/B/Y/X, vocabulaire du dépôt via session.vocabulary, refus avec consigne, cible du futur diff, service micro (ADR 09). Android 210 tests + lint, voix 127 + lint, pont 268 + typage/lint verts. Thor : WAV français sur moteur local réel, manette et tactile, correction/complément, un/deux écrans, message et refus suivis de réponse Codex. Qualité ASR imparfaite sur noms techniques/phrase longue ; micro réel et ElevenLabs avec clé restent à l'utilisateur. Aucun Claude ni permission accordée ; session d'essai et pont arrêtés par Quitter. Preuves et pas à pas : artifacts/screenshots/08/essai-thor.txt.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

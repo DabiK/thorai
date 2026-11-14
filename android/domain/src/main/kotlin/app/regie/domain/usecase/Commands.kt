@@ -6,16 +6,6 @@ import app.regie.domain.model.SessionId
 // Ils sont vides tant que le ticket qui les porte n'est pas livré : la manette
 // et l'écran tactile sont déjà branchés dessus.
 
-/** L2 maintenu : dicter un message à la session affichée. Ticket 08. */
-class StartDictation {
-    operator fun invoke(target: SessionId?) = Unit
-}
-
-/** L2 relâché. Ticket 08. */
-class StopDictation {
-    operator fun invoke() = Unit
-}
-
 /** R2 maintenu : donner un ordre vocal. Ticket 09. */
 class StartVoiceCommand {
     operator fun invoke() = Unit

@@ -1,6 +1,21 @@
 package app.regie
 
 import android.os.Bundle
+import android.Manifest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import app.regie.display.ScreenMode
+import app.regie.ui.components.tappable
+import app.regie.ui.screens.DictationTopScreen
+import app.regie.ui.screens.DictationBottomScreen
+import app.regie.ui.screens.VoiceSettingsScreen
+import app.regie.ui.theme.Palette
+import app.regie.ui.theme.sans
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -43,11 +58,9 @@ abstract class GamepadActivity : ComponentActivity() {
     protected val container: AppContainer get() = (application as RegieApplication).container
 
     protected val callbacks = object : ControlCallbacks {
-        override fun onButton(button: Button) = container.controller.handle(GamepadInput.Pressed(button))
+        override fun onButton(button: Button) = container.handleInput(GamepadInput.Pressed(button))
 
-        override fun onTrigger(trigger: Trigger, held: Boolean) = container.controller.handle(
-            if (held) GamepadInput.TriggerDown(trigger) else GamepadInput.TriggerUp(trigger),
-        )
+        override fun onTrigger(trigger: Trigger, held: Boolean) = container.touchTrigger(trigger, held)
 
         override fun onOpenApproval() = container.controller.openPendingApproval()
 
@@ -59,11 +72,9 @@ abstract class GamepadActivity : ComponentActivity() {
     }
 
     protected val sessionCallbacks = object : SessionCallbacks {
-        override fun onButton(button: Button) = container.sessionController.handle(GamepadInput.Pressed(button))
+        override fun onButton(button: Button) = container.handleInput(GamepadInput.Pressed(button))
 
-        override fun onTrigger(trigger: Trigger, held: Boolean) = container.sessionController.handle(
-            if (held) GamepadInput.TriggerDown(trigger) else GamepadInput.TriggerUp(trigger),
-        )
+        override fun onTrigger(trigger: Trigger, held: Boolean) = container.touchTrigger(trigger, held)
 
         override fun onDraftChange(text: String) = container.sessionController.onDraftChange(text)
 
@@ -76,10 +87,12 @@ abstract class GamepadActivity : ComponentActivity() {
         ThreadScroll(container.sessionController.scrollSteps, container.sessionController.scrollVelocity)
     }
 
+    private val microphonePermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        window.callback = GamepadWindowCallback(window.callback, container.inputRouter)
+        window.callback = GamepadWindowCallback(window.callback, container.inputRouter, container::releaseTouchDictation)
         // « Quitter » est allé au bout : les deux écrans se ferment, même en arrière-plan.
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.CREATED) {
@@ -90,6 +103,7 @@ abstract class GamepadActivity : ComponentActivity() {
 
     override fun onStop() {
         // Une autre appli a pris l'écran : un relâché de gâchette ne nous parviendrait plus.
+        container.releaseTouchDictation()
         container.inputRouter.reset()
         super.onStop()
     }
@@ -120,6 +134,24 @@ abstract class GamepadActivity : ComponentActivity() {
             RegieTheme {
                 val screen by container.screen.collectAsStateWithLifecycle()
                 val current by container.overview.collectAsStateWithLifecycle()
+                val dictation by container.dictation.state.collectAsStateWithLifecycle()
+                val settingsOpen by container.settingsOpen.collectAsStateWithLifecycle()
+                val settings by container.voiceSettings.collectAsStateWithLifecycle()
+                val mode by container.displays.mode.collectAsStateWithLifecycle()
+                val controlsHere = this@GamepadActivity is BottomActivity || mode == ScreenMode.Single
+                val button: (Button) -> Unit = { container.handleInput(GamepadInput.Pressed(it)) }
+                val held: (Boolean) -> Unit = { container.touchTrigger(Trigger.L2, it) }
+                if (settingsOpen && controlsHere) {
+                    VoiceSettingsScreen(settings, container::selectVoice, container::saveVoiceKey,
+                        { microphonePermission.launch(Manifest.permission.RECORD_AUDIO) }, container::closeVoiceSettings)
+                } else if (dictation.visible) {
+                    if (this@GamepadActivity is BottomActivity) DictationBottomScreen(dictation, button, held, container::openVoiceSettings)
+                    else DictationTopScreen(dictation, current.sessions.firstOrNull { it.id == dictation.target?.sessionId }, mode == ScreenMode.Single, button, held, container::openVoiceSettings, ThreadScroll(container.dictationScroll, container.dictationVelocity))
+                } else Column(Modifier.fillMaxSize()) {
+                    if (controlsHere) Row(Modifier.fillMaxWidth().background(Palette.background).padding(horizontal = 16.dp, vertical = 4.dp)) {
+                        BasicText("Réglages voix", style = sans(11.sp, color = Palette.textSubtle), modifier = Modifier.tappable(container::openVoiceSettings))
+                    }
+                    Box(Modifier.weight(1f)) {
                 when (val shown = screen) {
                     Screen.Approval -> approval()
                     Screen.Overview -> {
@@ -127,6 +159,8 @@ abstract class GamepadActivity : ComponentActivity() {
                         overview(current, control)
                     }
                     is Screen.Session -> session(shown, current)
+                }
+                    }
                 }
             }
         }
@@ -146,7 +180,14 @@ abstract class GamepadActivity : ComponentActivity() {
 private class GamepadWindowCallback(
     private val wrapped: Window.Callback,
     private val router: InputRouter,
+    private val touchEnd: () -> Unit,
 ) : Window.Callback by wrapped {
+
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        val handled = wrapped.dispatchTouchEvent(event)
+        if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) touchEnd()
+        return handled
+    }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         val isDown = when (event.action) {

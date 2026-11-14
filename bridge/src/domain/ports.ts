@@ -72,6 +72,8 @@ export interface SessionStore {
 
 /** The project folders the agents may work in. */
 export interface Workspace {
+  /** Bounded source identifiers and git refs; never file contents. */
+  vocabulary(cwd: string): Promise<readonly string[]>;
   /** Resolves a project of the projects root. Rejects any path that leaves it. */
   resolveProject(project: string): Promise<{ readonly name: string; readonly cwd: string }>;
   /** Whether `branch` is a valid branch name. The bridge never checks a branch out. */

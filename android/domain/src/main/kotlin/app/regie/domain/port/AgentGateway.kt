@@ -17,6 +17,9 @@ import kotlinx.coroutines.flow.StateFlow
  * par WebSocket ; la passerelle factice rejoue des enregistrements du vrai pont.
  */
 interface AgentGateway {
+    /** Names from files, declarations and branches of this session repository. */
+    suspend fun vocabulary(id: SessionId): List<String> = emptyList()
+
     /** Toutes les demandes en attente, y compris plusieurs pour une même session. */
     val approvals: StateFlow<List<Approval>>
 

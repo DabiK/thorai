@@ -20,8 +20,7 @@ data class ApprovalReview(
         (answer == null || answer.reply == ApprovalReply.NOT_SENT) && request?.optionFor(decision) != null
 }
 
-class ReviewApprovals(private val gateway: AgentGateway, scope: CoroutineScope) {
-    private val answerApproval = AnswerApproval(gateway)
+class ReviewApprovals(private val gateway: AgentGateway, scope: CoroutineScope, private val answerApproval: AnswerApproval = AnswerApproval(gateway)) {
     private var selectedId: ApprovalId? = null
     private val answers = mutableMapOf<ApprovalId, ApprovalAnswer>()
     private val sending = mutableSetOf<ApprovalId>()

@@ -65,7 +65,7 @@ class TopActivity : GamepadActivity() {
                 val mode by container.displays.mode.collectAsStateWithLifecycle()
                 ApprovalTopScreen(review, overview, mode == ScreenMode.Single,
                     container.approvalController.scrollSteps, container.approvalController.scrollVelocity,
-                    onButton = { container.approvalController.handle(GamepadInput.Pressed(it)) },
+                    onButton = { container.handleInput(GamepadInput.Pressed(it)) },
                     onSelect = container::selectApproval)
             },
             overview = { overview, control ->
@@ -148,6 +148,10 @@ class TopActivity : GamepadActivity() {
 
     /** En debug seulement : `--ez force_single_screen true` force le mode un seul écran. */
     private fun applyDebugExtras(intent: Intent) {
+        if (BuildConfig.DEBUG && intent.hasExtra("voice_wav")) {
+            val name = intent.getStringExtra("voice_wav").orEmpty()
+            container.debugVoiceWav = if (name.matches(Regex("[A-Za-z0-9_-]+\\.wav"))) java.io.File(filesDir, name).takeIf { it.isFile } else null
+        }
         if (BuildConfig.DEBUG && intent.hasExtra(EXTRA_FORCE_SINGLE_SCREEN)) {
             container.displays.forceSingleScreen(intent.getBooleanExtra(EXTRA_FORCE_SINGLE_SCREEN, false))
         }

@@ -1,0 +1,137 @@
+package app.regie.ui.screens
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.SpanStyle
+import kotlinx.coroutines.delay
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import app.regie.domain.model.*
+import app.regie.input.Button
+import app.regie.ui.components.*
+import app.regie.ui.theme.*
+
+@Composable
+fun DictationTopScreen(state: DictationReview, session: Session?, single: Boolean, onButton: (Button) -> Unit, onHeld: (Boolean) -> Unit, onSettings: () -> Unit, scrolling: ThreadScroll) {
+    val scroll = rememberScrollState()
+    var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
+    LaunchedEffect(scrolling) { scrolling.steps.collect { scroll.scrollTo(scroll.value + it * 150) } }
+    LaunchedEffect(scrolling.velocity) {
+        while (true) { delay(16); if (scrolling.velocity.value != 0f) scroll.scrollTo(scroll.value + (scrolling.velocity.value * 20).toInt()) }
+    }
+    LaunchedEffect(state.selectedWord, state.phase, layout) {
+        if (state.phase == DictationPhase.CORRECT) state.words.getOrNull(state.selectedWord)?.let { word ->
+            layout?.let { result -> scroll.scrollTo(result.getLineTop(result.getLineForOffset(word.range.first)).toInt()) }
+        }
+    }
+    Column(Modifier.fillMaxSize().background(Palette.background)) {
+        Row(Modifier.fillMaxWidth().height(44.dp).bottomDivider().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            BasicText(when (state.target) { is DictationTarget.Rejection -> "Refuser avec consigne"; is DictationTarget.DiffComment -> "Commentaire"; else -> "Message pour" }, style = sans(13.sp, color = Palette.textMuted))
+            session?.let { AgentTag(it.agent); BasicText(it.project, style = sans(13.sp, 600)); BasicText(it.branch.orEmpty(), style = mono(11.sp, color = Palette.textSubtle), maxLines = 1, modifier = Modifier.weight(1f)) }
+            BasicText(duration(state.durationMs), style = mono(12.sp, color = Palette.mic))
+        }
+        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll).padding(horizontal = 32.dp, vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+            BasicText(if (state.phase == DictationPhase.RECORDING) "Ce que j’entends" else "Relis avant d’envoyer", style = sans(12.sp, color = Palette.textSubtle))
+            val text = buildAnnotatedString {
+                append(state.text.ifEmpty { "…" })
+                recognizedTerms(state.text, state.vocabulary).forEach {
+                    addStyle(SpanStyle(color = Palette.running, background = Palette.activeRow), it.range.first, it.range.last + 1)
+                }
+                if (state.phase == DictationPhase.CORRECT) state.words.getOrNull(state.selectedWord)?.let {
+                    addStyle(SpanStyle(color = Palette.background, background = Palette.waiting), it.range.first, it.range.last + 1)
+                }
+            }
+            BasicText(text, style = sans(25.sp, lineHeight = 37.sp), onTextLayout = { layout = it })
+            (state.target as? DictationTarget.DiffComment)?.let { BasicText("${it.path} · ligne ${it.line}", style = mono(12.sp, color = Palette.textMuted)) }
+            val recognized = recognizedTerms(state.text, state.vocabulary).map { it.value }.distinct().take(8)
+            if (recognized.isNotEmpty()) BasicText("Reconnus dans le dépôt  ·  ${recognized.joinToString("  ·  ")}", style = mono(11.5.sp, color = Palette.textMuted))
+        }
+        if (single) DictationBottomScreen(state, onButton, onHeld, onSettings, compact = true)
+    }
+}
+
+@Composable
+fun DictationBottomScreen(state: DictationReview, onButton: (Button) -> Unit, onHeld: (Boolean) -> Unit, onSettings: () -> Unit, compact: Boolean = false) {
+    Column(Modifier.then(if (compact) Modifier.fillMaxWidth() else Modifier.fillMaxSize()).background(Palette.background).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            BasicText("Dictée · français", style = sans(13.sp, 600, Palette.mic))
+            BasicText(duration(state.durationMs), style = mono(12.sp))
+            BasicText("Réglages voix", style = sans(12.sp, color = Palette.textMuted), modifier = Modifier.tappable(onSettings))
+        }
+        Column(Modifier.then(if (compact) Modifier else Modifier.weight(1f)).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            if (!compact) {
+                // Actual recent PCM levels; no fabricated activity while the microphone is silent.
+                val levels = remember { mutableStateListOf<Float>() }
+                LaunchedEffect(state.durationMs) { levels.add(state.level); if (levels.size > 32) levels.removeAt(0) }
+                Row(Modifier.height(72.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    repeat(32) { index -> Box(Modifier.width(5.dp).height((4 + (levels.getOrNull(index) ?: 0f) * 180).coerceAtMost(72f).dp).background(Palette.mic, RoundedCornerShape(3.dp))) }
+                }
+                Spacer(Modifier.height(20.dp))
+                MicButton(state.phase == DictationPhase.RECORDING, { onHeld(true) }, { onHeld(false) }, size = 58.dp, halo = 4.dp)
+                Spacer(Modifier.height(16.dp))
+            }
+            BasicText(state.notice ?: when (state.phase) {
+                DictationPhase.RECORDING -> "Relâche L2 pour relire"
+                DictationPhase.FINALIZING -> "Transcription…"
+                DictationPhase.SENDING -> "Envoi…"
+                else -> "Rien ne part sans ton A"
+            }, style = sans(if (compact) 13.sp else 18.sp, 600), modifier = Modifier.fillMaxWidth())
+        }
+        if (state.phase == DictationPhase.CORRECT) Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+            BarAction("←", "Mot précédent") { onButton(Button.LEFT) }; BarAction("→", "Mot suivant") { onButton(Button.RIGHT) }
+        }
+        Row(Modifier.fillMaxWidth().topDivider().padding(top = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            if (state.editable) BarAction("A", "Envoyer") { onButton(Button.A) }
+            BarAction("B", if (state.phase == DictationPhase.SENT) "Retour" else "Effacer") { onButton(Button.B) }
+            if (state.editable) {
+                BarAction("Y", "Compléter") { onButton(Button.Y) }
+                BarAction("X", "Corriger un mot") { onButton(Button.X) }
+            }
+        }
+    }
+}
+
+@Composable
+fun VoiceSettingsScreen(settings: VoiceSettings, select: (DictationProvider) -> Unit, saveKey: (String) -> Unit, permission: () -> Unit, close: () -> Unit) {
+    var key by remember { mutableStateOf("") }
+    var saved by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxSize().background(Palette.background).imePadding().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        BasicText("Réglages voix", style = sans(22.sp, 600))
+        DictationProvider.entries.forEach { provider ->
+            BasicText("${if (settings.provider == provider) "●" else "○"}  ${if (provider == DictationProvider.LOCAL) "Locale · gratuite, sur la console" else "ElevenLabs · en ligne"}", style = sans(16.sp), modifier = Modifier.tappable { select(provider) })
+        }
+        BasicText("Clé ElevenLabs : ${if (settings.keyConfigured) "enregistrée" else "à saisir"}", style = sans(13.sp, color = Palette.textMuted))
+        BasicTextField(key, { key = it; saved = false }, textStyle = sans(16.sp), singleLine = true,
+            visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            cursorBrush = SolidColor(Palette.text), modifier = Modifier.fillMaxWidth().background(Palette.surface).padding(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+            BasicText(if (saved) "Enregistrée" else "Enregistrer", style = sans(14.sp), modifier = Modifier.tappable { if (key.isNotBlank()) { saveKey(key); key = ""; saved = true } })
+            BasicText("Effacer la clé", style = sans(14.sp, color = Palette.textMuted), modifier = Modifier.tappable { saveKey(""); key = "" })
+        }
+        BasicText("Autoriser le microphone", style = sans(15.sp, color = Palette.running), modifier = Modifier.tappable(permission))
+        BasicText("La voix locale télécharge son modèle au premier usage. Avec ElevenLabs, l’audio et les termes du dépôt sont transmis au fournisseur.", style = sans(12.sp, color = Palette.textMuted, lineHeight = 17.sp))
+        BarAction("B", "Retour") { close() }
+    }
+}
+
+private fun duration(ms: Long) = "${ms / 60_000}:${(ms / 1000 % 60).toString().padStart(2, '0')}"
+
+/** Exact identifier boundaries, so a branch named main does not highlight maintenant or mainframe. */
+fun recognizedTerms(text: String, vocabulary: List<String>): List<MatchResult> = vocabulary
+    .filter { it.isNotBlank() }
+    .flatMap { Regex("(?<![\\p{L}\\p{N}_])" + Regex.escape(it) + "(?![\\p{L}\\p{N}_])", RegexOption.IGNORE_CASE).findAll(text).toList() }
+    .sortedBy { it.range.first }
