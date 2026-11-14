@@ -11,6 +11,18 @@ import kotlin.test.*
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SessionNotificationsTest {
+    @Test fun `an agent failure does not wait for a thread that cannot load`() = runTest {
+        val gateway = StubGateway()
+        val port = RecordingNotifications()
+        gateway.sessions.value = listOf(session("s"))
+        NotifySessions(gateway, MutableStateFlow(false), port, backgroundScope)
+        runCurrent()
+        gateway.sessions.value = listOf(session("s", SessionStatus.FAILED).copy(lastError = "Agent arrêté"))
+        runCurrent()
+        assertEquals(SessionNoticeKind.FAILED, port.shown.single().kind)
+        assertTrue(port.shown.single().text.endsWith("Agent arrêté"))
+    }
+
     @Test fun `background end opens its session once and initial history stays silent`() = runTest {
         val gateway = StubGateway()
         val foreground = MutableStateFlow(false)

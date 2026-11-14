@@ -40,7 +40,7 @@ class NotifySessions(
                                 if (session.status.isBusy) notifications.cancel(session.id)
                                 previous = session.status
                             }
-                            if (pending && !visible && thread.loaded) {
+                            if (pending && !visible && (thread.loaded || session.status == SessionStatus.FAILED)) {
                                 val summary = WrittenSummary.of(session, thread)
                                 val kind = when {
                                     session.status == SessionStatus.FAILED -> SessionNoticeKind.FAILED

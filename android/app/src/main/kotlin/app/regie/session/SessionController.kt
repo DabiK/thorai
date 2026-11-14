@@ -60,7 +60,7 @@ data class SessionControlState(
     val notice: SessionNotice? = null,
 ) {
     fun showsSummary(live: LiveSession): Boolean = summaryOpen ||
-        (!live.session.status.isBusy && dismissedSummary != "${live.session.id.value}:${live.session.updatedAt}")
+        (!live.session.status.isBusy && dismissedSummary != live.summaryTurn)
 }
 
 /**
@@ -172,8 +172,7 @@ class SessionController(
     fun openSummary() = _state.update { it.copy(summaryOpen = true) }
 
     private fun closeSummary() = _state.update { state ->
-        val shown = live.value?.session
-        state.copy(summaryOpen = false, dismissedSummary = shown?.let { "${it.id.value}:${it.updatedAt}" })
+        state.copy(summaryOpen = false, dismissedSummary = live.value?.summaryTurn)
     }
 
     private fun onTrigger(trigger: Trigger, held: Boolean) {

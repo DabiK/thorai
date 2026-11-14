@@ -7,13 +7,14 @@ data class WrittenSummary(val lines: List<String>, val fromAgent: Boolean, val q
             // A new user message invalidates the previous turn's report.
             val current = thread.entries.drop(thread.entries.indexOfLast { it is ThreadEntry.UserMessage } + 1)
             val text = current.filterIsInstance<ThreadEntry.AgentText>().lastOrNull()?.text.orEmpty()
-            val block = text.substringAfterLast("[Point Régie]", "").substringBefore("[/Point Régie]")
+            val report = text.substringAfterLast("[Point Régie]", "")
+            val block = report.substringBefore("[/Point Régie]")
             fun field(name: String): String? = block.lineSequence().map { it.trim() }
                 .firstOrNull { it.startsWith("$name :") }?.substringAfter(':')?.trim()?.takeIf { it.isNotEmpty() }
             val done = field("Fait")
             val tests = field("Tests")
             val next = field("Suite")
-            val complete = text.contains("[/Point Régie]") && done != null && tests != null && next != null
+            val complete = report.contains("[/Point Régie]") && done != null && tests != null && next != null
             if (complete) return WrittenSummary(
                 listOf("Fait : $done", "Tests : $tests", "Suite : $next").map(::short), true,
                 field("Question")?.takeUnless { it.equals("aucune", ignoreCase = true) || it.equals("aucune.", ignoreCase = true) }?.let(::short),

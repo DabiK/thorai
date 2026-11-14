@@ -33,7 +33,7 @@ Y depuis la régie ouvre la session sélectionnée et son point ; Y depuis une s
 ouvre/ferme le panneau. La fin d'un tour (`idle`), l'échec ou l'arrêt rendent le bilan
 visible automatiquement dans la session ; la session reste reprenable. B ferme le
 point avant de revenir à la régie. Le point contient trois champs, deux lignes visuelles
-au plus chacun, plus titre et attribution : huit lignes au maximum. Une ellipse renvoie
+au plus chacun, plus titre, attribution et question éventuelle : neuf lignes au maximum. Une ellipse renvoie
 au fil complet. Aucun écran n'est automatiquement changé à la fin d'une autre session.
 
 ## Notifications
@@ -76,3 +76,24 @@ Pas d'outil Artifact Claude connecté ; fraîcheur distante non vérifiée. Poli
 fil et panneau latéral conservés. Le libellé vocal de la maquette est remplacé par
 « Faire le point », selon la décision utilisateur. Pas de maquette dédiée au résumé :
 le panneau Y existant est réutilisé et borné, également en mode un écran.
+
+
+## Relecture et preuves finales
+
+- Quatre régressions rouges puis vertes après le premier commit : le titre tardif ne
+  doit pas rouvrir le point fermé (identité du dernier message utilisateur), la question
+  doit apparaître aussi dans le panneau, la clôture du bilan doit suivre son ouverture,
+  et l'alerte d'échec ne doit pas attendre un journal indisponible.
+- Test Compose à la largeur du fil sur la Thor : textes longs et question occupent
+  moins de dix lignes réellement mises en page (`TextLayoutResult.lineCount`), pas
+  seulement trois chaînes Kotlin. API consultée via Context7 :
+  https://developer.android.com/reference/kotlin/androidx/compose/ui/text/TextLayoutResult
+- Android : 230 tests et lint verts. Pont : 270 tests, typage/lint verts. Aucun test
+  unitaire ne contacte la Thor ou un agent.
+- Quatre tours du même Codex réel, aucun Claude : bilan, question, refus et reprise,
+  ouverture par Y et par intent à froid, un/deux écrans. Seul `app.regie` installé.
+  Version finale : captures 16–18 ; détails dans `artifacts/screenshots/12/essai-thor.txt`.
+- Notifications système non démontrées sur la Thor : permission refusée avec
+  `USER_FIXED`, importance globale `NONE`. Test Robolectric du vrai adapter et test
+  d'ouverture par intent ne remplacent pas la publication et le toucher réels.
+  Critère laissé décoché ; statut à fusionner suivant la consigne nocturne.

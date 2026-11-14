@@ -676,6 +676,10 @@ internal fun SummaryPanel(summary: WrittenSummary, loading: Boolean = false) {
             BasicText(line, style = sans(13.sp, color = Palette.agentText, lineHeight = 18.sp),
                 maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
+        if (!loading) summary.question?.let {
+            BasicText("Question : $it", style = sans(13.sp, color = Palette.waiting, lineHeight = 18.sp),
+                maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
     }
 }
 

@@ -4,6 +4,13 @@ import app.regie.domain.model.*
 import kotlin.test.*
 
 class WrittenSummaryTest {
+    @Test fun `a previous closing marker cannot complete a newer unfinished report`() {
+        val old = "[Point Régie]\nFait : ancien\nTests : anciens\nSuite : rien\n[/Point Régie]"
+        val partial = "[Point Régie]\nFait : nouveau\nTests : nouveaux\nSuite : à"
+        val thread = SessionThread(listOf(ThreadEntry.AgentText(1, "$old\n$partial")), loaded = true)
+        assertFalse(LiveSession.of(session("s"), thread).writtenSummary.fromAgent)
+    }
+
     @Test fun `completed turn exposes the three agent statements without inventing tests`() {
         val thread = SessionThread(listOf(ThreadEntry.AgentText(1, """
             Explication longue.

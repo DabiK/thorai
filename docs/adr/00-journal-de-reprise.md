@@ -50,6 +50,8 @@
 
 - **14 novembre, ticket 12 à fusionner (solo Codex)** : points écrits en fin de tour et par Y, bilans demandés dans le tour normal de l’agent sans appel supplémentaire, notifications questions/fins/échecs (ADR 10). Android 226 tests + lint, pont 270 tests + typage/lint verts. Thor : Codex réel, un/deux écrans, Y, fin automatique, validation en arrière-plan et intents ciblés. Publication/clic notification restent à l’utilisateur : POST_NOTIFICATIONS refusée avec USER_FIXED, aucun droit accordé. Agent d’essai arrêté par bridge.shutdown, pas de Claude. Preuves et pas à pas : artifacts/screenshots/12/essai-thor.txt.
 
+- **14 novembre, ticket 12, relecture solo après commit** : titre tardif sans réouverture du point fermé, question visible dans le panneau (9 lignes maximum), bilan incomplet correctement rejeté, notification d’échec indépendante du chargement du fil. Quatre régressions rouges puis vertes et test de hauteur Compose : Android 230 tests + lint, pont 270 tests + typage/lint verts. APK réinstallé ; même Codex repris pour un quatrième tour sans outil, ouverture à froid, Y et question en un/deux écrans vérifiés (captures 16–18). Quitter arrête la session et le pont. Aucun Claude ni permission accordée ; publication/clic Android toujours à vérifier par l’utilisateur. Statut à fusionner maintenu.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

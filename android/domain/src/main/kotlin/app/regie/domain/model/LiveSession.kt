@@ -60,6 +60,8 @@ data class LiveSession(
     /** Le journal de la session n'est pas encore lu et rien n'est arrivé en direct. */
     val loading: Boolean,
     val writtenSummary: WrittenSummary,
+    /** Identifies a turn even if its title or branch changes after completion. */
+    val summaryTurn: String,
 ) {
     /** Start n'interrompt qu'une session qui travaille ou attend une validation. */
     val canInterrupt: Boolean get() = session.status.isBusy
@@ -90,6 +92,7 @@ data class LiveSession(
                 context = thread.context,
                 loading = !thread.loaded && thread.entries.isEmpty(),
                 writtenSummary = WrittenSummary.of(session, thread),
+                summaryTurn = "${session.id.value}:${thread.entries.lastOrNull { it is ThreadEntry.UserMessage }?.id}",
             )
         }
 

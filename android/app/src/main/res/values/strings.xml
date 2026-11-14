@@ -135,7 +135,7 @@
     <string name="notice_interrupted">Interruption envoyée.</string>
     <string name="notice_interrupt_failed">Le pont n\'a pas pu l\'interrompre.</string>
 
-    <!-- Point écrit (Y), en attendant le point à voix haute. -->
+    <!-- Point écrit (Y), sans synthèse vocale. -->
     <string name="summary_title">Le point</string>
     <string name="summary_close">Y ou B pour fermer</string>
 </resources>

@@ -65,6 +65,17 @@ class SessionControllerTest {
     }
 
     @Test
+    fun `a late title update does not reopen a dismissed report but a new turn does`() {
+        show("montage")
+        press(Button.B)
+        val previous = live.value!!
+        live.value = previous.copy(session = previous.session.copy(title = "Titre tardif", updatedAt = t0))
+        kotlin.test.assertFalse(controller.state.value.showsSummary(live.value!!))
+        live.value = LiveSession.of(previous.session, SessionThread(listOf(app.regie.domain.model.ThreadEntry.UserMessage(4, "Nouveau tour")), loaded = true))
+        assertTrue(controller.state.value.showsSummary(live.value!!))
+    }
+
+    @Test
     fun `completion opens a short report automatically and B dismisses it before returning`() {
         show("montage")
         assertTrue(controller.state.value.showsSummary(live.value!!))
