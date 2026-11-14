@@ -86,6 +86,8 @@
 
 - **14 novembre, ticket 16, corrections de revue (solo Codex)** : sur Mac, `ask`/`auto-edit`/`plan` passent en ACP `read-only` dans le domaine, configuration initiale comprise ; PRoot inchangé (ADR 14). Régressions rouges puis vertes ; shell et apply_patch réels refusés par B puis autorisés par A, auto-edit autorise seulement l’édition. Captures PNG entièrement vérifiées et décodées, fixtures réelles, troncatures et mutation du décodage détectées. Android 310 tests + lint, pont 286 + typage/lint, scripts 13 tests verts. Trois commandes rejouées, quatre Codex arrêtés, aucun Claude ; Thor absente, vérifications physiques dans `artifacts/screenshots/16/revision-validation.txt`. Relecture après fb74fe2 : assertion de reprise renforcée pour exclure un ancien appel, mutation détectée ; portes repassées et historique sur les deux écrans après réinstallation sans nouvel agent (18). Pont/app/AVD arrêtés. Statut à fusionner.
 
+- **14 novembre, ticket 19 à fusionner (solo Codex)** : configuration native MCP/consignes/permissions vérifiée sur pont Mac isolé 47619 ; sources Claude explicites à new/load (ADR 19), aucune copie de configuration. 288 tests pont + typage/lint verts ; contrat réel : inventaires Claude sans prompt et Codex, appel MCP Codex sans validation avec marqueur AGENTS.md, nouvel appel après arrêt/reprise. Sessions/ponts/MCP arrêtés. Thor absente ; émulateur et 47600 laissés au ticket 17. Panne physique non reproduite : pas à pas console dans le ticket et ADR 19, preuves artifacts/screenshots/19/. Relecture après commit détaillée à la suite.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |
