@@ -1,6 +1,6 @@
 # 08 — Dictée dans l'app
 
-Statut : à fusionner
+Statut : fait (reste l'essai au vrai micro avec l'utilisateur)
 Bloqué par : 01, 04, 06
 
 ## Objectif

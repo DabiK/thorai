@@ -17,6 +17,7 @@ RUNS=.scratch/regie-v1/runs
 LOG=$RUNS/night-chain.log
 ORDER="${ORDER:-06 07 08 12 09 10 11}"
 NOTE="$( [ -n "${NOTE_FILE:-}" ] && cat "$NOTE_FILE" || true)"
+export ANDROID_HOME="${ANDROID_HOME:-/opt/homebrew/share/android-commandlinetools}"
 TRAILER="Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 mkdir -p "$RUNS"
 
