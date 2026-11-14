@@ -79,7 +79,10 @@ fun NewSessionScreen(state: NewSessionForm, bottom: Boolean, single: Boolean, on
                             }
                             NewSessionField.BRANCH -> BasicText(state.branchLabel, style = mono(13.sp))
                             NewSessionField.BASE -> BasicText(state.base.ifEmpty { "À choisir" }, style = mono(13.sp))
-                            NewSessionField.VALIDATION -> Segments(listOf("Plan d’abord", "Modifs auto", "Tout valider"), state.modeLabel)
+                            NewSessionField.VALIDATION -> {
+                                BasicText(state.modeLabel, style = sans(14.sp, 600))
+                            }
+                            NewSessionField.MODEL, NewSessionField.THOUGHT -> BasicText(state.optionLabel(field), style = sans(14.sp))
                             NewSessionField.INSTRUCTION -> BasicText(if ((state.capturing || state.finalizing) && !state.dictatingName) state.partial.ifEmpty { "…" } else state.instruction.ifEmpty { "Aucune · L2 pour dicter" }, style = sans(14.sp, lineHeight = 20.sp))
                         }
                     }
@@ -117,6 +120,7 @@ fun NewSessionScreen(state: NewSessionForm, bottom: Boolean, single: Boolean, on
             if (state.capturing || state.finalizing) BasicText(
                 if (state.capturing) "L2 · ${(state.level * 100).toInt()} % · ${state.partial.ifBlank { "Écoute…" }}" else "Transcription…",
                 style = sans(13.sp, color = Palette.mic), maxLines = 2)
+            if (state.field == NewSessionField.VALIDATION) BasicText(approvalModeHelp(state.approvalMode), style = sans(12.sp, color = Palette.textMuted), maxLines = 2)
             BasicText(state.feedback, style = sans(12.sp, color = Palette.textMuted), maxLines = 2)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Row(Modifier.weight(1f).background(if (state.canLaunch) Palette.text else Palette.textSubtle, RoundedCornerShape(12.dp))

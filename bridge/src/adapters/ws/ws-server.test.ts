@@ -238,3 +238,135 @@ describe('the WebSocket server', () => {
     await client.close();
   });
 });
+
+it('relays advertised options, creation selections and acknowledged live changes', async () => {
+  codex.initialOptions = [
+    {
+      id: 'model',
+      name: 'Model',
+      type: 'select',
+      category: 'model',
+      currentValue: 'one',
+      options: [
+        { value: 'one', name: 'One' },
+        { value: 'two', name: 'Two' },
+      ],
+    },
+  ];
+  const client = new Client();
+  const catalogue = await client.call('agent.options', { agent: 'codex' });
+  expect(catalogue).toMatchObject({
+    result: { configOptions: [{ id: 'model', currentValue: 'one' }] },
+  });
+  const created = await client.call('session.create', {
+    agent: 'codex',
+    project: 'regie-demo',
+    approvalMode: 'allow-all',
+    configValues: { model: 'two' },
+  });
+  const { sessionId } = (created.result as { session: { sessionId: string } }).session;
+  expect(created).toMatchObject({
+    result: { session: { configOptions: [{ currentValue: 'two' }] } },
+  });
+  expect(
+    await client.call('session.configure', { sessionId, configId: 'model', value: 'one' }),
+  ).toMatchObject({ result: { session: { configOptions: [{ currentValue: 'one' }] } } });
+  expect(await client.call('session.configure', { sessionId, approvalMode: 'plan' })).toMatchObject(
+    { result: { session: { approvalMode: 'plan' } } },
+  );
+  expect(
+    await client.call('session.configure', { sessionId, configId: 'model', value: 'unknown' }),
+  ).toMatchObject({ error: { code: 'unknown_option' } });
+  await client.close();
+});
+
+it('publishes refreshed choices on repeated failed resumes and accepts an explicit replacement', async () => {
+  const model = {
+    id: 'model',
+    name: 'Model',
+    type: 'select',
+    category: 'model',
+    currentValue: 'large',
+    options: [{ value: 'large', name: 'Large' }],
+  };
+  codex.initialOptions = [model];
+  const client = new Client();
+  await client.call('hello');
+  const created = await client.call('session.create', {
+    agent: 'codex',
+    project: 'regie-demo',
+    approvalMode: 'allow-all',
+  });
+  const { sessionId } = (created.result as { session: { sessionId: string } }).session;
+  codex.crash();
+  await settle();
+  for (const replacement of ['small', 'new']) {
+    codex.initialOptions = [
+      { ...model, currentValue: replacement, options: [{ value: replacement, name: replacement }] },
+    ];
+    expect(await client.call('session.resume', { sessionId })).toMatchObject({
+      error: { code: 'agent_failed' },
+    });
+    expect(client.events.filter((e) => e.type === 'session').at(-1)?.data).toMatchObject({
+      active: false,
+      configOptions: [{ currentValue: 'large', options: [{ value: replacement }] }],
+    });
+  }
+  expect(
+    await client.call('session.configure', { sessionId, configId: 'model', value: 'new' }),
+  ).toMatchObject({
+    result: { session: { active: true, configOptions: [{ currentValue: 'new' }] } },
+  });
+  expect(codex.callsOf('prompt')).toEqual([]);
+  await client.close();
+});
+
+it('accepts joint resume replacements and rejects mixed or empty configuration payloads', async () => {
+  const option = (id: string, value: string) => ({
+    id,
+    name: id,
+    type: 'select',
+    category: id === 'model' ? 'model' : 'thought_level',
+    currentValue: value,
+    options: [{ value, name: value }],
+  });
+  codex.initialOptions = [option('model', 'old'), option('effort', 'high')];
+  const client = new Client();
+  await client.call('hello');
+  const created = await client.call('session.create', {
+    agent: 'codex',
+    project: 'regie-demo',
+    approvalMode: 'allow-all',
+  });
+  const { sessionId } = (created.result as { session: { sessionId: string } }).session;
+  codex.crash();
+  await settle();
+  codex.initialOptions = [option('model', 'new'), option('effort', 'low')];
+  expect(await client.call('session.resume', { sessionId })).toMatchObject({
+    error: { code: 'agent_failed' },
+  });
+  for (const invalid of [
+    { configValues: {} },
+    { configValues: { model: 'new' }, configId: 'effort', value: 'low' },
+    { configValues: { model: 'new' }, approvalMode: 'ask' },
+  ])
+    expect(await client.call('session.configure', { sessionId, ...invalid })).toHaveProperty(
+      'error',
+    );
+  expect(
+    await client.call('session.configure', {
+      sessionId,
+      configValues: { model: 'new', effort: 'low' },
+    }),
+  ).toMatchObject({
+    result: {
+      session: {
+        active: true,
+        approvalMode: 'allow-all',
+        configOptions: [{ currentValue: 'new' }, { currentValue: 'low' }],
+      },
+    },
+  });
+  expect(codex.callsOf('prompt')).toEqual([]);
+  await client.close();
+});

@@ -4,7 +4,7 @@ import app.regie.domain.usecase.validBranchName
 import app.regie.domain.usecase.projectFolderName
 
 data class ProjectChoice(val name: String, val currentBranch: String? = null, val branches: List<String> = emptyList())
-enum class NewSessionField(val label: String) { AGENT("Agent"), PROJECT("Projet"), BRANCH("Branche"), BASE("Depuis"), VALIDATION("Validation"), INSTRUCTION("Consigne") }
+enum class NewSessionField(val label: String) { AGENT("Agent"), PROJECT("Projet"), BRANCH("Branche"), BASE("Depuis"), VALIDATION("Validation"), MODEL("Modèle"), THOUGHT("Réflexion"), INSTRUCTION("Consigne") }
 enum class BranchChoice { CURRENT, EXISTING, NEW }
 
 data class NewSessionForm(
@@ -16,6 +16,7 @@ data class NewSessionForm(
     val catalogAvailable: Boolean = true, val loading: Boolean = false, val sending: Boolean = false, val uncertain: Boolean = false,
     val capturing: Boolean = false, val finalizing: Boolean = false, val partial: String = "", val level: Float = 0f,
     val notice: String = "",
+    val configOptions: List<SessionOption> = emptyList(), val optionsLoading: Boolean = false, val optionsNotice: String = "",
 ) {
     val selectedProject: ProjectChoice? get() = projects.singleOrNull { it.name == project }
     val fields: List<NewSessionField> get() = NewSessionField.entries.filter { (it != NewSessionField.BASE || branchChoice == BranchChoice.NEW) && (!newProject || it != NewSessionField.BRANCH && it != NewSessionField.BASE) }
@@ -32,7 +33,7 @@ data class NewSessionForm(
         instruction.length > 2000 -> "Consigne limitée à 2 000 caractères."
         else -> null
     }
-    val canLaunch: Boolean get() = editable && catalogAvailable && problem == null
+    val canLaunch: Boolean get() = editable && !optionsLoading && catalogAvailable && problem == null
     val projectLabel: String get() = when {
         loading -> "Chargement des projets…"
         !catalogAvailable -> "Pont injoignable · reconnexion…"
@@ -51,5 +52,13 @@ data class NewSessionForm(
         BranchChoice.EXISTING -> branch
         BranchChoice.NEW -> "Nouvelle · ${branch.ifBlank { "nom choisi par l’agent" }}"
     }
-    val modeLabel: String get() = when (approvalMode) { "ask" -> "Tout valider"; "auto-edit" -> "Modifs auto"; else -> "Plan d’abord" }
+    fun option(field: NewSessionField): SessionOption? = configOptions.firstOrNull { it.category == if (field == NewSessionField.MODEL) "model" else "thought_level" }
+    fun optionLabel(field: NewSessionField): String = when {
+        optionsLoading -> "Chargement…"
+        optionsNotice.isNotEmpty() -> optionsNotice
+        agent == null -> "Choisis un agent"
+        else -> option(field)?.valueLabel ?: "Non exposé par cet agent"
+    }
+    val configValues: Map<String, String> get() = configOptions.filter { it.category in listOf("model", "thought_level") }.mapNotNull { o -> o.currentValue?.let { o.id to it } }.toMap()
+    val modeLabel: String get() = approvalModeLabel(approvalMode)
 }

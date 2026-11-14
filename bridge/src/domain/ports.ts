@@ -72,6 +72,7 @@ export interface SessionStore {
 
 /** The project folders the agents may work in. */
 export interface Workspace {
+  configurationDirectory(): Promise<string>;
   createProject(
     name: string,
     initialBranch: string,

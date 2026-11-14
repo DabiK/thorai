@@ -30,7 +30,19 @@ function fakeAgent(): { transport: AcpTransport; received: string[] } {
       await client.notify('_auth/status_update', {
         authStatus: { kind: 'account', account: { email: EMAIL } },
       });
-      return { sessionId: 'fake-1' };
+      return {
+        sessionId: 'fake-1',
+        configOptions: [
+          {
+            id: 'model',
+            name: 'Model',
+            category: 'model',
+            type: 'select',
+            currentValue: 'from-agent',
+            options: [{ value: 'from-agent', name: 'Agent model' }],
+          },
+        ],
+      };
     })
     .onRequest('session/set_mode', async ({ params }) => {
       received.push(`set_mode ${params.modeId}`);
@@ -133,6 +145,10 @@ describe('AcpConnector', () => {
     ]);
     expect(recorded.updates).toEqual([
       expect.objectContaining({
+        sessionUpdate: 'config_option_update',
+        configOptions: [expect.objectContaining({ id: 'model', currentValue: 'from-agent' })],
+      }),
+      expect.objectContaining({
         sessionUpdate: 'tool_call',
         toolCallId: 'exec-1',
         _meta: { terminal_info: { terminal_id: 'exec-1' } },
@@ -146,9 +162,13 @@ describe('AcpConnector', () => {
 
   it('transports the requested collaboration configuration to ACP', async () => {
     const agent = fakeAgent();
-    const connection = await connector(agent.transport).connect(recordingHandlers().handlers);
+    const recorded = recordingHandlers();
+    const connection = await connector(agent.transport).connect(recorded.handlers);
     await connection.setConfig('fake-1', 'collaboration_mode', 'plan');
     expect(agent.received).toContain('config fake-1 collaboration_mode plan');
+    expect(recorded.updates).toEqual([
+      { sessionUpdate: 'config_option_update', configOptions: [] },
+    ]);
     await connection.close();
   });
 

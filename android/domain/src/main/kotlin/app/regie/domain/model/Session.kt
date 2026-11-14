@@ -51,4 +51,6 @@ data class Session(
     val lastError: String? = null,
     /** Fichiers modifiés par les éditions de l'agent, relatifs au projet, d'après le pont. */
     val modifiedFiles: List<String> = emptyList(),
+    val approvalMode: String = "unknown",
+    val configOptions: List<SessionOption> = emptyList(),
 )

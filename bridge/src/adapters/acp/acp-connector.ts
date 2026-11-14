@@ -94,16 +94,34 @@ export class AcpConnector implements AgentConnector {
     return {
       newSession: async (cwd) => {
         const response = await agent.request('session/new', { cwd, mcpServers: [] });
+        if (response.configOptions != null)
+          handlers.update(response.sessionId, {
+            sessionUpdate: 'config_option_update',
+            configOptions: response.configOptions,
+          });
         return response.sessionId;
       },
       loadSession: async (sessionId, cwd) => {
-        await agent.request('session/load', { sessionId, cwd, mcpServers: [] });
+        const response = await agent.request('session/load', { sessionId, cwd, mcpServers: [] });
+        if (response.configOptions != null)
+          handlers.update(sessionId, {
+            sessionUpdate: 'config_option_update',
+            configOptions: response.configOptions,
+          });
       },
       setMode: async (sessionId, modeId) => {
         await agent.request('session/set_mode', { sessionId, modeId });
       },
       setConfig: async (sessionId, configId, value) => {
-        await agent.request('session/set_config_option', { sessionId, configId, value });
+        const response = await agent.request('session/set_config_option', {
+          sessionId,
+          configId,
+          value,
+        });
+        handlers.update(sessionId, {
+          sessionUpdate: 'config_option_update',
+          configOptions: response.configOptions,
+        });
       },
       prompt: async (sessionId, text) => {
         const response = await agent.request<acp.PromptResponse>('session/prompt', {

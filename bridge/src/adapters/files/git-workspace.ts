@@ -15,6 +15,11 @@ export class GitWorkspace implements Workspace {
     this.root = root;
   }
 
+  async configurationDirectory(): Promise<string> {
+    await mkdir(this.root, { recursive: true });
+    return realpath(this.root);
+  }
+
   async createProject(name: string, initialBranch: string): Promise<{ name: string; cwd: string }> {
     await mkdir(this.root, { recursive: true });
     const root = await realpath(this.root);

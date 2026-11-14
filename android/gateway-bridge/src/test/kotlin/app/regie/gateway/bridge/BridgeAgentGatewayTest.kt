@@ -1,5 +1,6 @@
 package app.regie.gateway.bridge
 
+import app.regie.domain.model.*
 import app.regie.domain.model.ActionStatus
 import app.regie.domain.model.BridgeConnection
 import app.regie.domain.model.Delivery
@@ -111,6 +112,45 @@ class BridgeAgentGatewayTest {
             withTimeout(15.seconds) { block() }
         } finally {
             job.cancelAndJoin()
+        }
+    }
+
+    @Test fun `agent options and confirmed session settings cross the real gateway`() {
+        val bridge = FakeBridge(); upgrade(bridge); val gateway = gateway()
+        withGateway(gateway) {
+            val ws = bridge.socket(); val hello = bridge.next("hello")
+            ws.send(helloResult(hello.long("id")!!, "j", 0, ""))
+            gateway.connection.first { it == BridgeConnection.Connected }
+            val options = """[{"id":"custom-model","name":"Remote model","category":"model","currentValue":"remote","options":[{"value":"remote","name":"Remote"}]}]"""
+            val discovery = async { gateway.agentOptions(Agent.CODEX) }
+            val lookup = bridge.next("agent.options")
+            assertEquals("codex", lookup.obj("params")!!.string("agent"))
+            ws.send("""{"id":${lookup.long("id")},"result":{"configOptions":$options}}""")
+            assertEquals("remote", discovery.await().single().currentValue)
+            val change = async { gateway.configureSession(SessionId("s"), SessionSetting(approvalMode = "allow-all")) }
+            val request = bridge.next("session.configure")
+            assertEquals("allow-all", request.obj("params")!!.string("approvalMode"))
+            val session = sessionJson("s", "idle", "2026-11-14T00:00:00Z").replace("\"ask\"", "\"allow-all\"").dropLast(1) + ",\"configOptions\":$options}"
+            ws.send("""{"id":${request.long("id")},"result":{"session":$session}}""")
+            assertEquals(SettingsResult.APPLIED, change.await())
+            assertEquals("allow-all", gateway.sessions.value.single().approvalMode)
+            assertEquals("Remote", gateway.sessions.value.single().configOptions.single().valueLabel)
+        }
+    }
+
+    @Test fun `joint replacements cross the gateway in one configuration request`() {
+        val bridge = FakeBridge(); upgrade(bridge); val gateway = gateway()
+        withGateway(gateway) {
+            val ws = bridge.socket(); val hello = bridge.next("hello")
+            ws.send(helloResult(hello.long("id")!!, "j", 0, ""))
+            gateway.connection.first { it == BridgeConnection.Connected }
+            val change = async { gateway.configureSession(SessionId("s"), SessionSetting(configValues = mapOf("model" to "new", "effort" to "low"))) }
+            val request = bridge.next("session.configure")
+            assertEquals("new", request.obj("params")!!.obj("configValues")?.string("model"))
+            assertEquals("low", request.obj("params")!!.obj("configValues")?.string("effort"))
+            val session = sessionJson("s", "idle", "2026-11-14T00:00:00Z")
+            ws.send("""{"id":${request.long("id")},"result":{"session":$session}}""")
+            assertEquals(SettingsResult.APPLIED, change.await())
         }
     }
 

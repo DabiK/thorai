@@ -77,7 +77,7 @@ class InterpretVoiceCommand(private val model: VoiceCommandModel) {
                 val branch = intent.branch
                 if (branch != null && (branch.length > 200 || !branch.matches(Regex("[A-Za-z0-9][A-Za-z0-9_./-]*")) || branch.contains(".."))) return null
                 if (intent.baseBranch != null && !validBranchName(intent.baseBranch)) return null
-                if (intent.approvalMode != null && intent.approvalMode !in listOf("plan", "auto-edit", "ask")) return null
+                if (intent.approvalMode != null && intent.approvalMode !in listOf("plan", "auto-edit", "ask", "allow-all")) return null
                 if ((intent.instruction?.length ?: 0) > 2000) return null
                 VoiceCommand.Launch(NewSessionDraft(agent, project, branch, intent.instruction, intent.approvalMode ?: "plan", intent.newBranch, intent.baseBranch, intent.newProject))
             }

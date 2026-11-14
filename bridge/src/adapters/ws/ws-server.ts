@@ -164,12 +164,19 @@ function serve(ws: WebSocket, options: WsServerOptions): void {
         },
       };
     },
+    'agent.options': async (params) => ({
+      configOptions: await bridge.agentOptions(params.agent, params.configValues),
+    }),
+    'session.configure': async (params) => ({
+      session: await bridge.configureSession(params.sessionId, params),
+    }),
     'sessions.list': () => ({ sessions: bridge.listSessions() }),
     'session.create': async (params) => ({
       session: await bridge.createSession({
         agent: params.agent,
         project: params.project,
         newProject: params.newProject,
+        configValues: params.configValues,
         branch: params.branch ?? undefined,
         approvalMode: params.approvalMode,
         prompt: params.prompt ?? undefined,

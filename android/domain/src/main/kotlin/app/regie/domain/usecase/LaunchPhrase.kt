@@ -15,7 +15,7 @@ internal fun launchPhrase(text: String): VoiceIntent? {
     val instruction = separator?.let { rest.substring(it.range.last + 1).trim() }
     var header = (separator?.let { rest.substring(0, it.range.first) } ?: rest).trim(' ', ',', '.', '!', '?')
     var mode: String? = null
-    val modes = listOf("plan d’abord" to "plan", "plan d'abord" to "plan", "modifs auto" to "auto-edit", "modif auto" to "auto-edit", "tout valider" to "ask", "tout validé" to "ask")
+    val modes = listOf("plan d’abord" to "plan", "plan d'abord" to "plan", "modifs auto" to "auto-edit", "modif auto" to "auto-edit", "tout valider" to "ask", "tout validé" to "ask", "je valide chaque action" to "ask", "tout autoriser" to "allow-all")
     for ((label, value) in modes) {
         val found = Regex("(?:^|,?\\s+)(?:en (?:mode )?)?${Regex.escape(label)}$", RegexOption.IGNORE_CASE).find(header)
         if (found != null) { mode = value; header = header.substring(0, found.range.first).trim(' ', ',', '.', '!', '?'); break }

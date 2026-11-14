@@ -16,13 +16,15 @@ class ReviewNewSession(private val gateway: AgentGateway, private val capture: D
     private var recording: Job? = null
     private var catalogJob: Job? = null
     private var held = false
+    private var optionsJob: Job? = null
 
     fun open(seed: NewSessionDraft? = null, heard: String = "") {
         if (state.value.sending) return
-        job?.cancel(); catalogJob?.cancel(); cancelCapture()
+        job?.cancel(); catalogJob?.cancel(); optionsJob?.cancel(); cancelCapture()
         mutable.value = NewSessionForm(visible = true, heard = heard, loading = true, agent = seed?.agent, project = seed?.project, newProject = seed?.newProject == true, projectName = if (seed?.newProject == true) seed.project else "",
             branchChoice = if (seed?.newBranch == true) BranchChoice.NEW else if (seed?.branch != null) BranchChoice.EXISTING else BranchChoice.CURRENT,
             branch = seed?.branch.orEmpty(), base = seed?.baseBranch.orEmpty(), instruction = seed?.instruction.orEmpty(), approvalMode = seed?.approvalMode ?: "plan")
+        refreshOptions()
         catalogJob = scope.launch {
             gateway.connection.collectLatest { connection ->
                 if (!state.value.visible || state.value.sending || state.value.uncertain) return@collectLatest
@@ -64,9 +66,28 @@ class ReviewNewSession(private val gateway: AgentGateway, private val capture: D
                 s.copy(branchChoice = value.first, branch = value.second, base = "")
             }
             NewSessionField.BASE -> s.copy(base = next(s.selectedProject?.branches.orEmpty(), s.base).orEmpty())
-            NewSessionField.VALIDATION -> s.copy(approvalMode = next(listOf("plan", "auto-edit", "ask"), s.approvalMode)!!)
+            NewSessionField.VALIDATION -> s.copy(approvalMode = next(approvalModes, s.approvalMode)!!)
+            NewSessionField.MODEL, NewSessionField.THOUGHT -> {
+                if (s.optionsLoading) return
+                val option = s.option(s.field) ?: return
+                val value = next(option.options.map { it.value }, option.currentValue) ?: return
+                refreshOptions(mapOf(option.id to value)); return
+            }
             NewSessionField.INSTRUCTION -> s
         }.copy(notice = "")
+        if (s.field == NewSessionField.AGENT) refreshOptions()
+    }
+    private fun refreshOptions(values: Map<String, String> = emptyMap()) {
+        optionsJob?.cancel()
+        val agent = state.value.agent ?: return
+        mutable.value = state.value.copy(optionsLoading = true, optionsNotice = "", configOptions = if (values.isEmpty()) emptyList() else state.value.configOptions)
+        optionsJob = scope.launch {
+            try {
+                val options = gateway.agentOptions(agent, values)
+                mutable.value = state.value.copy(optionsLoading = false, configOptions = options, optionsNotice = "")
+            } catch (e: CancellationException) { throw e }
+            catch (_: Exception) { mutable.value = state.value.copy(optionsLoading = false, configOptions = emptyList(), optionsNotice = "Indisponible · défaut de l’agent") }
+        }
     }
     fun editProjectName(text: String) { if (state.value.editable && state.value.newProject) mutable.value = state.value.copy(projectName = text, project = projectFolderName(text), notice = "") }
     fun editInstruction(text: String) { if (state.value.editable) mutable.value = state.value.copy(instruction = text, notice = "") }
@@ -107,7 +128,7 @@ class ReviewNewSession(private val gateway: AgentGateway, private val capture: D
         if (s.sending) return
         if (s.capturing || s.finalizing) {
             cancelCapture(); mutable.value = s.copy(capturing = false, finalizing = false, partial = "", level = 0f, notice = "Dictée annulée.")
-        } else { job?.cancel(); catalogJob?.cancel(); cancelCapture(); mutable.value = NewSessionForm() }
+        } else { job?.cancel(); catalogJob?.cancel(); optionsJob?.cancel(); cancelCapture(); mutable.value = NewSessionForm() }
     }
     fun launch() {
         val s = state.value
@@ -130,7 +151,7 @@ class ReviewNewSession(private val gateway: AgentGateway, private val capture: D
                 BranchChoice.NEW -> "Crée une nouvelle branche ${s.branch.ifBlank { "au nom de ton choix" }} depuis ${s.base}, puis place-toi dessus avant d’exécuter la consigne. Si le nom existe déjà, demande confirmation."
             }
             val prompt = listOfNotNull(branchInstruction, s.instruction.takeIf { it.isNotBlank() }).joinToString("\n\n").ifBlank { null }
-            val request = NewSessionDraft(s.agent!!, s.project!!, instruction = prompt, approvalMode = s.approvalMode, newProject = s.newProject)
+            val request = NewSessionDraft(s.agent!!, s.project!!, instruction = prompt, approvalMode = s.approvalMode, newProject = s.newProject, configValues = s.configValues)
             val result = try { gateway.createSession(request) }
                 catch (e: CancellationException) { throw e } catch (_: Exception) { SessionCreation(uncertain = true) }
             if (result.id != null) {

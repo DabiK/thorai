@@ -9,7 +9,7 @@ data class VoiceIntent(val action: String, val target: String? = null, val agent
     val approvalMode: String? = null, val newBranch: Boolean = false, val baseBranch: String? = null, val newProject: Boolean = false)
 
 data class NewSessionDraft(val agent: Agent, val project: String, val branch: String? = null, val instruction: String? = null, val approvalMode: String = "plan",
-    val newBranch: Boolean = false, val baseBranch: String? = null, val newProject: Boolean = false)
+    val newBranch: Boolean = false, val baseBranch: String? = null, val newProject: Boolean = false, val configValues: Map<String, String> = emptyMap())
 data class SessionCreation(val id: SessionId? = null, val uncertain: Boolean = false, val error: String? = null)
 
 sealed interface VoiceCommand {

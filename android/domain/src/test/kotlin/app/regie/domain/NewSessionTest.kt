@@ -158,7 +158,7 @@ class NewSessionTest {
         form.open(); runCurrent()
         assertNull(form.state.value.agent); assertNull(form.state.value.project)
         form.launch(); runCurrent(); assertTrue(gateway.creations.isEmpty())
-        form.select(NewSessionField.AGENT); form.change(1)
+        form.select(NewSessionField.AGENT); form.change(1); runCurrent()
         form.select(NewSessionField.PROJECT); form.change(1)
         assertTrue(form.state.value.canLaunch)
         assertTrue(gateway.creations.isEmpty())

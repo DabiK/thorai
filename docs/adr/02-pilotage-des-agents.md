@@ -240,3 +240,190 @@ risquant d’effacer le travail d’un agent. Accusé perdu : pas de renvoi auto
 Tests isolés : domaine avec faux workspace/agents, vrai Git dans des dossiers
 jetables, contrat WebSocket local. Aucun service réel dans la porte de qualité.
 API mkdir vérifiée avec Context7 Node 24.22.2 (`docs-node.txt`, ticket 15).
+
+## Ticket 17 — Permissions explicites et options du CLI
+
+Décision du 14 novembre 2026. `allow-all` devient un choix de premier rang à la
+création et en session : **Tout autoriser**. Il force `bypassPermissions` pour
+Claude et `agent-full-access` pour Codex (`never`, `danger-full-access`, Mac comme
+PRoot). Les autres libellés sont « Plan d’abord », « Modifs auto » et « Je valide
+chaque action » ; l’exception des lectures automatiques est expliquée à l’écran.
+Une demande résiduelle dans Tout autoriser reçoit `allow_once`, y compris celles
+déjà en attente lors du changement. Sans cette option, elle est annulée sans
+question. Aucune permission durable de l’utilisateur n’est écrite.
+
+### Documentation vérifiée et versions conservées
+
+Consultation Context7 (`library`, puis `docs`) de Claude Agent ACP et du protocole,
+le 14 novembre ; liens officiels ouverts également. Pour Codex, Context7 retourne
+encore l’ancien adapter Rust Zed : ses signatures ne sont pas extrapolées à notre
+paquet. Référence retenue : [README officiel codex-acp](https://github.com/agentclientprotocol/codex-acp)
+et code distribué de **2.6.0**, `ModelConfigOption`, `CollaborationModeConfig`,
+`setConfigOption`. Claude reste **0.107.0**, SDK client **2.6.0**. Aucun agent Claude
+lancé pour cette vérification ; sa documentation et les faux couvrent le contrat.
+
+| Capacité ACP v1 | Claude Agent ACP | Codex ACP |
+| --- | --- | --- |
+| Modèle | `model`, catégorie `model`, liste du SDK | `model`, catégorie `model`, liste du serveur Codex |
+| Réflexion | `effort`, catégorie `thought_level`, dépend du modèle ; peut être absent | `reasoning_effort`, catégorie `thought_level`, niveaux supportés par le modèle |
+| Plan | `session/set_mode`, valeur `plan` | permission native + `collaboration_mode=plan`, puis `default` en sortant |
+| Autres sélecteurs | notamment fast, agent, selon ce qu’expose la session | `fast-mode` observé sur le banc |
+| Interrompre / reprendre | `session/cancel` / `session/load` | mêmes méthodes |
+
+Sources : [configuration ACP v1](https://agentclientprotocol.com/protocol/v1/session-config-options),
+[Claude Agent ACP](https://github.com/agentclientprotocol/claude-agent-acp).
+Les réponses de création/reprise/changement contiennent `configOptions` ; chaque
+`config_option_update` remplace la liste entière. Le pont les perdait avant ce
+ticket. L’adapter les relaie maintenant au domaine, qui conserve et valide les
+choix. Pas de catalogue de modèles dans l’app, pas de changement de version.
+
+### Découverte avant A et changements confirmés
+
+ACP expose les listes dans une **session**, pas dans `initialize`. `agent.options`
+ouvre donc une session de découverte par agent, à la racine des projets. Aucun
+prompt, aucun outil, aucun projet créé et aucune carte Régie avant A. Cette session
+peut figurer comme session vide dans l’historique propre du CLI ; elle est fermée
+avec le processus du pont. Ce choix remplace la formule absolue « aucune création
+avant A » de l’ADR 13 : aucun **travail** ne démarre avant A. Il évite de figer ou
+inventer les listes et permet de découvrir l’effort après changement du modèle.
+
+Les sélections sont revérifiées sur la vraie session, modèle puis effort, avant le
+premier message. Si un choix disparaît ou n’est pas confirmé, aucun tour ne part.
+Les choix effectifs sont persistés avec le résumé et restaurés après `session/load`.
+Les changements sont sérialisés ; un prompt attend un réglage en cours. Un échec
+partiel d’entrée ou sortie du plan tente de remettre le mode précédent. Si ce
+retour échoue aussi, le tour est annulé au mieux et la session suspendue : aucun
+nouveau message sans restauration du mode lors de la reprise. Une réponse perdue
+n’est jamais réémise automatiquement. Le protocole détaille les erreurs et le
+format normalisé, sans métadonnées de compte.
+
+### Interface et vérification
+
+Les exports locaux `Lancer.dc.html` et `Session.dc.html` ont été lus intégralement
+(mêmes chemins que les tickets 11/06 ; aucune connexion Artifact disponible pour
+vérifier la fraîcheur distante). Les lignes, couleurs, polices et actions épinglées
+sont conservées. Modèle/réflexion viennent s’ajouter à la fiche défilable. Le mode,
+modèle et effort effectifs restent sous l’en-tête du fil. Droite ou « Options de la
+session » ouvre le panneau : croix pour choisir/modifier, A applique un réglage,
+B ferme. « Reprendre cette session » apparaît pour l’historique ; Start conserve
+l’interruption existante. Les sélecteurs supplémentaires exposés sont accessibles
+dans ce panneau, sans inventer de booléens ou fonctionnalités absentes.
+
+Tests d’abord : transport ACP, domaine pont, protocole WebSocket, domaine Android,
+puis passerelle réelle face à un faux pont. Régressions supplémentaires : valeur
+non confirmée, effort retiré après modèle, retour arrière du mode, changements
+spontanés de l’agent, doubles A et résultat incertain. Tests sans service/agent/
+console ; banc réel distinct dans `artifacts/screenshots/17/`.
+
+Essai Codex sur l’émulateur à deux écrans : création d’un nouveau projet avec
+Tout autoriser / 6.1 Sol / Low ; édition apply_patch et commande shell avec
+redirection sans `approval_request` ; changement par la manette en 6.1 Terra / High.
+Les `turn_context` du vrai Codex confirment modèle, effort, `never` et accès complet,
+au-delà de l’affichage ACP. Plan puis retour, reprise après arrêt du pont, affichage
+un écran et interruption Start (`stopReason: cancelled`) vérifiés. Thor absente,
+aucun Claude lancé. Le premier texte long injecté par `adb input text` a été tronqué
+(comportement déjà relevé au ticket 11) ; la consigne complète a été transmise par
+WebSocket pour vérifier les actions, sans prétendre tester la voix humaine.
+
+### Correction de revue — Start pendant les réglages
+
+Start traverse le panneau d’options, y compris pendant l’attente d’un accusé
+(`busy`), et rejoint le contrôleur d’interruption existant. B reste bloqué pendant
+cette attente pour conserver la cible du réglage. Aucun changement des règles
+métier d’interruption ni du protocole. La racine de composition accepte un port
+et un scope injectés pour tester le parcours entier sans agent ni console.
+Régression initiale rouge puis verte ; mutation bloquant Start pendant `busy`
+détectée ; session au repos couverte. Essai réel Codex sur les deux écrans :
+Droite puis Start, `turn_end cancelled`, preuves `review-start-*` du ticket 17.
+
+### Correction de revue — restauration interrompue et action visible
+
+Pendant une reprise, les listes ACP reçues restent provisoires dans le domaine.
+Le résumé persisté conserve toutes les sélections précédentes jusqu’au succès
+de `session/load`, du mode et de chaque option. Un refus temporaire, y compris
+après restauration du modèle mais avant l’effort, ne remplace donc pas les choix
+par les valeurs par défaut. Une nouvelle tentative, même après redémarrage du
+pont, restaure les mêmes sélections. La session reste inactive en cas d’échec.
+Le protocole explicite que les options d’une session inactive sont les dernières
+sélections sauvegardées, pas la confirmation d’une reprise aboutie.
+
+Le panneau Options affiche « Start · Interrompre » comme action tactile pendant
+un tour, également pendant « Application… ». Il réutilise `SessionStatus.isBusy`
+dans le modèle du domaine et le routage Start existant ; A et B gardent leurs
+protections pendant le réglage. L’action disparaît au repos. API Compose vérifiée
+par Context7 (`library`, puis `docs`), source officielle :
+https://developer.android.com/reference/kotlin/androidx/compose/foundation/clickable.modifier
+Preuves rouges/vertes et essai réel : `artifacts/screenshots/17/review-resume.txt`.
+
+### Correction de revue — modèle sauvegardé retiré du catalogue
+
+Un remplacement explicite via `session.configure` est intégré aux sélections à
+restaurer avant de rendre la session active. La reprise ne tente donc plus
+l’ancien modèle d’abord. Le mode et les autres sélections restent obligatoires ;
+une erreur ne persiste ni le remplacement ni les valeurs par défaut provisoires.
+Aucun fallback automatique : un prompt seul continue de refuser la reprise.
+
+Le domaine sépare le catalogue courant des sélections persistées : les résumés
+inactifs envoyés à l’app exposent les nouvelles listes avec les anciennes valeurs
+sélectionnées. Une option disparue reste visible sans choix disponible. Les mises
+à jour publient un événement même après une erreur identique, afin de permettre
+le remplacement depuis le panneau déjà ouvert. Après redémarrage, une reprise
+recharge ce catalogue ; le dernier choix confirmé atelier sauvegardé.
+
+Régressions avec FakeAgentConnector : remplacement par un modèle existant ou
+nouveau, refus temporaire du remplacement, refus d’une valeur inventée, maintien
+de l’effort, reprise après redémarrage et prompt effectif. Le contrat WebSocket
+couvre deux catalogues successifs malgré la même erreur. Le domaine Android
+couvre le choix puis A lorsque la valeur sauvegardée ne figure plus dans la liste.
+Pas de nouvelle API de bibliothèque ni de changement d’adapter ACP.
+Preuves et essai Codex réel : `artifacts/screenshots/17/review-catalog.txt`.
+
+
+### Correction de revue — remplacements conjoints à la reprise
+
+`session.configure` accepte également une table `configValues` non vide, exclusive
+des deux formes précédentes. Le domaine substitue tous les remplacements explicites
+avant la restauration : modèle d’abord, puis effort et autres options selon les
+catalogues confirmés par ACP. Ni l’ancien modèle ni l’ancien effort ne bloque ainsi
+le remplacement de l’autre. Les sélections non modifiées restent obligatoires et
+persistées ; aucun prompt avant succès complet. Un refus temporaire conserve le
+mode et toutes les anciennes sélections, même après redémarrage.
+
+Pour une session inactive, le domaine Android conserve les choix préparés entre
+les lignes ; ils sont visibles et comptés comme préparés, sans remplacer les valeurs
+confirmées. A envoie une seule requête pour l’ensemble, depuis une option ou
+Reprendre. La validation locale de toutes les sélections a été corrigée ci-dessous
+pour tenir compte des catalogues dépendant du modèle.
+B abandonne les choix non confirmés ; un résultat incertain interdit le renvoi
+automatique. Les changements d’une session active et le mode restent unitaires.
+Ce choix prolonge le mécanisme de remplacement explicite, sans nouveau catalogue
+ni API ACP. Pas de nouvelle API de bibliothèque ; schéma et sérialisation réutilisent
+les primitives déjà présentes. Export local Session.dc.html relu ; export distant
+inaccessible, aucune refonte visuelle.
+
+Le relâchement du stick droit est transmis au contrôleur Session avant le routage
+vers Options, comme pour les vitesses Diff et Nouvelle session. La régression de
+composition couvre Scroll(1), Options, Scroll(0), B ; aucune règle agent dans l’app.
+Preuves : `artifacts/screenshots/17/review-joint-*`.
+
+### Correction de revue — effort dépendant du modèle à la reprise
+
+Le catalogue reçu lors d’une reprise échouée décrit le modèle provisoire de l’agent.
+Il ne permet pas à Android de décider si l’effort sauvegardé sera disponible une
+fois le modèle préparé appliqué. A valide donc uniquement les remplacements
+explicites contre le catalogue reçu ; le pont reste responsable de restaurer et
+valider les autres sélections après chaque réponse ACP, modèle en premier.
+Cela vaut aussi depuis la ligne Reprendre. Aucun choix implicite ni suppression
+de l’effort sauvegardé : si sa restauration échoue, la session reste inactive.
+Les refus temporaires, résultats incertains et doubles A gardent leurs protections.
+
+Régression Android rouge puis verte : modèle retiré, remplacement disponible,
+effort high absent d’une liste vide ou limitée à low ; A transmet le seul modèle,
+un refus garde les sélections, puis une confirmation permet la reprise. Un
+remplacement préparé retiré par une actualisation reste interdit. Test du domaine
+pont avec FakeAgentConnector : effort absent sous le modèle provisoire, réexposé
+après remplacement puis restauré à high, avec seconde reprise après redémarrage.
+Test Compose : A utilisable depuis Reprendre et high toujours visible.
+Pas de changement d’API de bibliothèque, d’adapter ou de protocole sur le fil.
+Export local Session.dc.html relu ; aucun changement de mise en page.
+Preuves et limites du banc : `artifacts/screenshots/17/review-dependent.txt`.

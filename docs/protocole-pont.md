@@ -79,7 +79,9 @@ Les requêtes sont traitées en parallèle : les réponses peuvent arriver dans 
 | --- | --- | --- |
 | `hello` | `since?`, `journal?` | état du pont, puis le flux d'événements (voir plus haut) |
 | `sessions.list` | — | `{sessions}` : en cours et historique, la plus récente d'abord |
-| `session.create` | `agent`, `project`, `newProject?`, `branch?`, `approvalMode`, `prompt?` | `{session}` ; le pont ne change pas de branche (voir plus bas) |
+| `session.create` | `agent`, `project`, `newProject?`, `branch?`, `approvalMode`, `configValues?`, `prompt?` | `{session}` ; le pont ne change pas de branche (voir plus bas) |
+| `agent.options` | `agent`, `configValues?` | `{configOptions}` : choix actuels de l’agent, sans tour |
+| `session.configure` | `sessionId` et soit `approvalMode`, soit `configId` + `value`, soit `configValues` non vide | `{session}` après confirmation ACP |
 | `session.prompt` | `sessionId`, `text` | `{delivery}` |
 | `session.cancel` | `sessionId` | `{}` |
 | `session.resume` | `sessionId` | `{session}`, rechargée dans son agent |
@@ -113,7 +115,8 @@ La fiche du ticket 11 exprime branche existante/nouvelle et base dans `prompt` s
   ```
 
   suivi d'une ligne vide, puis du message. L'agent choisit comment faire (`git switch`, worktree…). Le premier message est la consigne de `prompt`, sinon le premier `session.prompt`, même s'il est injecté dans un tour (`steering`). Les messages suivants ne répètent pas la consigne de branche. Chaque nouveau tour reçoit aussi la consigne de bilan écrit décrite dans l’ADR 10 ; le texte utilisateur du journal reste inchangé. Le nom doit être un nom de branche valide (`git check-ref-format --branch`), sinon : erreur `bad_request`, aucune session n'est créée.
-- `approvalMode` : `plan`, `auto-edit`, `ask` (ou `allow-all` pour compatibilité) (voir « Modes de validation »).
+- `approvalMode` : `plan`, `auto-edit`, `ask`, `allow-all` (voir « Modes de validation »).
+- `configValues` (facultatif) : dictionnaire `{identifiantACP: valeurACP}` issu de `agent.options`. Modèle appliqué avant réflexion, puis consigne ; choix périmé/refusé : session en échec, aucun prompt envoyé.
 - `prompt` (facultatif) : la consigne, envoyée dès la création.
 
 ### Parler à une session
@@ -137,7 +140,7 @@ Une session de l'historique (`active: false`) est rechargée d'abord (`session/l
 
 ### Reprendre une session de l'historique
 
-`session.resume` recharge la session dans son agent (`session/load`), puis réapplique son mode de validation. L'agent rejoue alors tout l'historique : le pont ne le relaie pas, il est déjà dans le journal (`session.events`).
+`session.resume` recharge la session dans son agent (`session/load`), puis réapplique son mode de validation et ses sélections de configuration sauvegardées. L'agent rejoue alors tout l'historique : le pont ne le relaie pas, il est déjà dans le journal (`session.events`).
 
 ## Événements
 
@@ -222,13 +225,13 @@ Silences : Claude peut rester 30 s sans rien envoyer pendant une longue réponse
 
 ## Modes de validation
 
-Trois niveaux produit, plus `allow-all` conservé pour les sessions existantes. Le pont les traduit en modes ACP, et les réapplique après chaque `session/load`. Le tableau décrit la Thor (PRoot) :
+Quatre niveaux proposés à la création et en session (ticket 17). Le pont les traduit en modes ACP, et les réapplique après chaque `session/load`. Le tableau décrit la Thor (PRoot) :
 
 | `approvalMode` | Claude | Codex |
 | --- | --- | --- |
 | `plan` (« plan d’abord ») | `plan` | `workspace-write` puis `collaboration_mode=plan` par `session/set_config_option` |
 | `auto-edit` (« modifications automatiques ») | `acceptEdits` | `workspace-write` ; le domaine du pont accepte les demandes `kind: edit` une fois |
-| `ask` (« tout valider ») | `default` | `workspace-write`, avec la consigne qui évite le sandbox (ADR 02) |
+| `ask` (« je valide chaque action ») | `default` | `workspace-write`, avec la consigne qui évite le sandbox (ADR 02) |
 | `allow-all` (« tout autoriser ») | `bypassPermissions` | `agent-full-access` |
 
 Sur le banc Mac (sandbox natif), `ask`, `auto-edit` et `plan` utilisent **`read-only`**
@@ -240,8 +243,87 @@ sandbox natif. La consigne PRoot n'est pas injectée (ADR 14).
 
 - Claude démarre en `auto`, le réglage de l'utilisateur : le pont force le mode juste après la création.
 - Le mode `agent` de Codex n'est jamais utilisé.
-- En `auto-edit`, seules les éditions structurées sont acceptées automatiquement, jamais une écriture shell. Les choix durables ne sont pas utilisés. La fiche de lancement du ticket 11 proposera les trois niveaux produit ; `allow-all` reste compatible avec les sessions existantes (ADR 08).
+- En `auto-edit`, seules les éditions structurées sont acceptées automatiquement, jamais une écriture shell. Les choix durables ne sont pas utilisés.
 - En `ask`, Codex demande aussi une validation pour chaque lecture (`cat`, `rg`). Le pont accepte seul les commandes en lecture seule (voir « Lectures acceptées par le pont »).
+
+En `allow-all`, les agents sont configurés nativement sans approbation ; Codex utilise
+`never` et `danger-full-access`. Toute demande résiduelle est acceptée une fois dans
+le domaine, jamais par une règle durable. Sans choix `allow_once`, elle est annulée
+sans demander à l’utilisateur. Passer dans ce mode résout aussi les demandes déjà
+en attente (`approval_resolved`, `by: "mode_change"`). Les autres niveaux conservent
+leurs exceptions de lecture ; l’interface les explique sous le libellé.
+
+### Options de session (ticket 17)
+
+`agent.options` ouvre au plus une session ACP de découverte par agent et par processus,
+dans la racine des projets, sans consigne, sans tour et sans entrée dans l’historique
+Régie. Le processus est fermé avec le pont. Les choix viennent de `session/new`,
+`session/load`, `session/set_config_option` et `config_option_update` ; aucune liste
+locale de modèles ou d’efforts. `configValues` permet de changer le modèle de cette
+session de découverte pour lire ses niveaux de réflexion compatibles.
+
+La session réelle reçoit ses sélections après A, avant tout prompt. Les choix sont
+revérifiés après chaque réponse : un modèle peut retirer/remplacer l’effort.
+Une option non proposée donne `unknown_option`. Une valeur non confirmée donne
+`agent_failed`. La découverte d’une fiche annulée peut laisser une session vide dans
+l’historique propre du CLI ; elle n’exécute aucun travail.
+
+`configOptions` est aussi ajouté à chaque résumé de session et persisté : liste de
+`{id, name, category, currentValue, options: [{value, name}]}`. Les groupes ACP sont
+aplatis ; les identifiants/noms restent ceux de l’agent, `currentValue` peut être nul.
+Seuls les sélecteurs ACP `select` sont exposés ; les capacités boolean ne sont pas
+annoncées. `mode` et `collaboration_mode` sont pilotés par `approvalMode`, les autres
+sélecteurs par `configId`/`value`. L’app propose modèle/réflexion dans la fiche et
+les autres sélecteurs exposés (par exemple Fast mode) dans les options en session.
+
+Chaque liste reçue remplace intégralement la précédente, y compris à vide. Les
+options manquantes sont signalées comme non exposées. Lors d’une reprise, les listes
+reçues sont provisoires jusqu’au succès du chargement, du mode et de toutes les
+sélections. En cas d’échec, le résumé persisté conserve les sélections sauvegardées
+pour la prochaine tentative, même après redémarrage du pont. Le résumé envoyé à
+l’app conserve ces `currentValue`, mais publie les listes de choix actualisées
+par ACP, même si l’erreur est identique à la tentative précédente. Une option
+sauvegardée qui n’est plus exposée garde sa valeur avec une liste de choix vide.
+Pour une session inactive, `currentValue` ne confirme donc pas une restauration
+réussie ; il peut être absent de la liste disponible. Les valeurs provisoires de
+l’agent ne remplacent jamais les sélections persistées.
+
+Si un modèle sauvegardé disparaît, `session.configure` avec `configId` et `value`
+permet de choisir explicitement un remplacement dans le catalogue actualisé.
+Si plusieurs sélections ont disparu, `configValues: {"model": "nouveau", "effort": "low"}`
+les remplace ensemble lors de la même reprise. Ces trois formes de requête sont
+mutuellement exclusives ; une table vide est refusée. Le modèle est appliqué en
+premier, puis les autres choix sont vérifiés contre chaque réponse ACP actualisée.
+Seules les valeurs explicitement fournies remplacent les sélections sauvegardées.
+Dans Options, une session inactive conserve les modifications d’une ligne à
+l’autre ; A confirme tous les remplacements préparés (également depuis Reprendre),
+B les abandonne. Le mode reste un réglage distinct. Le bouton A vérifie que les
+remplacements préparés figurent dans le catalogue reçu. Les sélections sauvegardées
+non modifiées sont validées par le pont après application du modèle : leur absence
+du catalogue provisoire ne bloque pas A, même si la liste d’efforts est vide.
+La reprise substitue ce choix à l’ancien et restaure le mode et les autres
+sélections avant activation. Aucun message ne part avant le succès complet.
+Un refus garde la session inactive et toutes les anciennes sélections ; un succès
+persiste les choix confirmés, y compris le remplacement. Il n’y a aucun choix de
+modèle de secours automatique. Les anciens résumés sans `configOptions`
+restent lisibles ; une reprise recharge les choix. Un changement produit
+un événement `session` et relaie l’événement ACP ; le résultat contient la même
+configuration confirmée. Les changements sont sérialisés par session ; un message
+attend un réglage déjà en cours. Aucun renvoi automatique après une réponse perdue.
+
+Le passage hors plan rétablit `collaboration_mode=default` chez Codex. Une erreur
+pendant l’entrée en plan tente de rétablir le mode précédent ; si ce rétablissement
+échoue également, le pont tente d’annuler le tour, annule les validations et marque
+la session inactive/en échec avec un changement incertain. Un prochain message
+exige une reprise et une restauration réussies du mode enregistré. Les
+changements spontanés de modes ACP reconnus sont reflétés dans `approvalMode`.
+
+Exemple (identifiants de modèle volontairement illustratifs, à obtenir de l’agent) :
+```json
+{"id": 20, "method": "agent.options", "params": {"agent": "codex"}}
+{"id": 21, "method": "session.configure", "params": {"sessionId": "s", "approvalMode": "allow-all"}}
+{"id": 22, "method": "session.configure", "params": {"sessionId": "s", "configId": "model", "value": "id-fourni-par-acp"}}
+```
 
 ### Lectures acceptées par le pont
 

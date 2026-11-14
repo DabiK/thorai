@@ -30,6 +30,7 @@ export type SessionStatus = (typeof SESSION_STATUSES)[number];
 
 /** A session as it is stored: it survives a restart of the bridge and of the console. */
 export interface SessionRecord {
+  readonly configOptions?: readonly import('./session-options.ts').SessionOption[];
   /** The ACP session id, given by the agent. */
   readonly sessionId: string;
   readonly agent: AgentKind;
