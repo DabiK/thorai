@@ -23,7 +23,8 @@ et portes finales de ces tickets restent conservées.
 Au ticket 20, les chemins de comptes dans les textes ont été remplacés par
 `/home/USER` et les chemins de cache privés par des exemples neutres. Les codes
 de retour, numéros d’événements et assertions restent inchangés ; ces textes sont
-des **copies anonymisées**, pas des sorties brutes à l’octet près. Les fixtures ACP
+des **copies anonymisées**, pas des sorties brutes à l’octet près. Les espaces
+finaux des nouvelles sorties du ticket 20 sont également retirés. Les fixtures ACP
 déjà caviardées restent intactes. Les références d’ADR suivent la nouvelle numérotation.
 
 Le contrôle `python3 scripts/repo-audit.py` parcourt le texte versionné et les
