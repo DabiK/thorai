@@ -48,6 +48,15 @@ class ThreadBuilderTest {
     private fun ThreadEntry.ToolCall.essentials() = listOf(kind, title, command, path, changes, status, result)
 
     @Test
+    fun `reported Claude patch retains its actual file coordinates`() {
+        val edits = replay(Fixtures.CLAUDE_SESSION, claudeId).entries.filterIsInstance<ThreadEntry.ToolCall>().filter { it.kind == ToolKind.EDIT }
+        val fragments = edits.single().diffs
+        assertEquals(listOf("todo.md"), fragments.map { it.path })
+        assertEquals(listOf(2, 3, 4, 5), fragments.single().lines.map { it.number })
+        assertEquals(app.regie.domain.model.DiffKind.ADDED, fragments.single().lines.last().kind)
+    }
+
+    @Test
     fun `a Claude session reads two files, edits one with its diff counted, then answers`() {
         val thread = replay(Fixtures.CLAUDE_SESSION, claudeId)
         val entries = thread.entries

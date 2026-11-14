@@ -38,6 +38,7 @@ sealed interface ThreadEntry {
         val result: String? = null,
         /** Tous les fichiers exposés par cet appel, avec le compte propre à chacun. */
         val files: List<ModifiedFile> = emptyList(),
+        val diffs: List<DiffFragment> = emptyList(),
     ) : ThreadEntry
 
     /** Le tour a échoué ; [message] est celui du pont, s'il en donne un. */

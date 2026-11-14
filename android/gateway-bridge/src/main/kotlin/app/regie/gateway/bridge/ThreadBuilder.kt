@@ -139,6 +139,7 @@ internal class ThreadBuilder(private val cwd: () -> String?, private val maxEntr
 
         /** Lignes ajoutées et retirées, par fichier : le dernier diff d'un fichier remplace le précédent. */
         private val diffs = LinkedHashMap<String, LineChanges>()
+        private val fragments = LinkedHashMap<String, List<app.regie.domain.model.DiffFragment>>()
 
         /** La fin de la sortie d'une commande : il n'en faut que la dernière ligne. */
         private var output: StringBuilder? = null
@@ -167,6 +168,7 @@ internal class ThreadBuilder(private val cwd: () -> String?, private val maxEntr
                 val file = item.string("path")?.let { relativeTo(it, cwd()) } ?: continue
                 val newText = item.string("newText") ?: continue
                 diffs[file] = LineDiff.changes(item.string("oldText"), newText)
+                fragments[file] = DiffDecoder.read(file, item, update)
                 if (path == null) path = file
             }
             if (kind == "execute") readOutput(update, content)
@@ -192,6 +194,7 @@ internal class ThreadBuilder(private val cwd: () -> String?, private val maxEntr
             status = status,
             result = output?.let(::lastLine),
             files = (paths + diffs.keys).map { ModifiedFile(it, diffs[it]) },
+            diffs = fragments.values.flatten(),
         ).also { cached = it }
     }
 

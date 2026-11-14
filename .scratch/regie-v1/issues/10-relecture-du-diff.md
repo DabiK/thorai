@@ -1,6 +1,6 @@
 # 10 — Relecture du diff
 
-Statut : en attente
+Statut : à fusionner
 Bloqué par : 06, 08
 
 ## Objectif
@@ -16,4 +16,21 @@ Bloqué par : 06, 08
 
 ## Critères d'acceptation
 
-- Sur la Thor, on relit le diff d'une vraie session, on commente une ligne à la voix, et l'agent en tient compte.
+- [x] Sur la Thor, on relit le diff d'une vraie session, on commente une ligne à la voix, et l'agent en tient compte.
+
+
+## Rapport
+
+- Écran de diff livré : X, fichiers +/−, croix, stick, L2 et Y puis A, tactile et
+  mode un/deux écrans. Domaine derrière AgentGateway ; aucune règle d’envoi dans l’UI.
+- Critère prouvé avec voix synthétique WAV Thomas sur le vrai moteur local et un
+  vrai Codex : commentaire seuil.ts ligne 1 reçu une fois, fichier passé de 70 à 80,
+  explication écrite revenue. Vrai microphone et extinction physique restent à
+  vérifier avec l’utilisateur, selon le pas à pas de `artifacts/screenshots/10/essai-thor.txt`.
+- Android : 261 tests + lint verts (`android-check.txt`), tests d’abord (`red-*`).
+- ADR 12 : éditions historiques par fichier, pas de diff Git inventé ; numéros
+  ancien/nouveau, coordonnées d’extrait signalées quand l’agent ne donne pas leur position.
+- Un Codex d’essai, aucun Claude. Quitter a arrêté l’agent et le pont (stopped.json).
+  Pas de permission accordée, reboot, push ou fusion. Seul app.regie installé.
+- Captures utiles : 01–04, 07–11 et 13 ; journaux avant/après et fichier final conservés.
+- Relecture solo après commit à consigner ci-dessous.

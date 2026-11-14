@@ -1,0 +1,130 @@
+package app.regie.domain.usecase
+
+import app.regie.domain.model.*
+import app.regie.domain.port.AgentGateway
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.combine
+
+fun sessionDiff(session: Session, thread: SessionThread): List<DiffFile> {
+    val blocks = linkedMapOf<String, MutableList<DiffBlock>>()
+    session.modifiedFiles.forEach { blocks[it] = mutableListOf() }
+    for (call in thread.entries.filterIsInstance<ThreadEntry.ToolCall>()) {
+        if (call.kind != ToolKind.EDIT || call.status != ActionStatus.COMPLETED) continue
+        (call.files.map { it.path } + listOfNotNull(call.path)).forEach { blocks.getOrPut(it) { mutableListOf() } }
+        call.diffs.forEachIndexed { index, fragment ->
+            blocks.getOrPut(fragment.path) { mutableListOf() } += DiffBlock("${call.id}:$index", fragment.lines, fragment.fileCoordinates)
+        }
+    }
+    return blocks.map { (path, edits) -> DiffFile(path, edits, edits.takeIf { it.isNotEmpty() }?.let {
+        val lines = it.flatMap { block -> block.lines }
+        LineChanges(lines.count { line -> line.kind == DiffKind.ADDED }, lines.count { line -> line.kind == DiffKind.REMOVED })
+    }) }
+}
+
+data class DiffSelection(val block: DiffBlock, val lineIndex: Int) {
+    val line: DiffLine get() = block.lines[lineIndex]
+}
+data class DiffReview(
+    val sessionId: SessionId? = null,
+    val project: String = "",
+    val files: List<DiffFile> = emptyList(),
+    val fileIndex: Int = 0,
+    val lineIndex: Int = 0,
+    val loading: Boolean = true,
+    val explanation: DiffExplanation? = null,
+) {
+    val file: DiffFile? get() = files.getOrNull(fileIndex)
+    val rows: List<DiffSelection> get() = file?.blocks.orEmpty().flatMap { block -> block.lines.indices.map { DiffSelection(block, it) } }
+    val selected: DiffSelection? get() = rows.getOrNull(lineIndex)
+}
+data class DiffExplanation(val prompt: String, val label: String, val sending: Boolean = false,
+    val delivery: Delivery? = null, val reply: String = "", val ended: Boolean = false)
+
+class ReviewDiff(private val gateway: AgentGateway, private val scope: CoroutineScope) {
+    private val mutable = kotlinx.coroutines.flow.MutableStateFlow(DiffReview())
+    val state: kotlinx.coroutines.flow.StateFlow<DiffReview> = mutable
+    private var observing: Job? = null
+    private var thread = SessionThread.EMPTY
+    fun open(id: SessionId) {
+        close()
+        mutable.value = DiffReview(sessionId = id)
+        observing = scope.launch {
+            combine(gateway.sessions, gateway.thread(id)) { sessions, content -> sessions.firstOrNull { it.id == id } to content }
+                .collect { (session, content) ->
+                    thread = content
+                    val before = mutable.value
+                    val files = session?.let { sessionDiff(it, content) }.orEmpty()
+                    val index = files.indexOfFirst { it.path == before.file?.path }.coerceAtLeast(0)
+                    val updated = before.copy(project = session?.project.orEmpty(), files = files, fileIndex = index, loading = !content.loaded)
+                    mutable.value = updated.copy(lineIndex = before.lineIndex.coerceIn(0, (updated.rows.size - 1).coerceAtLeast(0)),
+                        explanation = before.explanation?.let { explanation ->
+                            val anchor = content.entries.filterIsInstance<ThreadEntry.UserMessage>()
+                                .firstOrNull { it.id > afterEntry && it.text == explanation.prompt }
+                            if (anchor == null) explanation else {
+                                val replyEntries = content.entries.dropWhile { it.id <= anchor.id }.takeWhile { it !is ThreadEntry.UserMessage }
+                                explanation.copy(reply = replyEntries.mapNotNull { entry -> when (entry) {
+                                    is ThreadEntry.AgentText -> entry.text
+                                    is ThreadEntry.TurnFailed -> "Échec : ${entry.message ?: "sans détail"}"
+                                    is ThreadEntry.Interrupted -> "Tour interrompu."
+                                    else -> null
+                                } }.joinToString("\n\n"), ended = session?.status?.isBusy != true || content.entries.any { it is ThreadEntry.UserMessage && it.id > anchor.id })
+                            }
+                        })
+                }
+        }
+    }
+    fun close() { generation++; observing?.cancel(); observing = null; thread = SessionThread.EMPTY; mutable.value = DiffReview() }
+    fun moveLine(delta: Int) {
+        val state = mutable.value
+        mutable.value = state.copy(lineIndex = (state.lineIndex + delta).coerceIn(0, (state.rows.size - 1).coerceAtLeast(0)))
+    }
+    fun moveFile(delta: Int) = selectFile(mutable.value.fileIndex + delta)
+    fun selectFile(index: Int) {
+        val state = mutable.value
+        if (state.files.isEmpty() || state.explanation != null) return
+        mutable.value = state.copy(fileIndex = index.coerceIn(0, state.files.lastIndex), lineIndex = 0)
+    }
+    fun commentTarget(): DictationTarget.DiffComment? {
+        val state = mutable.value
+        val selected = state.selected ?: return null
+        return DictationTarget.DiffComment(state.sessionId ?: return null, state.file?.path ?: return null, selected.line.number ?: return null,
+            removed = selected.line.kind == DiffKind.REMOVED, fileCoordinates = selected.block.fileCoordinates, selectedText = selected.line.text)
+    }
+    private var afterEntry = -1L
+    private var generation = 0
+    fun explain() {
+        val state = mutable.value
+        if (state.explanation != null) return
+        val selected = state.selected ?: return
+        val line = selected.line
+        val label = "${state.file!!.path} · ligne ${line.number}" +
+            (if (selected.block.fileCoordinates) "" else " de l’extrait") +
+            (if (line.kind == DiffKind.REMOVED) " supprimée" else "")
+        val start = (selected.lineIndex - 30).coerceAtLeast(0)
+        val excerpt = selected.block.lines.drop(start).take(61).joinToString("\n") {
+            "${it.oldLine ?: "-"}/${it.newLine ?: "-"} ${when (it.kind) { DiffKind.ADDED -> "+"; DiffKind.REMOVED -> "-"; DiffKind.CONTEXT -> " " }} ${it.text}"
+        }
+        val prompt = "Explique-moi ce bloc, sans modifier les fichiers. Réponds en français par écrit.\n$label\n" +
+            "Édition historique exposée par l’agent ; numéros ancien/nouveau" +
+            (if (selected.block.fileCoordinates) "." else " relatifs à l’extrait, position dans le fichier non communiquée.") +
+            "\nExtrait autour de la sélection :\n$excerpt"
+        generation++
+        afterEntry = thread.entries.maxOfOrNull { it.id } ?: -1
+        mutable.value = state.copy(explanation = DiffExplanation(prompt, label))
+    }
+    fun dismissExplanation() { generation++; mutable.value = mutable.value.copy(explanation = null) }
+    fun confirmExplanation() {
+        val state = mutable.value
+        val explanation = state.explanation ?: return
+        if (explanation.sending || explanation.delivery?.canRetry == false) return
+        val id = state.sessionId ?: return
+        val token = generation
+        mutable.value = state.copy(explanation = explanation.copy(sending = true))
+        scope.launch {
+            val delivery = gateway.sendMessage(id, explanation.prompt)
+            if (token == generation) mutable.value = mutable.value.copy(explanation = mutable.value.explanation?.copy(sending = false, delivery = delivery))
+        }
+    }
+}

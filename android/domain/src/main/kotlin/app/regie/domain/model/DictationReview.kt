@@ -4,7 +4,10 @@ sealed interface DictationTarget {
     val sessionId: SessionId
     data class Message(override val sessionId: SessionId) : DictationTarget
     data class Rejection(override val sessionId: SessionId, val approvalId: ApprovalId) : DictationTarget
-    data class DiffComment(override val sessionId: SessionId, val path: String, val line: Int) : DictationTarget
+    data class DiffComment(override val sessionId: SessionId, val path: String, val line: Int, val removed: Boolean = false, val fileCoordinates: Boolean = true, val selectedText: String? = null) : DictationTarget {
+        val location: String get() = "$path, ligne $line" + (if (removed) " supprimée" else "") +
+            (if (fileCoordinates) "" else " de l’extrait (position dans le fichier non communiquée)")
+    }
 }
 
 enum class DictationPhase { CLOSED, RECORDING, FINALIZING, REVIEW, APPEND, CORRECT, SENDING, SENT }

@@ -700,7 +700,6 @@ private fun NoticeText(notice: SessionNotice, callbacks: SessionCallbacks, modif
 
 @Composable
 private fun noticeText(notice: SessionNotice): Pair<String, Color> = when (notice) {
-    SessionNotice.DiffUnavailable -> stringResource(R.string.notice_diff_unavailable) to Palette.textMuted
     SessionNotice.Sending -> stringResource(R.string.notice_sending) to Palette.textMuted
     SessionNotice.Interrupting -> stringResource(R.string.notice_interrupting) to Palette.textMuted
     is SessionNotice.Interrupted ->

@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.update
 sealed interface SessionAction {
     /** L1 / R1 : passer à une session voisine. */
     data class Open(val id: SessionId) : SessionAction
+    data class OpenDiff(val id: SessionId) : SessionAction
 
     /** R1 : ouvrir la validation en attente. */
     data class OpenApproval(val id: app.regie.domain.model.ApprovalId) : SessionAction
@@ -38,8 +39,6 @@ sealed interface SessionAction {
 
 /** Un avis bref, à la place de la phrase sous le micro. */
 sealed interface SessionNotice {
-    /** X : l'écran du diff n'existe pas encore. */
-    data object DiffUnavailable : SessionNotice
 
     data object Sending : SessionNotice
 
@@ -154,7 +153,7 @@ class SessionController(
                 openSummary()
                 dispatch(SessionAction.ShowSummary(id))
             }
-            Button.X -> _state.update { it.copy(notice = SessionNotice.DiffUnavailable) }
+            Button.X -> dispatch(SessionAction.OpenDiff(id))
             Button.START -> if (live.value?.takeIf { it.session.id == id }?.canInterrupt == true) {
                 _state.update { it.copy(notice = SessionNotice.Interrupting) }
                 dispatch(SessionAction.Interrupt(id))

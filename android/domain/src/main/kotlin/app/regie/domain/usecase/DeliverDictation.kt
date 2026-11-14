@@ -15,7 +15,7 @@ class DeliverDictation(private val sendMessage: SendMessage, private val answer:
                 ApprovalReply.ACCEPTED -> Unit
             }
         }
-        val content = if (target is DictationTarget.DiffComment) "Sur ${target.path}, ligne ${target.line} :\n$text" else text
+        val content = if (target is DictationTarget.DiffComment) "Sur ${target.location} :\n" + (target.selectedText?.let { "Ligne sélectionnée : $it\n" } ?: "") + text else text
         val delivery = sendMessage(target.sessionId, content, dictated = true) ?: Delivery.NOT_SENT
         val retry = if (target is DictationTarget.Rejection) DictationTarget.Message(target.sessionId) else target
         return when (delivery) {

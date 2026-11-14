@@ -60,7 +60,7 @@ fun DictationTopScreen(state: DictationReview, session: Session?, single: Boolea
                 }
             }
             BasicText(text, style = sans(25.sp, lineHeight = 37.sp), onTextLayout = { layout = it })
-            (state.target as? DictationTarget.DiffComment)?.let { BasicText("${it.path} · ligne ${it.line}", style = mono(12.sp, color = Palette.textMuted)) }
+            (state.target as? DictationTarget.DiffComment)?.let { BasicText(it.location, style = mono(12.sp, color = Palette.textMuted)) }
             val recognized = recognizedTerms(state.text, state.vocabulary).map { it.value }.distinct().take(8)
             if (recognized.isNotEmpty()) BasicText("Reconnus dans le dépôt  ·  ${recognized.joinToString("  ·  ")}", style = mono(11.5.sp, color = Palette.textMuted))
         }
