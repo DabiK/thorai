@@ -40,7 +40,7 @@ CRITÈRES:
 - [ ] Consigne française avec noms de fichiers reçue après relecture avec chacun des deux fournisseurs → clé ElevenLabs, permission micro et vraie voix utilisateur manquantes ; ASR local imparfait sur WAV Thomas.
 PORTE DE QUALITÉ: Android ./gradlew check : 215 tests + lint ; voice ./gradlew check : 127 + lint ; bridge npm run check : 268 + typage/lint, verts.
 THOR: app.regie réinstallée ; WAV Thomas sur vrai moteur local, B/L2 par sendevent, relecture puis effacement ; permission micro absente confirmée. Aucun nouvel agent ni message ; pont arrêté par Quitter.
-REVIEW: course de propriété du service corrigée ; test reproduisant [start, start] avant correction. Critère des deux fournisseurs conservé décoché ; aucune simulation présentée comme preuve micro réelle.
+REVIEW: main...HEAD relu en solo après f9afa67 ; course corrigée, test rouge puis vert ; aucun autre défaut bloquant établi. Ligne vide du journal npm retirée et preuve processus précisée. Critère des deux fournisseurs toujours décoché.
 DÉCISIONS PRISES: mutex commun aux captures pour attendre fermeture audio et arrêt du service ; ADR 09 complété, aucune décision produit nouvelle.
 POUR L'UTILISATEUR: suivre artifacts/screenshots/08/essai-thor.txt, étapes 1–8 : autoriser micro, tester local et B/L2, saisir la clé, refaire avec ElevenLabs ; conserver texte relu et message reçu pour chaque fournisseur.
 QUESTIONS: aucune décision produit en attente.
