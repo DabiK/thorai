@@ -30,6 +30,8 @@
 
 - **14 novembre, ticket 06, correction après revue bloquante** : livraison `UNKNOWN` après coupure ou délai sans accusé, sans remise du texte dans le champ ni renvoi automatique ; refus certains toujours réessayables. Quatre régressions rouges puis vertes, second A et origine dictée couverts : 181 tests Android + lint verts. APK réinstallé, envoi réel Codex terminé, navigation L1/R1 vérifiée ; aucun nouveau Claude. ADR 07 et preuves `artifacts/screenshots/06/delivery-*` mis à jour. Statut maintenu à `à fusionner`.
 
+- **14 novembre, ticket 07 en échec d'environnement (`bloqué`)** : reprise solo Codex, branche propre sans travail antérieur. La porte initiale `cd android && ./gradlew check` échoue avant les tests : `SDK location not found`, aucun `android/local.properties` dans le worktree. Arrêt sans nouvel essai conformément à la consigne ; aucun code changé, aucune installation ni session d'agent lancée. Sortie exacte : `artifacts/screenshots/07/android-check.txt`. Configurer le SDK indiqué dans `CLAUDE.md`, puis reprendre le ticket tests d'abord ; détails dans son rapport.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |
