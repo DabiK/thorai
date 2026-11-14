@@ -38,6 +38,8 @@
 
 - **14 novembre, ticket 07, correction de revue du canal** : `show()` renvoie faux si le canal est absent ou désactivé, pour permettre la nouvelle tentative. Régression du vrai adapter sous Robolectric 4.18 rouge puis verte, 197 tests Android + lint et 266 tests pont + typage/lint verts. APK réinstallé sur la Thor, permission laissée à l’utilisateur, demande résolue ouverte par intent sur les deux écrans puis retour régie et Quitter ; aucun agent lancé. ADR 08 et pas à pas canal bloqué/réactivé complétés. Captures 20–22 et preuves `review-channel-*`. Statut maintenu à `à fusionner`.
 
+- **14 novembre, ticket 07, correction de revue R1** : retour à la première validation après la dernière, dans le domaine. Régression `[a, b]` ouverte sur `b` rouge puis verte ; file vide et réponse déjà donnée couvertes. 199 tests Android + lint, 266 tests pont + typage/lint verts. Thor : deux nouvelles demandes Codex, intent sur la dernière puis boucle R1 par `sendevent`, un/deux écrans, double refus protégé, commandes refusées et fichiers absents. Sessions d'essai et pont arrêtés par Quitter ; aucun Claude ni permission accordée. ADR 08 précisé, captures 23–28 et preuves `review-r1-*`. Ticket maintenu à `à fusionner`.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

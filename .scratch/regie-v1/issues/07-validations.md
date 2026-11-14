@@ -21,7 +21,7 @@ Bloqué par : 06
 ## Critères d'acceptation
 
 - [ ] Sur la Thor, une commande et une modification de fichier sont validées ou refusées pour chacun des deux agents, et l'agent reprend en conséquence. **Codex vérifié** (A, X et B, journal et effets sur disque) ; essai Claude laissé à l'utilisateur conformément à la consigne de quota.
-- [x] Écran, file, R1 et deux modes d'affichage → captures 09 à 17, tests `ReviewApprovalsTest` / contrôleurs.
+- [x] Écran, file, R1 et deux modes d'affichage → captures 09 à 17 et 23 à 27, tests `ReviewApprovalsTest` / contrôleurs ; R1 boucle depuis la dernière demande (régression rouge puis verte).
 - [x] Refus avec consigne préparé pour 08 → `AnswerApproval` et tests d'accusé, livraison et concurrence.
 - [x] Trois niveaux au contrat de lancement, anciens modes conservés → tests du pont et essais Codex `plan` / `auto-edit` ; fiche visuelle au ticket 11.
 - [x] Notification via port et ouverture ciblée → tests domaine et adapter Android (canal désactivé puis réactivé), permission Android présentée, intent ciblé vérifié ; publication réelle après permission à vérifier avec l'utilisateur.
@@ -81,3 +81,15 @@ Vérification supplémentaire avec l'utilisateur :
 5. Effectuer ensuite l'essai Claude commande/édition A/B décrit plus haut, quand le quota le permet.
 
 Relecture solo après `4b42673` : diff contre `main` examiné (domaine, ports, adapters, UI, tests, contrat et preuves). Le test échoue bien si le contrôle du canal disparaît ; aucune règle métier ajoutée hors du domaine ni changement visuel. Correction documentaire de l'ancien « Deux niveaux » dans le protocole, désormais trois plus le mode historique ; retrait d'une ligne vide finale de la trace npm. Portes toujours vertes, APK installé identique au code final. `git diff --check main...HEAD` propre après correction.
+
+### Correction de la revue bloquante — parcours R1 de toute la file
+
+STATUT: done. Ticket maintenu à **à fusionner**.
+
+- `ReviewApprovals.next()` revient à la première demande après la dernière. La correction reste dans le domaine ; aucun adapter ni écran modifié. ADR 08 précisé.
+- Régression exacte : file `[a, b]`, ouverture de `b`, R1 → `a`, R1 → `b`, aucune réponse envoyée. Rouge avant correction (`review-r1-red.txt`), vert après (`review-r1-green.txt`). File vide, demande unique déjà répondue et protection contre une seconde décision également couvertes.
+- Portes : **199 tests Android + lint verts**, **266 tests pont + typage/lint verts** (`review-r1-*-check.txt`, `review-r1-test-counts.txt`). Aucun test n'appelle un agent, un service réel ou la console.
+- Thor `THOR0000000001` : APK installé par `scripts/thor-install.sh`. Deux sessions Codex réelles, commandes `touch regie07-r1-first.txt` et `touch regie07-r1-last.txt`. Ouverture ciblée de la dernière par intent, puis appuis R1 par `sendevent` : dernière → première → dernière, en deux écrans puis boucle en mode un écran forcé. Captures 23–27 ; file identique avant/après navigation.
+- Refus B de la première, second B sans effet sur la suivante, R1 puis B pour la dernière. Journal : refus 2125/2133, tours annulés 2131/2139 ; fichiers absents. Retour à la régie puis Quitter : les deux sessions d'essai, le pont et son superviseur arrêtés. Le Codex interactif préexistant hors du pont est conservé.
+- Aucun Claude lancé, aucune permission accordée, aucun redémarrage ni autre APK installé. Publication réelle d'une notification et essai Claude restent aux étapes utilisateur déjà décrites. Preuve détaillée : `artifacts/screenshots/07/review-r1-thor.txt`.
+- Hors périmètre confirmé : accès Android des agents indisponible (débogage sans fil/association), permission `WRITE_SECURE_SETTINGS` absente ; ancien libellé « Point à voix haute » sur la régie à reprendre au ticket 12.

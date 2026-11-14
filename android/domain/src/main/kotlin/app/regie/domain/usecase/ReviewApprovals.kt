@@ -42,7 +42,7 @@ class ReviewApprovals(private val gateway: AgentGateway, scope: CoroutineScope) 
     fun next() {
         val queue = gateway.approvals.value
         val index = queue.indexOfFirst { it.id == selectedId }
-        queue.getOrNull(index + 1)?.let { open(it.id) }
+        (queue.getOrNull(index + 1) ?: queue.firstOrNull())?.let { open(it.id) }
     }
 
     suspend fun answer(decision: ApprovalDecision, instruction: String? = null) {
