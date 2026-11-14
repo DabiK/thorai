@@ -8,7 +8,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import app.regie.display.ScreenMode
 import app.regie.input.GamepadInput
-import app.regie.ui.screens.ApprovalTopScreen
 import app.regie.ui.screens.ApprovalBottomScreen
 import app.regie.ui.screens.OverviewBottomScreen
 import app.regie.ui.screens.SessionBottomScreen

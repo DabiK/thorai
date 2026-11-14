@@ -46,8 +46,12 @@ Les extraits consultés sont dans `docs-*-current.txt` du dossier de preuves.
 
 ## Vérifications et limites
 
-- 195 tests Android et lint verts ; 266 tests du pont, typage et lint verts. Tests de domaine, passerelle réelle avec faux pont, passerelle factice, contrôles A/X/B/R1, notifications, choix et reprise des modes. Aucun test unitaire ne contacte la console ou un agent.
+- 196 tests Android et lint verts ; 266 tests du pont, typage et lint verts. Tests de domaine, passerelle réelle avec faux pont, passerelle factice, contrôles A/X/B/R1, notifications, choix et reprise des modes. Aucun test unitaire ne contacte la console ou un agent.
 - Thor : nouveau Codex seulement, A pour commande, B pour commande et édition, X pour édition, reprise du fil et effets sur disque ; file de deux demandes et double B ; deux écrans, mode un écran forcé, défilement, bas maintenu en arrière-plan, ouverture ciblée par l'intent de notification. Plan accepté avec `collaboration_mode=plan`, édition automatique exécutée sans demande UI. Détails et numéros de séquence : `artifacts/screenshots/07/essai-thor.txt`.
 - **Limite Codex observée** : `allow_for_session` est bien transmis et accepté (événement 1829), l'édition s'effectue. Une édition ultérieure du même fichier redemande pourtant une validation. Régie relaie la demande ; aucune autorisation locale n'est inventée pour masquer cette limite de l'agent/adaptateur.
 - Pas de nouveau Claude, conformément à la consigne d'économie de quota : contrat couvert par les faux et enregistrements existants, parcours réel restant à faire avec l'utilisateur.
 - Notification système non affichée : permission laissée à l'utilisateur. La boîte Android, le domaine et le chemin d'ouverture sont vérifiés, pas le clic sur une notification réellement publiée.
+
+### Relecture de la sélection après commit
+
+L'identité ouverte avant la synchronisation est conservée dans `ReviewApprovals`, même quand la demande n'est pas encore connue. La composition ne garde plus une deuxième identité susceptible de réouvrir une ancienne demande après R1. Test de régression avec arrivée tardive, changement de sélection puis mise à jour de file ; ouverture ciblée à froid vérifiée sur la Thor après réinstallation (capture 19).

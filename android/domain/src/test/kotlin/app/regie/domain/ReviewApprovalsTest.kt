@@ -52,4 +52,24 @@ class ReviewApprovalsTest {
         assertFalse(review.state.value.canAnswer(ApprovalDecision.ONCE))
         assertEquals(ApprovalReply.UNKNOWN, review.state.value.answer?.reply)
     }
+    @Test
+    fun `opening from a notification waits for sync and later queue updates keep the chosen identity`() = runTest {
+        val gateway = StubGateway()
+        val first = request("a")
+        val next = request("b")
+        val review = ReviewApprovals(gateway, backgroundScope)
+        review.open(first.id)
+        runCurrent()
+        assertNull(review.state.value.request)
+        gateway.approvals.value = listOf(first, next)
+        runCurrent()
+        assertEquals(first, review.state.value.request)
+        review.next()
+        gateway.approvals.value = listOf(first.copy(reason = "updated"), next)
+        runCurrent()
+        assertEquals(next, review.state.value.request)
+        review.answer(ApprovalDecision.ONCE)
+        assertEquals(listOf(next.id to "yes"), gateway.answers)
+    }
+
 }

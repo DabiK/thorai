@@ -37,7 +37,7 @@ Reprise solo Codex du 14 novembre 2026. Ticket **à fusionner** selon la règle 
 - Refus dicté prêt derrière `ReviewApprovals.answer(REJECT, instruction)` pour le 08, sans envoyer la consigne après un refus incertain.
 - Modes `plan`, `auto-edit`, `ask` disponibles via `session.create`, traduits pour les deux agents ; `allow-all` historique conservé. Sélecteur visuel dans la fiche du ticket 11.
 - Notifications Android via un port : demande de permission, canal, retrait à la résolution, ouverture ciblée après relancement. Un refus de permission ne perd plus définitivement l'alerte (régression rouge puis verte).
-- Porte Android : **195 tests + lint verts**. Pont : **266 tests + lint + typage verts**. Aucun test ne contacte un agent ni la Thor.
+- Porte Android : **196 tests + lint verts**. Pont : **266 tests + lint + typage verts**. Aucun test ne contacte un agent ni la Thor.
 - Installation `scripts/thor-install.sh` réussie, pont actualisé. Codex : commande autorisée puis refusée, édition autorisée par X puis autre édition refusée ; reprise/annulation confirmée par événements et fichiers. File de deux demandes, double B, défilement, mode un écran, bas en arrière-plan et intent ciblé testés.
 - Limite observée : Codex accepte `allow_for_session`, exécute l'édition, mais redemande une validation pour une édition ultérieure du même fichier. Régie relaie ce qu'il expose, sans contourner sa décision. Détails ADR 08.
 - Claude réel et publication d'une notification après permission : **non revendiqués**. Le quota Claude est préservé ; aucune permission n'a été accordée à la place de l'utilisateur.
@@ -56,3 +56,9 @@ Preuves : `artifacts/screenshots/07/essai-thor.txt`, `*-check-current.txt`, `cod
 5. Voix du refus : après ticket 08. Fiche et sélecteur du niveau de lancement : après ticket 11.
 
 Hors périmètre : absence RUN_COMMAND / WRITE_SECURE_SETTINGS et association sans fil ; bas derrière Cocoon au premier réveil, récupéré par bascule debug un/deux écrans ; portée effective du choix Codex `acceptForSession`. Le pas à pas et les limites exactes sont dans `essai-thor.txt`.
+
+### Relecture après commit
+
+`git diff main...HEAD` relu en solo : domaine, ports, adapters, écrans, tests, contrat et preuves. Correction d'une attente d'ouverture conservée dans la composition, qui risquait de reprendre la sélection après R1 lors d'une mise à jour de la file. L'identité attendue est désormais détenue uniquement par `ReviewApprovals`. Régression rouge puis verte : ouverture avant la synchronisation, arrivée de la demande, sélection de la suivante, mise à jour tardive et réponse adressée seulement à la suivante. Ancien cas d'usage vide `OpenApproval` retiré, imports et commentaire nettoyés.
+
+Porte après correction : **196 tests Android + lint verts**, `review-android-check.txt`. Pont inchangé depuis sa dernière porte verte (266 tests). APK réinstallé (`review-install.txt`), ouverture ciblée au démarrage à froid testée avec une demande Codex réelle (capture 19), refus B, fichier absent et nouvelle fermeture par Quitter. Pas de nouveau Claude ni de permission accordée. Statut maintenu à `à fusionner`.

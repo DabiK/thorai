@@ -1,6 +1,5 @@
 package app.regie.domain.usecase
 
-import app.regie.domain.model.ApprovalId
 import app.regie.domain.model.SessionId
 
 // Cas d'usage déclenchés par les commandes du PRD (section « Commandes »).
@@ -25,11 +24,6 @@ class StartVoiceCommand {
 /** R2 relâché. Ticket 09. */
 class StopVoiceCommand {
     operator fun invoke() = Unit
-}
-
-/** R1 sur la vue d'ensemble : ouvrir la première validation en attente. Ticket 07. */
-class OpenApproval {
-    operator fun invoke(id: ApprovalId) = Unit
 }
 
 /** X sur la vue d'ensemble : nouvelle session. Ticket 11. */

@@ -21,9 +21,10 @@ sealed interface SessionAction {
     /** L1 / R1 : passer à une session voisine. */
     data class Open(val id: SessionId) : SessionAction
 
-    /** B : revenir à la vue d'ensemble. */
+    /** R1 : ouvrir la validation en attente. */
     data class OpenApproval(val id: app.regie.domain.model.ApprovalId) : SessionAction
 
+    /** B : revenir à la vue d'ensemble. */
     data object Back : SessionAction
 
     data class Send(val id: SessionId, val text: String) : SessionAction

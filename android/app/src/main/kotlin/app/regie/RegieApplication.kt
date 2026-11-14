@@ -96,7 +96,6 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
     private val startVoiceCommand = StartVoiceCommand()
     private val stopVoiceCommand = StopVoiceCommand()
     private var reviewApprovals: ReviewApprovals? = null
-    private var pendingApprovalId: ApprovalId? = null
     val approvalReview = MutableStateFlow(ApprovalReview())
     val approvalController = ApprovalController(
         answer = { decision -> scope.launch { reviewApprovals?.answer(decision) } },
@@ -105,7 +104,6 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
     )
 
     fun openApproval(id: ApprovalId) {
-        pendingApprovalId = id
         reviewApprovals?.open(id)
         navigate(Screen.Approval)
     }
@@ -173,13 +171,6 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
         val review = ReviewApprovals(chosen, scope)
         reviewApprovals = review
         scope.launch { review.state.collect { approvalReview.value = it } }
-        scope.launch {
-            chosen.approvals.collect { requests ->
-                pendingApprovalId?.let { id ->
-                    if (requests.any { it.id == id }) { review.open(id); pendingApprovalId = null }
-                }
-            }
-        }
         NotifyApprovals(chosen, topStarted, AndroidApprovalNotifications(app), scope)
         quit = Quit(chosen, launcher)
         sendMessage = SendMessage(chosen, dictated)

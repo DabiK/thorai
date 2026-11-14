@@ -14,7 +14,6 @@ import app.regie.console.TermuxBridgeLauncher
 import app.regie.display.ScreenMode
 import app.regie.input.GamepadInput
 import app.regie.ui.screens.ApprovalTopScreen
-import app.regie.ui.screens.ApprovalBottomScreen
 import app.regie.ui.screens.OverviewTopScreen
 import app.regie.ui.screens.SessionTopScreen
 import kotlinx.coroutines.launch

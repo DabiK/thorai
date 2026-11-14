@@ -22,6 +22,7 @@ data class ApprovalReview(
 
 class ReviewApprovals(private val gateway: AgentGateway, scope: CoroutineScope) {
     private val answerApproval = AnswerApproval(gateway)
+    private var selectedId: ApprovalId? = null
     private val answers = mutableMapOf<ApprovalId, ApprovalAnswer>()
     private val sending = mutableSetOf<ApprovalId>()
     private val mutable = MutableStateFlow(ApprovalReview())
@@ -32,6 +33,7 @@ class ReviewApprovals(private val gateway: AgentGateway, scope: CoroutineScope) 
     }
 
     fun open(id: ApprovalId) {
+        selectedId = id
         val request = gateway.approvals.value.firstOrNull { it.id == id }
         mutable.value = ApprovalReview(request = request)
         refresh()
@@ -39,7 +41,7 @@ class ReviewApprovals(private val gateway: AgentGateway, scope: CoroutineScope) 
 
     fun next() {
         val queue = gateway.approvals.value
-        val index = queue.indexOfFirst { it.id == mutable.value.request?.id }
+        val index = queue.indexOfFirst { it.id == selectedId }
         queue.getOrNull(index + 1)?.let { open(it.id) }
     }
 
@@ -60,7 +62,7 @@ class ReviewApprovals(private val gateway: AgentGateway, scope: CoroutineScope) 
     private fun refresh() {
         val queue = gateway.approvals.value
         val old = mutable.value
-        val id = old.request?.id
+        val id = selectedId
         val pending = queue.firstOrNull { it.id == id }
         mutable.value = old.copy(
             request = pending ?: old.request,
