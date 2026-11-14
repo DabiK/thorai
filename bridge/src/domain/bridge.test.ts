@@ -74,6 +74,48 @@ beforeEach(() => {
 });
 
 describe('creating a session', () => {
+  it.each(['', '   ', '../escape', '/tmp/new', 'a/b', 'x;pwd', '--', '😸', 'a'.repeat(81)])(
+    'refuses invalid new name %s before any agent or folder',
+    async (project) => {
+      await expect(
+        world.bridge.createSession({
+          agent: 'codex',
+          project,
+          newProject: true,
+          approvalMode: 'ask',
+        }),
+      ).rejects.toMatchObject({ code: 'bad_project_name' });
+      expect(world.codex.callsOf('newSession')).toHaveLength(0);
+      expect(await world.bridge.listProjects()).toEqual([{ name: 'regie-demo', branch: 'main' }]);
+    },
+  );
+
+  it('creates a normalized new project on main and starts Codex inside it', async () => {
+    const session = await world.bridge.createSession({
+      agent: 'codex',
+      project: ' Météo du Jour ',
+      newProject: true,
+      approvalMode: 'ask',
+      prompt: 'Lis le dossier',
+    });
+    expect(session.project).toBe('meteo-du-jour');
+    expect(session.branch).toBe('main');
+    expect(world.codex.callsOf('newSession')).toEqual([['/home/dev/projects/meteo-du-jour']]);
+    await expect(world.bridge.listProjects()).resolves.toContainEqual({
+      name: 'meteo-du-jour',
+      branch: 'main',
+    });
+    await expect(
+      world.bridge.createSession({
+        agent: 'codex',
+        project: 'Météo du Jour',
+        newProject: true,
+        approvalMode: 'ask',
+      }),
+    ).rejects.toMatchObject({ code: 'project_exists' });
+    expect(world.codex.callsOf('newSession')).toHaveLength(1);
+  });
+
   it('applies the three product levels on creation and restores plan on resume', async () => {
     for (const agent of ['claude', 'codex'] as const) {
       for (const approvalMode of ['plan', 'auto-edit', 'ask'] as const) {

@@ -153,3 +153,25 @@ contre 1 950 exactement dans le test JVM. Aucune preuve de dictée longue humain
 Captures `scroll-51` à `scroll-54`, protocole dans `essai-thor.txt`. Aucun agent lancé ;
 Quitter a arrêté l'app et le pont à 09:20:58 Paris. Micro réel et extinction physique
 restent au pas à pas utilisateur. Le débogage sans fil des agents reste hors périmètre.
+
+
+## Ticket 15 — Catalogue vivant et nouveau projet
+
+La fiche observe la connexion et recharge `projects.list` à l’ouverture et à chaque
+reconnexion. Une requête remplacée est annulée ; elle ne remplace pas les choix ou
+la consigne déjà saisis. La ligne Projet distingue chargement et pont indisponible.
+Le catalogue est encore vérifié avant A ; un échec bloque toute création.
+
+Dernier choix à gauche/droite : « Nouveau projet… ». L2 sur cette ligne remplace
+le nom uniquement ; sur les autres lignes, il conserve son rôle de dictée de la
+consigne. Le nom normalisé et son chemin sont relus avant A. Un champ tactile de
+secours est disponible en bas. La règle R2 reconnaît « lance Codex sur un nouveau
+projet qui s’appelle météo », avec consigne facultative après « pour ».
+Les champs de branche sont masqués pour ce dépôt vide, initialisé sur main.
+Un nom invalide ou déjà listé bloque A ; le pont refuse aussi les collisions
+survenues entre la lecture du catalogue et la création. Les erreurs de projet
+certaines sont affichées, distinctes d’un accusé perdu (aucun renvoi).
+
+La maquette locale Lancer.dc.html a été relue intégralement, même export que le
+ticket 11 ; l’outil Artifact distant reste indisponible. Couleurs, polices, lignes
+et actions sont conservées. Aucun fournisseur vocal ajouté : moteur local existant.

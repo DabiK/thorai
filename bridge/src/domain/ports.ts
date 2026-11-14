@@ -72,6 +72,10 @@ export interface SessionStore {
 
 /** The project folders the agents may work in. */
 export interface Workspace {
+  createProject(
+    name: string,
+    initialBranch: string,
+  ): Promise<{ readonly name: string; readonly cwd: string }>;
   /** Bounded source identifiers and git refs; never file contents. */
   vocabulary(cwd: string): Promise<readonly string[]>;
   /** Resolves a project of the projects root. Rejects any path that leaves it. */

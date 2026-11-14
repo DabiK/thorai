@@ -50,7 +50,7 @@ class InterpretVoiceCommand(private val model: VoiceCommandModel) {
     }
 
     private fun resolve(intent: VoiceIntent, context: VoiceCommandContext): VoiceCommand? {
-        if (intent.action != "launch" && (listOf(intent.agent, intent.project, intent.branch, intent.instruction, intent.approvalMode, intent.baseBranch).any { it != null } || intent.newBranch)) return null
+        if (intent.action != "launch" && (listOf(intent.agent, intent.project, intent.branch, intent.instruction, intent.approvalMode, intent.baseBranch).any { it != null } || intent.newBranch || intent.newProject)) return null
         fun target(): SessionId? {
             val name = intent.target?.let(::normalize)
             if (name == null) return context.current?.takeIf { id -> context.sessions.any { it.id == id } }
@@ -71,13 +71,15 @@ class InterpretVoiceCommand(private val model: VoiceCommandModel) {
             "launch" -> {
                 if (intent.target != null) return null
                 val agent = Agent.entries.singleOrNull { it.name.equals(intent.agent, ignoreCase = true) } ?: return null
-                val project = context.projects.singleOrNull { normalize(it) == normalize(intent.project.orEmpty()) } ?: return null
+                val project = if (intent.newProject) projectFolderName(intent.project.orEmpty()) ?: return null
+                    else context.projects.singleOrNull { normalize(it) == normalize(intent.project.orEmpty()) } ?: return null
+                if (intent.newProject && (intent.branch != null || intent.newBranch || intent.baseBranch != null)) return null
                 val branch = intent.branch
                 if (branch != null && (branch.length > 200 || !branch.matches(Regex("[A-Za-z0-9][A-Za-z0-9_./-]*")) || branch.contains(".."))) return null
                 if (intent.baseBranch != null && !validBranchName(intent.baseBranch)) return null
                 if (intent.approvalMode != null && intent.approvalMode !in listOf("plan", "auto-edit", "ask")) return null
                 if ((intent.instruction?.length ?: 0) > 2000) return null
-                VoiceCommand.Launch(NewSessionDraft(agent, project, branch, intent.instruction, intent.approvalMode ?: "plan", intent.newBranch, intent.baseBranch))
+                VoiceCommand.Launch(NewSessionDraft(agent, project, branch, intent.instruction, intent.approvalMode ?: "plan", intent.newBranch, intent.baseBranch, intent.newProject))
             }
             else -> null
         }

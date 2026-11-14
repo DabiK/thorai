@@ -177,11 +177,12 @@ class BridgeAgentGateway(
         }
     }
 
-    override suspend fun projects(): List<String> = projectCatalog().map { it.name }
+    override suspend fun projects(): List<String> = try { projectCatalog().map { it.name } }
+        catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { emptyList() }
 
     override suspend fun projectCatalog(): List<app.regie.domain.model.ProjectChoice> {
         val result = call("projects.list", timeout = 5.seconds)
-        if (result !is CallResult.Accepted) return emptyList()
+        if (result !is CallResult.Accepted) throw java.io.IOException("Catalogue des projets indisponible")
         return (result.value["projects"] as? JsonArray)?.mapNotNull { item ->
             val project = item as? JsonObject ?: return@mapNotNull null
             val name = project.string("name") ?: return@mapNotNull null
@@ -196,6 +197,7 @@ class BridgeAgentGateway(
         val result = call("session.create", buildJsonObject {
             put("agent", draft.agent.name.lowercase(java.util.Locale.ROOT))
             put("project", draft.project)
+            if (draft.newProject) put("newProject", true)
             put("approvalMode", draft.approvalMode)
             draft.branch?.let { put("branch", it) }
             draft.instruction?.let { put("prompt", it) }
@@ -205,6 +207,7 @@ class BridgeAgentGateway(
                 val id = result.value.obj("session")?.string("sessionId")?.let(::SessionId)
                 app.regie.domain.model.SessionCreation(id, uncertain = id == null)
             }
+            is CallResult.ProjectRefused -> app.regie.domain.model.SessionCreation(error = result.message)
             CallResult.Unknown -> app.regie.domain.model.SessionCreation(uncertain = true)
             else -> app.regie.domain.model.SessionCreation()
         }
@@ -225,6 +228,7 @@ class BridgeAgentGateway(
             },
         )
         return when (result) {
+            is CallResult.ProjectRefused -> Delivery.NOT_SENT
             CallResult.Unavailable -> Delivery.NOT_SENT
             CallResult.NotSent -> Delivery.NOT_SENT
             CallResult.Unknown -> Delivery.UNKNOWN
@@ -245,6 +249,7 @@ class BridgeAgentGateway(
             put("optionId", optionId)
         })) {
             is CallResult.Accepted -> ApprovalReply.ACCEPTED
+            is CallResult.ProjectRefused -> ApprovalReply.NOT_SENT
             CallResult.Unavailable -> ApprovalReply.UNAVAILABLE
             CallResult.NotSent -> ApprovalReply.NOT_SENT
             CallResult.Unknown -> ApprovalReply.UNKNOWN
@@ -256,6 +261,7 @@ class BridgeAgentGateway(
     /** Résultat du transport : l'absence d'accusé ne prouve jamais un refus. */
     private sealed interface CallResult {
         data class Accepted(val value: JsonObject) : CallResult
+        data class ProjectRefused(val message: String) : CallResult
         data object Unavailable : CallResult
         data object NotSent : CallResult
         data object Unknown : CallResult
@@ -358,6 +364,7 @@ class BridgeAgentGateway(
                             calls.remove(id)?.let { reply ->
                                 reply.complete(
                                     when {
+                                        incoming.error in setOf("bad_project_name", "project_exists", "project_init_failed", "bad_project") -> CallResult.ProjectRefused(incoming.errorMessage ?: "Projet refusé par le pont.")
                                         incoming.error in setOf("unknown_approval", "unknown_option") -> CallResult.Unavailable
                                         incoming.error in setOf("bad_request", "unknown_session", "shutting_down") -> CallResult.NotSent
                                         incoming.error != null -> CallResult.Unknown

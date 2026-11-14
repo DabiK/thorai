@@ -78,6 +78,13 @@ export function counterIds(prefix = 'id'): IdGenerator {
 
 /** Projects and branches in memory. A test moves a branch as an agent would. */
 export class FakeWorkspace implements Workspace {
+  async createProject(name: string, initialBranch: string) {
+    if (this.branches.has(name))
+      throw new BridgeError('project_exists', `Le dossier ~/projects/${name} existe déjà.`);
+    this.branches.set(name, initialBranch);
+    return this.resolveProject(name);
+  }
+
   readonly terms = new Map<string, readonly string[]>();
   async vocabulary(cwd: string): Promise<readonly string[]> {
     return this.terms.get(cwd) ?? [];

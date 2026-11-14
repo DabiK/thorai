@@ -30,7 +30,7 @@ import app.regie.ui.theme.*
 
 @Composable
 fun NewSessionScreen(state: NewSessionForm, bottom: Boolean, single: Boolean, onButton: (Button) -> Unit,
-    onHeld: (Boolean) -> Unit, onField: (NewSessionField) -> Unit, onInstruction: (String) -> Unit, onBranch: (String) -> Unit, velocity: StateFlow<Float>) {
+    onHeld: (Boolean) -> Unit, onField: (NewSessionField) -> Unit, onInstruction: (String) -> Unit, onBranch: (String) -> Unit, velocity: StateFlow<Float>, onProjectName: (String) -> Unit = {}) {
     val list = rememberLazyListState()
     val speed = with(LocalDensity.current) { 500.dp.toPx() }
     LaunchedEffect(list, velocity, bottom, speed) {
@@ -74,7 +74,7 @@ fun NewSessionScreen(state: NewSessionForm, bottom: Boolean, single: Boolean, on
                         when (field) {
                             NewSessionField.AGENT -> Segments(listOf("Claude", "Codex"), state.agent?.let { if (it == Agent.CLAUDE) "Claude" else "Codex" })
                             NewSessionField.PROJECT -> {
-                                BasicText(state.project ?: "À choisir", style = sans(14.sp, 600))
+                                BasicText(state.projectLabel, style = sans(14.sp, 600))
                                 state.project?.let { BasicText("~/projects/$it", style = mono(11.sp, color = Palette.textSubtle)) }
                             }
                             NewSessionField.BRANCH -> BasicText(state.branchLabel, style = mono(13.sp))
@@ -83,7 +83,7 @@ fun NewSessionScreen(state: NewSessionForm, bottom: Boolean, single: Boolean, on
                             NewSessionField.INSTRUCTION -> BasicText(if (state.capturing || state.finalizing) state.partial.ifEmpty { "…" } else state.instruction.ifEmpty { "Aucune · L2 pour dicter" }, style = sans(14.sp, lineHeight = 20.sp))
                         }
                     }
-                    if (state.field == field) BasicText(if (field == NewSessionField.INSTRUCTION) "L2" else "‹ ›", style = sans(12.sp, color = Palette.textMuted))
+                    if (state.field == field) BasicText(if (field == NewSessionField.INSTRUCTION || state.dictatingName) "L2" else "‹ ›", style = sans(12.sp, color = Palette.textMuted))
                 }
             }
         }
@@ -99,6 +99,11 @@ fun NewSessionScreen(state: NewSessionForm, bottom: Boolean, single: Boolean, on
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     BarAction("←", "Changer") { onButton(Button.LEFT) }
                     BarAction("→", "Changer") { onButton(Button.RIGHT) }
+                }
+                if (state.dictatingName) {
+                    BasicText("Nom du projet · L2 pour dicter", style = sans(12.sp, color = Palette.textMuted))
+                    BasicTextField(state.projectName, onProjectName, enabled = state.editable, singleLine = true, textStyle = mono(14.sp),
+                        modifier = Modifier.fillMaxWidth().background(Palette.surface, RoundedCornerShape(8.dp)).padding(12.dp).testTag("project-name"))
                 }
                 if (state.field == NewSessionField.BRANCH && state.branchChoice == BranchChoice.NEW) {
                     BasicText("Nom facultatif · sinon l’agent le choisit", style = sans(12.sp, color = Palette.textMuted))
@@ -123,7 +128,7 @@ fun NewSessionScreen(state: NewSessionForm, bottom: Boolean, single: Boolean, on
                 if (single) BarAction("B", "Annuler") { onButton(Button.B) }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                ButtonChip("L2", "Redicter la consigne", modifier = Modifier.pointerInput(Unit) {
+                ButtonChip("L2", if (state.dictatingName) "Dicter le nom du projet" else "Redicter la consigne", modifier = Modifier.pointerInput(Unit) {
                     detectTapGestures(onPress = {
                         if (editable) {
                             held(true)

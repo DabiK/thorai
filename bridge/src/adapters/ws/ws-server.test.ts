@@ -193,6 +193,27 @@ describe('the WebSocket server', () => {
     await client.close();
   });
 
+  it('passes new project intent through the public protocol', async () => {
+    const client = new Client();
+    expect(
+      await client.call('session.create', {
+        agent: 'codex',
+        project: 'Météo',
+        newProject: true,
+        approvalMode: 'ask',
+      }),
+    ).toMatchObject({ result: { session: { project: 'meteo', branch: 'main' } } });
+    expect(
+      await client.call('session.create', {
+        agent: 'codex',
+        project: 'Météo',
+        newProject: true,
+        approvalMode: 'ask',
+      }),
+    ).toMatchObject({ error: { code: 'project_exists' } });
+    await client.close();
+  });
+
   it('answers clear errors', async () => {
     const client = new Client();
 

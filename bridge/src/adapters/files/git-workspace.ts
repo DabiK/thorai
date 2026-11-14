@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { lstat, readdir, readFile, realpath, stat } from 'node:fs/promises';
+import { lstat, mkdir, readdir, readFile, realpath, stat } from 'node:fs/promises';
 import { basename, relative, resolve, sep } from 'node:path';
 import { promisify } from 'node:util';
 import { BridgeError, type ProjectInfo } from '../../domain/model.ts';
@@ -13,6 +13,41 @@ export class GitWorkspace implements Workspace {
 
   constructor(root: string) {
     this.root = root;
+  }
+
+  async createProject(name: string, initialBranch: string): Promise<{ name: string; cwd: string }> {
+    await mkdir(this.root, { recursive: true });
+    const root = await realpath(this.root);
+    const cwd = resolve(root, name);
+    if (
+      relative(root, cwd) !== name ||
+      name.includes(sep) ||
+      name === '.' ||
+      name === '..' ||
+      !name
+    ) {
+      throw new BridgeError(
+        'bad_project_name',
+        'Le nom doit désigner un dossier directement dans ~/projects.',
+      );
+    }
+    try {
+      await mkdir(cwd);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
+        throw new BridgeError('project_exists', `Le dossier ~/projects/${name} existe déjà.`);
+      }
+      throw error;
+    }
+    try {
+      await git(cwd, ['init', '--quiet', '--initial-branch', initialBranch, '--template=']);
+    } catch {
+      throw new BridgeError(
+        'project_init_failed',
+        `Le dossier ~/projects/${name} a été créé, mais git init a échoué. Vérifie ce dossier avant de réessayer.`,
+      );
+    }
+    return { name, cwd };
   }
 
   async resolveProject(project: string): Promise<{ name: string; cwd: string }> {

@@ -22,8 +22,6 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.ViewGroup
 import android.view.Window
-import android.view.WindowInsets
-import android.view.WindowInsetsController
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.setContent
@@ -93,6 +91,7 @@ abstract class GamepadActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = false
         window.callback = GamepadWindowCallback(window.callback, container.inputRouter, container::releaseTouchDictation)
         // « Quitter » est allé au bout : les deux écrans se ferment, même en arrière-plan.
         lifecycleScope.launch {
@@ -109,19 +108,6 @@ abstract class GamepadActivity : ComponentActivity() {
         super.onStop()
     }
 
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) hideSystemBars()
-    }
-
-    /** Plein écran, comme le lanceur de la console : les barres reviennent d'un glissement. */
-    private fun hideSystemBars() {
-        window.insetsController?.apply {
-            systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            hide(WindowInsets.Type.systemBars())
-        }
-    }
-
     /**
      * L'écran affiché, le même sur les deux écrans de la console : la vue d'ensemble, ou une session.
      * [session] reçoit la vue d'ensemble pour les voisines (L1 / R1).
@@ -133,48 +119,50 @@ abstract class GamepadActivity : ComponentActivity() {
     ) {
         setContent {
             RegieTheme {
-                val screen by container.screen.collectAsStateWithLifecycle()
-                val current by container.overview.collectAsStateWithLifecycle()
-                val dictation by container.dictation.state.collectAsStateWithLifecycle()
-                val command by container.voiceCommand.state.collectAsStateWithLifecycle()
-                val newSession by container.newSession.collectAsStateWithLifecycle()
-                val settingsOpen by container.settingsOpen.collectAsStateWithLifecycle()
-                val settings by container.voiceSettings.collectAsStateWithLifecycle()
-                val mode by container.displays.mode.collectAsStateWithLifecycle()
-                val controlsHere = this@GamepadActivity is BottomActivity || mode == ScreenMode.Single
-                val button: (Button) -> Unit = { container.handleInput(GamepadInput.Pressed(it)) }
-                val held: (Boolean) -> Unit = { container.touchTrigger(Trigger.L2, it) }
-                if (settingsOpen && controlsHere) {
-                    VoiceSettingsScreen(settings, container::selectVoice, container::saveVoiceKey,
-                        { microphonePermission.launch(Manifest.permission.RECORD_AUDIO) }, container::closeVoiceSettings, container::saveCommandKey)
-                } else if (command.visible) {
-                    VoiceCommandScreen(command, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single,
-                        button, { container.touchTrigger(Trigger.R2, it) }, container::openVoiceSettings,
-                        ThreadScroll(container.commandScroll, container.commandVelocity))
-                } else if (newSession.visible) {
-                    app.regie.ui.screens.NewSessionScreen(newSession, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single,
-                        button, held, container::selectNewSessionField, container::editNewInstruction, container::editNewBranch, container.newSessionVelocity)
-                } else if (dictation.visible) {
-                    if (this@GamepadActivity is BottomActivity) DictationBottomScreen(dictation, button, held, container::openVoiceSettings)
-                    else DictationTopScreen(dictation, current.sessions.firstOrNull { it.id == dictation.target?.sessionId }, mode == ScreenMode.Single, button, held, container::openVoiceSettings, ThreadScroll(container.dictationScroll, container.dictationVelocity))
-                } else Column(Modifier.fillMaxSize()) {
-                    if (controlsHere) Row(Modifier.fillMaxWidth().background(Palette.background).padding(horizontal = 16.dp, vertical = 4.dp)) {
-                        BasicText("Réglages voix", style = sans(11.sp, color = Palette.textSubtle), modifier = Modifier.tappable(container::openVoiceSettings))
+                Box(Modifier.fillMaxSize().background(Palette.background).safeDrawingPadding()) {
+                    val screen by container.screen.collectAsStateWithLifecycle()
+                    val current by container.overview.collectAsStateWithLifecycle()
+                    val dictation by container.dictation.state.collectAsStateWithLifecycle()
+                    val command by container.voiceCommand.state.collectAsStateWithLifecycle()
+                    val newSession by container.newSession.collectAsStateWithLifecycle()
+                    val settingsOpen by container.settingsOpen.collectAsStateWithLifecycle()
+                    val settings by container.voiceSettings.collectAsStateWithLifecycle()
+                    val mode by container.displays.mode.collectAsStateWithLifecycle()
+                    val controlsHere = this@GamepadActivity is BottomActivity || mode == ScreenMode.Single
+                    val button: (Button) -> Unit = { container.handleInput(GamepadInput.Pressed(it)) }
+                    val held: (Boolean) -> Unit = { container.touchTrigger(Trigger.L2, it) }
+                    if (settingsOpen && controlsHere) {
+                        VoiceSettingsScreen(settings, container::selectVoice, container::saveVoiceKey,
+                            { microphonePermission.launch(Manifest.permission.RECORD_AUDIO) }, container::closeVoiceSettings, container::saveCommandKey)
+                    } else if (command.visible) {
+                        VoiceCommandScreen(command, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single,
+                            button, { container.touchTrigger(Trigger.R2, it) }, container::openVoiceSettings,
+                            ThreadScroll(container.commandScroll, container.commandVelocity))
+                    } else if (newSession.visible) {
+                        app.regie.ui.screens.NewSessionScreen(newSession, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single,
+                            button, held, container::selectNewSessionField, container::editNewInstruction, container::editNewBranch, container.newSessionVelocity, container::editNewProjectName)
+                    } else if (dictation.visible) {
+                        if (this@GamepadActivity is BottomActivity) DictationBottomScreen(dictation, button, held, container::openVoiceSettings)
+                        else DictationTopScreen(dictation, current.sessions.firstOrNull { it.id == dictation.target?.sessionId }, mode == ScreenMode.Single, button, held, container::openVoiceSettings, ThreadScroll(container.dictationScroll, container.dictationVelocity))
+                    } else Column(Modifier.fillMaxSize()) {
+                        if (controlsHere) Row(Modifier.fillMaxWidth().background(Palette.background).padding(horizontal = 16.dp, vertical = 4.dp)) {
+                            BasicText("Réglages voix", style = sans(11.sp, color = Palette.textSubtle), modifier = Modifier.tappable(container::openVoiceSettings))
+                        }
+                        Box(Modifier.weight(1f)) {
+                    when (val shown = screen) {
+                        is Screen.Diff -> {
+                            val review by container.diffReview.collectAsStateWithLifecycle()
+                            app.regie.ui.screens.DiffScreen(review, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single,
+                                container.diffVelocity, button, container::selectDiffFile, held, container.diffSteps)
+                        }
+                        Screen.Approval -> approval()
+                        Screen.Overview -> {
+                            val control by container.controller.state.collectAsStateWithLifecycle()
+                            overview(current, control)
+                        }
+                        is Screen.Session -> session(shown, current)
                     }
-                    Box(Modifier.weight(1f)) {
-                when (val shown = screen) {
-                    is Screen.Diff -> {
-                        val review by container.diffReview.collectAsStateWithLifecycle()
-                        app.regie.ui.screens.DiffScreen(review, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single,
-                            container.diffVelocity, button, container::selectDiffFile, held, container.diffSteps)
-                    }
-                    Screen.Approval -> approval()
-                    Screen.Overview -> {
-                        val control by container.controller.state.collectAsStateWithLifecycle()
-                        overview(current, control)
-                    }
-                    is Screen.Session -> session(shown, current)
-                }
+                        }
                     }
                 }
             }

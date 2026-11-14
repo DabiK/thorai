@@ -169,6 +169,7 @@ function serve(ws: WebSocket, options: WsServerOptions): void {
       session: await bridge.createSession({
         agent: params.agent,
         project: params.project,
+        newProject: params.newProject,
         branch: params.branch ?? undefined,
         approvalMode: params.approvalMode,
         prompt: params.prompt ?? undefined,

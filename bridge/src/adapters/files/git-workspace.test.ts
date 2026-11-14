@@ -1,5 +1,14 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -110,4 +119,26 @@ it('lists all local branch choices without changing HEAD or the worktree', async
   expect(execFileSync('git', ['-C', cwd, 'diff'], { encoding: 'utf8' })).toContain(
     'uncommitted work',
   );
+});
+
+it('reserves a new empty repository on main and never overwrites a collision', async () => {
+  const project = await workspace.createProject('meteo-du-jour', 'main');
+  expect(project).toEqual({ name: 'meteo-du-jour', cwd: join(root, 'meteo-du-jour') });
+  expect(readdirSync(project.cwd)).toEqual(['.git']);
+  expect(await workspace.currentBranch(project.cwd)).toBe('main');
+  const attempts = await Promise.allSettled([
+    workspace.createProject('race', 'main'),
+    workspace.createProject('race', 'main'),
+  ]);
+  expect(attempts.filter((it) => it.status === 'fulfilled')).toHaveLength(1);
+  expect(attempts.find((it) => it.status === 'rejected')).toMatchObject({
+    reason: { code: 'project_exists' },
+  });
+  for (const name of ['demo', 'plain', 'escape']) {
+    await expect(workspace.createProject(name, 'main')).rejects.toMatchObject({
+      code: 'project_exists',
+    });
+  }
+  expect(readFileSync(join(root, 'demo', 'a.txt'), 'utf8')).toBe('a\n');
+  expect(readdirSync(join(base, 'outside'))).toEqual([]);
 });

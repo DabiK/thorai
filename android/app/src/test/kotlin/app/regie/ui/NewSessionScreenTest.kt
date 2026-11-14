@@ -26,6 +26,18 @@ class NewSessionScreenTest {
     private val form = NewSessionForm(visible = true, agent = Agent.CODEX, project = "demo", projects = listOf(ProjectChoice("demo", "main", listOf("main"))),
         branchChoice = BranchChoice.NEW, branch = "essai", base = "main", instruction = "Corrige le scan", approvalMode = "auto-edit")
 
+    @Test fun `project row explains loading and unreachable bridge`() {
+        val state = mutableStateOf(NewSessionForm(visible = true, loading = true))
+        Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
+            host.setup().get().setContent { RegieTheme {
+                NewSessionScreen(state.value, bottom = false, single = false, onButton = {}, onHeld = {}, onField = {}, onInstruction = {}, onBranch = {}, velocity = MutableStateFlow(0f))
+            } }
+            compose.onNodeWithText("Chargement des projets…").assertIsDisplayed()
+            compose.runOnIdle { state.value = state.value.copy(loading = false, catalogAvailable = false) }
+            compose.onNodeWithText("Pont injoignable · reconnexion…").assertIsDisplayed()
+        }
+    }
+
     @Test fun `top displays editable values and compact layout keeps launch and cancel visible`() {
         val buttons = mutableListOf<Button>()
         val state = mutableStateOf(form)

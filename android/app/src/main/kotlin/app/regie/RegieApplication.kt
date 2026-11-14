@@ -302,6 +302,7 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
     }
     fun selectNewSessionField(field: NewSessionField) { reviewNewSession?.select(field) }
     fun editNewInstruction(text: String) { reviewNewSession?.editInstruction(text) }
+    fun editNewProjectName(text: String) { reviewNewSession?.editProjectName(text) }
     fun editNewBranch(text: String) { reviewNewSession?.editBranch(text) }
 
     private fun handleNewSession(input: GamepadInput) {

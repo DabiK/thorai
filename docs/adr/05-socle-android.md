@@ -96,3 +96,18 @@ Les événements suivent ainsi le même chemin que la vraie manette, gâchettes 
   2. Relever `adb -s THOR0000000001 shell dumpsys display | grep -E 'Screen-2.*state'` et `adb -s THOR0000000001 logcat -d -s Regie`, qui doit montrer `mode d'écran : Single`.
   3. Vérifier que le panneau apparaît en bas de l'écran haut.
   4. Rallumer l'écran du bas et vérifier que l'écran du bas de Régie revient.
+
+
+## Ticket 15 — Marges système sur les deux écrans
+
+Choix : respecter les insets, plutôt que masquer les barres au gain du focus.
+Le conteneur commun `GamepadActivity.setScreen` utilise `safeDrawingPadding` sur
+un fond sombre : statut, navigation, découpes et clavier restent hors du contenu,
+pour chaque écran et chaque panneau, y compris en mode un seul écran. Les icônes
+de statut sont claires pour rester lisibles. Aucun réglage système n’est modifié.
+
+API vérifiée avec Context7, documentation officielle Android `insets-ui` et
+`setup-e2e`, extraits `artifacts/screenshots/15/docs-insets.txt` et
+`docs-system-bar-style.txt`. Test Robolectric sur le vrai conteneur commun, sans
+le démarrer : injecter 24 px en haut et 20 px en bas déplace les limites du contenu
+d’autant. Retirer le padding fait échouer le test. Captures Thor des deux écrans.
