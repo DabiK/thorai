@@ -30,6 +30,14 @@ if [ ! -d "$wt" ]; then
 	fi
 fi
 
+# SDK Android : local.properties n'est pas versionné, un worktree neuf ne l'a pas.
+export ANDROID_HOME="${ANDROID_HOME:-/opt/homebrew/share/android-commandlinetools}"
+for d in android voice; do
+	if [ -d "$wt/$d" ] && [ ! -f "$wt/$d/local.properties" ]; then
+		echo "sdk.dir=$ANDROID_HOME" >"$wt/$d/local.properties"
+	fi
+done
+
 mkdir -p "$RUNS"
 if [ "$MODE" = review ]; then
 	instructions="$ROOT/scripts/review-codex.md"
