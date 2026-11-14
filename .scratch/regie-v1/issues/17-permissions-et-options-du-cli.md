@@ -66,7 +66,8 @@ THOR: absente ; émulateur deux écrans/pont Mac, vrai Codex Sol/high/never/dang
 Catalogue vide et modèle retiré simulés dans la seule sauvegarde du banc, confirmation par A.
 Agent, pont et émulateur arrêtés ; aucun Claude ni sous-agent.
 REVIEW: validation prématurée corrigée ; attente correspondante de l’ancien test corrigée,
-autres assertions conservées. Relecture finale consignée dans review-dependent-relecture.txt.
+autres assertions conservées. Diff main...HEAD relu après 5a41ed5, aucun autre blocage trouvé.
+Deux fins de journaux nettoyées ; preuve : review-dependent-relecture.txt.
 DÉCISIONS PRISES: ADR 02 et protocole précisés : le pont valide les sélections dépendantes.
 POUR L'UTILISATEUR: 1. Rebrancher Thor, installer pont/app selon essai-emulateur.txt.
 2. Dans une reprise bloquée, choisir un modèle disponible en conservant l’effort, puis Reprendre/A.
