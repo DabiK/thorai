@@ -48,6 +48,8 @@
 
 - **14 novembre, ticket 08, correction de revue du panneau compact (solo Codex)** : micro tactile et niveau PCM rétablis en mode un écran, côte à côte ; deux régressions Compose/Robolectric rouges puis vertes après Compléter/Corriger. Android 217 tests + lint, voix 127 + lint, pont 268 + typage/lint verts. Thor : maintien tactile injecté sur display 0, WAV Thomas, complément puis remplacement du mot choisi à la croix, retour en deux écrans (38–48). Brouillon effacé sans envoi, aucun agent lancé ; pont quitté à 03:24:21 locale. Critère des deux fournisseurs toujours décoché : vraie voix, permission micro, clé et preuves relu/reçu restent à l'utilisateur. Statut à fusionner selon la consigne nocturne ; ADR 09 et pas à pas complétés.
 
+- **14 novembre, ticket 12 à fusionner (solo Codex)** : points écrits en fin de tour et par Y, bilans demandés dans le tour normal de l’agent sans appel supplémentaire, notifications questions/fins/échecs (ADR 10). Android 226 tests + lint, pont 270 tests + typage/lint verts. Thor : Codex réel, un/deux écrans, Y, fin automatique, validation en arrière-plan et intents ciblés. Publication/clic notification restent à l’utilisateur : POST_NOTIFICATIONS refusée avec USER_FIXED, aucun droit accordé. Agent d’essai arrêté par bridge.shutdown, pas de Claude. Preuves et pas à pas : artifacts/screenshots/12/essai-thor.txt.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |
@@ -96,5 +98,5 @@ Les tickets qui touchent `android/` passent **un par un**. Ils installent tous l
 ## Questions en attente
 
 - Nom définitif de l'app (« Régie » est un nom de travail).
-- Lecture à voix haute : automatique ou seulement à la demande ? Un réglage est prévu, la valeur par défaut reste à décider.
+- Lecture à voix haute : question close par la décision du 14 novembre, points écrits uniquement.
 - Ticket 14 : `uninstall.sh` doit-il continuer à effacer la clé adb de la Debian ? Cela oblige à refaire l'association à la main après toute désinstallation.

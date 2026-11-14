@@ -32,6 +32,7 @@ import type {
   Workspace,
 } from './ports.ts';
 import { ReadOnlyCommands } from './read-only-command.ts';
+import { withSummaryRequest } from './written-summary.ts';
 
 export interface BridgeDeps {
   readonly connectors: readonly AgentConnector[];
@@ -420,7 +421,7 @@ export class Bridge {
       lastError: null,
     });
     const sent = prefix === null ? text : `${prefix}\n\n${text}`;
-    const turn = connection.prompt(sessionId, sent).then(
+    const turn = connection.prompt(sessionId, withSummaryRequest(sent)).then(
       (result) => {
         if (this.live.get(sessionId) !== live) return;
         live.inFlight -= 1;

@@ -42,6 +42,7 @@ class TopActivity : GamepadActivity() {
     }
 
     private fun openNotification(intent: Intent) {
+        intent.getStringExtra(EXTRA_SESSION)?.let { container.openSession(app.regie.domain.model.SessionId(it), summary = true) }
         intent.getStringExtra(EXTRA_APPROVAL)?.let { container.openApproval(app.regie.domain.model.ApprovalId(it)) }
     }
 
@@ -158,6 +159,7 @@ class TopActivity : GamepadActivity() {
     }
 
     companion object {
+        const val EXTRA_SESSION = "session_id"
         const val EXTRA_APPROVAL = "approval_id"
         const val EXTRA_FORCE_SINGLE_SCREEN = "force_single_screen"
 

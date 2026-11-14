@@ -30,6 +30,8 @@ import app.regie.domain.usecase.KeepBridgeUp
 import app.regie.domain.usecase.ObserveOverview
 import app.regie.domain.usecase.ReviewApprovals
 import app.regie.domain.usecase.ApprovalReview
+import app.regie.domain.usecase.NotifySessions
+import app.regie.console.AndroidSessionNotifications
 import app.regie.domain.usecase.NotifyApprovals
 import app.regie.domain.model.ApprovalId
 import app.regie.approval.ApprovalController
@@ -38,7 +40,6 @@ import app.regie.domain.usecase.OpenSession
 import app.regie.domain.usecase.PauseAll
 import app.regie.domain.usecase.Quit
 import app.regie.domain.usecase.SendMessage
-import app.regie.domain.usecase.SpeakSummary
 import app.regie.domain.usecase.StartNewSession
 import app.regie.domain.usecase.StartUp
 import app.regie.domain.usecase.StartUpReport
@@ -199,10 +200,14 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
         navigate(Screen.Approval)
     }
 
+    fun openSession(id: SessionId, summary: Boolean = false) {
+        navigate(Screen.Session(id))
+        if (summary) sessionController.openSummary()
+    }
+
     fun selectApproval(id: ApprovalId) { reviewApprovals?.open(id) }
 
     private val startNewSession = StartNewSession()
-    private val speakSummary = SpeakSummary()
     private val pauseAll = PauseAll()
 
     val controller = OverviewController(overview, ::execute)
@@ -259,6 +264,7 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
         reviewApprovals = review
         scope.launch { review.state.collect { approvalReview.value = it } }
         NotifyApprovals(chosen, topStarted, AndroidApprovalNotifications(app), scope)
+        NotifySessions(chosen, topStarted, AndroidSessionNotifications(app), scope)
         quit = Quit(chosen, launcher)
         sendMessage = SendMessage(chosen, dictated)
         interruptSession = InterruptSession(chosen)
@@ -340,7 +346,7 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
                 Log.i(TAG, "interruption : ${if (heard) "envoyée" else "refusée"}")
                 sessionController.onInterrupted(action.id, heard)
             }
-            is SessionAction.SpeakSummary -> speakSummary(action.id)
+            is SessionAction.ShowSummary -> sessionController.openSummary()
             is SessionAction.StartDictation -> startDictation(action.id)
             SessionAction.StopDictation -> stopDictation()
             SessionAction.StartVoiceCommand -> startVoiceCommand()
@@ -366,7 +372,7 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
         is OverviewAction.OpenSession -> navigate(Screen.Session(action.id))
         is OverviewAction.OpenApproval -> openApproval(action.id)
         OverviewAction.NewSession -> startNewSession()
-        is OverviewAction.SpeakSummary -> speakSummary(action.target)
+        is OverviewAction.ShowSummary -> action.target?.let { openSession(it, summary = true) }
         OverviewAction.PauseAll -> pauseAll()
         OverviewAction.Quit -> quitNow()
     }

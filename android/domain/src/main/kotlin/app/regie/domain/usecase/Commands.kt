@@ -1,7 +1,5 @@
 package app.regie.domain.usecase
 
-import app.regie.domain.model.SessionId
-
 // Cas d'usage déclenchés par les commandes du PRD (section « Commandes »).
 // Ils sont vides tant que le ticket qui les porte n'est pas livré : la manette
 // et l'écran tactile sont déjà branchés dessus.
@@ -19,11 +17,6 @@ class StopVoiceCommand {
 /** X sur la vue d'ensemble : nouvelle session. Ticket 11. */
 class StartNewSession {
     operator fun invoke() = Unit
-}
-
-/** Y : faire le point à voix haute. Ticket 12. */
-class SpeakSummary {
-    operator fun invoke(target: SessionId?) = Unit
 }
 
 /** Start sur la vue d'ensemble : tout mettre en pause. Ticket 05 ou 09. */

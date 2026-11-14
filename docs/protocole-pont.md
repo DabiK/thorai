@@ -104,7 +104,7 @@ Les requêtes sont traitées en parallèle : les réponses peuvent arriver dans 
   Travaille sur la branche <branch>, crée-la depuis main si elle n’existe pas.
   ```
 
-  suivi d'une ligne vide, puis du message. L'agent choisit comment faire (`git switch`, worktree…). Le premier message est la consigne de `prompt`, sinon le premier `session.prompt`, même s'il est injecté dans un tour (`steering`). Les messages suivants partent tels quels. Le nom doit être un nom de branche valide (`git check-ref-format --branch`), sinon : erreur `bad_request`, aucune session n'est créée.
+  suivi d'une ligne vide, puis du message. L'agent choisit comment faire (`git switch`, worktree…). Le premier message est la consigne de `prompt`, sinon le premier `session.prompt`, même s'il est injecté dans un tour (`steering`). Les messages suivants ne répètent pas la consigne de branche. Chaque nouveau tour reçoit aussi la consigne de bilan écrit décrite dans l’ADR 10 ; le texte utilisateur du journal reste inchangé. Le nom doit être un nom de branche valide (`git check-ref-format --branch`), sinon : erreur `bad_request`, aucune session n'est créée.
 - `approvalMode` : `plan`, `auto-edit`, `ask` (ou `allow-all` pour compatibilité) (voir « Modes de validation »).
 - `prompt` (facultatif) : la consigne, envoyée dès la création.
 

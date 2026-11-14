@@ -59,6 +59,7 @@ data class LiveSession(
     val context: ContextUsage?,
     /** Le journal de la session n'est pas encore lu et rien n'est arrivé en direct. */
     val loading: Boolean,
+    val writtenSummary: WrittenSummary,
 ) {
     /** Start n'interrompt qu'une session qui travaille ou attend une validation. */
     val canInterrupt: Boolean get() = session.status.isBusy
@@ -88,6 +89,7 @@ data class LiveSession(
                 modifiedFiles = modifiedFiles(session.modifiedFiles, thread.entries),
                 context = thread.context,
                 loading = !thread.loaded && thread.entries.isEmpty(),
+                writtenSummary = WrittenSummary.of(session, thread),
             )
         }
 

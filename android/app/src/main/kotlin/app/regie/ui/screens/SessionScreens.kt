@@ -94,7 +94,7 @@ import app.regie.domain.model.Neighbours
 import app.regie.domain.model.PlanStep
 import app.regie.domain.model.PlanStepStatus
 import app.regie.domain.model.Session
-import app.regie.domain.model.SpokenSummary
+import app.regie.domain.model.WrittenSummary
 import app.regie.domain.model.ThreadLine
 import app.regie.input.Button
 import app.regie.input.Trigger
@@ -167,7 +167,7 @@ fun SessionTopScreen(
                     // Une liste par session : passer à la voisine repart de la fin de son fil.
                     else -> key(live.session.id) { ThreadList(live, scroll) }
                 }
-                if (live != null && control.summaryOpen) SummaryPanel(live.summary)
+                if (live != null && control.showsSummary(live)) SummaryPanel(live.writtenSummary, live.loading)
             }
             if (live != null) SidePanel(live)
         }
@@ -658,11 +658,9 @@ private fun FileRow(file: ModifiedFile) {
 // --- Le point écrit (Y) ---
 
 @Composable
-private fun SummaryPanel(summary: SpokenSummary) {
+internal fun SummaryPanel(summary: WrittenSummary, loading: Boolean = false) {
     Column(
-        modifier = Modifier
-            .padding(horizontal = 20.dp, vertical = 14.dp)
-            .fillMaxWidth()
+        modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp).fillMaxWidth()
             .background(Palette.surface, RoundedCornerShape(12.dp))
             .border(1.dp, Palette.divider, RoundedCornerShape(12.dp))
             .padding(horizontal = 16.dp, vertical = 14.dp),
@@ -672,38 +670,11 @@ private fun SummaryPanel(summary: SpokenSummary) {
             BasicText(stringResource(R.string.summary_title), style = sans(14.sp, weight = 600), modifier = Modifier.weight(1f))
             BasicText(stringResource(R.string.summary_close), style = sans(11.sp, color = Palette.textSubtle))
         }
-        val body = sans(13.sp, color = Palette.agentText, lineHeight = 18.sp)
-        BasicText(statusLabel(summary.status), style = body.copy(color = statusColor(summary.status)))
-        summary.pendingApproval?.let {
-            BasicText(
-                it.subject?.let { subject -> stringResource(R.string.thread_awaiting, subject) } ?: stringResource(R.string.thread_awaiting_no_subject),
-                style = body.copy(color = Palette.waiting),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        summary.progress?.let { progress ->
-            BasicText(
-                progress.currentStep?.let { stringResource(R.string.card_step_with_label, progress.step, progress.total, it) }
-                    ?: stringResource(R.string.card_step, progress.step, progress.total),
-                style = body,
-            )
-        }
-        summary.lastAction?.let {
-            BasicText(stringResource(R.string.summary_last_action, it.description), style = body, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        }
-        BasicText(
-            if (summary.modifiedFiles.isEmpty()) {
-                stringResource(R.string.summary_no_files)
-            } else {
-                stringResource(R.string.summary_files, summary.modifiedFiles.joinToString(", "))
-            },
-            style = body,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-        summary.lastSentence?.let {
-            BasicText(stringResource(R.string.summary_last_sentence, it), style = body, maxLines = 3, overflow = TextOverflow.Ellipsis)
+        BasicText(if (loading) "Chargement du fil…" else if (summary.fromAgent) "Bilan de l’agent · détails dans le fil" else "Point sur les informations reçues · détails dans le fil",
+            style = sans(11.sp, color = Palette.textSubtle), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (!loading) summary.lines.forEach { line ->
+            BasicText(line, style = sans(13.sp, color = Palette.agentText, lineHeight = 18.sp),
+                maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
     }
 }
