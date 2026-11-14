@@ -137,4 +137,5 @@
     <!-- Point écrit (Y), sans synthèse vocale. -->
     <string name="summary_title">Le point</string>
     <string name="summary_close">Y ou B pour fermer</string>
+    <string name="bridge_hint_start_external">Démarre le pont sur le Mac avec scripts/bridge-mac.sh.</string>
 </resources>

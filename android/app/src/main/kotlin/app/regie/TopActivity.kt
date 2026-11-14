@@ -104,7 +104,7 @@ class TopActivity : GamepadActivity() {
      * au premier lancement de chaque processus. Refusée, l'écran donne la marche à suivre.
      */
     private fun askRunCommandPermission() {
-        if (container.replaying) return
+        if (container.replaying || !container.hasTermux) return
         if (checkSelfPermission(TermuxBridgeLauncher.PERMISSION) == PackageManager.PERMISSION_GRANTED) return
         askingPermission = true
         runCommandPermission.launch(TermuxBridgeLauncher.PERMISSION)

@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 import { Readable, Writable } from 'node:stream';
 import { promisify } from 'node:util';
 import * as acp from '@agentclientprotocol/sdk/unstable';
-import { TESTED_VERSIONS } from '../../domain/agents.ts';
+import { modeIdFor, TESTED_VERSIONS } from '../../domain/agents.ts';
 import type { AgentKind } from '../../domain/model.ts';
 import type { AgentConnector, Logger } from '../../domain/ports.ts';
 import { redact } from '../../domain/redact.ts';
@@ -37,7 +37,11 @@ interface AdapterSpec {
   readonly env: Readonly<Record<string, string>>;
 }
 
-export function adapterSpec(agent: AgentKind, binaries: AgentBinaries): AdapterSpec {
+export function adapterSpec(
+  agent: AgentKind,
+  binaries: AgentBinaries,
+  platform: NodeJS.Platform = process.platform,
+): AdapterSpec {
   if (agent === 'claude') {
     return {
       packageName: '@agentclientprotocol/claude-agent-acp',
@@ -52,8 +56,10 @@ export function adapterSpec(agent: AgentKind, binaries: AgentBinaries): AdapterS
       CODEX_PATH: binaries.codex,
       NO_BROWSER: '1',
       // Mode of the sessions this process loads, until the bridge sets theirs.
-      INITIAL_AGENT_MODE: 'workspace-write',
-      CODEX_CONFIG: JSON.stringify({ developer_instructions: CODEX_DEVELOPER_INSTRUCTIONS }),
+      INITIAL_AGENT_MODE: modeIdFor('codex', 'ask', platform === 'darwin' ? 'native' : 'proot'),
+      CODEX_CONFIG: JSON.stringify(
+        platform === 'darwin' ? {} : { developer_instructions: CODEX_DEVELOPER_INSTRUCTIONS },
+      ),
     },
   };
 }

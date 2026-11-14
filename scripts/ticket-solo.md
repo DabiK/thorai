@@ -16,7 +16,7 @@ Tu mènes un ticket du dépôt regie de bout en bout, sans intervention humaine 
    - Pour une API de bibliothèque, vérifie la documentation à jour.
 3. **Vérifier.**
    - Lance la porte de qualité de chaque partie touchée : `./gradlew check` dans `android/` ou `voice/`, `npm run check` dans `bridge/`. Corrige jusqu'au vert, sans affaiblir ni désactiver aucun test.
-   - Teste ensuite sur la Thor (adb, série `THOR0000000001`) : `scripts/thor-install.sh`, puis `scripts/thor-shot.sh artifacts/screenshots/<NN>`. **Si la Thor n'apparaît pas dans `adb devices`, teste sur l'émulateur à deux écrans avec le pont sur le Mac** (`docs/emulateur.md`, ticket 16), et liste dans le rapport ce qui reste à vérifier sur la vraie console.
+   - Teste ensuite sur la Thor (adb, série `THOR0000000001`) : `scripts/thor-install.sh`, puis `scripts/thor-shot.sh artifacts/screenshots/<NN>`. **Si la Thor n'apparaît pas dans `adb devices`, teste sur l'émulateur à deux écrans avec le pont sur le Mac** (`docs/emulateur.md` : `scripts/emu-start.sh`, `scripts/bridge-mac.sh`, `scripts/emu-install.sh`, puis `scripts/emu-shot.sh artifacts/screenshots/<NN>`), et liste dans le rapport ce qui reste à vérifier sur la vraie console.
    - Si un essai demande une vraie session d'agent sur la console, **lance-la avec Codex, pas avec Claude** : le quota Claude de l'utilisateur est presque épuisé.
 4. **Commiter.**
    - Conventional Commits (`type(scope): sujet`), fichiers ajoutés par leur chemin, pas de `--no-verify`.

@@ -23,6 +23,9 @@ sealed interface BridgeConnection {
 
 /** Débogage sans fil, dont dépend l'accès des agents à Android (ticket 03). */
 enum class WirelessDebugging {
+    /** Le transport Android est fourni par le poste de développement. */
+    NOT_REQUIRED,
+
     ALREADY_ON,
 
     /** Il était coupé (redémarrage de la console) : Régie l'a rallumé. */
@@ -34,6 +37,9 @@ enum class WirelessDebugging {
 
 /** Ce qu'a donné une demande de démarrage ou d'arrêt du pont (RUN_COMMAND de Termux). */
 enum class LaunchResult {
+    /** Pont externe : aucune commande locale envoyée. */
+    EXTERNAL,
+
     SENT,
 
     /** L'utilisateur n'a pas accordé à Régie le droit de lancer des commandes dans Termux. */
@@ -45,6 +51,7 @@ enum class LaunchResult {
 
 /** Ce que l'utilisateur doit savoir quand le pont est injoignable : la marche à suivre. */
 enum class BridgeHint {
+    START_EXTERNAL,
     GRANT_RUN_COMMAND,
     TERMUX_MISSING,
     TOKEN_MISSING,
@@ -73,6 +80,7 @@ sealed interface BridgeStatus {
                     UnreachableReason.NOT_RESPONDING -> when (launch) {
                         LaunchResult.PERMISSION_MISSING -> BridgeHint.GRANT_RUN_COMMAND
                         LaunchResult.TERMUX_MISSING -> BridgeHint.TERMUX_MISSING
+                        LaunchResult.EXTERNAL -> BridgeHint.START_EXTERNAL
                         LaunchResult.SENT, null -> BridgeHint.RESTARTING
                     }
                 },

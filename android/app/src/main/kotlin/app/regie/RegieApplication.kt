@@ -24,6 +24,7 @@ import android.app.Application
 import android.hardware.display.DisplayManager
 import android.os.Process
 import android.util.Log
+import app.regie.console.ExternalBridge
 import app.regie.console.TermuxBridgeLauncher
 import app.regie.console.WirelessDebuggingAccess
 import app.regie.display.DisplayMonitor
@@ -351,6 +352,9 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
     var replaying = false
         private set
 
+    /** Termux présent : transport local de la Thor ; absent : pont externe du banc. */
+    val hasTermux = TermuxBridgeLauncher.isInstalled(app)
+
     /**
      * Branche la passerelle, une fois pour le processus. [replay] choisit la passerelle factice, qui
      * rejoue les enregistrements du pont (en debug : `--ez fake_gateway true`).
@@ -358,7 +362,9 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
     fun start(replay: Boolean) {
         if (gateway != null) return
         replaying = replay
-        val launcher = TermuxBridgeLauncher(app)
+        val external = ExternalBridge()
+        val launcher = if (hasTermux) TermuxBridgeLauncher(app) else external
+        val androidAccess = if (hasTermux) WirelessDebuggingAccess(app) else external
         val chosen: AgentGateway = if (replay) {
             ReplayAgentGateway()
         } else {
@@ -372,7 +378,7 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
         val reports: StateFlow<StartUpReport?> = if (replay) {
             MutableStateFlow(null)
         } else {
-            StartUp(chosen, WirelessDebuggingAccess(app), launcher).also { startUp = it }.report
+            StartUp(chosen, androidAccess, launcher).also { startUp = it }.report
         }
         gateway = chosen
         reviewNewSession = ReviewNewSession(chosen, capture, scope) { openSession(it) }.also { review ->

@@ -222,7 +222,7 @@ Silences : Claude peut rester 30 s sans rien envoyer pendant une longue réponse
 
 ## Modes de validation
 
-Trois niveaux produit, plus `allow-all` conservé pour les sessions existantes. Le pont les traduit en modes ACP, et les réapplique après chaque `session/load` :
+Trois niveaux produit, plus `allow-all` conservé pour les sessions existantes. Le pont les traduit en modes ACP, et les réapplique après chaque `session/load`. Le tableau décrit la Thor (PRoot) :
 
 | `approvalMode` | Claude | Codex |
 | --- | --- | --- |
@@ -230,6 +230,13 @@ Trois niveaux produit, plus `allow-all` conservé pour les sessions existantes. 
 | `auto-edit` (« modifications automatiques ») | `acceptEdits` | `workspace-write` ; le domaine du pont accepte les demandes `kind: edit` une fois |
 | `ask` (« tout valider ») | `default` | `workspace-write`, avec la consigne qui évite le sandbox (ADR 02) |
 | `allow-all` (« tout autoriser ») | `bypassPermissions` | `agent-full-access` |
+
+Sur le banc Mac (sandbox natif), `ask`, `auto-edit` et `plan` utilisent **`read-only`**
+avec validation `on-request` par l'utilisateur, au démarrage comme après reprise.
+`plan` ajoute toujours `collaboration_mode=plan` ; `allow-all` reste `agent-full-access`.
+Les écritures shell et éditions structurées remontent ainsi au pont, qui applique
+les mêmes règles ci-dessous. Les lectures peuvent s'exécuter directement dans le
+sandbox natif. La consigne PRoot n'est pas injectée (ADR 14).
 
 - Claude démarre en `auto`, le réglage de l'utilisateur : le pont force le mode juste après la création.
 - Le mode `agent` de Codex n'est jamais utilisé.

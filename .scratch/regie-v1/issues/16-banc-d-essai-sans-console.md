@@ -1,6 +1,6 @@
 # 16 — Banc d'essai sans la console : émulateur à deux écrans et pont sur le Mac
 
-Statut : prêt
+Statut : à fusionner
 Bloqué par : rien
 Possède : `scripts/emu-*.sh`, `scripts/bridge-mac.sh`, `docs/emulateur.md`
 
@@ -25,4 +25,26 @@ L'utilisateur est parti avec la Thor. Les tickets suivants doivent pouvoir être
 
 ## Critères d'acceptation
 
-- Depuis un Mac sans la console, en trois commandes : émulateur démarré, pont lancé, Régie installée. Régie affiche alors la vraie session Codex lancée sur le projet de démo, sur les deux écrans de l'émulateur. Captures dans `artifacts/screenshots/16/`.
+- [x] Depuis un Mac sans la console, en trois commandes : émulateur démarré, pont lancé, Régie installée. Régie affiche alors la vraie session Codex lancée sur le projet de démo, sur les deux écrans de l'émulateur. Captures dans `artifacts/screenshots/16/`.
+
+## Rapport
+
+STATUT: done
+RÉSUMÉ: Banc en trois commandes confirmé avec Codex réel sur deux écrans.
+Sur Mac, les écritures demandent maintenant validation ; les PNG sont entièrement décodés.
+CRITÈRES:
+- [x] Trois commandes et vraie démo Codex → revision-{emu-start,bridge-start,install-demo}.txt, captures revision-17.
+- [x] Écrans 1920×1080 et 1240×1080 → 36 PNG décodés, emu-shot.sh.
+- [x] Modes Mac conformes → refus B / autorisation A de shell et apply_patch ; auto-edit conserve la validation shell (revision-validation.txt).
+- [x] PNG incomplets rejetés → 13 tests scripts, cas tronqués et mutation du décodage détectée.
+- [x] Absence de Termux → ExternalBridgeTest, BridgeStatusTest, QuitTest et démo réelle.
+- [x] A/B/L2/R2 et voix synthétique → captures initiales 02–08 ; A/B/R1 rejoués pendant la correction.
+- [x] Guide dix lignes et repli solo → docs/emulateur.md, scripts/ticket-solo.md.
+PORTE DE QUALITÉ: Android ./gradlew check : 310 tests + lint ; pont npm run check : 286 tests + typage/lint ; scripts : 13 tests.
+THOR: absente ; Regie_Thor API 36 et pont Mac testés ; quatre nouveaux Codex arrêtés, aucun Claude lancé.
+REVIEW: diff main...HEAD relu après fb74fe2 ; assertion de reprise renforcée (ancien appel exclu), omission du mode détectée par mutation. Deux constats corrigés ; portes et émulateur revérifiés, aucun nouveau blocage.
+DÉCISIONS PRISES: ADR 14 complété ; modes Mac read-only décidés dans le domaine, PRoot conservé ; Pillow requis pour les captures.
+POUR L'UTILISATEUR: 1. Rebrancher Thor ; 2. thor-install.sh et permission Termux ; 3. refuser/autoriser shell et édition avec les boutons ; 4. micro réel et écran bas ; 5. Quitter. Pas à pas : revision-validation.txt.
+QUESTIONS: aucune.
+CAPTURES: artifacts/screenshots/16/revision-{13-shell-pending,14-edit-pending,16-auto-shell,17-demo}-{haut,bas}.png.
+HORS PÉRIMÈTRE: phrase vocale « Fais le point sur la session » non reconnue par les règles existantes (constat initial conservé).

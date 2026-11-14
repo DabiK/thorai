@@ -85,6 +85,7 @@ async function main(): Promise<void> {
     info: { version, pid: process.pid, startedAt: new Date().toISOString() },
   });
   const bridge = new Bridge({
+    codexSandbox: process.platform === 'darwin' ? 'native' : 'proot',
     connectors: AGENT_KINDS.map((agent) =>
       processConnector(agent, binaries, { cwd: projectsDir, logger }),
     ),

@@ -5,8 +5,9 @@ import type { AgentKind, ApprovalMode } from './model.ts';
  *
  * - Claude starts in `auto`, the user's own setting: the mode is forced after every
  *   `session/new` and `session/load`.
- * - Codex `ask` is `workspace-write`, with the instruction that avoids its sandbox (set by the
- *   ACP adapter). Its `agent` mode is never used.
+ * - Under PRoot, Codex uses `workspace-write` and the adapter's sandbox workaround.
+ *   With a native sandbox, product modes use `read-only` so writes reach the bridge.
+ *   Its `agent` mode is never used.
  */
 const MODE_IDS: Record<AgentKind, Record<ApprovalMode, string>> = {
   claude: {
@@ -23,7 +24,16 @@ const MODE_IDS: Record<AgentKind, Record<ApprovalMode, string>> = {
   },
 };
 
-export function modeIdFor(agent: AgentKind, mode: ApprovalMode): string {
+export type CodexSandbox = 'native' | 'proot';
+
+export function modeIdFor(
+  agent: AgentKind,
+  mode: ApprovalMode,
+  codexSandbox: CodexSandbox = 'proot',
+): string {
+  // Native workspace-write bypasses the bridge for both shell writes and edits.
+  // Auto-edit still starts read-only: only the domain may approve structured edits.
+  if (agent === 'codex' && codexSandbox === 'native' && mode !== 'allow-all') return 'read-only';
   return MODE_IDS[agent][mode];
 }
 
