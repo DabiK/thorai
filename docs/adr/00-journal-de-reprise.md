@@ -134,6 +134,8 @@ physiques différés restent requis même lorsqu’un ticket est marqué fait.
 
 - **14 novembre, ticket 21 à fusionner (solo Codex)** : textes courts et vocabulaire cohérent, guide `docs/textes.md`, inventaire avant/après, puces partagées A/B/X/Y, hauteur de validation sans coupe, états vides harmonisés, README actualisé. 359 tests Android + lint verts, libellés existants maintenus à jour. Captures avant/après des six écrans sur l’émulateur double écran, pont Mac, une session Codex (aucun Claude), validation/refus, modifications et dictée WAV locale ; mode compact vérifié. Thor absente : gestes physiques et micro humain restent au pas à pas `artifacts/screenshots/21/essai-emulateur.md`. Aucun ADR nouveau ni changement des décisions produit. Relecture après commit : mutation de hauteur détectée, correction de test superflue retirée, porte complète 359 tests + lint relancée au vert ; pont, Codex et émulateur arrêtés.
 
+- **14 novembre, ticket 21, correction de revue typographique (solo Codex)** : deux préfixes `Échec :` corrigés en U+00A0 dans le domaine, inventaire avant/après rectifié, rubrique POUR L’UTILISATEUR ajoutée avec lien vers les six étapes Thor. Deux régressions ajoutées et assertions de récupération actualisées, quatre échecs attendus avant correction ; Android 361 tests + lint verts. Thor absente : APK réinstallé, historique réel consulté sur émulateur/pont Mac, modifications et préparation d’explication en deux écrans, mode compact vérifié. Aucun agent relancé, cas d’erreur exacts couverts hors console. Pont/AVD arrêtés ; preuves `revision-*`, statut à fusionner.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

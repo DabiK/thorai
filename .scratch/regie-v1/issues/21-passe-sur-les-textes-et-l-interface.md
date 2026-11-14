@@ -50,3 +50,14 @@ Textes harmonisés, puces partagées, états vides centrés et portée de X lisi
 
 - Relecture après commit `158c053` : mutation de hauteur détectée par le test (6 tests, 1 échec attendu), fichier restauré puis porte complète verte ; changement superflu d’une entrée de test retiré, capture compacte stabilisée. Preuve `review-mutation-height.txt`.
 - Fermeture : pont et agents arrêtés via `bridge.shutdown`, émulateur arrêté (`stop.txt`). Dernière porte verte : 359 tests + lint. Lenteurs de commandes Android à la fermeture consignées dans le rapport, sans cause attribuée.
+
+### Correction de revue — espaces insécables
+
+- Les deux préfixes applicatifs de `ReviewDiff` passent de `Échec :` (U+0020) à `Échec :` (U+00A0). Les deux lignes avant/après de l’inventaire sont corrigées ; les détails externes restent littéraux.
+- Deux tests de domaine ajoutés et les assertions de `DiffRecoveryTest` actualisées : quatre échecs attendus avant correction, puis porte Android verte, **361 tests**, zéro échec/erreur/ignoré et lint vert. Preuves : `revision-spacing-red.txt`, `revision-spacing-check.txt`, `revision-tests-count.json` dans `artifacts/screenshots/21/`.
+- APK réinstallé sur l’émulateur avec pont Mac ; historique existant consulté, modifications et préparation d’explication vérifiées en deux écrans, modifications en compact. Aucun nouvel agent. Les cas d’erreur précis sont couverts par tests isolés, sans prétendre les reproduire dans ces captures.
+- Statut maintenu à `à fusionner`. Aucune décision produit ni nouvel ADR.
+
+### POUR L’UTILISATEUR
+
+Suivre les six étapes de [Vérifications avec la Thor](../../../artifacts/screenshots/21/essai-emulateur.md#vérifications-avec-la-thor) : brancher et associer la console, installer l’APK, comparer les six écrans, essayer les boutons physiques, lire une phrase avec L2 puis un ordre avec R2, capturer et quitter. Le rendu matériel, le vrai micro et la manette restent à vérifier ; ne pas lancer Claude ni redémarrer la console.
