@@ -64,6 +64,8 @@
 
 - **14 novembre, ticket 10, correction de revue des explications en file (solo Codex)** : réponse liée au message par le décodage de delivery/fins de tour, sans capter la fin du tour précédent ; fin propre indépendante du statut global. Régressions rouges puis vertes, file multiple/steering/erreurs/éviction : 271 tests Android + lint verts. APK réinstallé ; même Codex repris, Y/A pendant sleep 25, attente puis réponse écrite en un/deux écrans (queued-38–42). Codex accepte en steering : queued exact couvert hors console. Quitter arrête le Codex et le pont à 05:03:51 locale ; aucun Claude ni droit Android accordé. ADR 12 complété, pas à pas vrai micro/extinction physique désormais directement dans le ticket. Relecture finale après a2a2cbc : aucun autre blocage du ticket, git diff --check vert ; risque analogue dans WrittenSummary (ticket 12) signalé hors périmètre. Statut à fusionner maintenu.
 
+- **14 novembre, ticket 10, correction de revue resync (solo Codex)** : seuil d’explication fondé sur la séquence persistante du journal, sans comparaison entre identifiants locaux reconstruits. Régression vrai décodeur/domaine rouge puis verte, ancienne demande identique exclue ; 272 tests Android + lint verts. APK réinstallé ; même Codex repris, un seul envoi malgré deux A, réponse écrite un/deux écrans (resync-47–50). Resync exact couvert par test, pas forcé sur console. Quitter arrête Codex/pont à 05:16:14 ; aucun Claude ni permission. ADR 12 et preuves resync-* complétés ; statut à fusionner, vrai micro/extinction physique au pas à pas utilisateur.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

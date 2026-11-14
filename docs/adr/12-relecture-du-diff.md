@@ -149,3 +149,28 @@ Thor : même Codex repris, Y/A pendant `sleep 25`, attente puis explication écr
 un/deux écrans (39–42). Le Codex installé accepte cette demande en `steering` :
 le scénario exact `queued` est prouvé par les tests, pas par cet essai matériel.
 Quitter arrête le Codex et le pont à 05:03:51 locale. Preuves `queued-*`.
+
+
+## Correction de revue : resynchronisation de l’explication
+
+Les identifiants locaux `ThreadEntry.id` sont reconstruits au chargement du fil :
+ils ne permettent pas de dater une demande par rapport à un instantané antérieur.
+Le domaine utilise désormais `UserMessage.sequence` et `SessionThread.lastSequence`,
+issus du `seq` persistant du journal existant (contrat « Numéros de séquence et
+rattrapage »). Ce numéro ne change pas lors d’une relecture du même journal.
+La passerelle ne fait que le décoder ; `ReviewDiff` conserve la position à laquelle
+Y a préparé la demande et choisit le message identique de séquence supérieure.
+Les liens `responseTo` et `completedMessages` restent locaux au même instantané :
+ils sont résolus à nouveau depuis le message retrouvé, sans comparer deux générations
+d’identifiants locaux. Les valeurs par défaut du modèle servent aux fils synthétiques
+sans reconstruction ; le vrai décodeur fournit toujours les séquences du protocole.
+Aucun changement du pont, du protocole, des dépendances ou du rendu.
+
+Régression `ResyncedExplanationTest` rouge puis verte : vrai `BridgeState`, relecture
+répétée de `session.events`, `hello` avec `resync=true`, nouvelle réponse et fin
+malgré le statut global working ; une nouvelle demande identique ne recycle pas
+l’ancienne réponse après plusieurs rechargements. Les fixtures réelles vérifient
+également les séquences 551 (Claude) et 560 (Codex). Porte Android : 272 tests et
+lint verts. Thor : même Codex repris, Y/deux A, un seul message 3398, réponse terminée
+3612, un/deux écrans. La resynchronisation exacte est prouvée par le test, pas par
+cet essai console. Quitter a arrêté la session et le pont à 05:16:14 locale.

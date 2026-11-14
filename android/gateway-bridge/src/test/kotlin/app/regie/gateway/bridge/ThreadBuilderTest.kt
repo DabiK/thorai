@@ -124,7 +124,7 @@ class ThreadBuilderTest {
         val thread = replay(Fixtures.CLAUDE_SESSION, claudeId)
         val entries = thread.entries
 
-        assertEquals(ThreadEntry.UserMessage(entries[0].id, prompt), entries[0])
+        assertEquals(ThreadEntry.UserMessage(0, prompt, sequence = 551), entries[0])
         val (notes, todo, edit) = entries.subList(1, 4).map { it as ThreadEntry.ToolCall }
         assertEquals(listOf(ToolKind.READ, "Read notes.md", null, "notes.md", null, ActionStatus.COMPLETED, null), notes.essentials())
         assertEquals("todo.md", todo.path)
@@ -151,7 +151,7 @@ class ThreadBuilderTest {
     fun `a Codex session streams tiny chunks into one text per run, and its commands give their last line`() {
         val entries = replay(Fixtures.CODEX_SESSION, codexId).entries
 
-        assertEquals(ThreadEntry.UserMessage(entries[0].id, prompt), entries[0])
+        assertEquals(ThreadEntry.UserMessage(0, prompt, sequence = 560), entries[0])
         assertEquals(
             "Je vais lire `notes.md` et `todo.md`, puis ajouter une seule ligne de résumé à la fin de `todo.md`.\n",
             (entries[1] as ThreadEntry.AgentText).text,

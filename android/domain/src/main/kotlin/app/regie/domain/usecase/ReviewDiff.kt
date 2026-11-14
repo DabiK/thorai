@@ -70,7 +70,7 @@ class ReviewDiff(private val gateway: AgentGateway, private val scope: Coroutine
                     mutable.value = updated.copy(lineIndex = lineIndex,
                         explanation = before.explanation?.let { explanation ->
                             val anchor = content.entries.filterIsInstance<ThreadEntry.UserMessage>()
-                                .firstOrNull { it.id > afterEntry && it.text == explanation.prompt }
+                                .firstOrNull { it.sequence > afterSequence && it.text == explanation.prompt }
                             if (anchor == null) explanation else {
                                 val replyEntries = content.entries.filter { entry -> when (entry) {
                                     is ThreadEntry.AgentText -> entry.responseTo == anchor.id
@@ -106,7 +106,7 @@ class ReviewDiff(private val gateway: AgentGateway, private val scope: Coroutine
         return DictationTarget.DiffComment(state.sessionId ?: return null, state.file?.path ?: return null, selected.line.number ?: return null,
             removed = selected.line.kind == DiffKind.REMOVED, fileCoordinates = selected.block.fileCoordinates, selectedText = selected.line.text)
     }
-    private var afterEntry = -1L
+    private var afterSequence = -1L
     private var generation = 0
     fun explain() {
         val state = mutable.value
@@ -125,7 +125,7 @@ class ReviewDiff(private val gateway: AgentGateway, private val scope: Coroutine
             (if (selected.block.fileCoordinates) "." else " relatifs à l’extrait, position dans le fichier non communiquée.") +
             "\nExtrait autour de la sélection :\n$excerpt"
         generation++
-        afterEntry = thread.entries.maxOfOrNull { it.id } ?: -1
+        afterSequence = thread.lastSequence
         mutable.value = state.copy(explanation = DiffExplanation(prompt, label))
     }
     fun dismissExplanation() { generation++; mutable.value = mutable.value.copy(explanation = null) }

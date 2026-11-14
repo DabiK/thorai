@@ -35,6 +35,7 @@ import kotlinx.serialization.json.JsonObject
  */
 internal class ThreadBuilder(private val cwd: () -> String?, private val maxEntries: Int = MAX_ENTRIES) {
     private var nextId = 0L
+    private var lastSequence = -1L
     private val items = ArrayDeque<Item>()
     private val calls = HashMap<String, Call>()
     private var plan: List<PlanStep>? = null
@@ -52,12 +53,14 @@ internal class ThreadBuilder(private val cwd: () -> String?, private val maxEntr
         responseTo = null
         pendingMessages.clear()
         completedMessages.clear()
+        lastSequence = -1L
     }
 
     fun apply(event: BridgeEvent) {
+        lastSequence = event.seq
         val data = event.data
         when (event.type) {
-            "user_message" -> data.string("text")?.let { addUserMessage(it, data.string("delivery")) }
+            "user_message" -> data.string("text")?.let { addUserMessage(it, data.string("delivery"), event.seq) }
             "session_error" -> {
                 add(Fixed(ThreadEntry.TurnFailed(nextId++, data.string("message")?.let(::oneLine)?.ifEmpty { null }, responseTo)))
                 finishResponse()
@@ -73,9 +76,10 @@ internal class ThreadBuilder(private val cwd: () -> String?, private val maxEntr
         }
     }
 
-    fun addUserMessage(text: String, delivery: String? = null) {
+    fun addUserMessage(text: String, delivery: String? = null, sequence: Long = lastSequence + 1) {
         val id = nextId++
-        add(Fixed(ThreadEntry.UserMessage(id, text)))
+        lastSequence = sequence
+        add(Fixed(ThreadEntry.UserMessage(id, text, sequence)))
         if (delivery == "queued") pendingMessages.addLast(id)
         else {
             // Steering owns subsequent chunks of the current turn, not an extra queued turn.
@@ -102,6 +106,7 @@ internal class ThreadBuilder(private val cwd: () -> String?, private val maxEntr
         context = context,
         loaded = loaded,
         completedMessages = completedMessages.toSet(),
+        lastSequence = lastSequence,
     )
 
     private fun applyUpdate(update: JsonObject) {

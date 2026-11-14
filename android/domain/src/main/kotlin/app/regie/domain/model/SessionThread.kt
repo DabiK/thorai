@@ -17,7 +17,10 @@ sealed interface ThreadEntry {
     val id: Long
 
     /** Un message envoyé à l'agent. D'où il vient (dictée, écrit) n'est pas connu du pont. */
-    data class UserMessage(override val id: Long, val text: String) : ThreadEntry
+    data class UserMessage(override val id: Long, val text: String,
+        /** Position persistante dans le journal, indépendante des identifiants reconstruits. */
+        val sequence: Long = id,
+    ) : ThreadEntry
 
     /** Une suite de morceaux de réponse de l'agent, mis bout à bout.
      * [responseTo] identifie le UserMessage auquel ces morceaux répondent ; null si inconnu.
@@ -78,6 +81,8 @@ data class SessionThread(
     val loaded: Boolean = false,
     /** Messages dont la réponse est terminée selon le journal, indépendamment du statut global. */
     val completedMessages: Set<Long> = emptySet(),
+    /** Dernière position du journal appliquée ; ne dépend pas du nombre d'éléments visibles. */
+    val lastSequence: Long = entries.maxOfOrNull { it.id } ?: -1,
 ) {
     companion object {
         val EMPTY = SessionThread()
