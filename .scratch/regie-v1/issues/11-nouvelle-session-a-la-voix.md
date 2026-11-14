@@ -1,6 +1,6 @@
 # 11 — Nouvelle session à la voix
 
-Statut : à fusionner
+Statut : fait
 Bloqué par : 09
 
 ## Objectif
