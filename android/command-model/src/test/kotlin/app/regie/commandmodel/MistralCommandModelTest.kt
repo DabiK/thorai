@@ -10,7 +10,7 @@ import kotlin.test.*
 class MistralCommandModelTest {
     private val context = VoiceCommandContext(emptyList(), null, null, listOf("atelier"))
     private fun response(arguments: String, name: String = "propose_command") = buildJsonObject {
-        putJsonArray("choices") { addJsonObject { putJsonObject("message") { putJsonArray("tool_calls") {
+        putJsonArray("choices") { addJsonObject { put("finish_reason", "tool_calls"); putJsonObject("message") { putJsonArray("tool_calls") {
             addJsonObject { put("type", "function"); putJsonObject("function") { put("name", name); put("arguments", arguments) } }
         } } } }
     }.toString()
@@ -29,6 +29,23 @@ class MistralCommandModelTest {
             assertEquals("auto", json["tool_choice"]!!.jsonPrimitive.content)
             assertEquals(1, json["tools"]!!.jsonArray.size)
             assertTrue(json["messages"].toString().contains("Fais un bilan global"))
+        }
+    }
+
+    @Test fun `truncated function response and multiple calls are not proposals`() = runBlocking {
+        MockWebServer().use { server ->
+            server.start()
+            val valid = response("""{"action":"approve"}""")
+            val root = Json.parseToJsonElement(valid).jsonObject
+            val choice = root["choices"]!!.jsonArray.single().jsonObject
+            val message = choice["message"]!!.jsonObject
+            val calls = message["tool_calls"]!!.jsonArray
+            val multiple = JsonObject(root + ("choices" to JsonArray(listOf(JsonObject(choice + ("message" to JsonObject(message + ("tool_calls" to JsonArray(calls + calls)))))))))
+            val model = MistralCommandModel({ "test" }, endpoint = server.url("/").toString())
+            listOf(valid.replace("tool_calls\",\"message", "length\",\"message"), multiple.toString()).forEach { body ->
+                server.enqueue(MockResponse.Builder().body(body).build())
+                assertNull(model.interpret("x", context))
+            }
         }
     }
 

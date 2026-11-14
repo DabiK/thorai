@@ -44,6 +44,18 @@ class VoiceCommandsTest {
         cases.forEach { (phrase, expected) -> assertEquals(expected, interpreter(phrase, context).command, phrase) }
     }
 
+    @Test fun `common ASR homophones keep the same bounded pause intent`() = runTest {
+        val interpreter = InterpretVoiceCommand(noModel)
+        listOf("Mais en pause.", "Met en pause", "Interrompt cette session.").forEach {
+            assertEquals(VoiceCommand.Pause(listOf(one.id)), interpreter(it, context).command, it)
+        }
+    }
+
+    @Test fun `conditional request is never reduced to an unconditional approval`() = runTest {
+        val interpreter = InterpretVoiceCommand(VoiceCommandModel { _, _ -> VoiceIntent("approve") })
+        assertNull(interpreter("approuve si les tests passent", context).command)
+    }
+
     @Test fun `ambiguous phrase falls back once but never executes`() = runTest {
         var calls = 0
         val interpreter = InterpretVoiceCommand(VoiceCommandModel { text, ctx ->

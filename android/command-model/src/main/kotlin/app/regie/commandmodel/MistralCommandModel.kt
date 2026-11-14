@@ -90,6 +90,7 @@ class MistralCommandModel(
     private fun decode(body: String): VoiceIntent? {
         val root = Json.parseToJsonElement(body).jsonObject
         val choice = root["choices"]?.jsonArray?.singleOrNull()?.jsonObject ?: return null
+        if (choice["finish_reason"]?.jsonPrimitive?.content != "tool_calls") return null
         val call = choice["message"]?.jsonObject?.get("tool_calls")?.jsonArray?.singleOrNull()?.jsonObject ?: return null
         if (call["type"]?.jsonPrimitive?.content != "function") return null
         val function = call["function"]?.jsonObject ?: return null

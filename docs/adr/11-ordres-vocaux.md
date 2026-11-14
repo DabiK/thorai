@@ -91,3 +91,27 @@ Première mesure synthétique : **14/20, 70 %**, `corpus-results.json`. Les six 
 proviennent des transcriptions listées dans le rapport ; pas de cible approximative
 choisie pour masquer une erreur de nom. Les vingt textes de référence passent les
 règles dans le test de domaine ; ce test ne mesure pas la reconnaissance acoustique.
+
+## Relecture solo après le premier commit
+
+Quatre régressions rouges puis vertes (`review-red.txt`) : maintien tactile de
+« Redire » (le clic au relâchement ouvrait puis fermait immédiatement la capture),
+variantes ASR strictes « Mais/Met en pause » et « Interrompt cette session », refus
+conditionnel (« approuve si… »), rejet d'un appel de fonction tronqué. Les réponses
+Mistral doivent finir par `tool_calls` et contenir exactement un appel. La règle
+« session encore occupée » de Start est exécutée uniquement dans le domaine.
+Porte finale : 250 tests Android, aucun échec/ignoré, lint vert.
+
+
+Mesure finale synthétique, APK corrigé : **15/20, 75 %**, conservée intégralement
+sous `final-corpus/`. Les variantes 06/08 sont maintenant reconnues ; les erreurs de
+noms 12/16/19/20 restent refusées. L'essai 01 a donné un texte vide à froid, puis le
+même WAV a été correctement interprété par le maintien tactile de cinq secondes
+(captures 23–24) ; cause non isolée, reprise séparée hors du taux 15/20. Pas de taux
+humain inventé, ni de preuve du modèle distant sans clé.
+
+Thor finale : refus, autorisation unique, pause, points individuels/globaux, navigation
+et création réelle Codex en plan confirmés ; aucun ordre de contrôle ajouté au fil
+comme message. Deux sessions d'essai seulement, arrêtées par Quitter ; pas de Claude.
+La pause de `sleep 90` annule le tour (seq 2652), mais la commande termine ensuite :
+limite héritée d'ACP/Codex, explicitement annoncée dans le résultat de l'ordre.

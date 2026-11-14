@@ -1,5 +1,7 @@
 package app.regie.ui.screens
 
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -19,6 +21,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun VoiceCommandScreen(state: VoiceCommandReview, bottom: Boolean, single: Boolean,
     onButton: (Button) -> Unit, onHeld: (Boolean) -> Unit, onSettings: () -> Unit, scrolling: ThreadScroll) {
+    val held by rememberUpdatedState(onHeld)
     val scroll = rememberScrollState()
     LaunchedEffect(scrolling) { scrolling.steps.collect { scroll.scrollTo(scroll.value + it * 150) } }
     LaunchedEffect(scrolling.velocity) {
@@ -50,7 +53,12 @@ fun VoiceCommandScreen(state: VoiceCommandReview, bottom: Boolean, single: Boole
                 Row(Modifier.fillMaxWidth().topDivider().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(28.dp)) {
                     if (state.canConfirm) BarAction("A", "Confirmer") { onButton(Button.A) }
                     if (state.phase != CommandPhase.RUNNING) BarAction("B", if (state.phase == CommandPhase.DONE) "Retour" else "Annuler") { onButton(Button.B) }
-                    if (state.phase in setOf(CommandPhase.REVIEW, CommandPhase.UNKNOWN, CommandPhase.DONE)) BarAction("R2", "Redire") { onHeld(true) }
+                    if (state.phase in setOf(CommandPhase.REVIEW, CommandPhase.UNKNOWN, CommandPhase.DONE)) ButtonChip("R2", "Redire", modifier = Modifier.pointerInput(Unit) {
+                        detectTapGestures(onPress = {
+                            held(true)
+                            try { tryAwaitRelease() } finally { held(false) }
+                        })
+                    })
                 }
             }
         }

@@ -1,6 +1,6 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
-// Adapter du port AgentGateway vers le pont (ADR 06) : Kotlin JVM pur, comme le domaine.
+// Adapter HTTP du port VoiceCommandModel (ADR 11), Kotlin JVM pur.
 plugins {
     alias(libs.plugins.kotlin.jvm)
     // Lint d'Android sur un module JVM : `check` le lance aussi ici.
@@ -30,12 +30,9 @@ dependencies {
     api(project(":domain"))
     implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
-    // Lignes ajoutées et retirées d'un diff (ADR 07).
-
 
     testImplementation(libs.kotlin.test.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.okhttp.mockwebserver)
-    // Les enregistrements du pont : fournis à l'exécution par le debug de `:app`, ici par les tests.
 
 }

@@ -11,7 +11,7 @@ class InterpretVoiceCommand(private val model: VoiceCommandModel) {
     suspend operator fun invoke(text: String, context: VoiceCommandContext): CommandInterpretation {
         val normalized = normalize(text)
         val unknown = CommandInterpretation(null, "Ordre non compris : « ${text.take(1000)} ». Reformule un seul ordre avec le nom de la session.")
-        if (normalized.isBlank() || text.length > 2000 || Regex("\\b(pas|jamais|ne|puis|ensuite|sinon)\\b|\\bn[' ]").containsMatchIn(normalized) ||
+        if (normalized.isBlank() || text.length > 2000 || Regex("\\b(pas|jamais|ne|puis|ensuite|sinon|si)\\b|\\bn[' ]").containsMatchIn(normalized) ||
             Regex("\\bet (approuve|refuse|mets|lance|ouvre|passe|interromps)\\b").containsMatchIn(normalized)) return unknown
         val fixed = fixed(text, normalized)
         val intent = fixed ?: try {
@@ -35,7 +35,7 @@ class InterpretVoiceCommand(private val model: VoiceCommandModel) {
         if (text in setOf("approuve", "autorise", "valide", "approuve cette validation", "autorise cette validation", "valide cette demande")) return VoiceIntent("approve")
         if (text in setOf("refuse", "refuse cette validation", "refuse cette demande")) return VoiceIntent("reject")
         if (text in setOf("mets tout en pause", "mets toutes les sessions en pause", "pause tout", "interromps tout")) return VoiceIntent("pause_all")
-        if (text in setOf("pause", "mets en pause", "mets cette session en pause", "interromps cette session")) return VoiceIntent("pause")
+        if (text in setOf("pause", "mets en pause", "met en pause", "mais en pause", "mets cette session en pause", "interromps cette session", "interrompt cette session")) return VoiceIntent("pause")
         if (text in setOf("fais le point sur tout", "fais le point sur toutes les sessions", "ou en sont toutes les sessions", "fais le point sur toutes")) return VoiceIntent("summary_all")
         if (text in setOf("fais le point", "ou en est cette session")) return VoiceIntent("summary")
         Regex("(?:fais le point sur|ou en est) (.+)").matchEntire(text)?.let { return VoiceIntent("summary", it.groupValues[1]) }

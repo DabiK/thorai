@@ -418,7 +418,7 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
         is OverviewAction.OpenApproval -> openApproval(action.id)
         OverviewAction.NewSession -> startNewSession()
         is OverviewAction.ShowSummary -> action.target?.let { openSession(it, summary = true) }
-        OverviewAction.PauseAll -> { scope.launch { executeVoiceCommand?.invoke(VoiceCommand.Pause(overview.value.sessions.filter { it.status.isBusy }.map { it.id })) }; Unit }
+        OverviewAction.PauseAll -> { scope.launch { executeVoiceCommand?.invoke(VoiceCommand.Pause(overview.value.sessions.map { it.id })) }; Unit }
         OverviewAction.Quit -> quitNow()
     }
 

@@ -25,6 +25,22 @@ import kotlin.test.assertEquals
 @Config(sdk = [33], application = Application::class, qualifiers = "w832dp-h468dp-land-mdpi")
 class VoiceCommandScreenTest {
     @get:Rule val compose = createEmptyComposeRule()
+    @Test fun `redire starts on touch down and ends only on release`() {
+        val holds = mutableListOf<Boolean>()
+        Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
+            host.setup().get().setContent { RegieTheme {
+                VoiceCommandScreen(VoiceCommandReview(CommandPhase.UNKNOWN, "inconnu"), bottom = true, single = false,
+                    onButton = {}, onHeld = { holds += it }, onSettings = {},
+                    scrolling = ThreadScroll(emptyFlow(), MutableStateFlow(0f)))
+            } }
+            val redo = compose.onNodeWithText("Redire")
+            redo.assertIsDisplayed().performTouchInput { down(center) }
+            compose.runOnIdle { assertEquals(listOf(true), holds) }
+            redo.performTouchInput { up() }
+            compose.runOnIdle { assertEquals(listOf(true, false), holds) }
+        }
+    }
+
     @Test fun `single screen shows interpretation and confirmation only after recognition`() {
         val state = mutableStateOf(VoiceCommandReview(CommandPhase.RECORDING, text = "approuve"))
         val buttons = mutableListOf<Button>()
