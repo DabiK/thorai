@@ -20,9 +20,15 @@ class VoicePreferences(context: Context) {
         if (key.isBlank()) secrets.delete(SecretStore.ELEVENLABS_KEY) else secrets.write(SecretStore.ELEVENLABS_KEY, key.trim())
         mutable.value = read()
     }
+    fun saveCommandKey(key: String) {
+        if (key.isBlank()) secrets.delete("mistral_command_key") else secrets.write("mistral_command_key", key.trim())
+        mutable.value = read()
+    }
+    fun commandKey(): String? = secrets.read("mistral_command_key")
     fun apiKey(): String? = secrets.read(SecretStore.ELEVENLABS_KEY)
     private fun read() = VoiceSettings(
         if (prefs.getString("provider", null) == "ELEVENLABS") DictationProvider.ELEVENLABS else DictationProvider.LOCAL,
         secrets.contains(SecretStore.ELEVENLABS_KEY),
+        secrets.contains("mistral_command_key"),
     )
 }

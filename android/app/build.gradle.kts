@@ -55,6 +55,7 @@ kotlin {
 
 dependencies {
     implementation(project(":domain"))
+    implementation(project(":command-model"))
     implementation(libs.voice.api)
     implementation(libs.voice.local)
     implementation(libs.voice.elevenlabs)

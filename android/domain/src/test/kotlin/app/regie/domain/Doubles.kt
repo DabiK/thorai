@@ -25,6 +25,14 @@ class StubGateway(
     var bridgeUp: Boolean = true,
     var shutdownHeard: Boolean = true,
 ) : AgentGateway {
+    var projectNames = emptyList<String>()
+    var creation = app.regie.domain.model.SessionCreation()
+    val creations = mutableListOf<app.regie.domain.model.NewSessionDraft>()
+    override suspend fun projects() = projectNames
+    override suspend fun createSession(draft: app.regie.domain.model.NewSessionDraft): app.regie.domain.model.SessionCreation {
+        creations += draft
+        return creation
+    }
     override val approvals = MutableStateFlow<List<Approval>>(emptyList())
     var approvalResult = ApprovalReply.ACCEPTED
     val answers = mutableListOf<Pair<ApprovalId, String>>()

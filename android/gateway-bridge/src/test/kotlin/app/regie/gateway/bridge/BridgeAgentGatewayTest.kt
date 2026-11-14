@@ -115,6 +115,37 @@ class BridgeAgentGatewayTest {
     }
 
     @Test
+    fun `voice launch uses project catalog and creates once with plan mode`() {
+        val bridge = FakeBridge()
+        upgrade(bridge)
+        val gateway = gateway()
+        withGateway(gateway) {
+            val ws = bridge.socket()
+            val hello = bridge.next("hello")
+            ws.send(helloResult(hello.long("id")!!, "j", 0, ""))
+            gateway.connection.first { it == BridgeConnection.Connected }
+            val projects = async { gateway.projects() }
+            val catalog = bridge.next("projects.list")
+            ws.send("""{"id":${catalog.long("id")},"result":{"projects":[{"name":"demo","branch":"main"}]}}""")
+            assertEquals(listOf("demo"), projects.await())
+            val creation = async { gateway.createSession(app.regie.domain.model.NewSessionDraft(app.regie.domain.model.Agent.CODEX, "demo", "feature", "Corrige le test")) }
+            val request = bridge.next("session.create")
+            val params = request.obj("params")!!
+            assertEquals("codex", params.string("agent"))
+            assertEquals("demo", params.string("project"))
+            assertEquals("plan", params.string("approvalMode"))
+            assertEquals("feature", params.string("branch"))
+            assertEquals("Corrige le test", params.string("prompt"))
+            ws.send("""{"id":${request.long("id")},"result":{"session":${sessionJson("created", "idle", "2026-11-14T00:00:00Z")}}}""")
+            assertEquals(SessionId("created"), creation.await().id)
+            val lost = async { gateway.createSession(app.regie.domain.model.NewSessionDraft(app.regie.domain.model.Agent.CODEX, "demo")) }
+            bridge.next("session.create")
+            ws.close(1000, "lost receipt")
+            assertTrue(lost.await().uncertain)
+        }
+    }
+
+    @Test
     fun `approval answer sends exact ids and a lost receipt stays unknown`() {
         val bridge = FakeBridge()
         upgrade(bridge)

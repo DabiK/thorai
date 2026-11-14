@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.regie.display.ScreenMode
 import app.regie.ui.components.tappable
+import app.regie.ui.screens.VoiceCommandScreen
 import app.regie.ui.screens.DictationTopScreen
 import app.regie.ui.screens.DictationBottomScreen
 import app.regie.ui.screens.VoiceSettingsScreen
@@ -135,6 +136,7 @@ abstract class GamepadActivity : ComponentActivity() {
                 val screen by container.screen.collectAsStateWithLifecycle()
                 val current by container.overview.collectAsStateWithLifecycle()
                 val dictation by container.dictation.state.collectAsStateWithLifecycle()
+                val command by container.voiceCommand.state.collectAsStateWithLifecycle()
                 val settingsOpen by container.settingsOpen.collectAsStateWithLifecycle()
                 val settings by container.voiceSettings.collectAsStateWithLifecycle()
                 val mode by container.displays.mode.collectAsStateWithLifecycle()
@@ -143,7 +145,11 @@ abstract class GamepadActivity : ComponentActivity() {
                 val held: (Boolean) -> Unit = { container.touchTrigger(Trigger.L2, it) }
                 if (settingsOpen && controlsHere) {
                     VoiceSettingsScreen(settings, container::selectVoice, container::saveVoiceKey,
-                        { microphonePermission.launch(Manifest.permission.RECORD_AUDIO) }, container::closeVoiceSettings)
+                        { microphonePermission.launch(Manifest.permission.RECORD_AUDIO) }, container::closeVoiceSettings, container::saveCommandKey)
+                } else if (command.visible) {
+                    VoiceCommandScreen(command, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single,
+                        button, { container.touchTrigger(Trigger.R2, it) }, container::openVoiceSettings,
+                        ThreadScroll(container.commandScroll, container.commandVelocity))
                 } else if (dictation.visible) {
                     if (this@GamepadActivity is BottomActivity) DictationBottomScreen(dictation, button, held, container::openVoiceSettings)
                     else DictationTopScreen(dictation, current.sessions.firstOrNull { it.id == dictation.target?.sessionId }, mode == ScreenMode.Single, button, held, container::openVoiceSettings, ThreadScroll(container.dictationScroll, container.dictationVelocity))

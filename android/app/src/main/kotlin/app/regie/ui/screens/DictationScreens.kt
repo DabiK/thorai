@@ -131,7 +131,8 @@ private fun DictationLevel(state: DictationReview, compact: Boolean) {
 }
 
 @Composable
-fun VoiceSettingsScreen(settings: VoiceSettings, select: (DictationProvider) -> Unit, saveKey: (String) -> Unit, permission: () -> Unit, close: () -> Unit) {
+fun VoiceSettingsScreen(settings: VoiceSettings, select: (DictationProvider) -> Unit, saveKey: (String) -> Unit, permission: () -> Unit, close: () -> Unit, saveCommandKey: (String) -> Unit = {}) {
+    var commandKey by remember { mutableStateOf("") }
     var key by remember { mutableStateOf("") }
     var saved by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().background(Palette.background).imePadding().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -146,6 +147,14 @@ fun VoiceSettingsScreen(settings: VoiceSettings, select: (DictationProvider) -> 
         Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
             BasicText(if (saved) "Enregistrée" else "Enregistrer", style = sans(14.sp), modifier = Modifier.tappable { if (key.isNotBlank()) { saveKey(key); key = ""; saved = true } })
             BasicText("Effacer la clé", style = sans(14.sp, color = Palette.textMuted), modifier = Modifier.tappable { saveKey(""); key = "" })
+        }
+        BasicText("Ordres ambigus · Mistral : ${if (settings.commandKeyConfigured) "clé enregistrée" else "clé à saisir"}", style = sans(13.sp, color = Palette.textMuted))
+        BasicText("Facultatif. Les tournures courantes restent locales. Avec cette clé, les phrases ambiguës et les noms des sessions/projets sont transmis à Mistral (API payante).", style = sans(12.sp, color = Palette.textMuted, lineHeight = 17.sp))
+        BasicTextField(commandKey, { commandKey = it }, textStyle = sans(16.sp), singleLine = true,
+            visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), modifier = Modifier.fillMaxWidth().background(Palette.surface).padding(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+            BasicText("Enregistrer Mistral", style = sans(14.sp), modifier = Modifier.tappable { if (commandKey.isNotBlank()) { saveCommandKey(commandKey); commandKey = "" } })
+            BasicText("Effacer Mistral", style = sans(14.sp, color = Palette.textMuted), modifier = Modifier.tappable { saveCommandKey(""); commandKey = "" })
         }
         BasicText("Autoriser le microphone", style = sans(15.sp, color = Palette.running), modifier = Modifier.tappable(permission))
         BasicText("La voix locale télécharge son modèle au premier usage. Avec ElevenLabs, l’audio et les termes du dépôt sont transmis au fournisseur.", style = sans(12.sp, color = Palette.textMuted, lineHeight = 17.sp))

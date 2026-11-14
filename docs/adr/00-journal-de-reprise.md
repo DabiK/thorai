@@ -52,6 +52,8 @@
 
 - **14 novembre, ticket 12, relecture solo après commit** : titre tardif sans réouverture du point fermé, question visible dans le panneau (9 lignes maximum), bilan incomplet correctement rejeté, notification d’échec indépendante du chargement du fil. Quatre régressions rouges puis vertes et test de hauteur Compose : Android 230 tests + lint, pont 270 tests + typage/lint verts. APK réinstallé ; même Codex repris pour un quatrième tour sans outil, ouverture à froid, Y et question en un/deux écrans vérifiés (captures 16–18). Quitter arrête la session et le pont. Aucun Claude ni permission accordée ; publication/clic Android toujours à vérifier par l’utilisateur. Statut à fusionner maintenu.
 
+- **14 novembre, ticket 09 à fusionner (solo Codex)** : R2 capture un ordre distinct de L2, règles fixes puis Ministral 3B par appel de fonction (clé facultative, ADR 11), confirmation A et cible figée. Lancement minimal en plan, pause, validation, navigation et points écrits dans le domaine. Android check vert ; Thor : premier corpus local Thomas 14/20, aucun effet sans A, refus réel Codex confirmé. Aucun Claude ; vraie voix et clé Mistral restent à l’utilisateur. Éditeur de fiche au 11. Rapport et preuves : artifacts/screenshots/09/essai-thor.txt ; relecture solo en cours.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |
