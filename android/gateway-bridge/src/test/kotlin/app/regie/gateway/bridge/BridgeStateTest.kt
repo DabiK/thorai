@@ -227,4 +227,14 @@ class BridgeStateTest {
             state.agents,
         )
     }
+
+    @Test
+    fun `after an interruption the card's last action is interrupted, no longer in progress`() {
+        val state = BridgeState()
+        state.apply(event("""{"seq":1,"at":"2026-11-13T21:00:01Z","sessionId":"s","type":"session","data":${sessionJson("s", "working", "2026-11-13T21:00:01Z")}}"""))
+        state.apply(event("""{"seq":2,"sessionId":"s","type":"session_update","data":{"sessionUpdate":"tool_call","toolCallId":"e","title":"sleep 90","kind":"execute","status":"in_progress","rawInput":{"command":"sleep 90; echo fini"}}}"""))
+        state.apply(event("""{"seq":3,"sessionId":"s","type":"turn_end","data":{"stopReason":"cancelled","usage":null}}"""))
+
+        assertEquals(LastAction("sleep 90; echo fini", ActionStatus.INTERRUPTED), state.sessions().single().lastAction)
+    }
 }

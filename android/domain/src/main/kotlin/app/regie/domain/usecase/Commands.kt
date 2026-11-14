@@ -27,11 +27,6 @@ class StopVoiceCommand {
     operator fun invoke() = Unit
 }
 
-/** A sur une carte : ouvrir la session. Ticket 06. */
-class OpenSession {
-    operator fun invoke(id: SessionId) = Unit
-}
-
 /** R1 sur la vue d'ensemble : ouvrir la première validation en attente. Ticket 07. */
 class OpenApproval {
     operator fun invoke(id: ApprovalId) = Unit

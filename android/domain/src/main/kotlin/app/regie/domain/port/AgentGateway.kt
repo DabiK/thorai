@@ -2,7 +2,11 @@ package app.regie.domain.port
 
 import app.regie.domain.model.AgentVersion
 import app.regie.domain.model.BridgeConnection
+import app.regie.domain.model.Delivery
 import app.regie.domain.model.Session
+import app.regie.domain.model.SessionId
+import app.regie.domain.model.SessionThread
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -29,4 +33,16 @@ interface AgentGateway {
      * Faux si le pont n'a pas pu l'entendre (pas connecté, pas de réponse).
      */
     suspend fun shutdownBridge(): Boolean
+
+    /**
+     * Le fil d'une session, en direct. L'observer charge le journal de la session (`session.events`)
+     * s'il ne l'est pas encore ; jusque-là, le fil ne contient que ce qui est arrivé en direct.
+     */
+    fun thread(id: SessionId): Flow<SessionThread>
+
+    /** Envoie un message à la session (`session.prompt`) et dit comment il est parti. */
+    suspend fun sendMessage(id: SessionId, text: String): Delivery
+
+    /** Interrompt le tour en cours de la session (`session.cancel`). Faux si le pont ne l'a pas fait. */
+    suspend fun interrupt(id: SessionId): Boolean
 }

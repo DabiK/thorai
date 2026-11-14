@@ -29,4 +29,14 @@ object Palette {
     val bannerBackground = Color(0xFF1D1A12)
     val keyBorder = Color(0xFF4A4D53)
     val chipBackground = Color(0xFF2A2D33)
+
+    // Écran d'une session.
+    val bubble = Color(0xFF1A1D21)
+    val agentText = Color(0xFFD9D7D2)
+    val activeRow = Color(0xFF121820)
+    val added = done
+    val removed = Color(0xFFFF8A96)
+
+    /** Code dans le texte d'un agent : un fond à peine plus clair que la page. */
+    val codeBackground = Color(0xFF1A1D21)
 }

@@ -61,6 +61,8 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.kotlinx.coroutines.android)
+    // Le texte des agents est en markdown : analysé ici, rendu en Compose (ADR 07).
+    implementation(libs.commonmark)
     debugImplementation(libs.compose.ui.tooling)
 
     testImplementation(libs.kotlin.test.junit)

@@ -102,6 +102,11 @@ class OverviewController(
         dispatch(OverviewAction.Quit)
     }
 
+    /** L'écran change : les gâchettes maintenues sont relâchées ici, une seule fois. */
+    fun releaseTriggers() {
+        _state.value.heldTriggers.forEach { onTrigger(it, held = false) }
+    }
+
     fun cancelQuit() {
         if (_state.value.quit is QuitStep.Confirm) _state.update { it.copy(quit = null) }
     }

@@ -37,7 +37,7 @@ class ArchitectureTest {
     fun `the domain depends neither on Android nor on the app`() {
         val found = violations(domainSources.kotlinFiles()) {
             it.startsWith("android.") || it.startsWith("androidx.") || it.startsWith("okhttp3.") ||
-                it.startsWith("kotlinx.serialization.") ||
+                it.startsWith("kotlinx.serialization.") || it.startsWith("com.github.difflib.") ||
                 (it.startsWith("app.regie.") && !it.startsWith("app.regie.domain."))
         }
         assertEquals(emptyList(), found)

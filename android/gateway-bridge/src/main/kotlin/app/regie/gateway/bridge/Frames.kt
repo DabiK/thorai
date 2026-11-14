@@ -85,3 +85,6 @@ internal fun JsonObject.boolean(key: String): Boolean? = (this[key] as? JsonPrim
 internal fun JsonObject.instant(key: String): Instant? = string(key)?.let { runCatching { Instant.parse(it) }.getOrNull() }
 
 internal fun JsonArray.objects(): List<JsonObject> = filterIsInstance<JsonObject>()
+
+internal fun JsonArray.strings(): List<String> =
+    mapNotNull { (it as? JsonPrimitive)?.takeUnless { p -> p is JsonNull }?.takeIf { p -> p.isString }?.content }

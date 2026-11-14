@@ -4,9 +4,11 @@ import app.regie.domain.model.Agent
 import app.regie.domain.model.AgentVersion
 import app.regie.domain.model.Approval
 import app.regie.domain.model.BridgeConnection
+import app.regie.domain.model.Delivery
 import app.regie.domain.model.LaunchResult
 import app.regie.domain.model.Session
 import app.regie.domain.model.SessionId
+import app.regie.domain.model.SessionThread
 import app.regie.domain.model.SessionStatus
 import app.regie.domain.model.WirelessDebugging
 import app.regie.domain.port.AgentGateway
@@ -26,6 +28,11 @@ class StubGateway(
     override val connection = MutableStateFlow<BridgeConnection>(BridgeConnection.Connecting)
     var shutdowns = 0
     var healthChecks = 0
+    val threads = mutableMapOf<SessionId, MutableStateFlow<SessionThread>>()
+    var delivery = Delivery.PROMPT
+    val sent = mutableListOf<Pair<SessionId, String>>()
+    val interrupted = mutableListOf<SessionId>()
+    var interruptHeard = true
 
     override suspend fun maintainConnection() = awaitCancellation()
 
@@ -37,6 +44,20 @@ class StubGateway(
     override suspend fun shutdownBridge(): Boolean {
         shutdowns++
         return shutdownHeard
+    }
+
+    fun threadOf(id: SessionId) = threads.getOrPut(id) { MutableStateFlow(SessionThread.EMPTY) }
+
+    override fun thread(id: SessionId) = threadOf(id)
+
+    override suspend fun sendMessage(id: SessionId, text: String): Delivery {
+        sent += id to text
+        return delivery
+    }
+
+    override suspend fun interrupt(id: SessionId): Boolean {
+        interrupted += id
+        return interruptHeard
     }
 }
 

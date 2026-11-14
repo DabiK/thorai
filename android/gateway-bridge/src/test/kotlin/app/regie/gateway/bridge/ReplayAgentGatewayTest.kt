@@ -1,6 +1,9 @@
 package app.regie.gateway.bridge
 
 import app.regie.domain.model.BridgeConnection
+import app.regie.domain.model.Delivery
+import app.regie.domain.model.SessionId
+import app.regie.domain.model.ThreadEntry
 import app.regie.domain.model.SessionStatus
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -60,6 +63,26 @@ class ReplayAgentGatewayTest {
         val working = gateway.sessions.first { list -> list.any { it.status == SessionStatus.WORKING } }
             .filter { it.status == SessionStatus.WORKING }
         assertTrue(working.all { it.lastActivityAt >= now }, working.map { it.lastActivityAt }.toString())
+        job.cancel()
+    }
+
+    @Test
+    fun `the fake gateway shows the replayed thread and adds a message sent to it`() = runTest {
+        val gateway = ReplayAgentGateway(Fixtures::demoRun, speed = Double.POSITIVE_INFINITY, clock = Clock.System)
+        val job = launch { gateway.maintainConnection() }
+        gateway.sessions.first { it.size == 11 }
+        val claude = SessionId("00000000-0000-4000-8000-000000000044")
+
+        val replayed = gateway.thread(claude).first { it.entries.isNotEmpty() }
+        assertTrue(replayed.loaded)
+        assertEquals(5, replayed.entries.size)
+
+        assertEquals(Delivery.PROMPT, gateway.sendMessage(claude, "Merci"))
+        assertTrue(gateway.interrupt(claude))
+        val after = gateway.thread(claude).first { it.entries.size == 7 }
+        assertEquals("Merci", (after.entries[5] as ThreadEntry.UserMessage).text)
+        assertTrue(after.entries[6] is ThreadEntry.Interrupted)
+        assertEquals(Delivery.NOT_SENT, gateway.sendMessage(SessionId("inconnue"), "x"))
         job.cancel()
     }
 }

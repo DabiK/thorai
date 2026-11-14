@@ -24,7 +24,11 @@ import app.regie.input.Trigger
 import app.regie.input.TriggerAxes
 import app.regie.overview.ControlState
 import app.regie.domain.model.Overview
+import app.regie.session.Screen
+import app.regie.session.SessionNotice
 import app.regie.ui.screens.ControlCallbacks
+import app.regie.ui.screens.SessionCallbacks
+import app.regie.ui.screens.ThreadScroll
 import app.regie.ui.theme.RegieTheme
 import kotlinx.coroutines.launch
 import kotlin.math.max
@@ -52,6 +56,24 @@ abstract class GamepadActivity : ComponentActivity() {
         override fun onConfirmQuit() = container.controller.confirmQuit()
 
         override fun onCancelQuit() = container.controller.cancelQuit()
+    }
+
+    protected val sessionCallbacks = object : SessionCallbacks {
+        override fun onButton(button: Button) = container.sessionController.handle(GamepadInput.Pressed(button))
+
+        override fun onTrigger(trigger: Trigger, held: Boolean) = container.sessionController.handle(
+            if (held) GamepadInput.TriggerDown(trigger) else GamepadInput.TriggerUp(trigger),
+        )
+
+        override fun onDraftChange(text: String) = container.sessionController.onDraftChange(text)
+
+        override fun onSend() = container.sessionController.send()
+
+        override fun onNoticeSeen(notice: SessionNotice) = container.sessionController.dismissNotice(notice)
+    }
+
+    protected val threadScroll by lazy {
+        ThreadScroll(container.sessionController.scrollSteps, container.sessionController.scrollVelocity)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -85,12 +107,25 @@ abstract class GamepadActivity : ComponentActivity() {
         }
     }
 
-    protected fun setScreen(content: @Composable (Overview, ControlState) -> Unit) {
+    /**
+     * L'écran affiché, le même sur les deux écrans de la console : la vue d'ensemble, ou une session.
+     * [session] reçoit la vue d'ensemble pour les voisines (L1 / R1).
+     */
+    protected fun setScreen(
+        overview: @Composable (Overview, ControlState) -> Unit,
+        session: @Composable (Screen.Session, Overview) -> Unit,
+    ) {
         setContent {
             RegieTheme {
-                val overview by container.overview.collectAsStateWithLifecycle()
-                val control by container.controller.state.collectAsStateWithLifecycle()
-                content(overview, control)
+                val screen by container.screen.collectAsStateWithLifecycle()
+                val current by container.overview.collectAsStateWithLifecycle()
+                when (val shown = screen) {
+                    Screen.Overview -> {
+                        val control by container.controller.state.collectAsStateWithLifecycle()
+                        overview(current, control)
+                    }
+                    is Screen.Session -> session(shown, current)
+                }
             }
         }
         // Sans vue focalisée, Android avale la première touche de navigation pour quitter

@@ -18,8 +18,11 @@ data class Progress(val done: Int, val total: Int, val currentStep: String? = nu
     val step: Int get() = if (currentStep != null) (done + 1).coerceAtMost(total) else done
 }
 
-/** Où en est la dernière action de l'agent. */
-enum class ActionStatus { PENDING, IN_PROGRESS, COMPLETED, FAILED }
+/**
+ * Où en est une action de l'agent. [INTERRUPTED] : le tour a été interrompu avant que l'agent ne dise
+ * qu'elle était finie ; une mise à jour tardive de l'agent peut encore préciser son résultat.
+ */
+enum class ActionStatus { PENDING, IN_PROGRESS, COMPLETED, FAILED, INTERRUPTED }
 
 /** Dernière action de l'agent : la commande, sinon le titre que l'agent lui donne. */
 data class LastAction(val description: String, val status: ActionStatus?)
@@ -46,4 +49,6 @@ data class Session(
     val lastAction: LastAction? = null,
     val pendingApproval: Approval? = null,
     val lastError: String? = null,
+    /** Fichiers modifiés par les éditions de l'agent, relatifs au projet, d'après le pont. */
+    val modifiedFiles: List<String> = emptyList(),
 )

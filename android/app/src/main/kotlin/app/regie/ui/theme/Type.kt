@@ -65,10 +65,16 @@ fun mono(
     weight: Int = 400,
     color: Color = Palette.text,
     letterSpacing: TextUnit = Unspecified,
+    lineHeight: TextUnit = Unspecified,
 ) = TextStyle(
     fontFamily = LocalFonts.current.mono,
     fontSize = size,
     fontWeight = FontWeight(weight),
     color = color,
     letterSpacing = letterSpacing,
+    lineHeight = lineHeight,
 )
+
+/** Geist Mono, pour les morceaux de code au milieu d'un texte en Geist. */
+@Composable
+fun monoFamily(): FontFamily = LocalFonts.current.mono

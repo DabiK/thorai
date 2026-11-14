@@ -2,7 +2,10 @@ package app.regie.gateway.bridge
 
 import app.regie.domain.model.AgentVersion
 import app.regie.domain.model.BridgeConnection
+import app.regie.domain.model.Delivery
 import app.regie.domain.model.Session
+import app.regie.domain.model.SessionId
+import app.regie.domain.model.SessionThread
 import app.regie.domain.model.UnreachableReason
 import app.regie.domain.port.AgentGateway
 import kotlinx.coroutines.CompletableDeferred
@@ -11,9 +14,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonObject
@@ -28,6 +34,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
@@ -41,8 +48,10 @@ import kotlin.time.toJavaDuration
  * - Reconnexion seule, de plus en plus espacée ([retryDelay]), avec `hello` porteur du dernier `seq`
  *   et de l'identifiant du journal : le pont renvoie ce qui a été manqué, sans doublon.
  * - Le journal (`session.events`) d'une session est chargé quand elle entre dans les cartes
- *   affichées, une fois par état reconstruit (première connexion, `resync`), pour retrouver son plan
- *   et sa dernière action.
+ *   affichées, ou quand son fil est observé (écran de la session), une fois par état reconstruit
+ *   (première connexion, `resync`), pour retrouver son plan, sa dernière action et son fil.
+ * - Les requêtes de l'écran (`session.prompt`, `session.cancel`, `bridge.shutdown`) partent sur la
+ *   connexion ouverte ; leur réponse est attendue au plus [requestTimeout].
  * - Une connexion qui se coupe moins de [stableAfter] après la réponse à `hello` compte comme un
  *   échec : un pont qui retombe aussitôt finit dit injoignable, avec des essais espacés.
  *
@@ -61,6 +70,8 @@ class BridgeAgentGateway(
     /** Sessions dont on recharge le journal : celles que la vue d'ensemble affiche. */
     private val historyCount: Int = 4,
     private val shutdownTimeout: Duration = 3.seconds,
+    /** Un message à une session de l'historique attend qu'elle soit rechargée dans son agent. */
+    private val requestTimeout: Duration = 2.minutes,
     private val stableAfter: Duration = 10.seconds,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val log: (String) -> Unit = {},
@@ -81,10 +92,20 @@ class BridgeAgentGateway(
     /** Sessions dont le journal est chargé dans l'état actuel ; vidé quand l'état repart de zéro. */
     private val historyLoaded = HashSet<String>()
 
-    /** La connexion ouverte, pour les requêtes venues d'ailleurs ([shutdownBridge]). */
+    /** La connexion ouverte, pour les requêtes venues d'ailleurs ([shutdownBridge], [sendMessage]…). */
     @Volatile
     private var socket: WebSocket? = null
     private val calls = ConcurrentHashMap<Long, CompletableDeferred<JsonObject?>>()
+
+    /** Le fil de chaque session observée ; publié par la boucle de connexion. */
+    private val threads = ConcurrentHashMap<String, MutableStateFlow<SessionThread>>()
+
+    /** Sessions dont le fil est observé, avec le nombre d'observateurs : leur journal est chargé. */
+    private val watchers = ConcurrentHashMap<String, Int>()
+
+    /** La boucle de la connexion en cours, réveillée quand un fil commence à être observé. */
+    @Volatile
+    private var wake: SendChannel<Signal>? = null
 
     override suspend fun maintainConnection(): Unit = withContext(dispatcher) {
         var failures = 0
@@ -135,17 +156,56 @@ class BridgeAgentGateway(
         }.getOrDefault(false)
     }
 
-    override suspend fun shutdownBridge(): Boolean {
-        val ws = socket ?: return false
-        if (_connection.value != BridgeConnection.Connected) return false
+    override suspend fun shutdownBridge(): Boolean = call("bridge.shutdown", timeout = shutdownTimeout) != null
+
+    override fun thread(id: SessionId): Flow<SessionThread> = flow {
+        val key = id.value
+        val thread = threads.computeIfAbsent(key) { MutableStateFlow(SessionThread.EMPTY) }
+        watchers.merge(key, 1, Int::plus)
+        try {
+            wake?.trySend(Signal.Watch)
+            emitAll(thread)
+        } finally {
+            watchers.computeIfPresent(key) { _, count -> (count - 1).takeIf { it > 0 } }
+        }
+    }
+
+    override suspend fun sendMessage(id: SessionId, text: String): Delivery {
+        val result = call(
+            "session.prompt",
+            buildJsonObject {
+                put("sessionId", id.value)
+                put("text", text)
+            },
+        ) ?: return Delivery.NOT_SENT
+        return when (result.string("delivery")) {
+            "prompt" -> Delivery.PROMPT
+            "steering" -> Delivery.STEERING
+            "queued" -> Delivery.QUEUED
+            "cancelled" -> Delivery.CANCELLED
+            // Le pont l'a pris sans dire comment : il est parti.
+            else -> Delivery.PROMPT
+        }
+    }
+
+    override suspend fun interrupt(id: SessionId): Boolean =
+        call("session.cancel", buildJsonObject { put("sessionId", id.value) }) != null
+
+    /**
+     * Une requête sur la connexion ouverte. Son résultat, ou `null` : pas connecté, erreur du pont, ou
+     * pas de réponse dans le délai.
+     */
+    private suspend fun call(method: String, params: JsonObject = JsonObject(emptyMap()), timeout: Duration = requestTimeout): JsonObject? {
+        val ws = socket ?: return null
+        if (_connection.value != BridgeConnection.Connected) return null
         val id = nextId.incrementAndGet()
         val reply = CompletableDeferred<JsonObject?>()
         calls[id] = reply
-        if (!ws.send(Frames.request(id, "bridge.shutdown"))) {
+        if (!ws.send(Frames.request(id, method, params))) {
             calls.remove(id)
-            return false
+            return null
         }
-        return withTimeoutOrNull(shutdownTimeout) { reply.await() } != null
+        return withTimeoutOrNull(timeout) { reply.await() }.also { if (it == null) calls.remove(id) }
     }
 
     /** Une connexion, de l'ouverture à la coupure. */
@@ -153,6 +213,7 @@ class BridgeAgentGateway(
         val secret = token()?.trim()?.ifEmpty { null }
             ?: return Outcome.Failed(UnreachableReason.TOKEN_MISSING, "jeton absent")
         val signals = Channel<Signal>(Channel.UNLIMITED)
+        wake = signals
         val request = Request.Builder().url(url).header("Authorization", "Bearer $secret").build()
         val ws = client.newWebSocket(request, Listener(signals))
         val requests = HashMap<Long, Pair<String, JsonObject>>()
@@ -166,11 +227,12 @@ class BridgeAgentGateway(
             ws.send(Frames.request(id, method, params))
         }
 
-        // Le journal des sessions qui entrent dans les cartes affichées, une fois chacune.
+        // Le journal des sessions qui entrent dans les cartes affichées, ou dont le fil est observé,
+        // une fois chacune.
         fun loadHistories() {
             if (greetedAt == null) return
-            for (id in state.firstSessions(historyCount)) {
-                if (id in historyLoaded || !historyPending.add(id)) continue
+            for (id in state.firstSessions(historyCount) + watchers.keys) {
+                if (id in historyLoaded || !state.knows(id) || !historyPending.add(id)) continue
                 send("session.events", buildJsonObject { put("sessionId", id) })
             }
         }
@@ -198,6 +260,10 @@ class BridgeAgentGateway(
                                 }
                             },
                         )
+                    }
+                    Signal.Watch -> {
+                        loadHistories()
+                        publishThreads()
                     }
                     is Signal.Message -> when (val incoming = Frames.parse(signal.text)) {
                         is Incoming.Event -> {
@@ -269,6 +335,7 @@ class BridgeAgentGateway(
             return Outcome.Lost("fin du flux", greetedAt?.elapsedNow() ?: Duration.ZERO)
         } finally {
             catchUp?.let { log("${it.summary()} — interrompu") }
+            if (wake === signals) wake = null
             socket = null
             ws.cancel()
             calls.values.forEach { it.complete(null) }
@@ -279,6 +346,15 @@ class BridgeAgentGateway(
     private fun publish() {
         _sessions.value = state.sessions()
         _agents.value = state.agents
+        publishThreads()
+    }
+
+    /** Le fil des sessions observées en ce moment : une ou deux, recopiées à chaque changement. */
+    private fun publishThreads() {
+        for (id in watchers.keys) {
+            val thread = threads[id] ?: continue
+            state.thread(id, loaded = id in historyLoaded)?.let { thread.value = it }
+        }
     }
 
     private sealed interface Outcome {
@@ -290,6 +366,9 @@ class BridgeAgentGateway(
 
     private sealed interface Signal {
         data object Opened : Signal
+
+        /** Un fil vient d'être observé : charger son journal s'il ne l'est pas, et le publier. */
+        data object Watch : Signal
 
         data class Message(val text: String) : Signal
 

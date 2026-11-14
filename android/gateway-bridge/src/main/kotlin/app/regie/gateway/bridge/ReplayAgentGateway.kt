@@ -2,19 +2,28 @@ package app.regie.gateway.bridge
 
 import app.regie.domain.model.AgentVersion
 import app.regie.domain.model.BridgeConnection
+import app.regie.domain.model.Delivery
 import app.regie.domain.model.Session
+import app.regie.domain.model.SessionId
+import app.regie.domain.model.SessionThread
 import app.regie.domain.port.AgentGateway
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -29,7 +38,8 @@ import kotlin.time.Instant
  * Les dates enregistrées sont décalées pour que la démo semble se dérouler maintenant : sans cela,
  * une session « En cours » afficherait l'ancienneté de l'enregistrement.
  *
- * Elle sert à développer l'interface sans console. Aucune commande ne part.
+ * Elle sert à développer l'interface sans console. Aucune commande ne part : un message envoyé est
+ * ajouté au fil (« prompt »), une interruption aussi ; l'agent enregistré, lui, n'en sait rien.
  */
 class ReplayAgentGateway internal constructor(
     private val load: () -> List<RecordedFrame>,
@@ -45,19 +55,20 @@ class ReplayAgentGateway internal constructor(
     override val agents: StateFlow<List<AgentVersion>> = _agents.asStateFlow()
     override val connection: StateFlow<BridgeConnection> = MutableStateFlow(BridgeConnection.Connected)
 
+    /** L'état rejoué, partagé avec l'envoi de messages : un seul à la fois. */
+    private val state = BridgeState()
+    private val lock = Mutex()
+    private val threads = ConcurrentHashMap<String, MutableStateFlow<SessionThread>>()
+
     override suspend fun maintainConnection() {
         // Près de 500 Ko de JSON : lus hors du fil de l'interface.
         val frames = withContext(Dispatchers.Default) { shiftedToNow(load(), clock.now()) }
-        val state = BridgeState()
         val requests = HashMap<Long, Pair<String, JsonObject>>()
         var clock = frames.firstOrNull()?.atMillis ?: 0
         for (recorded in frames) {
             if (speed.isFinite()) delay(((recorded.atMillis - clock) / speed).milliseconds)
             clock = recorded.atMillis
-            if (replay(state, requests, recorded)) {
-                _sessions.value = state.sessions()
-                _agents.value = state.agents
-            }
+            lock.withLock { if (replay(state, requests, recorded)) publish() }
         }
         awaitCancellation()
     }
@@ -65,6 +76,29 @@ class ReplayAgentGateway internal constructor(
     override suspend fun isBridgeUp() = true
 
     override suspend fun shutdownBridge() = true
+
+    /** Tout l'enregistrement est rejoué depuis le début : le fil est complet, rien à charger. */
+    override fun thread(id: SessionId): Flow<SessionThread> = flow {
+        val thread = threads.computeIfAbsent(id.value) { MutableStateFlow(SessionThread(loaded = true)) }
+        lock.withLock { state.thread(id.value, loaded = true)?.let { thread.value = it } }
+        emitAll(thread)
+    }
+
+    override suspend fun sendMessage(id: SessionId, text: String): Delivery = lock.withLock {
+        if (!state.addLocalMessage(id.value, text)) return@withLock Delivery.NOT_SENT
+        publish()
+        Delivery.PROMPT
+    }
+
+    override suspend fun interrupt(id: SessionId): Boolean = lock.withLock {
+        state.addLocalInterruption(id.value).also { if (it) publish() }
+    }
+
+    private fun publish() {
+        _sessions.value = state.sessions()
+        _agents.value = state.agents
+        for ((id, thread) in threads) state.thread(id, loaded = true)?.let { thread.value = it }
+    }
 
     internal companion object {
         /** Rejoue une trame enregistrée ; vrai si l'état a changé. */
