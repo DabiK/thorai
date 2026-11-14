@@ -32,7 +32,7 @@ class LongInstructionReviewTest {
 
     private fun readToEnd(single: Boolean) {
         val instruction = "Vérifie chaque fichier et explique les résultats avant de proposer une correction.\n".repeat(24)
-            .take(1918) + "\nDernière ligne : ne lance rien."
+            .take(1918) + "\nDernière ligne : ne lance rien."
         val form = NewSessionForm(visible = true, agent = Agent.CODEX, project = "demo",
             projects = listOf(ProjectChoice("demo", "main", listOf("main"))),
             instruction = instruction, field = NewSessionField.INSTRUCTION)

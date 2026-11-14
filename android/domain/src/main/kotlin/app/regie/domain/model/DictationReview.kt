@@ -6,7 +6,7 @@ sealed interface DictationTarget {
     data class Rejection(override val sessionId: SessionId, val approvalId: ApprovalId) : DictationTarget
     data class DiffComment(override val sessionId: SessionId, val path: String, val line: Int, val removed: Boolean = false, val fileCoordinates: Boolean = true, val selectedText: String? = null) : DictationTarget {
         val location: String get() = "$path, ligne $line" + (if (removed) " supprimée" else "") +
-            (if (fileCoordinates) "" else " de l’extrait (position dans le fichier non communiquée)")
+            (if (fileCoordinates) "" else " de l’extrait (position dans le fichier inconnue)")
     }
 }
 

@@ -11,7 +11,7 @@ class DeliverDictation(private val sendMessage: SendMessage, private val answer:
             when (reply) {
                 ApprovalReply.NOT_SENT -> return DictationDelivery("Refus non envoyé. A pour réessayer.", target)
                 ApprovalReply.UNKNOWN -> return DictationDelivery("Refus non confirmé. Vérifie la session ; consigne non envoyée.")
-                ApprovalReply.UNAVAILABLE -> return DictationDelivery("Cette demande n’est plus disponible. Consigne non envoyée.")
+                ApprovalReply.UNAVAILABLE -> return DictationDelivery("Validation indisponible. Consigne non envoyée.")
                 ApprovalReply.ACCEPTED -> Unit
             }
         }
@@ -20,7 +20,7 @@ class DeliverDictation(private val sendMessage: SendMessage, private val answer:
         val retry = if (target is DictationTarget.Rejection) DictationTarget.Message(target.sessionId) else target
         return when (delivery) {
             Delivery.NOT_SENT, Delivery.CANCELLED -> DictationDelivery("Message non livré. A pour réessayer.", retry)
-            Delivery.UNKNOWN -> DictationDelivery("Livraison non confirmée. Vérifie le fil avant de dicter à nouveau.")
+            Delivery.UNKNOWN -> DictationDelivery("Envoi non confirmé. Vérifie le fil avant de renvoyer.")
             Delivery.QUEUED -> DictationDelivery("Message mis en attente. B pour revenir.")
             Delivery.STEERING -> DictationDelivery("Consigne transmise au tour en cours. B pour revenir.")
             Delivery.PROMPT -> DictationDelivery("Message envoyé. B pour revenir.")

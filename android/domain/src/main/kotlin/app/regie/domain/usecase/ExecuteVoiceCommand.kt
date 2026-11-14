@@ -9,7 +9,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 class ExecuteVoiceCommand(private val gateway: AgentGateway, private val answer: AnswerApproval, private val open: (SessionId) -> Unit) {
     suspend operator fun invoke(command: VoiceCommand): String = when (command) {
         is VoiceCommand.Reply -> {
-            if (gateway.approvals.value.none { it == command.approval }) "Cette validation a changé ou a déjà reçu une réponse. Aucun ordre envoyé."
+            if (gateway.approvals.value.none { it == command.approval }) "Validation modifiée ou déjà traitée. Aucun ordre envoyé."
             else when (answer(command.approval.id, command.decision).reply) {
                 ApprovalReply.ACCEPTED -> if (command.decision == ApprovalDecision.ONCE) "Validation autorisée une fois." else "Validation refusée."
                 ApprovalReply.UNKNOWN -> "Réponse incertaine. Vérifie la validation ; aucun renvoi automatique."
@@ -20,11 +20,11 @@ class ExecuteVoiceCommand(private val gateway: AgentGateway, private val answer:
             val ids = command.ids.filter { id -> gateway.sessions.value.any { it.id == id && it.status.isBusy } }
             var heard = 0
             ids.forEach { if (gateway.interrupt(it)) heard++ }
-            "Interruption reçue pour $heard sur ${ids.size} sessions encore occupées. Les processus déjà lancés peuvent continuer."
+            "Interruption reçue : $heard sur ${ids.size} sessions occupées. Les programmes déjà lancés peuvent continuer."
         }
         is VoiceCommand.Navigate -> if (gateway.sessions.value.any { it.id == command.id }) {
             open(command.id); "Session ouverte."
-        } else "Cette session n’est plus disponible."
+        } else "Session indisponible."
         is VoiceCommand.Summary -> command.ids.mapNotNull { id ->
             val session = gateway.sessions.value.firstOrNull { it.id == id } ?: return@mapNotNull null
             val thread = withTimeoutOrNull(2000) { gateway.thread(id).first { it.loaded } } ?: SessionThread.EMPTY

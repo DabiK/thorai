@@ -4,7 +4,7 @@
 
 | Écran du haut : suivre la session | Écran du bas : parler et agir |
 | --- | --- |
-| ![Session Codex et point écrit](artifacts/screenshots/20/final-session-haut.png) | ![Micro, message, diff et point écrit](artifacts/screenshots/20/final-session-bas.png) |
+| ![Fil de la session Codex](artifacts/screenshots/21/after-session-haut.png) | ![Micro, consigne, modifications et point écrit](artifacts/screenshots/21/after-session-bas.png) |
 
 Captures réelles du banc à deux écrans, le 14 novembre 2026 : Codex travaille sur `regie-demo`, un projet de démonstration. Le pont tourne sur le Mac pour cet essai ; sur la Thor, il tourne dans sa Debian.
 
@@ -13,9 +13,9 @@ Captures réelles du banc à deux écrans, le 14 novembre 2026 : Codex travaille
 - **Suivre plusieurs sessions** : avancement, fil en direct, plan quand l’agent en fournit un, fichiers modifiés, points écrits et notifications.
 - **Parler à l’agent** : maintenir L2, relire la transcription, corriger ou compléter, puis envoyer avec A. La transcription est **locale par défaut** ; aucun texte n’est lu à voix haute.
 - **Donner un ordre** : maintenir R2, dire par exemple « ouvre cette session » ou « mets tout en pause », puis confirmer. Les règles courantes marchent sans clé de modèle distant.
-- **Choisir les validations** : Plan d’abord, Modifs auto, Je valide chaque action ou Tout autoriser. Une demande se lit dans le fil ; A autorise une fois, B refuse, X autorise pour la session quand l’agent le permet. Les lectures reconnues sont automatiques.
+- **Choisir les validations** : Plan d’abord, Modifications auto, Je valide chaque action ou Tout autoriser. Une demande se lit dans le fil ; A autorise une fois, B refuse, X autorise pour la session quand l’agent le permet. Les lectures reconnues sont automatiques.
 - **Relire un diff** : parcourir les éditions exposées par l’agent, commenter une ligne avec L2 ou demander une explication écrite avec Y puis A.
-- **Lancer un nouveau projet** : X depuis la régie, ou « lance Codex sur un nouveau projet qui s’appelle météo ». La fiche permet de choisir agent, projet, modèle, réflexion, validation et consigne. Régie crée le dépôt vide ; les changements de branche sont confiés à l’agent.
+- **Lancer un nouveau projet** : X depuis la régie, ou « lance Codex sur un nouveau projet qui s’appelle météo ». La fiche permet de choisir agent, projet, modèle, réflexion, mode et consigne. Régie crée le dépôt vide ; les changements de branche sont confiés à l’agent.
 - **Piloter Android depuis les agents** : leurs outils MCP et `thor-screen` voient et commandent les deux écrans, Régie comprise, sans validation supplémentaire.
 
 Régie démarre son pont à l’ouverture. Passer en arrière-plan laisse les sessions tourner et le tableau de bord du bas visible. **Quitter** arrête le pont et ses sessions. Rien ne démarre au boot.
@@ -203,6 +203,18 @@ Pour mettre à jour, quitter Régie puis relancer les scripts de déploiement co
 
 Les boutons affichés en bas précisent l’action courante. Dans les options, A applique et B ferme : les validations gardent leurs boutons tactiles, sans détourner ces raccourcis. **Quitter** se touche en bas de la régie.
 
+## Comprendre un message de connexion
+
+| Message | Action depuis le Mac, console branchée |
+| --- | --- |
+| Clé du pont absente ou refusée | `thor/bridge/install.sh token-app` |
+| Termux ne répond pas | `thor/bridge/install.sh`, puis rouvrir Régie |
+| Autorise les commandes Termux | Sur Android : Infos de Régie → Autorisations → Autorisations supplémentaires → « Run commands in Termux environment » |
+| Autorise la reconnexion Android | Une fois : `adb -s THOR0000000001 shell pm grant app.regie android.permission.WRITE_SECURE_SETTINGS` |
+| Démarre le pont sur le Mac | Sur le banc : `scripts/bridge-mac.sh` |
+
+Ces instructions complètent les messages courts de l’app.
+
 ## Architecture
 
 ```mermaid
@@ -229,7 +241,7 @@ flowchart LR
 ## Limites connues
 
 - Le mode **Tout autoriser** et le pilotage Android sont volontairement libres. Un agent peut toucher Régie et ses validations. Ce prototype ne constitue pas une frontière de sécurité entre agents et console.
-- Les CLI, ACP et modèles évoluent. Une information absente reste annoncée comme non communiquée. X « cette session » dépend des options de l’agent ; Codex a parfois redemandé une validation après l’avoir accepté.
+- Les CLI, ACP et modèles évoluent. Une information absente reste annoncée comme non communiquée. X « Autoriser pour la session » dépend des options de l’agent ; Codex a parfois redemandé une validation après l’avoir accepté.
 - Le diff montre les éditions reçues, pas un `git diff` complet ; une écriture shell peut manquer. La branche affichée correspond au dossier de la session, même si l’agent travaille ensuite dans un autre worktree.
 - Start annule le tour mais ne garantit pas l’arrêt de tous ses sous-processus. Quitter termine les sessions du pont. Le détail du journal expire après 30 jours d’inactivité, les résumés restent.
 - La voix locale peut mal reconnaître les noms techniques. Les essais WAV synthétiques ne mesurent pas la qualité avec une voix humaine. ElevenLabs et le repli Mistral nécessitent leurs clés et transmettent des données au fournisseur choisi.
@@ -258,12 +270,14 @@ scripts/emu-start.sh
 scripts/bridge-mac.sh
 scripts/emu-install.sh
 scripts/emu-key.sh A
-scripts/emu-shot.sh artifacts/screenshots/20
+scripts/emu-shot.sh artifacts/screenshots/21
 scripts/bridge-mac.sh stop
 adb -s emulator-5580 emu kill
 ```
 
-Ces commandes lancent une **vraie démo Codex**, jamais Claude. `emu-install.sh --no-demo` ne fait qu’actualiser l’app. Le [guide du banc](docs/emulateur.md) précise les variables, le changement de worktree et la voix WAV. Sur la console : `scripts/thor-install.sh`, puis `scripts/thor-shot.sh artifacts/screenshots/20`.
+Ces commandes lancent une **vraie démo Codex**, jamais Claude. `emu-install.sh --no-demo` ne fait qu’actualiser l’app. Le [guide du banc](docs/emulateur.md) précise les variables, le changement de worktree et la voix WAV. Sur la console : `scripts/thor-install.sh`, puis `scripts/thor-shot.sh artifacts/screenshots/21`.
+
+Les [règles de texte et d’interface](docs/textes.md) et l’[inventaire avant/après](artifacts/screenshots/21/inventaire-textes.md) fixent les libellés.
 
 Le travail suit [CLAUDE.md](CLAUDE.md), le [PRD](docs/PRD.md), le [journal de reprise](docs/adr/00-journal-de-reprise.md) et les [tickets](.scratch/regie-v1/issues). Un ticket par branche/worktree, tests d’abord, portes vertes, essai réel, rapport et Conventional Commit ; l’orchestrateur relit, fusionne et pousse. Les tickets d’interface passent un par un sur la console partagée. Les preuves sont rangées par ticket dans [artifacts](artifacts/README.md).
 

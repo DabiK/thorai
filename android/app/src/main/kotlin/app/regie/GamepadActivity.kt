@@ -154,10 +154,10 @@ abstract class GamepadActivity : ComponentActivity() {
                     } else Column(Modifier.fillMaxSize()) {
                         if (controlsHere) Row(Modifier.fillMaxWidth().background(Palette.background).padding(horizontal = 16.dp, vertical = 4.dp)) {
                             if (screen is Screen.Session) {
-                                BasicText("→ Options de la session", style = sans(12.sp, color = Palette.text), modifier = Modifier.tappable(container::openSessionSettings))
+                                app.regie.ui.components.BarAction("→", "Régler la session", container::openSessionSettings)
                                 Spacer(Modifier.weight(1f))
                             }
-                            BasicText("Réglages voix", style = sans(11.sp, color = Palette.textSubtle), modifier = Modifier.tappable(container::openVoiceSettings))
+                            BasicText("Régler la voix", style = sans(11.sp, color = Palette.textSubtle), modifier = Modifier.tappable(container::openVoiceSettings))
                         }
                         Box(Modifier.weight(1f)) {
                     when (val shown = screen) {

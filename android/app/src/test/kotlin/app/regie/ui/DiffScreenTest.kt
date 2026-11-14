@@ -37,11 +37,23 @@ class DiffScreenTest {
             } }
             compose.onNodeWithText("const limit = 70", substring = true).assertIsDisplayed()
             compose.onNodeWithText("src/b.kt").assertIsDisplayed().performClick()
-            compose.onNodeWithText("Explique-moi ce bloc").assertIsDisplayed().performClick()
+            compose.onNodeWithText("Expliquer le bloc").assertIsDisplayed().performClick()
             compose.onNodeWithContentDescription("Maintenir pour dicter").assertIsDisplayed()
             compose.runOnIdle { assertEquals(listOf(1), files); assertEquals(listOf(Button.Y), buttons) }
         }
     }
+    @Test fun `file count agrees at one and several files`() {
+        val review = mutableStateOf(DiffReview(files = listOf(DiffFile("a.kt", emptyList(), null)), loading = false))
+        Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
+            host.setup().get().setContent { RegieTheme {
+                DiffScreen(review.value, true, false, MutableStateFlow(0f), {}, {}, {})
+            } }
+            compose.onNodeWithText("1 fichier · modifications suivies").assertIsDisplayed()
+            compose.runOnIdle { review.value = review.value.copy(files = review.value.files + DiffFile("b.kt", emptyList(), null)) }
+            compose.onNodeWithText("2 fichiers · modifications suivies").assertIsDisplayed()
+        }
+    }
+
     @Test fun `a repeated selection brings an offscreen first line back into view`() {
         val review = mutableStateOf(DiffReview(SessionId("s"), "demo", listOf(
             DiffFile("a.kt", listOf(DiffBlock("1", (0..70).map { DiffLine(DiffKind.ADDED, "row$it", null, it + 1) }, true)), LineChanges(71, 0)),
@@ -65,7 +77,7 @@ class DiffScreenTest {
                 DiffScreen(review, false, true, MutableStateFlow(0f), {}, {}, {})
             } }
             compose.onNodeWithText("Le seuil 80 remplace 70.").assertIsDisplayed()
-            compose.onNodeWithText("Revenir au diff").assertIsDisplayed()
+            compose.onNodeWithText("Revenir aux modifications").assertIsDisplayed()
             compose.onNodeWithText("Demander").assertDoesNotExist()
         }
     }

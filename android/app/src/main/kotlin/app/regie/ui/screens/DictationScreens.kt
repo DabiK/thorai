@@ -49,7 +49,7 @@ fun DictationTopScreen(state: DictationReview, session: Session?, single: Boolea
             BasicText(duration(state.durationMs), style = mono(12.sp, color = Palette.mic))
         }
         Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll).padding(horizontal = 32.dp, vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-            BasicText(if (state.phase == DictationPhase.RECORDING) "Ce que j’entends" else "Relis avant d’envoyer", style = sans(12.sp, color = Palette.textSubtle))
+            if (state.phase == DictationPhase.RECORDING) BasicText("Transcription", style = sans(12.sp, color = Palette.textSubtle))
             val text = buildAnnotatedString {
                 append(state.text.ifEmpty { "…" })
                 recognizedTerms(state.text, state.vocabulary).forEach {
@@ -61,8 +61,6 @@ fun DictationTopScreen(state: DictationReview, session: Session?, single: Boolea
             }
             BasicText(text, style = sans(25.sp, lineHeight = 37.sp), onTextLayout = { layout = it })
             (state.target as? DictationTarget.DiffComment)?.let { BasicText(it.location, style = mono(12.sp, color = Palette.textMuted)) }
-            val recognized = recognizedTerms(state.text, state.vocabulary).map { it.value }.distinct().take(8)
-            if (recognized.isNotEmpty()) BasicText("Reconnus dans le dépôt  ·  ${recognized.joinToString("  ·  ")}", style = mono(11.5.sp, color = Palette.textMuted))
         }
         if (single) DictationBottomScreen(state, onButton, onHeld, onSettings, compact = true)
     }
@@ -74,7 +72,7 @@ fun DictationBottomScreen(state: DictationReview, onButton: (Button) -> Unit, on
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             BasicText("Dictée · français", style = sans(13.sp, 600, Palette.mic))
             BasicText(duration(state.durationMs), style = mono(12.sp))
-            BasicText("Réglages voix", style = sans(12.sp, color = Palette.textMuted), modifier = Modifier.tappable(onSettings))
+            BasicText("Régler la voix", style = sans(12.sp, color = Palette.textMuted), modifier = Modifier.tappable(onSettings))
         }
         Column(Modifier.then(if (compact) Modifier else Modifier.weight(1f)).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             if (compact) {
@@ -93,18 +91,18 @@ fun DictationBottomScreen(state: DictationReview, onButton: (Button) -> Unit, on
                 DictationPhase.RECORDING -> "Relâche L2 pour relire"
                 DictationPhase.FINALIZING -> "Transcription…"
                 DictationPhase.SENDING -> "Envoi…"
-                else -> "Rien ne part sans ton A"
+                else -> "Relis avant d’envoyer"
             }, style = sans(if (compact) 13.sp else 18.sp, 600), modifier = Modifier.fillMaxWidth())
         }
         if (state.phase == DictationPhase.CORRECT) Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-            BarAction("←", "Mot précédent") { onButton(Button.LEFT) }; BarAction("→", "Mot suivant") { onButton(Button.RIGHT) }
+            BarAction("←", "Choisir avant") { onButton(Button.LEFT) }; BarAction("→", "Choisir après") { onButton(Button.RIGHT) }
         }
         Row(Modifier.fillMaxWidth().topDivider().padding(top = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             if (state.editable) BarAction("A", "Envoyer") { onButton(Button.A) }
-            BarAction("B", if (state.phase == DictationPhase.SENT) "Retour" else "Effacer") { onButton(Button.B) }
+            BarAction("B", if (state.phase == DictationPhase.SENT) "Revenir" else "Effacer") { onButton(Button.B) }
             if (state.editable) {
-                BarAction("Y", "Compléter") { onButton(Button.Y) }
                 BarAction("X", "Corriger un mot") { onButton(Button.X) }
+                BarAction("Y", "Compléter") { onButton(Button.Y) }
             }
         }
     }
@@ -136,11 +134,11 @@ fun VoiceSettingsScreen(settings: VoiceSettings, select: (DictationProvider) -> 
     var key by remember { mutableStateOf("") }
     var saved by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().background(Palette.background).imePadding().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        BasicText("Réglages voix", style = sans(22.sp, 600))
+        BasicText("Régler la voix", style = sans(22.sp, 600))
         DictationProvider.entries.forEach { provider ->
-            BasicText("${if (settings.provider == provider) "●" else "○"}  ${if (provider == DictationProvider.LOCAL) "Locale · gratuite, sur la console" else "ElevenLabs · en ligne"}", style = sans(16.sp), modifier = Modifier.tappable { select(provider) })
+            BasicText("${if (settings.provider == provider) "●" else "○"}  ${if (provider == DictationProvider.LOCAL) "Voix locale · gratuite" else "ElevenLabs · en ligne"}", style = sans(16.sp), modifier = Modifier.tappable { select(provider) })
         }
-        BasicText("Clé ElevenLabs : ${if (settings.keyConfigured) "enregistrée" else "à saisir"}", style = sans(13.sp, color = Palette.textMuted))
+        BasicText("Clé ElevenLabs : ${if (settings.keyConfigured) "enregistrée" else "à saisir"}", style = sans(13.sp, color = Palette.textMuted))
         BasicTextField(key, { key = it; saved = false }, textStyle = sans(16.sp), singleLine = true,
             visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             cursorBrush = SolidColor(Palette.text), modifier = Modifier.fillMaxWidth().background(Palette.surface).padding(12.dp))
@@ -148,8 +146,8 @@ fun VoiceSettingsScreen(settings: VoiceSettings, select: (DictationProvider) -> 
             BasicText(if (saved) "Enregistrée" else "Enregistrer", style = sans(14.sp), modifier = Modifier.tappable { if (key.isNotBlank()) { saveKey(key); key = ""; saved = true } })
             BasicText("Effacer la clé", style = sans(14.sp, color = Palette.textMuted), modifier = Modifier.tappable { saveKey(""); key = "" })
         }
-        BasicText("Ordres ambigus · Mistral : ${if (settings.commandKeyConfigured) "clé enregistrée" else "clé à saisir"}", style = sans(13.sp, color = Palette.textMuted))
-        BasicText("Facultatif. Les tournures courantes restent locales. Avec cette clé, les phrases ambiguës et les noms des sessions/projets sont transmis à Mistral (API payante).", style = sans(12.sp, color = Palette.textMuted, lineHeight = 17.sp))
+        BasicText("Ordres ambigus · Mistral : ${if (settings.commandKeyConfigured) "clé enregistrée" else "clé à saisir"}", style = sans(13.sp, color = Palette.textMuted))
+        BasicText("Facultatif et payant. Les ordres courants restent locaux. Mistral reçoit les phrases ambiguës. Les noms des sessions et projets sont transmis.", style = sans(12.sp, color = Palette.textMuted, lineHeight = 17.sp))
         BasicTextField(commandKey, { commandKey = it }, textStyle = sans(16.sp), singleLine = true,
             visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), modifier = Modifier.fillMaxWidth().background(Palette.surface).padding(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
@@ -157,8 +155,8 @@ fun VoiceSettingsScreen(settings: VoiceSettings, select: (DictationProvider) -> 
             BasicText("Effacer Mistral", style = sans(14.sp, color = Palette.textMuted), modifier = Modifier.tappable { saveCommandKey(""); commandKey = "" })
         }
         BasicText("Autoriser le microphone", style = sans(15.sp, color = Palette.running), modifier = Modifier.tappable(permission))
-        BasicText("La voix locale télécharge son modèle au premier usage. Avec ElevenLabs, l’audio et les termes du dépôt sont transmis au fournisseur.", style = sans(12.sp, color = Palette.textMuted, lineHeight = 17.sp))
-        BarAction("B", "Retour") { close() }
+        BasicText("Voix locale : modèle téléchargé au premier usage. ElevenLabs reçoit l’audio et les termes du projet.", style = sans(12.sp, color = Palette.textMuted, lineHeight = 17.sp))
+        BarAction("B", "Revenir") { close() }
     }
 }
 

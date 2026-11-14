@@ -10,14 +10,14 @@ val approvalModes = listOf("plan", "auto-edit", "ask", "allow-all")
 fun approvalModeLabel(mode: String): String = when (mode) {
     "plan" -> "Plan d’abord"
     "ask" -> "Je valide chaque action"
-    "auto-edit" -> "Modifs auto"
+    "auto-edit" -> "Modifications auto"
     "allow-all" -> "Tout autoriser"
     else -> "Mode non communiqué"
 }
 fun approvalModeHelp(mode: String): String = when (mode) {
     "allow-all" -> "Aucune validation pendant la session."
     "ask" -> "Les lectures usuelles restent automatiques."
-    "auto-edit" -> "Éditions automatiques ; les commandes qui écrivent demandent validation."
+    "auto-edit" -> "Modifications automatiques. Les commandes qui écrivent demandent validation."
     "plan" -> "L’agent prépare un plan avant les modifications."
     else -> ""
 }
@@ -31,7 +31,7 @@ data class SessionSettingsReview(
     val replacements: Map<String, String> = emptyMap(),
 ) {
     val rows: List<SettingsRow> get() = session?.let { session ->
-        listOf(SettingsRow("approvalMode", "Validation", session.approvalMode, approvalModes.map { OptionValue(it, approvalModeLabel(it)) })) +
+        listOf(SettingsRow("approvalMode", "Mode", session.approvalMode, approvalModes.map { OptionValue(it, approvalModeLabel(it)) })) +
             editableSessionOptions(session.configOptions).map { SettingsRow(it.id, it.label, it.currentValue, it.options) } +
             if (!session.active) listOf(SettingsRow("resume", "Reprendre cette session", null, emptyList())) else emptyList()
     }.orEmpty()

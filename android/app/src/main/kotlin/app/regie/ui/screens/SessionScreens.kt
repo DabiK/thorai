@@ -113,6 +113,7 @@ import app.regie.session.SessionControlState
 import app.regie.session.SessionNotice
 import app.regie.ui.components.AgentTag
 import app.regie.ui.components.BarAction
+import app.regie.ui.components.StateMessage
 import app.regie.ui.components.KeyChip
 import app.regie.ui.components.MicButton
 import app.regie.ui.components.StatusDot
@@ -181,14 +182,14 @@ fun SessionTopScreen(
         SessionHeader(live?.session, live, now, callbacks)
         live?.session?.let { session ->
             val labels = listOf(app.regie.domain.model.approvalModeLabel(session.approvalMode)) +
-                session.configOptions.filter { it.category in listOf("model", "thought_level") }.map { it.valueLabel } + "→ Options"
+                session.configOptions.filter { it.category in listOf("model", "thought_level") }.map { it.valueLabel } + "→ Régler"
             BasicText(labels.joinToString(" · "), style = sans(12.sp, color = Palette.textMuted), maxLines = 2,
                 modifier = Modifier.fillMaxWidth().tappable { callbacks.onOptions() }.bottomDivider().padding(horizontal = 20.dp, vertical = 7.dp))
         }
         Row(Modifier.weight(1f).fillMaxWidth()) {
             Box(Modifier.weight(1f).fillMaxHeight()) {
                 when {
-                    live == null -> Centered(stringResource(if (gone) R.string.session_gone else R.string.thread_opening))
+                    live == null -> StateMessage(stringResource(if (gone) R.string.session_gone else R.string.thread_opening))
                     // Une liste par session : passer à la voisine repart de la fin de son fil.
                     else -> key(live.session.id) { ThreadList(live, scroll, approval, onDecision, onNextApproval, onDismissApproval, shortcutsEnabled = options == null) }
                 }
@@ -251,8 +252,6 @@ fun SessionBottomScreen(
                     val notice = control.notice
                     if (notice != null) {
                         NoticeText(notice, callbacks, Modifier)
-                    } else {
-                        BasicText(stringResource(R.string.mic_session_hint), style = sans(13.sp, color = Palette.textMuted, lineHeight = 18.85.sp))
                     }
                 }
             }
@@ -323,7 +322,7 @@ private fun NeighbourBar(neighbours: Neighbours?, callbacks: SessionCallbacks, a
             horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
         ) {
             if (approval.request != null) {
-                if (approval.queue.any { it.id != approval.request?.id }) BasicText("R1 · Demande suivante", style = label)
+                if (approval.queue.any { it.id != approval.request?.id }) { KeyChip("R1"); BasicText("Voir la suivante", style = label) }
             } else neighbours?.next?.let {
                 BasicText(sessionName(it), style = label, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                 KeyChip("R1")
@@ -382,8 +381,8 @@ private fun ThreadList(live: LiveSession, scroll: ThreadScroll, approval: Approv
     LaunchedEffect(lines, approval, viewportHeight) { if (follow) bottom() }
     Box(Modifier.fillMaxSize()) {
         when {
-            live.loading && approval.request == null -> Centered(stringResource(R.string.thread_loading))
-            lines.isEmpty() && approval.request == null -> Centered(stringResource(R.string.thread_empty))
+            live.loading && approval.request == null -> StateMessage(stringResource(R.string.thread_loading))
+            lines.isEmpty() && approval.request == null -> StateMessage(stringResource(R.string.thread_empty))
             else -> LazyColumn(state = listState,
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
                 modifier = Modifier.fillMaxSize().testTag("session-thread").onSizeChanged { viewportHeight = it.height }) {
@@ -425,15 +424,8 @@ private fun ExpandableAction(line: ThreadLine, action: ThreadEntry.ToolCall) {
                 diff.lines.forEach { part -> BasicText(when (part.kind) { DiffKind.ADDED -> "+"; DiffKind.REMOVED -> "−"; DiffKind.CONTEXT -> " " } + part.text,
                     style = mono(12.sp, color = when (part.kind) { DiffKind.ADDED -> Palette.done; DiffKind.REMOVED -> Palette.failed; DiffKind.CONTEXT -> Palette.textMuted })) }
             }
-            if (action.output.isNullOrEmpty() && action.diffs.isEmpty()) BasicText("Détail non communiqué par l’agent.", style = sans(12.sp, color = Palette.textMuted))
+            if (action.output.isNullOrEmpty() && action.diffs.isEmpty()) BasicText("Détail non communiqué.", style = sans(12.sp, color = Palette.textMuted))
         }
-    }
-}
-
-@Composable
-private fun Centered(text: String) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        BasicText(text, style = sans(13.sp, color = Palette.textSubtle))
     }
 }
 
@@ -737,7 +729,7 @@ private fun FileRow(file: ModifiedFile) {
     }
 }
 
-// --- Le point écrit (Y) ---
+// --- Point de session écrit (Y) ---
 
 @Composable
 internal fun SummaryPanel(summary: WrittenSummary, loading: Boolean = false) {
@@ -752,14 +744,14 @@ internal fun SummaryPanel(summary: WrittenSummary, loading: Boolean = false) {
             BasicText(stringResource(R.string.summary_title), style = sans(14.sp, weight = 600), modifier = Modifier.weight(1f))
             BasicText(stringResource(R.string.summary_close), style = sans(11.sp, color = Palette.textSubtle))
         }
-        BasicText(if (loading) "Chargement du fil…" else if (summary.fromAgent) "Bilan de l’agent · détails dans le fil" else "Point sur les informations reçues · détails dans le fil",
+        BasicText(if (loading) "Chargement du fil…" else if (summary.fromAgent) "Bilan de l’agent" else "Bilan non communiqué. Consulte le fil.",
             style = sans(11.sp, color = Palette.textSubtle), maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (!loading) summary.lines.forEach { line ->
             BasicText(line, style = sans(13.sp, color = Palette.agentText, lineHeight = 18.sp),
                 maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         if (!loading) summary.question?.let {
-            BasicText("Question : $it", style = sans(13.sp, color = Palette.waiting, lineHeight = 18.sp),
+            BasicText("Question : $it", style = sans(13.sp, color = Palette.waiting, lineHeight = 18.sp),
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
@@ -872,18 +864,19 @@ internal fun withoutFullscreen(imeOptions: Int): Int =
 private fun ActionGrid(live: LiveSession?, callbacks: SessionCallbacks) {
     Column(Modifier.padding(start = 14.dp, end = 14.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ActionButton({ KeyChip("B") }, stringResource(R.string.action_back_to_overview), onClick = { callbacks.onButton(Button.B) }, modifier = Modifier.weight(1f))
             val files = live?.modifiedFiles?.size ?: 0
             ActionButton(
-                key = { RoundKey("X") },
+                key = { KeyChip("X") },
                 label = stringResource(R.string.action_see_diff),
                 // Pas de compteur à zéro : les écritures par commande n'y figurent pas.
                 trailing = files.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.diff_files, it, it) },
                 onClick = { callbacks.onButton(Button.X) },
                 modifier = Modifier.weight(1f),
             )
-            ActionButton({ RoundKey("Y") }, stringResource(R.string.action_speak_summary), onClick = { callbacks.onButton(Button.Y) }, modifier = Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ActionButton({ KeyChip("Y") }, stringResource(R.string.action_speak_summary), onClick = { callbacks.onButton(Button.Y) }, modifier = Modifier.weight(1f))
             ActionButton(
                 key = { KeyChip("Start") },
                 label = stringResource(R.string.action_interrupt),
@@ -891,7 +884,6 @@ private fun ActionGrid(live: LiveSession?, callbacks: SessionCallbacks) {
                 onClick = { callbacks.onButton(Button.START) },
                 modifier = Modifier.weight(1f),
             )
-            ActionButton({ RoundKey("B") }, stringResource(R.string.action_back_to_overview), onClick = { callbacks.onButton(Button.B) }, modifier = Modifier.weight(1f))
         }
     }
 }
@@ -922,13 +914,6 @@ private fun ActionButton(
     }
 }
 
-@Composable
-private fun RoundKey(button: String) {
-    Box(Modifier.size(22.dp).background(Palette.chipBackground, CircleShape), contentAlignment = Alignment.Center) {
-        BasicText(button, style = sans(11.sp, weight = 600))
-    }
-}
-
 /** Panneau du mode un seul écran : micro, message de secours (ou gâchette tenue) et actions. */
 @Composable
 private fun CompactSessionPanel(live: LiveSession?, control: SessionControlState, draft: String, callbacks: SessionCallbacks) {
@@ -951,6 +936,7 @@ private fun CompactSessionPanel(live: LiveSession?, control: SessionControlState
                 MessageField(draft, callbacks, compact = true, modifier = Modifier)
             }
         }
+        BarAction("B", stringResource(R.string.action_back_short)) { callbacks.onButton(Button.B) }
         BarAction("X", stringResource(R.string.action_see_diff)) { callbacks.onButton(Button.X) }
         BarAction("Y", stringResource(R.string.action_speak_summary_short)) { callbacks.onButton(Button.Y) }
         if (live?.canInterrupt == true) {
@@ -963,7 +949,6 @@ private fun CompactSessionPanel(live: LiveSession?, control: SessionControlState
                 BasicText(stringResource(R.string.action_interrupt), style = sans(12.5.sp, color = Palette.footerText), maxLines = 1)
             }
         }
-        BarAction("B", stringResource(R.string.action_back_short)) { callbacks.onButton(Button.B) }
     }
 }
 

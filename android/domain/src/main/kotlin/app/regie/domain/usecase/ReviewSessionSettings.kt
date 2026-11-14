@@ -58,7 +58,7 @@ class ReviewSessionSettings(private val gateway: AgentGateway, private val scope
                 notice = when (result) {
                     SettingsResult.APPLIED -> if (row.id == "resume") "Session reprise · prête à recevoir un message." else "Réglage confirmé par l’agent · prochains messages."
                     SettingsResult.REFUSED -> "Réglage refusé ou indisponible."
-                    SettingsResult.UNKNOWN -> "Résultat incertain. Ferme puis vérifie le mode et les options ; aucun renvoi automatique."
+                    SettingsResult.UNKNOWN -> "Résultat incertain. Ferme puis vérifie le mode et les options. Aucun renvoi automatique."
                 })
         }
     }

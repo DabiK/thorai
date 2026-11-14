@@ -37,7 +37,7 @@ class VoiceCapture(
             active.state.collect { event ->
                 mutable.update { before -> when (event) {
                     DictationState.Connecting -> before.copy(notice = "Préparation de la voix…")
-                    is DictationState.PreparingModel -> before.copy(notice = "Modèle local : ${event.progress?.let { "${(it * 100).toInt()} %" } ?: "chargement…"}")
+                    is DictationState.PreparingModel -> before.copy(notice = "Modèle local : ${event.progress?.let { "${(it * 100).toInt()} %" } ?: "chargement…"}")
                     is DictationState.Listening -> before.copy(text = event.partial, notice = null)
                     is DictationState.Finalizing -> before.copy(text = event.partial, recording = false, notice = "Transcription…")
                     is DictationState.Final -> before.copy(text = event.text, recording = false, complete = true, level = 0f, notice = null)

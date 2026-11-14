@@ -69,7 +69,7 @@ class InlineSessionScreenTest {
                 SessionBottomScreen(LiveSession.of(session, SessionThread(loaded = true)), null,
                     SessionControlState(), "", callbacks, approval = review, onDismissApproval = { closed = true })
             } }
-            compose.onNodeWithText("Voir le diff").assertDoesNotExist()
+            compose.onNodeWithText("Voir les modifications").assertDoesNotExist()
             compose.onNodeWithText("Fermer la validation").assertIsDisplayed().performClick()
             kotlin.test.assertTrue(closed)
             compose.onNodeWithText("Autoriser une fois").assertHasNoClickAction()

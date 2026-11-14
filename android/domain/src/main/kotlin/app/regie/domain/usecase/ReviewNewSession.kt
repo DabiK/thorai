@@ -96,7 +96,7 @@ class ReviewNewSession(private val gateway: AgentGateway, private val capture: D
         val s = state.value
         if (!s.editable) return
         held = true
-        mutable.value = s.copy(capturing = true, partial = "", notice = if (s.dictatingName) "Relâche L2 pour relire le nom du projet." else "Relâche L2 pour relire la consigne.")
+        mutable.value = s.copy(capturing = true, partial = "", notice = if (s.dictatingName) "Relâche L2 pour relire le nom." else "Relâche L2 pour relire la consigne.")
         capture.start(listOfNotNull(s.project) + s.selectedProject?.branches.orEmpty())
         recording = scope.launch { capture.state.collect(::applyCapture) }
     }
@@ -118,7 +118,7 @@ class ReviewNewSession(private val gateway: AgentGateway, private val capture: D
                 projectName = if (valid && s.dictatingName) event.text.trim().trimEnd('.', '!', '?') else s.projectName,
                 project = if (valid && s.dictatingName) projectFolderName(event.text.trim().trimEnd('.', '!', '?')) else s.project,
                 field = if (s.dictatingName) NewSessionField.PROJECT else NewSessionField.INSTRUCTION,
-                notice = event.error ?: if (valid) "${if (s.dictatingName) "Nom" else "Consigne"} remplacé. Relis avant A." else "Aucune parole reconnue. Texte conservé.")
+                notice = event.error ?: if (valid) "${if (s.dictatingName) "Nom remplacé" else "Consigne remplacée"}. Relis avant A." else "Aucune parole reconnue. Texte conservé.")
             recording?.cancel(); recording = null
         }
     }
@@ -157,7 +157,7 @@ class ReviewNewSession(private val gateway: AgentGateway, private val capture: D
             if (result.id != null) {
                 mutable.value = NewSessionForm(); openSession(result.id)
             } else mutable.value = state.value.copy(sending = false, uncertain = result.uncertain,
-                notice = if (result.uncertain) "Création incertaine. Reviens à la régie pour vérifier ; aucun renvoi automatique."
+                notice = if (result.uncertain) "Création incertaine. Reviens à la régie pour vérifier. Aucun renvoi automatique."
                     else result.error ?: "Session non créée. Vérifie le pont puis réessaie.")
         }
     }

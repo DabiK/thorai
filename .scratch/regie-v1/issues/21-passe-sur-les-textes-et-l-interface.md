@@ -1,6 +1,6 @@
 # 21 — Passe sur les textes et l'interface : moins de mots, les bons libellés, une seule voix
 
-Statut : prêt
+Statut : à fusionner
 Bloqué par : 20
 Possède : `android/` (textes et composants d'interface), `README.md` (captures et libellés cités)
 
@@ -30,6 +30,20 @@ Demande de l'utilisateur, le 14 novembre : retirer le « slop » des textes, har
 
 ## Critères d'acceptation
 
-- Captures avant et après de chaque écran, sur l'émulateur, dans `artifacts/screenshots/21/`.
-- Aucun texte visible ne contredit le guide `docs/textes.md`. Les tests qui vérifient des libellés sont mis à jour, pas supprimés.
-- Les portes de qualité sont vertes.
+- [x] Captures avant et après de chaque écran, sur l'émulateur, dans `artifacts/screenshots/21/`.
+- [x] Aucun texte visible ne contredit le guide `docs/textes.md`. Les tests qui vérifient des libellés sont mis à jour, pas supprimés.
+- [x] Les portes de qualité sont vertes.
+
+
+## Rapport
+
+Textes harmonisés, puces partagées, états vides centrés et portée de X lisible, y compris dans la carte compacte. Guide `docs/textes.md`, README actualisé.
+
+- Inventaire avant/après complet : `artifacts/screenshots/21/inventaire-textes.md` (108 ressources/variantes et 398 textes/fragments uniques). Les données natives et les réponses des agents restent littérales.
+- Captures des six écrans et des options : `artifacts/screenshots/21/captures.md`. Scénarios et pas à pas Thor : `artifacts/screenshots/21/essai-emulateur.md`.
+- Android : `./gradlew check` vert, 359 tests, aucun ignoré, lint vert. Aucun test supprimé. Rouge/vert sur les libellés, l’ordre des actions, l’état vide, la hauteur de validation, la session disparue et fichier/fichiers.
+- Émulateur double écran avec pont Mac et un seul Codex réel ; validation acceptée puis refusée, modifications consultées, dictée WAV locale relue/effacée, modes compact et deux écrans. Aucun Claude lancé.
+- Relecture visuelle : doublon Y éliminé, libellé X tronqué corrigé par hauteur minimale, accord fichier/fichiers corrigé. Message de session disparue rétabli après remplacement trop large ; prompts/protocole laissés intacts.
+- Décisions réversibles : « Mode », « Modifications », « Revenir », « Faire le point » ; ordre A/B/X/Y et navigation séparée ; puces de 22 dp. Aucun ADR nouveau.
+- Thor absente : boutons physiques, micro humain et rendu matériel restent à vérifier selon le protocole. Aucun blocage humain pour cette livraison.
+- Hors périmètre : blocage ponctuel Android pendant navigation rapide sur l’émulateur, contourné par relance ; transcription WAV partielle, sans prétendre corriger le moteur vocal.

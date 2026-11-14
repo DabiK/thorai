@@ -10,7 +10,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 class InterpretVoiceCommand(private val model: VoiceCommandModel) {
     suspend operator fun invoke(text: String, context: VoiceCommandContext): CommandInterpretation {
         val normalized = normalize(text)
-        val unknown = CommandInterpretation(null, "Ordre non compris : « ${text.take(1000)} ». Reformule un seul ordre avec le nom de la session.")
+        val unknown = CommandInterpretation(null, "Ordre non compris. Redis l’ordre en nommant la session.")
         val launch = launchPhrase(text)
         if (normalized.isBlank() || text.length > 2000 || (launch == null && Regex("\\b(pas|jamais|ne|puis|ensuite|sinon|si)\\b|\\bn[' ]").containsMatchIn(normalized)) ||
             (launch == null && Regex("\\bet (approuve|refuse|mets|lance|ouvre|passe|interromps)\\b").containsMatchIn(normalized))) return unknown
@@ -21,12 +21,12 @@ class InterpretVoiceCommand(private val model: VoiceCommandModel) {
         val command = intent?.let { resolve(it, context) } ?: return unknown
         fun name(id: SessionId) = context.sessions.firstOrNull { it.id == id }?.let { "${it.title ?: it.project} · ${it.agent}" } ?: id.value
         val description = when (command) {
-            is VoiceCommand.Reply -> "${if (command.decision == ApprovalDecision.ONCE) "Autoriser une fois" else "Refuser"} : ${command.approval.subject ?: "validation affichée"}"
-            is VoiceCommand.Pause -> "Interrompre le tour de : ${command.ids.joinToString { name(it) }}"
-            is VoiceCommand.Summary -> "Faire le point écrit sur : ${command.ids.joinToString { name(it) }}"
-            is VoiceCommand.Navigate -> "Ouvrir : ${name(command.id)}"
+            is VoiceCommand.Reply -> "${if (command.decision == ApprovalDecision.ONCE) "Autoriser une fois" else "Refuser"} : ${command.approval.subject ?: "validation affichée"}"
+            is VoiceCommand.Pause -> "Interrompre : ${command.ids.joinToString { name(it) }}"
+            is VoiceCommand.Summary -> "Faire le point écrit sur : ${command.ids.joinToString { name(it) }}"
+            is VoiceCommand.Navigate -> "Ouvrir : ${name(command.id)}"
             is VoiceCommand.Launch -> with(command.draft) {
-                "Lancer $agent sur $project\nValidation : plan d’abord\nBranche : ${branch ?: "courante"}\nConsigne : ${instruction ?: "aucune (session vide)"}"
+                "Lancer $agent sur $project\nMode : plan d’abord\nBranche : ${branch ?: "courante"}\nConsigne : ${instruction ?: "aucune (session vide)"}"
             }
         }
         return CommandInterpretation(command, description)

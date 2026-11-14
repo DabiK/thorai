@@ -22,7 +22,7 @@ class WrittenSummaryTest {
             [/Point Régie]
         """.trimIndent())), loaded = true)
         val summary = LiveSession.of(session("s", SessionStatus.IDLE), thread).writtenSummary
-        assertEquals(listOf("Fait : Minimum corrigé dans PassageCheck.ts.", "Tests : 68 tests passent.", "Suite : Commit à valider."), summary.lines)
+        assertEquals(listOf("Fait : Minimum corrigé dans PassageCheck.ts.", "Tests : 68 tests passent.", "Suite : Commit à valider."), summary.lines)
         assertEquals("Veux-tu le commit ?", summary.question)
         assertTrue(summary.fromAgent)
     }
@@ -32,7 +32,7 @@ class WrittenSummaryTest {
         val thread = SessionThread(listOf(old, ThreadEntry.UserMessage(2, "Recommence"), ThreadEntry.AgentText(3, "Je commence.")), loaded = true)
         val summary = LiveSession.of(session("s"), thread).writtenSummary
         assertFalse(summary.fromAgent)
-        assertEquals("Tests : résultats non communiqués dans un bilan.", summary.lines[1])
+        assertEquals("Tests : résultats non communiqués dans un bilan.", summary.lines[1])
         assertNull(summary.question)
     }
 

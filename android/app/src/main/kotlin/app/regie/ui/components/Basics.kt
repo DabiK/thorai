@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
@@ -117,24 +119,21 @@ fun ButtonChip(button: String, label: String, modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(7.dp),
     ) {
-        Box(
-            modifier = Modifier.size(20.dp).background(Palette.chipBackground, CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            BasicText(button, style = sans(11.sp, weight = 600))
-        }
+        KeyChip(button)
         BasicText(label, style = sans(12.5.sp, color = Palette.footerText), maxLines = 1)
     }
 }
 
-/** Puce rectangulaire d'une touche d'épaule (« R1 »). */
+/** Une seule puce : ronde pour A/B/X/Y, rectangulaire pour les autres touches. */
 @Composable
 fun KeyChip(key: String) {
-    BasicText(
-        text = key,
-        style = sans(10.5.sp, weight = 600),
-        modifier = Modifier
-            .border(1.dp, Palette.keyBorder, RoundedCornerShape(6.dp))
-            .padding(horizontal = 6.dp, vertical = 2.dp),
-    )
+    val round = key in listOf("A", "B", "X", "Y")
+    Box(
+        Modifier.height(22.dp).widthIn(min = 22.dp)
+            .background(Palette.chipBackground, if (round) CircleShape else RoundedCornerShape(6.dp))
+            .padding(horizontal = if (round) 0.dp else 6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        BasicText(key, style = sans(11.sp, weight = 600), maxLines = 1)
+    }
 }
