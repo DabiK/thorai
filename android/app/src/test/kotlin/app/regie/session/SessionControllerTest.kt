@@ -81,7 +81,7 @@ class SessionControllerTest {
     }
 
     @Test
-    fun `R1 goes to the next session even with an approval waiting`() {
+    fun `R1 opens a waiting approval from another session before moving to a neighbour`() {
         val approval = Approval(ApprovalId("a"), SessionId("montage"), ApprovalKind.COMMAND, "rm x")
         overview.value = Overview.of(sessions.map { if (it.id.value == "montage") it.copy(pendingApproval = approval) else it }, emptyList())
         show("atelier")
@@ -89,7 +89,7 @@ class SessionControllerTest {
 
         press(Button.R1)
 
-        assertEquals(listOf<SessionAction>(SessionAction.Open(SessionId("atelier-meubles"))), actions)
+        assertEquals(listOf<SessionAction>(SessionAction.OpenApproval(approval.id)), actions)
     }
 
     @Test
@@ -246,4 +246,12 @@ class SessionControllerTest {
         assertEquals(null, controller.state.value.notice)
         assertEquals("", controller.draft.value)
     }
+    @Test
+    fun `R1 opens pending approval before moving to a neighbour`() {
+        val request = Approval(ApprovalId("a"), sessions.first().id, ApprovalKind.COMMAND, "touch x")
+        overview.value = Overview.of(listOf(sessions.first().copy(pendingApproval = request)), emptyList())
+        press(Button.R1)
+        assertEquals(listOf<SessionAction>(SessionAction.OpenApproval(request.id)), actions)
+    }
+
 }

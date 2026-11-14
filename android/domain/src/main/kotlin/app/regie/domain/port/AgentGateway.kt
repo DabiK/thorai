@@ -1,5 +1,8 @@
 package app.regie.domain.port
 
+import app.regie.domain.model.Approval
+import app.regie.domain.model.ApprovalId
+import app.regie.domain.model.ApprovalReply
 import app.regie.domain.model.AgentVersion
 import app.regie.domain.model.BridgeConnection
 import app.regie.domain.model.Delivery
@@ -14,6 +17,12 @@ import kotlinx.coroutines.flow.StateFlow
  * par WebSocket ; la passerelle factice rejoue des enregistrements du vrai pont.
  */
 interface AgentGateway {
+    /** Toutes les demandes en attente, y compris plusieurs pour une même session. */
+    val approvals: StateFlow<List<Approval>>
+
+    /** Répond avec un identifiant de choix fourni par l’agent, sans renvoi automatique. */
+    suspend fun answerApproval(id: ApprovalId, optionId: String): ApprovalReply
+
     /** Les sessions que le pont connaît, en cours et historique, dans un ordre quelconque. */
     val sessions: StateFlow<List<Session>>
 

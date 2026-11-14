@@ -1,5 +1,8 @@
 package app.regie.gateway.bridge
 
+import app.regie.domain.model.Approval
+import app.regie.domain.model.ApprovalId
+import app.regie.domain.model.ApprovalReply
 import app.regie.domain.model.AgentVersion
 import app.regie.domain.model.BridgeConnection
 import app.regie.domain.model.Delivery
@@ -78,6 +81,8 @@ class BridgeAgentGateway(
 ) : AgentGateway {
 
     private val url = baseUrl.trimEnd('/')
+    private val _approvals = MutableStateFlow<List<Approval>>(emptyList())
+    override val approvals: StateFlow<List<Approval>> = _approvals.asStateFlow()
     private val _sessions = MutableStateFlow<List<Session>>(emptyList())
     private val _agents = MutableStateFlow<List<AgentVersion>>(emptyList())
     private val _connection = MutableStateFlow<BridgeConnection>(BridgeConnection.Connecting)
@@ -179,6 +184,7 @@ class BridgeAgentGateway(
             },
         )
         return when (result) {
+            CallResult.Unavailable -> Delivery.NOT_SENT
             CallResult.NotSent -> Delivery.NOT_SENT
             CallResult.Unknown -> Delivery.UNKNOWN
             is CallResult.Accepted -> when (result.value.string("delivery")) {
@@ -192,12 +198,24 @@ class BridgeAgentGateway(
         }
     }
 
+    override suspend fun answerApproval(id: ApprovalId, optionId: String): ApprovalReply =
+        when (call("approval.answer", buildJsonObject {
+            put("approvalId", id.value)
+            put("optionId", optionId)
+        })) {
+            is CallResult.Accepted -> ApprovalReply.ACCEPTED
+            CallResult.Unavailable -> ApprovalReply.UNAVAILABLE
+            CallResult.NotSent -> ApprovalReply.NOT_SENT
+            CallResult.Unknown -> ApprovalReply.UNKNOWN
+        }
+
     override suspend fun interrupt(id: SessionId): Boolean =
         call("session.cancel", buildJsonObject { put("sessionId", id.value) }) is CallResult.Accepted
 
     /** Résultat du transport : l'absence d'accusé ne prouve jamais un refus. */
     private sealed interface CallResult {
         data class Accepted(val value: JsonObject) : CallResult
+        data object Unavailable : CallResult
         data object NotSent : CallResult
         data object Unknown : CallResult
     }
@@ -299,6 +317,7 @@ class BridgeAgentGateway(
                             calls.remove(id)?.let { reply ->
                                 reply.complete(
                                     when {
+                                        incoming.error in setOf("unknown_approval", "unknown_option") -> CallResult.Unavailable
                                         incoming.error in setOf("bad_request", "unknown_session", "shutting_down") -> CallResult.NotSent
                                         incoming.error != null -> CallResult.Unknown
                                         incoming.result != null -> CallResult.Accepted(incoming.result)
@@ -364,6 +383,7 @@ class BridgeAgentGateway(
     }
 
     private fun publish() {
+        _approvals.value = state.pendingApprovals()
         _sessions.value = state.sessions()
         _agents.value = state.agents
         publishThreads()

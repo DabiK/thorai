@@ -12,6 +12,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import app.regie.console.TermuxBridgeLauncher
 import app.regie.display.ScreenMode
+import app.regie.input.GamepadInput
+import app.regie.ui.screens.ApprovalTopScreen
 import app.regie.ui.screens.OverviewTopScreen
 import app.regie.ui.screens.SessionTopScreen
 import kotlinx.coroutines.launch
@@ -28,6 +30,19 @@ class TopActivity : GamepadActivity() {
     private val runCommandPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
         askingPermission = false
         container.runStartUp()
+        askNotificationPermission()
+    }
+
+    private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
+    private fun askNotificationPermission() {
+        if (!container.replaying && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
+    private fun openNotification(intent: Intent) {
+        intent.getStringExtra(EXTRA_APPROVAL)?.let { container.openApproval(app.regie.domain.model.ApprovalId(it)) }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,8 +55,19 @@ class TopActivity : GamepadActivity() {
         container.start(replay = BuildConfig.DEBUG && intent.getBooleanExtra(EXTRA_FAKE_GATEWAY, false))
         container.topAlive.value = true
         askRunCommandPermission()
+        if (!askingPermission) askNotificationPermission()
+        openNotification(intent)
 
         setScreen(
+            approval = {
+                val review by container.approvalReview.collectAsStateWithLifecycle()
+                val overview by container.overview.collectAsStateWithLifecycle()
+                val mode by container.displays.mode.collectAsStateWithLifecycle()
+                ApprovalTopScreen(review, overview, mode == ScreenMode.Single,
+                    container.approvalController.scrollSteps, container.approvalController.scrollVelocity,
+                    onButton = { container.approvalController.handle(GamepadInput.Pressed(it)) },
+                    onSelect = container::selectApproval)
+            },
             overview = { overview, control ->
                 val mode by container.displays.mode.collectAsStateWithLifecycle()
                 OverviewTopScreen(overview, control, singleScreen = mode == ScreenMode.Single, callbacks = callbacks)
@@ -91,6 +117,7 @@ class TopActivity : GamepadActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         applyDebugExtras(intent)
+        openNotification(intent)
     }
 
     override fun onDestroy() {
@@ -127,6 +154,7 @@ class TopActivity : GamepadActivity() {
     }
 
     companion object {
+        const val EXTRA_APPROVAL = "approval_id"
         const val EXTRA_FORCE_SINGLE_SCREEN = "force_single_screen"
 
         /** En debug : `--ez fake_gateway true` au premier lancement du processus branche la passerelle factice. */

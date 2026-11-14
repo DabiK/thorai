@@ -114,12 +114,14 @@ abstract class GamepadActivity : ComponentActivity() {
     protected fun setScreen(
         overview: @Composable (Overview, ControlState) -> Unit,
         session: @Composable (Screen.Session, Overview) -> Unit,
+        approval: @Composable () -> Unit,
     ) {
         setContent {
             RegieTheme {
                 val screen by container.screen.collectAsStateWithLifecycle()
                 val current by container.overview.collectAsStateWithLifecycle()
                 when (val shown = screen) {
+                    Screen.Approval -> approval()
                     Screen.Overview -> {
                         val control by container.controller.state.collectAsStateWithLifecycle()
                         overview(current, control)

@@ -3,6 +3,8 @@ package app.regie.domain
 import app.regie.domain.model.Agent
 import app.regie.domain.model.AgentVersion
 import app.regie.domain.model.Approval
+import app.regie.domain.model.ApprovalId
+import app.regie.domain.model.ApprovalReply
 import app.regie.domain.model.BridgeConnection
 import app.regie.domain.model.Delivery
 import app.regie.domain.model.LaunchResult
@@ -23,6 +25,13 @@ class StubGateway(
     var bridgeUp: Boolean = true,
     var shutdownHeard: Boolean = true,
 ) : AgentGateway {
+    override val approvals = MutableStateFlow<List<Approval>>(emptyList())
+    var approvalResult = ApprovalReply.ACCEPTED
+    val answers = mutableListOf<Pair<ApprovalId, String>>()
+    override suspend fun answerApproval(id: ApprovalId, optionId: String): ApprovalReply {
+        answers += id to optionId
+        return approvalResult
+    }
     override val sessions = MutableStateFlow<List<Session>>(emptyList())
     override val agents = MutableStateFlow<List<AgentVersion>>(emptyList())
     override val connection = MutableStateFlow<BridgeConnection>(BridgeConnection.Connecting)

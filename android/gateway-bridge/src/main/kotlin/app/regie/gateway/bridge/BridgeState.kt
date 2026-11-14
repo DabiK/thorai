@@ -5,6 +5,9 @@ import app.regie.domain.model.Agent
 import app.regie.domain.model.AgentVersion
 import app.regie.domain.model.Approval
 import app.regie.domain.model.ApprovalId
+import app.regie.domain.model.ApprovalChange
+import app.regie.domain.model.ApprovalOption
+import app.regie.domain.model.ApprovalOptionKind
 import app.regie.domain.model.ApprovalKind
 import app.regie.domain.model.LastAction
 import app.regie.domain.model.Overview
@@ -139,6 +142,12 @@ internal class BridgeState {
         }
     }
 
+    fun removeApproval(id: ApprovalId) {
+        approvals.remove(id.value)
+    }
+
+    fun pendingApprovals(): List<Approval> = approvals.values.toList()
+
     fun sessions(): List<Session> = records.values.mapNotNull { it.toSession() }
 
     /** Le fil d'une session ; `null` si elle est inconnue. [loaded] : son journal a été lu. */
@@ -173,7 +182,14 @@ internal class BridgeState {
         val id = data.string("approvalId") ?: return
         val sessionId = data.string("sessionId") ?: return
         val toolCall = data.obj("toolCall")
-        val command = toolCall?.obj("rawInput")?.let(::commandOf)
+        val raw = toolCall?.obj("rawInput")
+        val command = raw?.get("command")?.let { value ->
+            when (value) {
+                is JsonPrimitive -> value.takeIf { it.isString }?.content
+                is JsonArray -> value.strings().joinToString(" ")
+                else -> null
+            }
+        }
         val title = toolCall?.string("title")?.let(::oneLine)
         val kind = toolCall?.string("kind")
         val path = toolCall?.let(::pathOf)?.let { relativeTo(it, records[sessionId]?.meta?.cwd) }
@@ -182,7 +198,25 @@ internal class BridgeState {
             command != null || kind == "execute" -> Approval(ApprovalId(id), SessionId(sessionId), ApprovalKind.COMMAND, command ?: title)
             kind in FILE_KINDS || path != null -> Approval(ApprovalId(id), SessionId(sessionId), ApprovalKind.FILE_CHANGE, path ?: title)
             else -> Approval(ApprovalId(id), SessionId(sessionId), ApprovalKind.OTHER, title)
-        }
+        }.copy(
+            reason = raw?.string("description") ?: raw?.string("justification"),
+            workingDirectory = raw?.string("cwd"),
+            paths = (toolCall?.array("locations")?.objects().orEmpty().mapNotNull { it.string("path") } +
+                toolCall?.array("content")?.objects().orEmpty().mapNotNull { it.string("path") }).distinct(),
+            plan = data.string("plan") ?: raw?.string("plan"),
+            changes = toolCall?.array("content")?.objects().orEmpty().filter { it.string("type") == "diff" }.mapNotNull {
+                ApprovalChange(it.string("path") ?: return@mapNotNull null, it.string("oldText"), it.string("newText") ?: return@mapNotNull null)
+            },
+            options = data.array("options")?.objects().orEmpty().mapNotNull {
+                ApprovalOption(it.string("optionId") ?: return@mapNotNull null, when (it.string("kind")) {
+                    "allow_once" -> ApprovalOptionKind.ALLOW_ONCE
+                    "allow_always" -> ApprovalOptionKind.ALLOW_ALWAYS
+                    "reject_once" -> ApprovalOptionKind.REJECT_ONCE
+                    "reject_always" -> ApprovalOptionKind.REJECT_ALWAYS
+                    else -> ApprovalOptionKind.OTHER
+                }, it.string("name").orEmpty())
+            },
+        )
     }
 
     private inner class SessionRecord(var meta: Meta) {

@@ -19,6 +19,19 @@ import kotlin.time.Instant
 class ReplayAgentGatewayTest {
 
     @Test
+    fun `fake gateway resolves only a choice actually offered by the recording`() = runTest {
+        val gateway = ReplayAgentGateway()
+        val job = launch { gateway.maintainConnection() }
+        val request = gateway.approvals.first { it.isNotEmpty() }.first()
+        assertEquals(app.regie.domain.model.ApprovalReply.UNAVAILABLE, gateway.answerApproval(request.id, "invented"))
+        assertTrue(gateway.approvals.value.any { it.id == request.id })
+        assertEquals(app.regie.domain.model.ApprovalReply.ACCEPTED, gateway.answerApproval(request.id, request.options.first().id))
+        assertTrue(gateway.approvals.value.none { it.id == request.id })
+        assertEquals(app.regie.domain.model.ApprovalReply.UNAVAILABLE, gateway.answerApproval(request.id, request.options.first().id))
+        job.cancel()
+    }
+
+    @Test
     fun `the fake gateway replays the demo at its own pace, through the bridge decoding`() = runTest {
         val gateway = ReplayAgentGateway()
         val job = launch { gateway.maintainConnection() }

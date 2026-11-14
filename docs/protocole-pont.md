@@ -105,7 +105,7 @@ Les requêtes sont traitées en parallèle : les réponses peuvent arriver dans 
   ```
 
   suivi d'une ligne vide, puis du message. L'agent choisit comment faire (`git switch`, worktree…). Le premier message est la consigne de `prompt`, sinon le premier `session.prompt`, même s'il est injecté dans un tour (`steering`). Les messages suivants partent tels quels. Le nom doit être un nom de branche valide (`git check-ref-format --branch`), sinon : erreur `bad_request`, aucune session n'est créée.
-- `approvalMode` : `ask` ou `allow-all` (voir « Modes de validation »).
+- `approvalMode` : `plan`, `auto-edit`, `ask` (ou `allow-all` pour compatibilité) (voir « Modes de validation »).
 - `prompt` (facultatif) : la consigne, envoyée dès la création.
 
 ### Parler à une session
@@ -214,21 +214,24 @@ Silences : Claude peut rester 30 s sans rien envoyer pendant une longue réponse
 
 ## Modes de validation
 
-Deux niveaux dans l'app. Le pont les traduit en modes ACP, et les réapplique après chaque `session/load` :
+Trois niveaux produit, plus `allow-all` conservé pour les sessions existantes. Le pont les traduit en modes ACP, et les réapplique après chaque `session/load` :
 
 | `approvalMode` | Claude | Codex |
 | --- | --- | --- |
-| `ask` (« valider ») | `default` | `workspace-write`, avec la consigne qui évite le sandbox (ADR 02) |
+| `plan` (« plan d’abord ») | `plan` | `workspace-write` puis `collaboration_mode=plan` par `session/set_config_option` |
+| `auto-edit` (« modifications automatiques ») | `acceptEdits` | `workspace-write` ; le domaine du pont accepte les demandes `kind: edit` une fois |
+| `ask` (« tout valider ») | `default` | `workspace-write`, avec la consigne qui évite le sandbox (ADR 02) |
 | `allow-all` (« tout autoriser ») | `bypassPermissions` | `agent-full-access` |
 
 - Claude démarre en `auto`, le réglage de l'utilisateur : le pont force le mode juste après la création.
 - Le mode `agent` de Codex n'est jamais utilisé.
+- En `auto-edit`, seules les éditions structurées sont acceptées automatiquement, jamais une écriture shell. Les choix durables ne sont pas utilisés. La fiche de lancement du ticket 11 proposera les trois niveaux produit ; `allow-all` reste compatible avec les sessions existantes (ADR 08).
 - En `ask`, Codex demande aussi une validation pour chaque lecture (`cat`, `rg`). Le pont accepte seul les commandes en lecture seule (voir « Lectures acceptées par le pont »).
 
 ### Lectures acceptées par le pont
 
-En `ask`, le pont répond seul à une demande de validation (ticket 13) quand toutes ces conditions tiennent :
-- l'appel est une commande shell : `kind: "execute"`, la commande dans `rawInput.command`. C'est la forme des deux agents : `Bash` de Claude, exec de Codex. Une édition, un plan, un outil MCP remontent toujours ;
+En `ask`, `plan` et `auto-edit`, le pont répond seul à une demande de validation (ticket 13) quand toutes ces conditions tiennent :
+- l'appel est une commande shell : `kind: "execute"`, la commande dans `rawInput.command`. C'est la forme des deux agents : `Bash` de Claude, exec de Codex. Une édition, un plan ou un outil MCP ne relève pas de cette règle de lecture ; les éditions structurées en `auto-edit` suivent la règle distincte décrite plus haut ;
 - `rawInput` ne porte que la commande et sa description (`command`, `cwd`, `description`, `command_description`, `timeout`, `run_in_background`). Un accès réseau (`url`) ou des permissions en plus (`additionalPermissions`) demandés par Codex remontent ;
 - l'agent propose une option `allow_once` : le pont choisit celle-là, jamais « toujours » ;
 - la commande ne fait que lire (règle ci-dessous).

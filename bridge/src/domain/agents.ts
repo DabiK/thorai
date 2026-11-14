@@ -9,8 +9,18 @@ import type { AgentKind, ApprovalMode } from './model.ts';
  *   ACP adapter). Its `agent` mode is never used.
  */
 const MODE_IDS: Record<AgentKind, Record<ApprovalMode, string>> = {
-  claude: { ask: 'default', 'allow-all': 'bypassPermissions' },
-  codex: { ask: 'workspace-write', 'allow-all': 'agent-full-access' },
+  claude: {
+    plan: 'plan',
+    'auto-edit': 'acceptEdits',
+    ask: 'default',
+    'allow-all': 'bypassPermissions',
+  },
+  codex: {
+    plan: 'workspace-write',
+    'auto-edit': 'workspace-write',
+    ask: 'workspace-write',
+    'allow-all': 'agent-full-access',
+  },
 };
 
 export function modeIdFor(agent: AgentKind, mode: ApprovalMode): string {

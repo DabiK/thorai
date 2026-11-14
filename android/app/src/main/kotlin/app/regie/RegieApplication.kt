@@ -15,7 +15,12 @@ import app.regie.domain.usecase.DictatedMessages
 import app.regie.domain.usecase.InterruptSession
 import app.regie.domain.usecase.KeepBridgeUp
 import app.regie.domain.usecase.ObserveOverview
-import app.regie.domain.usecase.OpenApproval
+import app.regie.domain.usecase.ReviewApprovals
+import app.regie.domain.usecase.ApprovalReview
+import app.regie.domain.usecase.NotifyApprovals
+import app.regie.domain.model.ApprovalId
+import app.regie.approval.ApprovalController
+import app.regie.console.AndroidApprovalNotifications
 import app.regie.domain.usecase.OpenSession
 import app.regie.domain.usecase.PauseAll
 import app.regie.domain.usecase.Quit
@@ -90,7 +95,21 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
     private val stopDictation = StopDictation()
     private val startVoiceCommand = StartVoiceCommand()
     private val stopVoiceCommand = StopVoiceCommand()
-    private val openApproval = OpenApproval()
+    private var reviewApprovals: ReviewApprovals? = null
+    val approvalReview = MutableStateFlow(ApprovalReview())
+    val approvalController = ApprovalController(
+        answer = { decision -> scope.launch { reviewApprovals?.answer(decision) } },
+        next = { reviewApprovals?.next() },
+        back = { navigate(Screen.Overview) },
+    )
+
+    fun openApproval(id: ApprovalId) {
+        reviewApprovals?.open(id)
+        navigate(Screen.Approval)
+    }
+
+    fun selectApproval(id: ApprovalId) { reviewApprovals?.open(id) }
+
     private val startNewSession = StartNewSession()
     private val speakSummary = SpeakSummary()
     private val pauseAll = PauseAll()
@@ -102,6 +121,7 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
     val inputRouter = InputRouter { input ->
         when (_screen.value) {
             Screen.Overview -> controller.handle(input)
+            Screen.Approval -> approvalController.handle(input)
             is Screen.Session -> sessionController.handle(input)
         }
     }
@@ -148,6 +168,10 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
             StartUp(chosen, WirelessDebuggingAccess(app), launcher).also { startUp = it }.report
         }
         gateway = chosen
+        val review = ReviewApprovals(chosen, scope)
+        reviewApprovals = review
+        scope.launch { review.state.collect { approvalReview.value = it } }
+        NotifyApprovals(chosen, topStarted, AndroidApprovalNotifications(app), scope)
         quit = Quit(chosen, launcher)
         sendMessage = SendMessage(chosen, dictated)
         interruptSession = InterruptSession(chosen)
@@ -208,6 +232,7 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
         when (action) {
             is SessionAction.Open -> navigate(Screen.Session(action.id))
             SessionAction.Back -> navigate(Screen.Overview)
+            is SessionAction.OpenApproval -> openApproval(action.id)
             is SessionAction.Send -> scope.launch {
                 val delivery = sendMessage?.invoke(action.id, action.text) ?: Delivery.NOT_SENT
                 Log.i(TAG, "message : $delivery")
@@ -233,6 +258,7 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
         controller.releaseTriggers()
         sessionController.releaseTriggers()
         sessionController.reset()
+        approvalController.scrollVelocity.value = 0f
         _screen.value = to
     }
 

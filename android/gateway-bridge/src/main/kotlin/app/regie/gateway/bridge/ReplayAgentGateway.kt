@@ -1,5 +1,8 @@
 package app.regie.gateway.bridge
 
+import app.regie.domain.model.Approval
+import app.regie.domain.model.ApprovalId
+import app.regie.domain.model.ApprovalReply
 import app.regie.domain.model.AgentVersion
 import app.regie.domain.model.BridgeConnection
 import app.regie.domain.model.Delivery
@@ -49,6 +52,8 @@ class ReplayAgentGateway internal constructor(
 
     constructor(speed: Double = 1.0) : this(Fixtures::demoRun, speed, Clock.System)
 
+    private val _approvals = MutableStateFlow<List<Approval>>(emptyList())
+    override val approvals: StateFlow<List<Approval>> = _approvals.asStateFlow()
     private val _sessions = MutableStateFlow<List<Session>>(emptyList())
     private val _agents = MutableStateFlow<List<AgentVersion>>(emptyList())
     override val sessions: StateFlow<List<Session>> = _sessions.asStateFlow()
@@ -90,11 +95,20 @@ class ReplayAgentGateway internal constructor(
         Delivery.PROMPT
     }
 
+    override suspend fun answerApproval(id: ApprovalId, optionId: String): ApprovalReply = lock.withLock {
+        val pending = state.pendingApprovals().firstOrNull { it.id == id } ?: return@withLock ApprovalReply.UNAVAILABLE
+        if (pending.options.none { it.id == optionId }) return@withLock ApprovalReply.UNAVAILABLE
+        state.removeApproval(id)
+        publish()
+        ApprovalReply.ACCEPTED
+    }
+
     override suspend fun interrupt(id: SessionId): Boolean = lock.withLock {
         state.addLocalInterruption(id.value).also { if (it) publish() }
     }
 
     private fun publish() {
+        _approvals.value = state.pendingApprovals()
         _sessions.value = state.sessions()
         _agents.value = state.agents
         for ((id, thread) in threads) state.thread(id, loaded = true)?.let { thread.value = it }

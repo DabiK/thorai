@@ -91,6 +91,9 @@ export class FakeAgentConnector implements AgentConnector {
         await sleep(this.setModeDelayMs);
         if (this.setModeError) throw this.setModeError;
       },
+      setConfig: async (sessionId, configId, value) => {
+        record('setConfig', sessionId, configId, value);
+      },
       prompt: (sessionId, text) => {
         record('prompt', sessionId, text);
         const turn = deferred<TurnResult>();
