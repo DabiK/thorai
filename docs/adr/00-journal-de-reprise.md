@@ -104,6 +104,8 @@
 
 - **14 novembre, ticket 17, relecture après a744d45 (solo Codex)** : diff main...HEAD relu contre PRD, ADR et critères ; aucun autre blocage trouvé. Régressions et preuve réelle distinguées, reprise persistée et arrêt du banc vérifiés. Aucun code/test changé après les portes et l’essai finaux ; détail review-joint-relecture.txt. Statut maintenu à fusionner, sans push ni fusion.
 
+- **14 novembre, ticket 17, correction de revue effort dépendant du modèle (solo Codex)** : A valide les remplacements explicites et confie au pont la restauration des sélections dépendantes après application du modèle. Régression Android rouge/verte, catalogue vide ou limité, refus/double A conservés, remplacement retiré interdit ; scénario ACP conditionnel avec FakeAgentConnector et action Reprendre en Compose. Android 329 tests + lint, pont 306 + typage/lint verts. Thor absente ; résumé conditionnel simulé dans la sauvegarde du banc, un A reprend le vrai Codex Sol/high/Tout autoriser ; apply_patch et printf sans validation, fin seq 2230, reprise après redémarrage réussie. Agent/pont/AVD arrêtés, aucun Claude ni sous-agent. ADR 02/protocole et pas à pas Thor complétés ; preuves review-dependent.txt, captures 52–56. Statut à fusionner.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

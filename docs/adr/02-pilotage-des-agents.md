@@ -392,7 +392,8 @@ mode et toutes les anciennes sélections, même après redémarrage.
 Pour une session inactive, le domaine Android conserve les choix préparés entre
 les lignes ; ils sont visibles et comptés comme préparés, sans remplacer les valeurs
 confirmées. A envoie une seule requête pour l’ensemble, depuis une option ou
-Reprendre. Il reste désactivé tant qu’une sélection indisponible n’a pas de remplacement.
+Reprendre. La validation locale de toutes les sélections a été corrigée ci-dessous
+pour tenir compte des catalogues dépendant du modèle.
 B abandonne les choix non confirmés ; un résultat incertain interdit le renvoi
 automatique. Les changements d’une session active et le mode restent unitaires.
 Ce choix prolonge le mécanisme de remplacement explicite, sans nouveau catalogue
@@ -404,3 +405,25 @@ Le relâchement du stick droit est transmis au contrôleur Session avant le rout
 vers Options, comme pour les vitesses Diff et Nouvelle session. La régression de
 composition couvre Scroll(1), Options, Scroll(0), B ; aucune règle agent dans l’app.
 Preuves : `artifacts/screenshots/17/review-joint-*`.
+
+### Correction de revue — effort dépendant du modèle à la reprise
+
+Le catalogue reçu lors d’une reprise échouée décrit le modèle provisoire de l’agent.
+Il ne permet pas à Android de décider si l’effort sauvegardé sera disponible une
+fois le modèle préparé appliqué. A valide donc uniquement les remplacements
+explicites contre le catalogue reçu ; le pont reste responsable de restaurer et
+valider les autres sélections après chaque réponse ACP, modèle en premier.
+Cela vaut aussi depuis la ligne Reprendre. Aucun choix implicite ni suppression
+de l’effort sauvegardé : si sa restauration échoue, la session reste inactive.
+Les refus temporaires, résultats incertains et doubles A gardent leurs protections.
+
+Régression Android rouge puis verte : modèle retiré, remplacement disponible,
+effort high absent d’une liste vide ou limitée à low ; A transmet le seul modèle,
+un refus garde les sélections, puis une confirmation permet la reprise. Un
+remplacement préparé retiré par une actualisation reste interdit. Test du domaine
+pont avec FakeAgentConnector : effort absent sous le modèle provisoire, réexposé
+après remplacement puis restauré à high, avec seconde reprise après redémarrage.
+Test Compose : A utilisable depuis Reprendre et high toujours visible.
+Pas de changement d’API de bibliothèque, d’adapter ou de protocole sur le fil.
+Export local Session.dc.html relu ; aucun changement de mise en page.
+Preuves et limites du banc : `artifacts/screenshots/17/review-dependent.txt`.

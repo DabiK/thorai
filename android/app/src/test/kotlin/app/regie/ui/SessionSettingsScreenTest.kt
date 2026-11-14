@@ -75,4 +75,23 @@ class SessionSettingsScreenTest {
             compose.onNodeWithText("B · Fermer").assertIsNotEnabled()
         }
     }
+
+    @Test fun `resume allows model confirmation while saved effort has no provisional choices`() {
+        val session = Session(SessionId("s"), Agent.CODEX, "demo", null, null, SessionStatus.FAILED, false,
+            Instant.fromEpochMilliseconds(0), Instant.fromEpochMilliseconds(0), approvalMode = "allow-all",
+            configOptions = listOf(
+                SessionOption("model", "Model", "model", "removed", listOf(OptionValue("new", "New model"))),
+                SessionOption("effort", "Effort", "thought_level", "high", emptyList())))
+        val state = SessionSettingsReview(visible = true, session = session, selected = 3,
+            replacements = mapOf("model" to "new"))
+        val buttons = mutableListOf<Button>()
+        Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
+            host.setup().get().setContent { RegieTheme { SessionSettingsScreen(state, { buttons += it }, {}) } }
+            compose.onNodeWithText("New model").assertIsDisplayed()
+            compose.onNodeWithText("high").assertIsDisplayed()
+            compose.onNodeWithText("En cours : Tout autoriser").assertIsDisplayed()
+            compose.onNodeWithText("A · Appliquer").assertIsDisplayed().assertIsEnabled().performClick()
+            assertEquals(listOf(Button.A), buttons)
+        }
+    }
 }

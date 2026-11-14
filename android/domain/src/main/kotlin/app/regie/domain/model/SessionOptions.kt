@@ -39,9 +39,12 @@ data class SessionSettingsReview(
     val row: SettingsRow? get() = rows.getOrNull(selected)
     val applyingReplacements: Boolean get() = session?.active == false && replacements.isNotEmpty() && row?.id != "approvalMode"
     val canApply: Boolean get() = !busy && !uncertain && row != null && if (applyingReplacements) {
-        editableSessionOptions(session!!.configOptions).all { option ->
-            val choice = replacements[option.id] ?: option.currentValue
-            choice == null || option.options.any { it.value == choice }
+        // Saved choices may only become available after the prepared model is applied.
+        // The bridge restores and validates them against each fresh ACP response.
+        replacements.all { (id, choice) ->
+            editableSessionOptions(session!!.configOptions).any { option ->
+                option.id == id && option.options.any { it.value == choice }
+            }
         }
     } else (row!!.id == "resume" || value != row!!.current && row!!.choices.any { it.value == value })
 }

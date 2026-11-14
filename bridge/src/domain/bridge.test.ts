@@ -1457,6 +1457,51 @@ describe('agent provided choices', () => {
       expect(reloaded.configOptions?.map((o) => o.currentValue)).toEqual([replacement, 'high']);
     },
   );
+  it('restores saved effort exposed only after replacing the removed model', async () => {
+    world.codex.initialOptions = choices;
+    const session = await world.bridge.createSession({
+      agent: 'codex',
+      project: 'regie-demo',
+      approvalMode: 'allow-all',
+      configValues: { model: 'large', effort: 'high' },
+    });
+    await world.bridge.shutdown();
+    world.restart();
+    const model = {
+      ...choices[0],
+      currentValue: 'small',
+      options: [
+        { value: 'small', name: 'Small' },
+        { value: 'new', name: 'New' },
+      ],
+    };
+    // The provisional model has no effort option at all.
+    world.codex.initialOptions = [model];
+    world.codex.configResponses.set('model:new', [{ ...model, currentValue: 'new' }, choices[1]!]);
+    await expect(world.bridge.resume(session.sessionId)).rejects.toThrow('model / large');
+    expect(world.bridge.listSessions()[0]?.configOptions).toEqual([
+      expect.objectContaining({ id: 'model', currentValue: 'large', options: model.options }),
+      expect.objectContaining({ id: 'effort', currentValue: 'high', options: [] }),
+    ]);
+    const resumed = await world.bridge.configureSession(session.sessionId, {
+      configValues: { model: 'new' },
+    });
+    expect(resumed).toMatchObject({ active: true, approvalMode: 'allow-all', lastError: null });
+    expect(resumed.configOptions?.map((o) => o.currentValue)).toEqual(['new', 'high']);
+    expect(world.codex.callsOf('setConfig').slice(-2)).toEqual([
+      [session.sessionId, 'model', 'new'],
+      [session.sessionId, 'effort', 'high'],
+    ]);
+    expect(world.codex.callsOf('prompt')).toEqual([]);
+    await expect(
+      world.bridge.prompt(session.sessionId, 'Continue with saved effort'),
+    ).resolves.toBe('prompt');
+    world.codex.endTurn(session.sessionId);
+    await world.bridge.shutdown();
+    world.restart();
+    const reloaded = await world.bridge.resume(session.sessionId);
+    expect(reloaded.configOptions?.map((o) => o.currentValue)).toEqual(['new', 'high']);
+  });
   it('confirms joint replacements after both saved model and effort disappear, preserving other choices', async () => {
     const extra = {
       id: 'extra',

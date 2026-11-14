@@ -86,7 +86,7 @@ class SessionSettingsTest {
         val review = ReviewSessionSettings(gateway, backgroundScope)
         review.open(id); runCurrent()
         review.select(1); review.change(1)
-        assertFalse(review.state.value.canApply) // Effort still needs an explicit replacement.
+        assertTrue(review.state.value.canApply) // The bridge validates effort after applying the model.
         review.select(2); review.change(1)
         review.select(1)
         assertEquals("new", review.state.value.value)
@@ -122,6 +122,67 @@ class SessionSettingsTest {
         assertTrue(review.state.value.canApply)
         review.apply(); runCurrent()
         assertEquals(SessionSetting(configValues = mapOf("remote-model" to "small")), gateway.configurations.single().second)
+    }
+
+    @Test fun `a prepared replacement removed by a catalogue refresh cannot be submitted`() = runTest {
+        val gateway = StubGateway()
+        val saved = session("old", active = false).copy(configOptions = listOf(model))
+        gateway.sessions.value = listOf(saved)
+        val review = ReviewSessionSettings(gateway, backgroundScope)
+        review.open(saved.id); runCurrent()
+        review.select(1); review.change(1)
+        assertTrue(review.state.value.canApply)
+        gateway.sessions.value = listOf(saved.copy(configOptions = listOf(model.copy(options = listOf(OptionValue("small", "Small"))))))
+        runCurrent()
+        assertFalse(review.state.value.canApply)
+        review.apply(); runCurrent()
+        assertTrue(gateway.configurations.isEmpty())
+        review.select(2)
+        assertFalse(review.state.value.canApply)
+        review.close(); review.open(saved.id); runCurrent()
+        assertTrue(review.state.value.replacements.isEmpty())
+    }
+
+    @Test fun `model replacement lets bridge validate saved effort against the resulting catalogue`() = runTest {
+        for (provisionalEfforts in listOf(emptyList(), listOf(OptionValue("low", "Low")))) {
+            val gateway = StubGateway()
+            val id = SessionId("conditional")
+            val saved = session("conditional", active = false).copy(approvalMode = "allow-all", configOptions = listOf(
+                model.copy(currentValue = "removed", options = listOf(OptionValue("new", "New"))),
+                effort.copy(currentValue = "high", options = provisionalEfforts),
+            ))
+            gateway.sessions.value = listOf(saved)
+            val review = ReviewSessionSettings(gateway, backgroundScope)
+            review.open(id); runCurrent()
+            review.select(1); review.change(1)
+            assertTrue(review.state.value.canApply)
+            review.select(3) // Reprendre submits the prepared model too.
+            assertTrue(review.state.value.canApply)
+            assertTrue(gateway.configurations.isEmpty())
+            gateway.settingsWait = CompletableDeferred()
+            review.apply(); review.apply(); runCurrent()
+            assertEquals(listOf(id to SessionSetting(configValues = mapOf("remote-model" to "new"))), gateway.configurations)
+            assertTrue(review.state.value.busy)
+            assertFalse(review.state.value.canApply)
+            gateway.settingsWait!!.complete(SettingsResult.REFUSED); runCurrent()
+            assertEquals(saved, review.state.value.session)
+            assertEquals(mapOf("remote-model" to "new"), review.state.value.replacements)
+            assertTrue(review.state.value.canApply)
+            gateway.settingsWait = null
+            review.apply(); runCurrent()
+            gateway.sessions.value = listOf(saved.copy(active = true, configOptions = listOf(
+                model.copy(currentValue = "new", options = listOf(OptionValue("new", "New"))),
+                effort.copy(currentValue = "high"),
+            )))
+            runCurrent()
+            assertEquals(2, gateway.configurations.size)
+            assertTrue(review.state.value.replacements.isEmpty())
+            assertEquals(listOf("new", "high"), review.state.value.session!!.configOptions.map { it.currentValue })
+            assertEquals("allow-all", review.state.value.session!!.approvalMode)
+            assertTrue(gateway.sent.isEmpty())
+            assertTrue(gateway.resumed.isEmpty())
+            review.close()
+        }
     }
 
 }

@@ -34,7 +34,7 @@ Retours de l'utilisateur, le 14 novembre :
 - Sur l'émulateur (ticket 16) avec une vraie session Codex :
   - [x] en « Tout autoriser », une écriture et une commande passent sans aucune demande → `artifacts/screenshots/17/acceptance.txt`, `events-final.json` (apply_patch et printf avec redirection, zéro approval_request) ;
   - [x] le changement de modèle et de niveau de réflexion en cours de session est pris en compte → captures 09–11 et `codex-turn-contexts.json` (Sol/low → Terra/high, never/danger-full-access).
-- [x] Les portes de qualité sont vertes → Android `./gradlew check` (326 tests + lint), pont `npm run check` (305 tests + typage/lint).
+- [x] Les portes de qualité sont vertes → Android `./gradlew check` (329 tests + lint), pont `npm run check` (306 tests + typage/lint).
 
 - [x] Start interrompt depuis les options, même pendant un réglage → `SessionSettingsInputTest`, mutation busy détectée ; vrai Codex `turn_end cancelled` seq 1463.
 
@@ -46,33 +46,34 @@ Retours de l'utilisateur, le 14 novembre :
 - [x] Modèle et effort retirés se remplacent ensemble, sans perdre les autres choix → régressions domaine/WS/Android, `review-joint.txt`, captures 48–51, vrai Codex `REPRISE_CONJOINTE_OK` seq 2069.
 - [x] Relâcher le stick dans Options arrête le défilement au retour → `SessionSettingsInputTest`, `review-joint-scroll-red.txt`, porte finale verte.
 
+- [x] Un effort dépendant du modèle ne bloque plus A ni Reprendre avant validation par le pont → SessionSettingsTest rouge/vert, FakeAgentConnector, SessionSettingsScreenTest ; banc avec résumé conditionnel simulé puis vrai Codex high, captures 52–56 et review-dependent.txt.
+
 ## Rapport
 
 STATUT: done
-RÉSUMÉ: Modèle et effort retirés se remplacent ensemble avant de reprendre la session.
-Options conserve les choix préparés entre les lignes ; A confirme l’ensemble.
-Le relâchement du stick dans Options arrête le défilement. Ticket à fusionner.
+RÉSUMÉ: Un effort absent du catalogue provisoire ne bloque plus le remplacement du modèle.
+A transmet les choix au pont, qui restaure l’effort après application du modèle.
+Le ticket reste à fusionner ; aucun push ni fusion.
 CRITÈRES:
-- [x] Remplacements conjoints → régressions domaine/WS/Android et vrai Codex, fin seq 2069.
-- [x] Refus temporaire et autres sélections conservés → test domaine puis reprise après redémarrage.
-- [x] Choix visibles avant A → SessionSettingsScreenTest, captures review-joint-48/49.
-- [x] Stick relâché dans Options → SessionSettingsInputTest rouge puis vert.
-- [x] Permissions, modèle/réflexion, plan, interruption → preuves précédentes acceptance.txt et captures 09–15/30–33.
-- [x] Protocole documenté et testé → docs/protocole-pont.md, contrat WebSocket.
-PORTE DE QUALITÉ: Android ./gradlew check : 326 tests + lint ; pont npm run check : 305 tests + typage/lint.
-THOR: absente ; émulateur deux écrans/pont Mac, vrai Codex repris, deux choix retirés simulés
-uniquement dans la sauvegarde du banc. Sol/low/Tout autoriser confirmés, prompt puis seconde reprise.
+- [x] Catalogue conditionnel → SessionSettingsTest rouge/vert et FakeAgentConnector.
+- [x] A depuis Reprendre, effort conservé → test Compose, captures 53–55, vrai Codex high.
+- [x] Refus, doubles A, choix devenus indisponibles → régressions domaine Android.
+- [x] Écriture et commande sans validation → review-dependent-events.json, fin seq 2230.
+- [x] Reprise après redémarrage → review-dependent-reloaded.json.
+- [x] Autres critères du ticket → preuves précédentes conservées, suites complètes vertes.
+PORTE DE QUALITÉ: Android ./gradlew check : 329 tests + lint ; pont npm run check : 306 tests + typage/lint.
+THOR: absente ; émulateur deux écrans/pont Mac, vrai Codex Sol/high/never/danger-full-access.
+Catalogue vide et modèle retiré simulés dans la seule sauvegarde du banc, confirmation par A.
 Agent, pont et émulateur arrêtés ; aucun Claude ni sous-agent.
-REVIEW: deux constats et option sans sélection corrigés ; diff main...HEAD relu après a744d45, aucun autre blocage trouvé.
-Preuve : review-joint-relecture.txt. Travail commité, aucun push ni fusion.
-DÉCISIONS PRISES: ADR 02 complété ; table conjointe explicite, A confirme, B abandonne, aucun fallback.
-POUR L'UTILISATEUR: 1. Rebrancher Thor et installer pont/app selon essai-emulateur.txt.
-2. Options > Reprendre ; si plusieurs choix sont retirés, préparer modèle et effort, puis un seul A.
-3. Vérifier mode/autres choix, envoyer une consigne, quitter/rouvrir et reprendre.
-4. Défiler au stick, ouvrir Options, relâcher, B : vérifier que le fil reste immobile.
-5. Refaire écriture/commande sans validation, plan/retour, Start/tactile, micro et deux écrans physiques.
-6. Essayer Claude quand son quota le permet ; détails dans review-joint.txt.
+REVIEW: validation prématurée corrigée ; attente correspondante de l’ancien test corrigée,
+autres assertions conservées. Relecture finale consignée dans review-dependent-relecture.txt.
+DÉCISIONS PRISES: ADR 02 et protocole précisés : le pont valide les sélections dépendantes.
+POUR L'UTILISATEUR: 1. Rebrancher Thor, installer pont/app selon essai-emulateur.txt.
+2. Dans une reprise bloquée, choisir un modèle disponible en conservant l’effort, puis Reprendre/A.
+3. Vérifier modèle/effort/mode, envoyer une consigne, quitter/rouvrir et reprendre.
+4. Refaire écriture/commande, plan/retour, Start/tactile, relâchement du stick et vrai micro.
+5. Essayer Claude quand son quota le permet ; détails dans review-dependent.txt.
 QUESTIONS: aucune.
-CAPTURES: artifacts/screenshots/17/review-joint-48bas.png, review-joint-49bas.png, review-joint-51haut.png.
-HORS PÉRIMÈTRE: warnings Codex de configuration rmcp_client ignorée ; réglages personnels inchangés.
-Micro/stick physiques non testés ; refus temporaire couvert par tests isolés ; ancien délai ACP à froid inchangé.
+CAPTURES: artifacts/screenshots/17/review-dependent-54bas.png, review-dependent-55bas.png, review-dependent-56haut.png.
+HORS PÉRIMÈTRE: warnings Codex rmcp_client préexistants ; réglages personnels inchangés.
+Catalogue ACP conditionnel et refus temporaires testés avec doubles ; Thor/Claude restent à vérifier.

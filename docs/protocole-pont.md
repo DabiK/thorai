@@ -297,8 +297,10 @@ premier, puis les autres choix sont vérifiés contre chaque réponse ACP actual
 Seules les valeurs explicitement fournies remplacent les sélections sauvegardées.
 Dans Options, une session inactive conserve les modifications d’une ligne à
 l’autre ; A confirme tous les remplacements préparés (également depuis Reprendre),
-B les abandonne. Le mode reste un réglage distinct. Le bouton A attend que chaque
-sélection sauvegardée indisponible ait reçu un remplacement proposé par l’agent.
+B les abandonne. Le mode reste un réglage distinct. Le bouton A vérifie que les
+remplacements préparés figurent dans le catalogue reçu. Les sélections sauvegardées
+non modifiées sont validées par le pont après application du modèle : leur absence
+du catalogue provisoire ne bloque pas A, même si la liste d’efforts est vide.
 La reprise substitue ce choix à l’ancien et restaure le mode et les autres
 sélections avant activation. Aucun message ne part avant le succès complet.
 Un refus garde la session inactive et toutes les anciennes sélections ; un succès
