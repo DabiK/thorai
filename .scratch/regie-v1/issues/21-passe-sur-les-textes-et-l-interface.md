@@ -58,6 +58,8 @@ Textes harmonisés, puces partagées, états vides centrés et portée de X lisi
 - APK réinstallé sur l’émulateur avec pont Mac ; historique existant consulté, modifications et préparation d’explication vérifiées en deux écrans, modifications en compact. Aucun nouvel agent. Les cas d’erreur précis sont couverts par tests isolés, sans prétendre les reproduire dans ces captures.
 - Statut maintenu à `à fusionner`. Aucune décision produit ni nouvel ADR.
 
+- Relecture après `5916902` : aucun autre blocage établi ; fin de trace ADB nettoyée. Porte Android relancée verte, 361 tests. Aucun code changé après la réinstallation vérifiée. Détail dans `essai-emulateur.md`, section « Relecture après 5916902 ».
+
 ### POUR L’UTILISATEUR
 
 Suivre les six étapes de [Vérifications avec la Thor](../../../artifacts/screenshots/21/essai-emulateur.md#vérifications-avec-la-thor) : brancher et associer la console, installer l’APK, comparer les six écrans, essayer les boutons physiques, lire une phrase avec L2 puis un ordre avec R2, capturer et quitter. Le rendu matériel, le vrai micro et la manette restent à vérifier ; ne pas lancer Claude ni redémarrer la console.
