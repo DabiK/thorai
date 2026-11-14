@@ -54,7 +54,7 @@ L'association passe par une boîte de dialogue sur l'écran de la console. Seul 
 2. Activer **Utiliser le débogage sans fil**. À la question « Autoriser le débogage sans fil sur ce réseau ? », cocher **Toujours autoriser sur ce réseau**, puis toucher **Autoriser**.
 3. Toucher **Associer l'appareil avec un code d'association**. La fenêtre « Associer à l'appareil » affiche :
    - le **Code d'association via le Wi-Fi**, à 6 chiffres ;
-   - l'**Adresse IP et port**, par exemple `192.168.1.20:37145`. Seul le port compte (`37145`).
+   - l'**Adresse IP et port**, par exemple `203.0.113.1:37145`. Seul le port compte (`37145`).
 4. Sans fermer cette fenêtre, lancer l'association avec le port et le code, au choix :
    - depuis le Mac, console en USB :
      ```sh

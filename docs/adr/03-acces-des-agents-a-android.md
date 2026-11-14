@@ -287,7 +287,7 @@ Il ne permet pas de lire les données privées des applis non débogables.
 - **Côté Debian** : `thor/computer-use/uninstall.sh` depuis le Mac. Il :
   - retire `thor_android` des deux agents, leurs autorisations sans validation (les entrées de `permissions.sh` dans `settings.json`, `~/.codex/rules/thor-android.rules`), ainsi que le bloc de consignes de `CLAUDE.md` et d'`AGENTS.md` ;
   - arrête le démon de mobilecli, le DeviceServer et le serveur adb ;
-  - efface les fichiers posés : `/opt/thor-android`, les lanceurs, la cale `adb`, le dossier de la socket, `~dev/.mobilecli`, la clé adb de la Debian. L'association est alors à refaire ;
+  - efface les fichiers posés : `/opt/thor-android`, les lanceurs, la cale `adb`, le dossier de la socket et `~dev/.mobilecli`. La clé adb de la Debian est conservée ; seul `--oublier-association` l’efface et impose une nouvelle association ;
   - retire `/data/data/app.regie/mobilecli`, que mobilecli a pu poser dans les données de Régie en mode mobilecli (par `run-as`, si Régie est débogable).
 - `stop.sh` arrête seulement le démon de mobilecli, le DeviceServer et le serveur adb : la clé, les consignes et les autorisations restent.
 

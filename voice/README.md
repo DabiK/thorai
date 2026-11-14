@@ -2,6 +2,12 @@
 
 Build Gradle séparé, inclus par `android/` en composite build (ADR 01, ADR 04).
 
+Régie utilise la transcription locale par défaut et ne lit aucun texte à voix haute.
+Ce guide concerne le laboratoire historique, qui conserve la synthèse pour ses mesures.
+Son APK `app.regie.voicelab` n’est pas nécessaire à Régie et ne doit pas être installé
+par un ticket limité à `app.regie`. Les mesures cloud utilisent un compte réel ;
+elles sont séparées de `./gradlew check`.
+
 | Module | Rôle |
 | --- | --- |
 | `api` | Les ports, en Kotlin pur |

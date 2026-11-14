@@ -1,6 +1,6 @@
 # 20 — Revue d'ensemble, homogénéisation et vitrine du projet
 
-Statut : prêt
+Statut : à fusionner
 Bloqué par : 17, 18, 19
 Possède : tout le dépôt (passe de nettoyage), `README.md`
 
@@ -30,5 +30,30 @@ L'utilisateur veut pouvoir poster et partager le projet. Le dépôt doit être p
 
 ## Critères d'acceptation
 
-- `./gradlew check` et `npm run check` sont verts.
-- Le README se lit seul. Une recherche de secrets (`rg` sur jetons, clés, IP privées, e-mails) ne trouve rien dans le dépôt.
+- [x] `./gradlew check` et `npm run check` sont verts : Android 351 tests, voix 127, pont 308 ; sorties dans `artifacts/screenshots/20/*-check.txt`.
+- [x] Le README se lit seul : usages, installation complète, commandes, schéma, limites et développement ; deux captures réelles du build final inspectées.
+- [x] Recherche `rg` sur clés, jetons, IP privées, e-mails et chemins personnels : zéro signalement réel dans le texte du worktree, avec exceptions fictives explicites et testées (`scripts/repo-audit.py`). Historique Git et pixels des anciennes captures hors de cette preuve.
+- [x] Revue des six périmètres, numérotation ADR, statuts et nettoyage : `artifacts/screenshots/20/revue.md`.
+- [x] Émulateur deux écrans avec pont Mac et vrai Codex ; arrêt vérifié.
+- [ ] Vérification physique Thor et installation vierge : console absente ; pas à pas dans `artifacts/screenshots/20/essai-emulateur.txt`.
+
+
+## Rapport
+
+STATUT: done
+RÉSUMÉ: README français autonome et illustré ; documentation consolidée, ADR renumérotés et preuves textuelles anonymisées.
+Nettoyage limité sans changement de comportement ; audit rg reproductible et testé.
+CRITÈRES:
+- [x] Portes vertes → Android 351, voix 127, pont 308 tests ; sorties du ticket 20.
+- [x] Vitrine complète → README et final-session-haut/bas.png inspectés.
+- [x] Recherche de secrets → repo-audit.py, zéro signalement réel ; exceptions fictives documentées.
+- [x] Revue du dépôt → revue.md, cas vide supprimé, nom vocal corrigé, ADR 18/19 devenus 15/16.
+- [ ] Thor physique → absente ; essais différés explicitement sans bloquer la fusion.
+PORTE DE QUALITÉ: ./gradlew check Android/voix et npm run check verts ; 13 tests émulateur, 5 tests audit et tests shell verts.
+THOR: absente d’ADB. Banc deux écrans : vraie démo Codex, fil, options, un/deux écrans, Quitter ; agent/pont/app/AVD arrêtés.
+REVIEW: contrôles avant commit effectués ; relecture du diff commité consignée dans la suite du rapport.
+DÉCISIONS PRISES: numérotation continue des ADR, conservation des preuves utiles, anonymisation des chemins ; aucune décision produit ni nouvel ADR.
+POUR L’UTILISATEUR: suivre les étapes 1–9 de artifacts/screenshots/20/essai-emulateur.txt (permissions, association, vrai micro, manette, notifications, extinction, redémarrage autorisé).
+QUESTIONS: aucune question bloquante.
+CAPTURES: artifacts/screenshots/20/final-session-{haut,bas}.png ; options-{haut,bas}.png ; single-{haut,bas}.png.
+HORS PÉRIMÈTRE: installation vierge non rejouée, historique Git non purgé, anciennes captures non certifiées pour publication ; limites ACP/voix existantes documentées. Push de main réservé à l’orchestrateur.

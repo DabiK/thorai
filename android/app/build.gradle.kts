@@ -41,7 +41,7 @@ android {
         warningsAsErrors = true
         checkDependencies = false
         // Les mises à jour de versions se décident dans un ADR, pas au fil des builds (et sans réseau).
-        // OldTargetApi : la cible suit compileSdk 36, le plus haut SDK installé (ADR 02).
+        // OldTargetApi : la cible suit compileSdk 36, le plus haut SDK installé (ADR 05).
         disable += setOf("GradleDependency", "NewerVersionAvailable", "AndroidGradlePluginVersion", "OldTargetApi")
     }
 }

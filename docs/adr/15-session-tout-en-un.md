@@ -1,4 +1,4 @@
-# ADR 18 — Session tout-en-un
+# ADR 15 — Session tout-en-un
 
 Statut : accepté, 14 novembre 2026. Demande produit explicite du ticket 18.
 

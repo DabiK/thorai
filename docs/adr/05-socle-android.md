@@ -64,7 +64,7 @@ Elles suivent le tableau « Commandes » du PRD, et appellent les cas d'usage vi
 - croix : focus dans la grille 2×2, arrêté aux bords et limité aux 4 cartes affichées ;
 - A : ouvrir la session qui a le focus ;
 - X : nouvelle session ;
-- Y : point à voix haute ;
+- Y : point écrit depuis le ticket 12 (ADR 10) ;
 - Start : tout mettre en pause ;
 - L2 et R2 maintenues : dictée et ordre vocal ;
 - R1 : ouvrir la première validation en attente (maquette, ticket 05), ou session suivante s'il n'y en a pas ;

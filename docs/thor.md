@@ -1,10 +1,10 @@
 # Fiche de la console : AYN Thor
 
-Relevée par adb le 13 novembre 2026, en lecture seule. L'installation date d'une session Codex du 12 novembre. Ses scripts et son guide sont sur le Mac, dans `/tmp/regie-reference` :
-- `work/thor/termux.py`, un pont adb vers Termux ;
-- `outputs/Thor-dev-guide.md`.
-
-Attention, les versions finales de `dev-stop` et `dev-service-run` sont sur la console, pas sur le Mac.
+Relevé matériel du 13 novembre 2026, conservé comme référence de la Thor.
+Les versions et l’état des permissions ci-dessous sont un instantané, pas un contrôle actuel.
+L’installation reproductible est maintenant dans le [README](../README.md#installer-sur-la-thor).
+Les anciens lanceurs `dev-start`, `dev-stop`, `dev-linux` et le navigateur sont des outils
+préexistants de cette console, pas des prérequis ni des livrables de Régie.
 
 ## Matériel et système
 
@@ -58,4 +58,4 @@ Attention, les versions finales de `dev-stop` et `dev-service-run` sont sur la c
   - Playwright MCP déclaré sous le nom `thor_browser` dans les deux agents (Chromium sans fenêtre, avec `--no-sandbox`) ;
   - `openssh` installé, mais aucun sshd configuré.
 - **Réglages Android** : Termux est exempté de l'économie de batterie, `settings_enable_monitor_phantom_procs=false`.
-- **RUN_COMMAND** : le service est exposé, mais `allow-external-apps=false`. Une app externe ne peut donc pas lancer de commande dans Termux en l'état.
+- **RUN_COMMAND** : le service est exposé, mais `allow-external-apps=false` au relevé initial. `thor/bridge/install.sh` le passe à `true` ; la permission RUN_COMMAND de Régie reste à accorder sur la console.

@@ -56,7 +56,7 @@ artifacts/ captures d'écran des écrans livrés, rangées par ticket
 
 Tout ce qu'il faut est dans `docs/thor.md`. En résumé :
 - adb, numéro de série `THOR0000000001` ;
-- écran haut : `displayId` 0 ; écran bas : `displayId` 4 ;
+- écran haut : `displayId` 0 ; écran bas : `displayId` 4 sur la Thor, découvert dynamiquement sur le banc ;
 - Claude Code et Codex tournent dans une Debian (proot-distro, utilisateur `dev`).
 
 Toutes les sessions partagent **une seule console** :
@@ -74,13 +74,13 @@ Toutes les sessions partagent **une seule console** :
 4. Passer la porte de qualité de la partie touchée :
    - `android/` ou `voice/` : `./gradlew check`
    - `bridge/` : `npm run check`
-5. Faire relire par un sous-agent indépendant, qui ne reçoit que le ticket et le diff.
+5. Relire le diff contre le ticket et les consignes. Par défaut, utiliser une revue indépendante ; si la mission impose le solo, effectuer cette revue soi-même, sans sous-agent.
 6. Tester sur la Thor. Joindre les captures des deux écrans dans `artifacts/screenshots/<NN>/`.
 7. Faire les commits (Conventional Commits) sur la branche du ticket.
 8. Mettre le statut du ticket à `à fusionner`, remplir sa section « Rapport » et mettre à jour le journal de reprise.
 9. **Ne pas fusionner, ne pas rebaser sur `main` et ne pas pousser** : c'est l'orchestrateur qui fusionne.
 
-Si le ticket a besoin de l'utilisateur (toucher l'écran de la console, saisir une clé, lire des phrases au micro), le lui demander clairement et attendre sa réponse. Sans personne pour répondre, passer le ticket en `bloqué` et noter la question dans sa section « Rapport ».
+Si une vérification exige l’utilisateur (permission, association, clé, vraie voix, redémarrage), faire tout le reste et écrire son pas à pas dans le rapport. Sans Thor, utiliser le banc de `docs/emulateur.md`. Quand tout ce qui ne dépend pas de lui est vert, passer à `à fusionner`, en laissant les critères non prouvés décochés. Réserver `bloqué` aux décisions produit manquantes et aux obstacles non contournables. Pour les essais réels, utiliser Codex ; ne pas consommer le quota Claude sans instruction explicite.
 
 ## Vocabulaire
 
@@ -93,7 +93,7 @@ Documentation en français, code en anglais.
 | Validation | `Approval` |
 | Dictée | `Dictation` |
 | Ordre vocal | `VoiceCommand` |
-| Point à voix haute | `SpokenSummary` |
+| Point écrit | `WrittenSummary` (bilan), `SessionSummary` (faits de session) |
 | Pont | `Bridge` |
 
 ## Outils sur le Mac

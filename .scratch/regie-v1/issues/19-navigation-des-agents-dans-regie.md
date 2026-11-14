@@ -33,7 +33,7 @@ Dans un terminal, Claude et Codex pilotent bien Android (ticket 14).
 
 ## Livraison et preuves
 
-- [x] Documentation actuelle et code épinglé des deux ACP vérifiés : ADR 19.
+- [x] Documentation actuelle et code épinglé des deux ACP vérifiés : ADR 16.
 - [x] Configuration native conservée, aucune copie de MCP dans le pont ; chargement
   explicite des sources Claude à la création et à la reprise.
 - [x] Tests unitaires sans agent : paramètres ACP `new` et `load` des deux agents.
@@ -51,7 +51,7 @@ RÉSUMÉ: Configuration native des agents vérifiée sur Mac ; sources Claude ex
 Codex appelle le MCP utilisateur avec sa consigne globale et sans validation, y compris après reprise.
 Ticket à fusionner ; la panne de navigation Thor n'est pas reproduite et reste à vérifier sur place.
 CRITÈRES:
-- [x] Sources/documents ACP → docs/adr/19-configuration-native-des-agents.md.
+- [x] Sources/documents ACP → docs/adr/16-configuration-native-des-agents.md.
 - [x] Test unitaire new/load → user-configuration.test.ts, rouge puis vert.
 - [x] Codex liste et appelle son MCP → contract.json, profils utilisateur isolés, port 47619.
 - [x] Claude liste au démarrage, sans quota modèle → tools/list enregistré, aucun prompt envoyé.
@@ -60,7 +60,7 @@ CRITÈRES:
 PORTE DE QUALITÉ: npm run check vert : 288 tests, typage et lint ; contrat Mac dédié vert.
 THOR: adb devices vide. Aucun essai émulateur, conformément à la réservation du ticket 17.
 REVIEW: diff main...HEAD relu en solo ; appel MCP/réponse/reprise vérifiés. Mutation approve→prompt détectée ; nettoyage du banc corrigé si la préparation échoue.
-DÉCISIONS PRISES: ADR 19 ; garder le chargement natif, profils temporaires pour ne pas perturber le ticket 17.
+DÉCISIONS PRISES: ADR 16 ; garder le chargement natif, profils temporaires pour ne pas perturber le ticket 17.
 POUR L'UTILISATEUR:
 1. Rebrancher la Thor ; vérifier adb devices, série THOR0000000001.
 2. Après fusion, Quitter Régie ; thor/bridge/install.sh puis scripts/thor-install.sh ; rouvrir Régie.

@@ -45,7 +45,7 @@ CRITÈRES:
 PORTE DE QUALITÉ: android/./gradlew check vert ; 351 tests, zéro échec/ignoré, lint vert (options-android-check.txt).
 THOR: absente ; émulateur deux écrans + mode un écran forcé, vrai Codex, touches et toucher injectés. Banc arrêté.
 REVIEW: diff main...HEAD relu après f70a59e ; R1/Gauche corrigés aussi dans la carte, trace nettoyée, aucun autre blocage (options-relecture.txt).
-DÉCISIONS PRISES: ADR 18 complété ; masquage visuel seulement, callbacks et règles du domaine conservés.
+DÉCISIONS PRISES: ADR 15 complété ; masquage visuel seulement, callbacks et règles du domaine conservés.
 POUR L'UTILISATEUR:
 1. Rebrancher THOR0000000001 ; scripts/thor-install.sh ; ouvrir Régie et traiter les permissions demandées.
 2. Lancer Codex en mode validation et demander une commande ; Droite ouvre les options : carte sans A/X/B.
