@@ -60,3 +60,11 @@ Bloqué par : 09
 
 Statut à fusionner selon la consigne nocturne : tout ce qui ne dépend pas de
 l'utilisateur est vert. Le micro réel et l'extinction physique restent à vérifier.
+
+### Relecture après commit
+
+Diff `main...HEAD` relu après 4b884f7, axes architecture et ticket séparés : aucun
+nouveau blocage fonctionnel. Preuves sensibles à la mutation resync ; ports/faux,
+absence de mutation Git, prompts de base et verrou de création vérifiés. Traces
+texte nettoyées uniquement des espaces finaux ; code et tests inchangés depuis les
+portes vertes et l'APK essayé. Détail : artifacts/screenshots/11/relecture.txt.

@@ -70,6 +70,8 @@
 
 - **14 novembre, ticket 11 à fusionner (reprise solo Codex)** : fiche R2/X, croix/L2, A/direct/B, branches et base transmises à l’agent (ADR 13). Travail non commité repris ; 294 tests Android + lint et 271 tests pont + typage/lint verts. Constat resync déjà corrigé dans le socle 10 : régression verte et mutation détectée. Thor : trois phrases WAV Thomas/local, vrais lancements Codex vérifiés sur main, lecture et travail depuis lecture ; relecture des preuves puis nouveaux essais de fiche/correction/collision/un-deux écrans. Quatre Codex précédents et pont arrêtés par Quitter à 09:04:35 Paris. Aucun Claude, permission ni reboot. Vraie voix et extinction physique au pas à pas du ticket et artifacts/screenshots/11/essai-thor.txt.
 
+- **14 novembre, ticket 11, relecture solo finale** : diff main...HEAD relu après 4b884f7, aucun nouveau blocage ; preuves, limites ASR et pas à pas humain explicités. Espaces finaux des traces nettoyés, aucun code/test changé après les portes vertes et les essais Thor. Détail : artifacts/screenshots/11/relecture.txt ; statut à fusionner maintenu.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |
