@@ -175,3 +175,12 @@ certaines sont affichées, distinctes d’un accusé perdu (aucun renvoi).
 La maquette locale Lancer.dc.html a été relue intégralement, même export que le
 ticket 11 ; l’outil Artifact distant reste indisponible. Couleurs, polices, lignes
 et actions sont conservées. Aucun fournisseur vocal ajouté : moteur local existant.
+
+
+Relecture du ticket 15 : pendant L2 sur Projet, le partiel reste dans cette ligne ;
+la consigne garde son texte. Après relâchement, le problème de validation prime
+sur l’accusé « Nom remplacé » : collision et nom invalide restent explicites.
+Deux tests Compose rouges puis verts, captures Thor 20–22 ; portes finales :
+306 tests Android + lint, 283 tests pont + typage/lint. La session Codex d’essai
+et le pont ont été arrêtés par Quitter ; vraie voix et extinction physique restent
+au pas à pas de l’utilisateur.

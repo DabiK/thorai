@@ -41,13 +41,17 @@ Retours de l'utilisateur au premier essai réel, le 14 novembre.
 - Nouveau projet L2 : meteo-du-matin, dépôt vide sur main, puis travail Codex
   preuve.text contenant Bonjour sans commit. new-repository.txt, codex-work.txt,
   codex-events-final.json, captures 08–13. R2 : fiche meteo-du-soir (14–16), annulée.
-- Collisions et noms invalides : tests domaine/adapter/WS, captures 17, RPC
+- Collisions et noms invalides : tests domaine/adapter/WS, captures 17 et 21–22, RPC
   project_exists et bad_project_name ; 39 sessions après comme avant le refus.
 - Marges système communes : test réel du conteneur, captures haut/bas 14–19,
   mode un seul écran forcé. ADR 05 ; protocole et ADR 02/13 complétés.
-- Portes : Android 304 tests + lint ; pont 283 tests + typage/lint, verts.
+- Portes : Android 306 tests + lint ; pont 283 tests + typage/lint, verts.
 - Une session Codex seulement, aucun Claude, aucune permission accordée, aucun reboot.
-- Relecture solo à consigner après le premier commit. Aucun push ni fusion.
+- Relecture solo du diff main...HEAD après fa2a9d3 : partiel du nom dans le mauvais
+  champ et refus masqué corrigés, deux régressions rouges puis vertes, captures 20–22.
+  Aucun autre blocage trouvé. Détail relecture.txt. Aucun push ni fusion.
+- Quitter a arrêté le Codex, le pont et l’app à 10:36:56 Paris (quit.txt).
+  Jeton restauré, vraie source micro et deux écrans remis, forward retiré.
 - Vérifications humaines : ouvrir Réglages voix et autoriser le micro si demandé ;
   X → Codex → Projet → Nouveau projet ; L2 dicte un nom inédit, puis la consigne ;
   relire, choisir le niveau, A ; R1/A sur les actions voulues. Essayer aussi R2

@@ -36,8 +36,14 @@ data class NewSessionForm(
     val projectLabel: String get() = when {
         loading -> "Chargement des projets…"
         !catalogAvailable -> "Pont injoignable · reconnexion…"
+        dictatingName && (capturing || finalizing) -> partial.ifBlank { "Écoute du nom…" }
         newProject -> "Nouveau projet…${project?.let { " · $it" }.orEmpty()}"
         else -> project ?: "À choisir · ← →"
+    }
+    val feedback: String get() = when {
+        loading -> "Chargement des projets…"
+        !capturing && !finalizing && !sending && !uncertain && problem != null -> problem!!
+        else -> notice.ifEmpty { "Rien ne démarre avant ton A." }
     }
     val dictatingName: Boolean get() = newProject && this.field == NewSessionField.PROJECT
     val branchLabel: String get() = when (branchChoice) {
