@@ -38,6 +38,11 @@ for d in android voice; do
 	fi
 done
 
+# Dépendances du pont : node_modules n'est pas versionné.
+if [ -f "$wt/bridge/package-lock.json" ] && [ ! -d "$wt/bridge/node_modules/@rolldown" ]; then
+	(cd "$wt/bridge" && npm ci --no-audit --no-fund >/dev/null 2>&1) || echo "npm ci a échoué dans $wt/bridge" >&2
+fi
+
 mkdir -p "$RUNS"
 if [ "$MODE" = review ]; then
 	instructions="$ROOT/scripts/review-codex.md"

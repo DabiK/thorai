@@ -47,7 +47,7 @@ Si tout ce qui ne dépend pas de lui est vert, le statut est `à fusionner`.
 - Reste dans le périmètre du ticket. Un problème hors périmètre se signale dans le rapport.
 - Un choix mineur et réversible se tranche et se note. Une décision durable se consigne dans un ADR.
 - Une décision produit absente du PRD et difficile à défaire : `STATUT: blocked` avec la question.
-- Une commande qui échoue pour une raison d'environnement (réseau, outil absent, console débranchée) : n'insiste pas, `STATUT: failed` avec la sortie exacte.
+- **Une erreur d'environnement que tu peux lever toi-même, lève-la et continue** : dépendance manquante (`npm ci` dans `bridge/`, sans `--omit`), `local.properties`, build à relancer, pont à redémarrer, appli à réinstaller. `STATUT: failed` seulement pour un obstacle hors de ta portée (console débranchée, réseau coupé, quota), avec la sortie exacte.
 
 ## Rapport
 
