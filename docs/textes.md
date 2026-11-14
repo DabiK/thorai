@@ -33,7 +33,7 @@ les entourent suivent ce guide. Les commandes de dépannage restent dans
 le README. Une limite de données reste annoncée : écriture par commande
 absente du suivi, résultat inconnu, information non communiquée.
 
-On utilise l’apostrophe typographique et les espaces insécables U+00A0
+On utilise les espaces insécables U+00A0
 avant « : ? ! » et à l’intérieur des guillemets français. On ne les
 injecte jamais dans les identifiants de protocole ou dans le code.
 

@@ -47,3 +47,6 @@ Textes harmonisés, puces partagées, états vides centrés et portée de X lisi
 - Décisions réversibles : « Mode », « Modifications », « Revenir », « Faire le point » ; ordre A/B/X/Y et navigation séparée ; puces de 22 dp. Aucun ADR nouveau.
 - Thor absente : boutons physiques, micro humain et rendu matériel restent à vérifier selon le protocole. Aucun blocage humain pour cette livraison.
 - Hors périmètre : blocage ponctuel Android pendant navigation rapide sur l’émulateur, contourné par relance ; transcription WAV partielle, sans prétendre corriger le moteur vocal.
+
+- Relecture après commit `158c053` : mutation de hauteur détectée par le test (6 tests, 1 échec attendu), fichier restauré puis porte complète verte ; changement superflu d’une entrée de test retiré, capture compacte stabilisée. Preuve `review-mutation-height.txt`.
+- Fermeture : pont et agents arrêtés via `bridge.shutdown`, émulateur arrêté (`stop.txt`). Dernière porte verte : 359 tests + lint. Lenteurs de commandes Android à la fermeture consignées dans le rapport, sans cause attribuée.
