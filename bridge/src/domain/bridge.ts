@@ -407,12 +407,7 @@ export class Bridge {
           connection,
         );
         if (failure !== null) {
-          const rollback = await this.applyMode(record, connection);
-          if (rollback !== null)
-            this.update(sessionId, {
-              status: 'failed',
-              lastError: `Changement de mode incertain : ${failure.message}`,
-            });
+          await this.restoreMode(record, connection, failure);
           throw failure;
         }
         if (
@@ -423,7 +418,7 @@ export class Bridge {
           try {
             await connection.setConfig(sessionId, 'collaboration_mode', 'default');
           } catch (error) {
-            await this.applyMode(record, connection);
+            await this.restoreMode(record, connection, error);
             throw error;
           }
         }
@@ -438,6 +433,22 @@ export class Bridge {
       } else throw new BridgeError('bad_request', 'Choisis un réglage.');
       return this.summaryOf(this.recordOf(sessionId));
     });
+  }
+
+  private async restoreMode(
+    record: SessionRecord,
+    connection: AgentConnection,
+    failure: unknown,
+  ): Promise<void> {
+    if ((await this.applyMode(record, connection)) === null) return;
+    // No further prompt may use an uncertain policy. A later load must force it again.
+    await this.cancel(record.sessionId).catch(() => {});
+    this.cancelApprovals(record.sessionId, 'mode_failed');
+    this.goOffline(
+      record.sessionId,
+      'failed',
+      `Changement de mode incertain : ${messageOf(failure)}`,
+    );
   }
 
   /**

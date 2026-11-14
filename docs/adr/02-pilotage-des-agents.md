@@ -291,7 +291,9 @@ Les sélections sont revérifiées sur la vraie session, modèle puis effort, av
 premier message. Si un choix disparaît ou n’est pas confirmé, aucun tour ne part.
 Les choix effectifs sont persistés avec le résumé et restaurés après `session/load`.
 Les changements sont sérialisés ; un prompt attend un réglage en cours. Un échec
-partiel d’entrée en plan tente de remettre le mode précédent. Une réponse perdue
+partiel d’entrée ou sortie du plan tente de remettre le mode précédent. Si ce
+retour échoue aussi, le tour est annulé au mieux et la session suspendue : aucun
+nouveau message sans restauration du mode lors de la reprise. Une réponse perdue
 n’est jamais réémise automatiquement. Le protocole détaille les erreurs et le
 format normalisé, sans métadonnées de compte.
 

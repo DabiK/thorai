@@ -1196,6 +1196,42 @@ it('loads vocabulary from the session project and refuses an unknown session', a
 });
 
 describe('session settings', () => {
+  it.each(['ask', 'plan'] as const)(
+    'suspends %s when both the mode change and rollback fail, and restores before another prompt',
+    async (approvalMode) => {
+      const session = await world.bridge.createSession({
+        agent: 'codex',
+        project: 'regie-demo',
+        approvalMode,
+        prompt: 'First turn',
+      });
+      const pending = world.codex.ask(session.sessionId, { kind: 'edit', title: 'Write' }, [
+        ALLOW_ONCE,
+        REJECT,
+      ]);
+      if (approvalMode === 'ask') world.codex.setModeError = new Error('mode refused');
+      else world.codex.setConfigError = new Error('collaboration refused');
+      await expect(
+        world.bridge.configureSession(session.sessionId, { approvalMode: 'allow-all' }),
+      ).rejects.toThrow('refused');
+      expect(world.bridge.listSessions()[0]).toMatchObject({
+        active: false,
+        status: 'failed',
+        approvalMode,
+      });
+      await expect(pending).resolves.toEqual({ outcome: 'cancelled' });
+      expect(world.codex.runningTurns(session.sessionId)).toBe(0);
+      await expect(world.bridge.prompt(session.sessionId, 'Must not run')).rejects.toThrow(
+        'refused',
+      );
+      expect(world.codex.callsOf('prompt')).toHaveLength(1);
+      world.codex.setModeError = null;
+      world.codex.setConfigError = null;
+      await expect(world.bridge.prompt(session.sessionId, 'Now restored')).resolves.toBe('prompt');
+      expect(world.codex.callsOf('prompt')).toHaveLength(2);
+      expect(world.bridge.listSessions()[0]).toMatchObject({ active: true, approvalMode });
+    },
+  );
   it('switches plan to full access, releases pending approvals and never asks again', async () => {
     const session = await world.bridge.createSession({
       agent: 'codex',

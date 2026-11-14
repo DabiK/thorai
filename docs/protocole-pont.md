@@ -285,7 +285,9 @@ attend un réglage déjà en cours. Aucun renvoi automatique après une réponse
 
 Le passage hors plan rétablit `collaboration_mode=default` chez Codex. Une erreur
 pendant l’entrée en plan tente de rétablir le mode précédent ; si ce rétablissement
-échoue également, le résumé indique un échec et un changement incertain. Les
+échoue également, le pont tente d’annuler le tour, annule les validations et marque
+la session inactive/en échec avec un changement incertain. Un prochain message
+exige une reprise et une restauration réussies du mode enregistré. Les
 changements spontanés de modes ACP reconnus sont reflétés dans `approvalMode`.
 
 Exemple (identifiants de modèle volontairement illustratifs, à obtenir de l’agent) :

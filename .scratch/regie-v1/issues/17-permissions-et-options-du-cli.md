@@ -34,7 +34,7 @@ Retours de l'utilisateur, le 14 novembre :
 - Sur l'émulateur (ticket 16) avec une vraie session Codex :
   - [x] en « Tout autoriser », une écriture et une commande passent sans aucune demande → `artifacts/screenshots/17/acceptance.txt`, `events-final.json` (apply_patch et printf avec redirection, zéro approval_request) ;
   - [x] le changement de modèle et de niveau de réflexion en cours de session est pris en compte → captures 09–11 et `codex-turn-contexts.json` (Sol/low → Terra/high, never/danger-full-access).
-- [x] Les portes de qualité sont vertes → Android `./gradlew check` (316 tests + lint), pont `npm run check` (295 tests + typage/lint).
+- [x] Les portes de qualité sont vertes → Android `./gradlew check` (316 tests + lint), pont `npm run check` (297 tests + typage/lint).
 
 
 ## Rapport
@@ -47,16 +47,17 @@ CRITÈRES:
 - [x] Options dynamiques → domaine/passerelle/protocole, captures 04/10, vrais turn_context.
 - [x] Plan / reprendre / interrompre → captures 12/15/20, événements du pont.
 - [x] Contrat documenté et portes vertes → docs/protocole-pont.md, android-check.txt, bridge-check.txt.
-PORTE DE QUALITÉ: Android 316 tests et lint ; pont 295 tests, typage et lint, verts.
+PORTE DE QUALITÉ: Android 316 tests et lint ; pont 297 tests, typage et lint, verts.
 THOR: absente ; émulateur Regie_Thor à deux écrans avec pont Mac et vrai Codex.
 REVIEW: première passe : options non confirmées, mode spontané, retour arrière du mode,
-consigne masquée par l’aide corrigés. Relecture main...HEAD après commit à consigner.
+consigne masquée par l’aide corrigés. Relecture main...HEAD après 949e61f : double
+échec changement/retour suspend désormais la session, deux tests rouges puis verts.
 DÉCISIONS PRISES: ADR 02 complété ; découverte ACP sans prompt avant A, sélecteurs reçus
 entiers, changement confirmé par A, pas de renvoi après résultat incertain.
 POUR L’UTILISATEUR: suivre les étapes 1–8 de artifacts/screenshots/17/essai-emulateur.txt :
 installer sur Thor, édition + commande en Tout autoriser, changer modèle/effort, plan,
 Start, reprise, manette/micro/écrans physiques ; Claude quand le quota le permet.
 QUESTIONS: aucune.
-CAPTURES: artifacts/screenshots/17/ (04, 10, 12, 14–17, 20–22).
+CAPTURES: artifacts/screenshots/17/ (04, 10, 12, 14–17, 20–25).
 HORS PÉRIMÈTRE: saisie longue adb input text tronquée, déjà relevée au ticket 11 ;
 la consigne exacte de vérification a été envoyée par WebSocket. Pas de voix réelle testée.
