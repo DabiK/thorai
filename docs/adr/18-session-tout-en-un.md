@@ -72,3 +72,23 @@ A/X/B, options conservant le fil, sorties/dates/éviction, rendu et dépliage, s
 initial, stick, croissance du même paragraphe, marges/barres. Essai réel Codex
 séparé sur émulateur deux écrans : `artifacts/screenshots/18/essai-emulateur.txt`.
 Thor absente ; vérifications physiques explicites dans le ticket.
+
+## Correction de revue — A et contexte vocal
+
+Le champ conserve son envoi tactile explicite, mais n'affiche la puce A que si
+aucune carte de validation (même résolue) ni option ne capture ce bouton. Cela
+s'applique aussi clavier ouvert. Après fermeture de la carte et des options,
+A redevient le raccourci d'envoi. Le brouillon n'est pas effacé par une décision.
+
+R2 transmet à `ReviewVoiceCommand` la demande de la carte de la session affichée,
+avec vérification de son `sessionId`. Les règles de l'ADR 11 restent dans le
+domaine : identité figée au début de R2, aucune réponse avant relâchement puis A,
+une seule exécution, demande disparue ou modifiée non remplacée par la suivante.
+Le port `DictationCapture` est injectable dans la composition pour tester ce
+chemin sans micro, fournisseur, agent ni console. Le fournisseur réel reste local
+par défaut ; aucun protocole ou adapter métier n'est modifié.
+
+Cinq tests intégrés couvrent affichage/routage, options et envoi tactile, approbation,
+refus et disparition avant confirmation. Documentation Compose vérifiée via Context7
+(`revision-docs-compose.txt`). Essai Codex et WAV Thomas réels, preuves et limites :
+`artifacts/screenshots/18/revision-essai.txt`.

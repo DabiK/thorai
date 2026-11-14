@@ -35,25 +35,29 @@ Il demande aussi de travailler l'interface pour qu'elle soit plus fluide et plus
 ## Rapport
 
 STATUT: done
-RÉSUMÉ: validations A/X/B dans le fil, options dans le panneau inférieur, fil enrichi et barres sombres.
-Le vrai Codex a autorisé une commande et une édition, refusé une autre commande et changé de modèle sans quitter la session.
+RÉSUMÉ: validations et options réunies dans la session, fil enrichi et barres sombres.
+Les deux blocages de revue sont corrigés : raccourci A cohérent et R2 ciblant la carte affichée.
 CRITÈRES:
-- [x] Validation depuis le fil → événements 2391/2519/2625, captures after-inline et edit-pending.
-- [x] Modèle depuis le bas → model-confirmed-haut/bas et codex-turn-context.json (Astra → Terra).
-- [x] Captures avant/après → artifacts/screenshots/18/, before-validation et final-pending.
-- [x] Défilement, Markdown coloré, actions/diffs dépliables, dates, en-tête → 343 tests et captures markdown/output-expanded/review-scroll.
-PORTE DE QUALITÉ: android/./gradlew check vert, 343 tests + lint ; android-check.txt.
-THOR: absente ; émulateur deux écrans et mode un écran forcé, vrai Codex, manette injectée et toucher.
-REVIEW: suivi initial/redimensionnement, identité des réponses, double appui et lien Régie corrigés ; après commit, faux raccourci X du bas résolu corrigé et rejoué (relecture.txt).
-DÉCISIONS PRISES: ADR 18 ; file séparée conservée depuis la régie, carte résolue gardée jusqu'à fermeture explicite, coloration lexicale sans dépendance.
+- [x] Validation dans le fil → essais précédents A/X/B ; nouvel essai R2/A, événements 2992 et 3070.
+- [x] Modèle depuis le bas → revision-model-confirmed, Astra → Terra confirmé, brouillon conservé.
+- [x] Captures avant/après → artifacts/screenshots/18/, before-validation et revision-*.
+- [x] Affichage/routage A et contexte R2 → 5 tests intégrés, régressions rouges puis vertes.
+PORTE DE QUALITÉ: android/./gradlew check vert, 348 tests + lint ; revision-android-check.txt.
+THOR: absente ; émulateur deux écrans, mode un écran forcé, vrai Codex, WAV Thomas/local et touches injectées.
+REVIEW: faux raccourci A retiré pendant validation/options ; contexte vocal raccordé, identité et confirmation vérifiées.
+DÉCISIONS PRISES: ADR 18 complété ; envoi tactile conservé sans puce A quand ce bouton sert ailleurs.
 POUR L'UTILISATEUR:
-1. Rebrancher THOR0000000001, lancer scripts/thor-install.sh puis Régie ; traiter les permissions Android si demandées.
-2. Lancer Codex en mode validation dans un projet de test ; autoriser/refuser commande et édition avec les vrais A/X/B.
-3. Ouvrir Droite sur le bas, changer modèle/réflexion/mode à la croix et A ; B ferme, le fil reste visible.
-4. Remonter au stick pendant une réponse, attendre, revenir en bas ; déplier une action au toucher.
-5. Éteindre/rallumer le bas, essayer L2 au micro ; capturer avec scripts/thor-shot.sh artifacts/screenshots/18/thor puis Quitter.
+1. Rebrancher THOR0000000001, lancer scripts/thor-install.sh puis Régie ; traiter les permissions demandées.
+2. Lancer Codex en mode validation ; tester commande/édition avec les vrais A/X/B depuis le fil.
+3. Saisir un brouillon pendant une demande : Envoyer sans A ; A traite la demande et garde le brouillon.
+4. Sur une nouvelle demande, maintenir R2, dire « approuve » puis relâcher : rien avant A. Refaire avec « refuse » ; B annule la relecture.
+5. Droite ouvre les options sur le bas ; changer modèle/réflexion/mode et confirmer A sans envoyer le brouillon ; B ferme.
+6. Fermer la carte résolue avec Gauche : A Envoyer revient. Vérifier le stick pendant le flux et déplier une action au toucher.
+7. Éteindre/rallumer le bas, essayer L2 au vrai micro ; scripts/thor-shot.sh artifacts/screenshots/18/thor puis Quitter.
 QUESTIONS: aucune.
-CAPTURES: before-validation-*, after-inline-*, model-confirmed-*, edit-pending-*, markdown-haut.png, output-expanded-haut.png, review-single-options-*.
-HORS PÉRIMÈTRE: justification absente du flux ACP Codex observé (signalée comme absente) ; voix/gestes physiques non testés. Aucun Claude lancé.
+CAPTURES: artifacts/screenshots/18/revision-{draft-pending,draft-options,voice-review,refuse-current,model-confirmed,single-options,send-restored}-*.png ; captures initiales conservées.
+HORS PÉRIMÈTRE: justification ACP Codex parfois absente (signalée) ; vraie voix/manette/extinction Thor non testées. Aucun Claude lancé.
 
-Preuves et étapes détaillées : `artifacts/screenshots/18/essai-emulateur.txt`. Session, pont et AVD arrêtés (`stop.txt`, `review-stop.txt`).
+Preuves initiales : `artifacts/screenshots/18/essai-emulateur.txt`.
+Correction : `artifacts/screenshots/18/revision-essai.txt`, événements `revision-events-final.json`.
+Session Codex, pont et AVD arrêtés (`revision-stop.txt`).

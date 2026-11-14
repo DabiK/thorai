@@ -146,7 +146,7 @@ interface SessionCallbacks {
     fun onTrigger(trigger: Trigger, held: Boolean)
     fun onDraftChange(text: String)
 
-    /** « Envoyer » au doigt : comme A. */
+    /** Envoi tactile explicite, même quand un autre panneau utilise A. */
     fun onSend()
 
     /** L'avis est resté affiché assez longtemps. */
@@ -257,7 +257,8 @@ fun SessionBottomScreen(
                 }
             }
         }
-        MessageField(draft, callbacks, compact = false, modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = if (keyboardOpen) 10.dp else 8.dp))
+        MessageField(draft, callbacks, compact = false, modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = if (keyboardOpen) 10.dp else 8.dp),
+            sendWithA = approval.request == null && options == null)
         if (!keyboardOpen && options == null) {
             if (approval.request != null) InlineApproval(approval, onDecision, onNextApproval, details = false, onDismiss = onDismissApproval)
             else ActionGrid(live, callbacks)
@@ -800,7 +801,7 @@ private fun noticeText(notice: SessionNotice): Pair<String, Color> = when (notic
  * La touche du clavier ferme le clavier, elle n'envoie pas.
  */
 @Composable
-private fun MessageField(draft: String, callbacks: SessionCallbacks, compact: Boolean, modifier: Modifier) {
+private fun MessageField(draft: String, callbacks: SessionCallbacks, compact: Boolean, modifier: Modifier, sendWithA: Boolean = true) {
     val focus = LocalFocusManager.current
     Row(
         modifier = modifier
@@ -828,10 +829,13 @@ private fun MessageField(draft: String, callbacks: SessionCallbacks, compact: Bo
             }
         }
         if (draft.isNotBlank()) {
-            BarAction("A", stringResource(R.string.message_send)) {
+            val send = {
                 callbacks.onSend()
                 focus.clearFocus()
             }
+            if (sendWithA) BarAction("A", stringResource(R.string.message_send), send)
+            else BasicText(stringResource(R.string.message_send), style = sans(13.sp),
+                modifier = Modifier.tappable(send).padding(8.dp))
         }
     }
 }

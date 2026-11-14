@@ -32,6 +32,7 @@ import app.regie.domain.model.Delivery
 import app.regie.domain.model.LiveSession
 import app.regie.domain.model.Overview
 import app.regie.domain.port.AgentGateway
+import app.regie.domain.port.DictationCapture
 import app.regie.domain.usecase.DictatedMessages
 import app.regie.domain.usecase.InterruptSession
 import app.regie.domain.usecase.KeepBridgeUp
@@ -94,6 +95,7 @@ class AppContainer(
     private val app: Application,
     displayManager: DisplayManager,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
+    captureOverride: DictationCapture? = null,
     private val gatewayFactory: (() -> AgentGateway)? = null,
 ) {
 
@@ -127,7 +129,7 @@ class AppContainer(
     private val cloudVoice = ElevenLabsVoiceProvider(ElevenLabsConfig(apiKey = voicePreferences::apiKey))
     /** Debug-only WAV replay uses the real provider and the same review/delivery path. */
     var debugVoiceWav: File? = null
-    private val capture = VoiceCapture(
+    private val capture: DictationCapture = captureOverride ?: VoiceCapture(
         { if (voiceSettings.value.provider == DictationProvider.LOCAL) localVoice.speechToText else cloudVoice.speechToText },
         { debugVoiceWav?.let { WavAudioSource.fromFile(it, realtime = true) } ?: ForegroundMicrophone(app) }, scope,
     )
@@ -154,7 +156,8 @@ class AppContainer(
         val approval = when (shown) {
             Screen.Approval -> approvalReview.value.request
             Screen.Overview -> overview.value.firstPendingApproval?.approval
-            is Screen.Session, is Screen.Diff -> null
+            is Screen.Session -> inlineApproval.value.request?.takeIf { it.sessionId == shown.id }
+            is Screen.Diff -> null
         }
         voiceCommand.start(VoiceCommandContext(overview.value.sessions.toList(), current, approval, projects))
     }
