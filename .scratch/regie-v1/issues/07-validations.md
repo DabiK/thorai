@@ -24,7 +24,7 @@ Bloqué par : 06
 - [x] Écran, file, R1 et deux modes d'affichage → captures 09 à 17, tests `ReviewApprovalsTest` / contrôleurs.
 - [x] Refus avec consigne préparé pour 08 → `AnswerApproval` et tests d'accusé, livraison et concurrence.
 - [x] Trois niveaux au contrat de lancement, anciens modes conservés → tests du pont et essais Codex `plan` / `auto-edit` ; fiche visuelle au ticket 11.
-- [x] Notification via port et ouverture ciblée → tests domaine, permission Android présentée, intent ciblé vérifié ; publication réelle après permission à vérifier avec l'utilisateur.
+- [x] Notification via port et ouverture ciblée → tests domaine et adapter Android (canal désactivé puis réactivé), permission Android présentée, intent ciblé vérifié ; publication réelle après permission à vérifier avec l'utilisateur.
 
 ## Rapport
 
@@ -62,3 +62,20 @@ Hors périmètre : absence RUN_COMMAND / WRITE_SECURE_SETTINGS et association sa
 `git diff main...HEAD` relu en solo : domaine, ports, adapters, écrans, tests, contrat et preuves. Correction d'une attente d'ouverture conservée dans la composition, qui risquait de reprendre la sélection après R1 lors d'une mise à jour de la file. L'identité attendue est désormais détenue uniquement par `ReviewApprovals`. Régression rouge puis verte : ouverture avant la synchronisation, arrivée de la demande, sélection de la suivante, mise à jour tardive et réponse adressée seulement à la suivante. Ancien cas d'usage vide `OpenApproval` retiré, imports et commentaire nettoyés.
 
 Porte après correction : **196 tests Android + lint verts**, `review-android-check.txt`. Pont inchangé depuis sa dernière porte verte (266 tests). APK réinstallé (`review-install.txt`), ouverture ciblée au démarrage à froid testée avec une demande Codex réelle (capture 19), refus B, fichier absent et nouvelle fermeture par Quitter. Pas de nouveau Claude ni de permission accordée. Statut maintenu à `à fusionner`.
+
+### Correction de la revue bloquante — canal désactivé
+
+STATUT: done. Ticket maintenu à **à fusionner**.
+
+- `AndroidApprovalNotifications.show()` relit le canal à chaque appel et renvoie `false` s'il est absent ou à `IMPORTANCE_NONE`. Le domaine peut ainsi retenter après réactivation ; aucune règle métier déplacée dans l'adapter.
+- Test du vrai adapter sous Robolectric 4.18 (Android 33 simulé, Application neutre) : permission accordée et notifications globales actives, canal bloqué → échec sans publication ; réactivation en importance basse → même demande publiée ; nouveau blocage → échec. Rouge avant correction (`review-channel-red.txt`), vert ensuite. Le test de domaine existant couvre la nouvelle tentative après retour du premier plan.
+- Portes : **197 tests Android + lint verts**, **266 tests pont + typage/lint verts** (`review-channel-android-check.txt`, `review-channel-bridge-check.txt`). Aucun service, agent ou console dans les tests.
+- Thor `THOR0000000001` : `scripts/thor-install.sh` réussi ; permission notifications présentée et fermée par Retour sans l'accorder (capture 20). Pont démarré par le script existant, connexion et historique retrouvés. Intent d'une demande précédemment résolue → indisponible et actions désactivées sur les deux écrans (capture 21), retour à la régie (capture 22), puis Quitter. Aucun agent lancé, aucun redémarrage ni autre APK installé.
+- ADR 08 complété pour le canal et l'outil de test. Documentation Android et Robolectric consultée via Context7. L'essai réel canal bloqué/réactivé reste à l'utilisateur, car `POST_NOTIFICATIONS` est toujours refusée ; aucun succès de publication réelle revendiqué.
+
+Vérification supplémentaire avec l'utilisateur :
+1. Accorder les notifications à Régie dans Android et conserver l'activation globale.
+2. Désactiver uniquement la catégorie « Validations » ; faire demander une validation par Codex, puis mettre le haut en arrière-plan : aucune alerte.
+3. Réactiver « Validations », revenir dans Régie puis remettre le haut en arrière-plan sans répondre à la demande : une notification doit apparaître pour cette même demande.
+4. Toucher cette notification, vérifier la bonne demande, répondre puis vérifier son retrait. Refaire un passage en arrière-plan : aucune alerte pour la demande résolue.
+5. Effectuer ensuite l'essai Claude commande/édition A/B décrit plus haut, quand le quota le permet.

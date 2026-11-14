@@ -36,6 +36,8 @@
 
 - **14 novembre, ticket 07 à fusionner (reprise solo)** : écran des validations, file, A/X/B, R1 et un/deux écrans livrés ; refus avec consigne prêt pour 08 ; niveaux `plan`/`auto-edit`/`ask` au contrat du pont (fiche au 11), notifications via port (ADR 08). 196 tests Android + lint, 266 tests pont + typage/lint verts. Thor : commandes et éditions Codex acceptées/refusées, file et double B, modes, bas en arrière-plan et intent ciblé ; aucun Claude lancé (consigne quota). Permission notifications et essai Claude à faire avec l'utilisateur. Limite réelle : Codex redemande après `allow_for_session` sur le même fichier ; pas de contournement. Quatre sessions d'essai arrêtées par Quitter, aucune fusion/push. Preuves et pas à pas : `artifacts/screenshots/07/essai-thor.txt`.
 
+- **14 novembre, ticket 07, correction de revue du canal** : `show()` renvoie faux si le canal est absent ou désactivé, pour permettre la nouvelle tentative. Régression du vrai adapter sous Robolectric 4.18 rouge puis verte, 197 tests Android + lint et 266 tests pont + typage/lint verts. APK réinstallé sur la Thor, permission laissée à l’utilisateur, demande résolue ouverte par intent sur les deux écrans puis retour régie et Quitter ; aucun agent lancé. ADR 08 et pas à pas canal bloqué/réactivé complétés. Captures 20–22 et preuves `review-channel-*`. Statut maintenu à `à fusionner`.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

@@ -30,6 +30,7 @@ Le mode Codex `agent` reste écarté : son examen automatique peut aussi autoris
 - Le premier plan se mesure sur l'écran du **haut**, puisque le bas doit rester visible en arrière-plan. Une demande encore en attente devient notifiable quand le haut est masqué ; une notification déjà émise ne sonne pas à chaque mise à jour. Elle est retirée quand la demande disparaît.
 - Canal Android `approvals`, importance haute, contenu privé sur l'écran verrouillé, aucune action d'autorisation directe dans la notification. Le `PendingIntent` immuable ouvre `TopActivity` avec l'identité exacte de la demande, y compris après relancement. Une demande disparue affiche son indisponibilité.
 - `POST_NOTIFICATIONS` est déclarée et demandée après RUN_COMMAND pour ne pas superposer deux demandes Android. Une permission refusée ou des notifications désactivées ne marquent pas l'alerte comme livrée : elle peut être retentée après un retour de premier plan.
+- L'adapter relit également l'importance du canal à chaque tentative : un canal absent ou à `IMPORTANCE_NONE` renvoie `false`, sans appeler `notify`. Réactiver le canal permet ainsi au domaine de retenter la demande au prochain passage en arrière-plan.
 
 ## Interface et références
 
@@ -39,7 +40,7 @@ Empreintes conservées dans `artifacts/screenshots/07/maquette-sha256.txt` ; fra
 
 Structure reprise : en-tête agent/projet, commande ou fichier en pleine largeur avec contour ambre, justification, cibles, autres demandes en bas ; grand A clair, X conditionnel et B sur l'écran inférieur. Avant/après et plan sont défilables par croix/stick. Mode un écran : actions compactes sous le contenu. Les effets et justifications absents sont annoncés, jamais inférés d'une commande. La mention « lu à voix haute » est omise conformément à la décision du 14 novembre.
 
-Pas de nouvelle bibliothèque. Documentation actuelle consultée via Context7 :
+Pas de nouvelle bibliothèque de production. Documentation actuelle consultée via Context7 :
 - [Notifications Android](https://developer.android.com/develop/ui/compose/notifications/create-notification), [permission](https://developer.android.com/develop/ui/compose/notifications/notification-permission) ;
 - [Configuration ACP](https://agentclientprotocol.com/protocol/session-config-options) ; syntaxe confrontée aux types du SDK 2.6.0 et au code installé de `codex-acp` 2.6.0 (`CollaborationModeConfig`, `fileChangeDecisionOptions`).
 Les extraits consultés sont dans `docs-*-current.txt` du dossier de preuves.
@@ -55,3 +56,9 @@ Les extraits consultés sont dans `docs-*-current.txt` du dossier de preuves.
 ### Relecture de la sélection après commit
 
 L'identité ouverte avant la synchronisation est conservée dans `ReviewApprovals`, même quand la demande n'est pas encore connue. La composition ne garde plus une deuxième identité susceptible de réouvrir une ancienne demande après R1. Test de régression avec arrivée tardive, changement de sélection puis mise à jour de file ; ouverture ciblée à froid vérifiée sur la Thor après réinstallation (capture 19).
+
+### Relecture du canal désactivé
+
+Robolectric 4.18 est ajouté uniquement aux tests de l'app pour exercer le vrai adapter face à Android simulé (API 33 comme la Thor). Une `Application` neutre remplace la composition : aucun service, agent ou accès console. Le test accorde la permission, active les notifications globales, bloque le canal, vérifie `show() == false` et l'absence de publication, puis réactive le canal en importance basse et vérifie la publication de la même demande. Un nouveau blocage est également relu. Le test était rouge avant la correction ; les tests existants de `NotifyApprovals` couvrent la nouvelle tentative après un échec du port.
+
+Références consultées par Context7 : [importance du canal](https://developer.android.com/reference/android/app/NotificationChannel#getImportance()), [configuration Robolectric](https://robolectric.org/configuring). Version stable vérifiée dans les métadonnées Maven Central. Preuves : `review-channel-*-docs.txt`, `review-channel-red.txt` et `review-channel-android-check.txt` dans `artifacts/screenshots/07/`.

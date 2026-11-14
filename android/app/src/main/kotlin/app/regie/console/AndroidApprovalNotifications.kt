@@ -24,6 +24,8 @@ class AndroidApprovalNotifications(private val context: Context) : ApprovalNotif
 
     override fun show(request: Approval): Boolean {
         if (context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED || !manager.areNotificationsEnabled()) return false
+        val channel = manager.getNotificationChannel(CHANNEL) ?: return false
+        if (channel.importance == NotificationManager.IMPORTANCE_NONE) return false
         val intent = Intent(context, TopActivity::class.java)
             .setAction("app.regie.approval.${request.id.value}")
             .putExtra(TopActivity.EXTRA_APPROVAL, request.id.value)
