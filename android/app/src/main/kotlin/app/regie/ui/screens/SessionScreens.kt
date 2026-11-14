@@ -925,4 +925,3 @@ private const val CURSOR = "cursor"
 private const val NOTICE_MS = 6_000L
 private val STEP = 120.dp
 private val STICK_SPEED = 900.dp
-

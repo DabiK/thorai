@@ -36,3 +36,4 @@ Bloqué par : 05
 - ADR 07 : modèle du fil, bibliothèques, navigation, limites du protocole, clavier. API Compose vérifiée via Context7. Les tests restent sans vrai agent ni console.
 - Preuves : `artifacts/screenshots/06/` (captures), `android-check.txt`, `bridge-events.jsonl`, `manette-envoi.txt`, `essai-thor.txt`.
 - Sessions d'essai arrêtées par Quitter ; aucune fusion, aucun push.
+- Relecture finale de `git diff main...HEAD` : périmètre, frontières domaine/adapters, assertions et provenance des captures vérifiés ; ligne vide finale supprimée et commentaire sur les résultats tardifs corrigé. Aucun critère de démarrage automatique ni de destruction du shell déclaré tenu.

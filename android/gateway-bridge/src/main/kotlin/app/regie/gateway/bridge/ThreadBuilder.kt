@@ -54,7 +54,7 @@ internal class ThreadBuilder(private val cwd: () -> String?, private val maxEntr
             "session_error" -> add(Fixed(ThreadEntry.TurnFailed(nextId++, data.string("message")?.let(::oneLine)?.ifEmpty { null })))
             "turn_end" -> {
                 val cancelled = data.string("stopReason") == "cancelled"
-                // Une action restée en cours ne l'est plus : l'agent ne dira pas qu'elle est finie.
+                // Fin du tour : aucun résultat définitif connu ; une mise à jour tardive reste possible.
                 items.forEach { if (it is Call) it.endTurn(cancelled) }
                 if (cancelled) addInterruption()
             }
