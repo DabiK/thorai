@@ -76,3 +76,19 @@ describe('GitWorkspace', () => {
     ]);
   });
 });
+
+it('reads files functions and branches without following links or reading ignored secrets', async () => {
+  const cwd = join(root, 'demo');
+  writeFileSync(join(cwd, 'PassageCheck.ts'), 'export function minPassage() { return 70; }');
+  writeFileSync(join(cwd, '.gitignore'), '.env\n');
+  writeFileSync(join(cwd, '.env'), 'function secretName() {}');
+  writeFileSync(join(base, 'outside', 'external.ts'), 'function externalSecret() {}');
+  symlinkSync(join(base, 'outside', 'external.ts'), join(cwd, 'link.ts'));
+  git(cwd, 'branch', 'feature/passage');
+  const terms = await workspace.vocabulary(cwd);
+  expect(terms).toEqual(
+    expect.arrayContaining(['PassageCheck.ts', 'minPassage', 'main', 'feature/passage']),
+  );
+  expect(terms).not.toContain('secretName');
+  expect(terms).not.toContain('externalSecret');
+});

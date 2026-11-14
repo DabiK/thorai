@@ -133,6 +133,7 @@ fun ApprovalBottomScreen(review: ApprovalReview, onButton: (Button) -> Unit, com
                 BasicText("L’agent ne propose pas d’autorisation limitée à cette session.", style = sans(12.sp, color = Palette.textSubtle))
             }
             Spacer(Modifier.weight(1f))
+            BasicText("L2 maintenu : refuser avec une consigne, puis A pour confirmer.", style = sans(13.sp, color = Palette.textMuted))
             BasicText("Une décision concerne uniquement la demande affichée en haut.", style = sans(13.sp, color = Palette.textMuted))
         }
     }

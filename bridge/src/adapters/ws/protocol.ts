@@ -31,6 +31,7 @@ export const paramsSchemas = {
   'session.prompt': z.object({ sessionId, text: z.string().min(1).max(100_000) }),
   'session.cancel': z.object({ sessionId }),
   'session.resume': z.object({ sessionId }),
+  'session.vocabulary': z.object({ sessionId }),
   'session.events': z.object({ sessionId, since: seq.optional() }),
   'approval.answer': z.object({
     approvalId: z.string().min(1).max(200),

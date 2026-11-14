@@ -17,7 +17,7 @@ class ArchitectureTest {
 
     /** Les adapters : la passerelle vers le pont (module) et les accès à la console (Android). */
     private fun isAdapter(name: String) =
-        name.startsWith("app.regie.gateway.") || name.startsWith("app.regie.console.")
+        name.startsWith("app.regie.gateway.") || name.startsWith("app.regie.console.") || name.startsWith("app.regie.voice.")
 
     private fun File.kotlinFiles() = walkTopDown().filter { it.extension == "kt" }.toList()
 
@@ -69,6 +69,17 @@ class ArchitectureTest {
         assertTrue(console.isNotEmpty())
         val found = violations(console) { it.startsWith("app.regie.gateway.") } +
             violations(gatewaySources.kotlinFiles()) { it.startsWith("app.regie.console.") }
+        assertEquals(emptyList(), found)
+    }
+
+    @Test
+    fun `voice adapter only depends on voice ports never on providers or gateway`() {
+        val voice = File(appSources, "app/regie/voice").kotlinFiles()
+        assertTrue(voice.isNotEmpty())
+        val found = violations(voice) {
+            it.startsWith("app.regie.gateway.") || it.startsWith("app.regie.voice.local.") ||
+                it.startsWith("app.regie.voice.elevenlabs.") || it.startsWith("app.regie.voice.fake.")
+        }
         assertEquals(emptyList(), found)
     }
 

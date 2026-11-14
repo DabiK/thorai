@@ -27,7 +27,7 @@ class BottomActivity : GamepadActivity() {
         setScreen(
             approval = {
                 val review by container.approvalReview.collectAsStateWithLifecycle()
-                ApprovalBottomScreen(review, { container.approvalController.handle(GamepadInput.Pressed(it)) })
+                ApprovalBottomScreen(review, { container.handleInput(GamepadInput.Pressed(it)) })
             },
             overview = { overview, control -> OverviewBottomScreen(overview, control, callbacks) },
             session = { shown, overview ->

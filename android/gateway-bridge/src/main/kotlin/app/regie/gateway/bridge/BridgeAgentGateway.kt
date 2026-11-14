@@ -25,6 +25,8 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -173,6 +175,12 @@ class BridgeAgentGateway(
         } finally {
             watchers.computeIfPresent(key) { _, count -> (count - 1).takeIf { it > 0 } }
         }
+    }
+
+    override suspend fun vocabulary(id: SessionId): List<String> {
+        val result = call("session.vocabulary", buildJsonObject { put("sessionId", id.value) }, timeout = 5.seconds)
+        if (result !is CallResult.Accepted) return emptyList()
+        return (result.value["terms"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.content }.orEmpty()
     }
 
     override suspend fun sendMessage(id: SessionId, text: String): Delivery {

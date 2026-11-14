@@ -10,6 +10,7 @@ android {
     defaultConfig {
         applicationId = "app.regie"
         minSdk = 33
+        ndk { abiFilters += setOf("arm64-v8a", "x86_64") }
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
@@ -54,6 +55,9 @@ kotlin {
 
 dependencies {
     implementation(project(":domain"))
+    implementation(libs.voice.api)
+    implementation(libs.voice.local)
+    implementation(libs.voice.elevenlabs)
     implementation(project(":gateway-bridge"))
     // Les enregistrements rejoués par la passerelle factice, qui n'est choisissable qu'en debug.
     debugImplementation(project(":bridge-fixtures"))
@@ -71,5 +75,6 @@ dependencies {
 
     testImplementation(libs.kotlin.test.junit)
     testImplementation(libs.robolectric)
+    testImplementation(libs.compose.ui.test.junit4)
     testImplementation(libs.kotlinx.coroutines.test)
 }

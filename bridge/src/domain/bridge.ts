@@ -195,6 +195,12 @@ export class Bridge {
     return this.journal.subscribe(since, listener);
   }
 
+  async sessionVocabulary(sessionId: string): Promise<readonly string[]> {
+    const record = this.recordOf(sessionId);
+    const project = await this.deps.workspace.resolveProject(record.project);
+    return this.deps.workspace.vocabulary(project.cwd);
+  }
+
   sessionEvents(sessionId: string, since = 0): readonly BridgeEvent[] {
     this.recordOf(sessionId);
     return this.journal.forSession(sessionId, since);

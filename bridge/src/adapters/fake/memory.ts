@@ -78,6 +78,10 @@ export function counterIds(prefix = 'id'): IdGenerator {
 
 /** Projects and branches in memory. A test moves a branch as an agent would. */
 export class FakeWorkspace implements Workspace {
+  readonly terms = new Map<string, readonly string[]>();
+  async vocabulary(cwd: string): Promise<readonly string[]> {
+    return this.terms.get(cwd) ?? [];
+  }
   readonly branches = new Map<string, string | null>([['regie-demo', 'main']]);
   /** Folders whose branch was read. */
   readonly reads: string[] = [];

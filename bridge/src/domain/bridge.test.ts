@@ -1078,3 +1078,24 @@ describe('retention of the history (ticket 13)', () => {
     });
   });
 });
+
+it('loads vocabulary from the session project and refuses an unknown session', async () => {
+  const session = await world.bridge.createSession({
+    agent: 'codex',
+    project: 'regie-demo',
+    approvalMode: 'ask',
+  });
+  world.workspace.terms.set('/home/dev/projects/regie-demo', [
+    'PassageCheck.ts',
+    'minPassage',
+    'main',
+  ]);
+  await expect(world.bridge.sessionVocabulary(session.sessionId)).resolves.toEqual([
+    'PassageCheck.ts',
+    'minPassage',
+    'main',
+  ]);
+  await expect(world.bridge.sessionVocabulary('missing')).rejects.toMatchObject({
+    code: 'unknown_session',
+  });
+});

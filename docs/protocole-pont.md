@@ -366,3 +366,10 @@ Réglages du pont, par variables d'environnement : `REGIE_BRIDGE_PORT`, `REGIE_B
 - `bridge/fixtures/acp-raw/` : les messages ACP bruts des deux adaptateurs (essai de l'ADR 02).
 
 La passerelle factice de l'app rejoue `bridge/fixtures/bridge-ws/`.
+
+### `session.vocabulary` (ticket 08)
+
+Paramètres : `{ "sessionId": "…" }`. Réponse : `{ "terms": ["PassageCheck.ts", "minPassage", "main"] }`.
+Lecture authentifiée du projet de la session, sans lancement d'agent ni changement de branche.
+Identifiants de fichiers, déclarations de fonctions et branches locales ; extraction bornée et indicative (ADR 09).
+Une session inconnue rend `unknown_session`. Un client peut continuer sans vocabulaire si cette lecture échoue ou si le pont ne la connaît pas.

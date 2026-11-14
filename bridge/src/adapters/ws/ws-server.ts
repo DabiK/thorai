@@ -182,6 +182,9 @@ function serve(ws: WebSocket, options: WsServerOptions): void {
       return {};
     },
     'session.resume': async (params) => ({ session: await bridge.resume(params.sessionId) }),
+    'session.vocabulary': async (params) => ({
+      terms: await bridge.sessionVocabulary(params.sessionId),
+    }),
     'session.events': (params) => ({
       events: bridge.sessionEvents(params.sessionId, params.since),
     }),
