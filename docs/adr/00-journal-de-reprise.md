@@ -117,6 +117,8 @@
 
 - **14 novembre, ticket 18, correction des deux blocages de revue (solo Codex)** : puce A retirée du champ quand validation/options capturent ce bouton, envoi tactile conservé ; R2 reçoit la carte de la session affichée. Régressions UI/composition rouges puis vertes, confirmation unique et identité disparue couvertes : Android 348 tests + lint verts. Thor absente ; vrai Codex sur émulateur, WAV Thomas/local Approuve/Refuse puis A (résolutions 2992/3070), brouillon conservé et modèle confirmé depuis le bas, mode un écran. Agent/pont/AVD arrêtés ; aucun Claude ni sous-agent. ADR 18 et pas à pas physique complétés ; preuves revision-essai.txt. Statut à fusionner.
 
+- **14 novembre, ticket 18, relecture après c35a222 (solo Codex)** : diff main...HEAD et preuves relus, aucun nouveau blocage. Affichage/routage et identité vocale confrontés aux cinq tests intégrés ; deux réponses Codex uniques, aucun brouillon envoyé. Limites de voix synthétique et modèle confirmé précisées ; aucun code/test changé après la porte et les essais verts. Banc arrêté ; détail revision-relecture.txt. Statut à fusionner maintenu.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

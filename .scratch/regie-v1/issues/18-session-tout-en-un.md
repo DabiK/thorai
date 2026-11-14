@@ -44,7 +44,7 @@ CRITÈRES:
 - [x] Affichage/routage A et contexte R2 → 5 tests intégrés, régressions rouges puis vertes.
 PORTE DE QUALITÉ: android/./gradlew check vert, 348 tests + lint ; revision-android-check.txt.
 THOR: absente ; émulateur deux écrans, mode un écran forcé, vrai Codex, WAV Thomas/local et touches injectées.
-REVIEW: faux raccourci A retiré pendant validation/options ; contexte vocal raccordé, identité et confirmation vérifiées.
+REVIEW: deux blocages corrigés ; diff main...HEAD relu après c35a222, aucun nouveau blocage (revision-relecture.txt).
 DÉCISIONS PRISES: ADR 18 complété ; envoi tactile conservé sans puce A quand ce bouton sert ailleurs.
 POUR L'UTILISATEUR:
 1. Rebrancher THOR0000000001, lancer scripts/thor-install.sh puis Régie ; traiter les permissions demandées.
