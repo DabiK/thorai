@@ -135,7 +135,7 @@ class OverviewController(
                 }
             Button.A -> focused?.let { dispatch(OverviewAction.OpenSession(it.id)) }
             Button.X -> dispatch(OverviewAction.NewSession)
-            Button.Y -> dispatch(OverviewAction.SpeakSummary(focused?.id))
+            Button.Y -> dispatch(OverviewAction.ShowSummary(focused?.id))
             Button.START -> dispatch(OverviewAction.PauseAll)
             // La vue d'ensemble est le premier écran : B n'a rien à annuler.
             Button.B -> Unit

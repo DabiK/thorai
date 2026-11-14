@@ -65,6 +65,31 @@ class SessionControllerTest {
     }
 
     @Test
+    fun `a late title update does not reopen a dismissed report but a new turn does`() {
+        show("montage")
+        press(Button.B)
+        val previous = live.value!!
+        live.value = previous.copy(session = previous.session.copy(title = "Titre tardif", updatedAt = t0))
+        kotlin.test.assertFalse(controller.state.value.showsSummary(live.value!!))
+        live.value = LiveSession.of(previous.session, SessionThread(listOf(app.regie.domain.model.ThreadEntry.UserMessage(4, "Nouveau tour")), loaded = true))
+        assertTrue(controller.state.value.showsSummary(live.value!!))
+    }
+
+    @Test
+    fun `completion opens a short report automatically and B dismisses it before returning`() {
+        show("montage")
+        assertTrue(controller.state.value.showsSummary(live.value!!))
+        press(Button.B)
+        kotlin.test.assertFalse(controller.state.value.showsSummary(live.value!!))
+        assertTrue(actions.isEmpty())
+        press(Button.Y)
+        assertTrue(controller.state.value.showsSummary(live.value!!))
+        press(Button.B)
+        press(Button.B)
+        assertEquals(SessionAction.Back, actions.last())
+    }
+
+    @Test
     fun `R1 and L1 open the next and previous sessions in the overview order, without wrapping`() {
         show("atelier")
         press(Button.L1)
@@ -93,8 +118,8 @@ class SessionControllerTest {
     }
 
     @Test
-    fun `B goes back to the overview`() {
-        show("montage")
+    fun `B goes back to the overview when no summary is open`() {
+        show("atelier")
         press(Button.B)
 
         assertEquals(listOf<SessionAction>(SessionAction.Back), actions)
@@ -179,7 +204,7 @@ class SessionControllerTest {
 
         assertEquals(false, controller.state.value.summaryOpen)
         assertEquals(
-            listOf<SessionAction>(SessionAction.SpeakSummary(SessionId("atelier")), SessionAction.SpeakSummary(SessionId("atelier"))),
+            listOf<SessionAction>(SessionAction.ShowSummary(SessionId("atelier")), SessionAction.ShowSummary(SessionId("atelier"))),
             actions,
         )
     }

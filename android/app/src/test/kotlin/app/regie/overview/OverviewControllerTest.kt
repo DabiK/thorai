@@ -130,7 +130,7 @@ class OverviewControllerTest {
         press(Button.START)
 
         assertEquals(
-            listOf(OverviewAction.NewSession, OverviewAction.SpeakSummary(SessionId("atelier")), OverviewAction.PauseAll),
+            listOf(OverviewAction.NewSession, OverviewAction.ShowSummary(SessionId("atelier")), OverviewAction.PauseAll),
             actions,
         )
     }

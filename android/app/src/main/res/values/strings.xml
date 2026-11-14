@@ -59,7 +59,7 @@
 
     <string name="action_open">Ouvrir</string>
     <string name="action_new_session">Nouvelle session</string>
-    <string name="action_speak_summary">Point à voix haute</string>
+    <string name="action_speak_summary">Faire le point</string>
     <string name="action_quit">Quitter</string>
 
     <plurals name="quit_busy">
@@ -135,11 +135,7 @@
     <string name="notice_interrupted">Interruption envoyée.</string>
     <string name="notice_interrupt_failed">Le pont n\'a pas pu l\'interrompre.</string>
 
-    <!-- Point écrit (Y), en attendant le point à voix haute. -->
+    <!-- Point écrit (Y), sans synthèse vocale. -->
     <string name="summary_title">Le point</string>
     <string name="summary_close">Y ou B pour fermer</string>
-    <string name="summary_last_action">Dernière action : %s</string>
-    <string name="summary_files">Fichiers modifiés : %s</string>
-    <string name="summary_no_files">Aucune édition suivie (les fichiers écrits par une commande n\'y figurent pas)</string>
-    <string name="summary_last_sentence">Dernière phrase : « %s »</string>
 </resources>

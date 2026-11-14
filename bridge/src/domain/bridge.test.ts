@@ -11,6 +11,7 @@ import {
 } from '../adapters/fake/memory.ts';
 import { Bridge, branchInstruction } from './bridge.ts';
 import type { BridgeEvent, SessionRecord } from './model.ts';
+import { withSummaryRequest } from './written-summary.ts';
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -154,7 +155,9 @@ describe('creating a session', () => {
       prompt: 'Lis notes.md',
     });
 
-    expect(world.claude.callsOf('prompt')).toEqual([[session.sessionId, 'Lis notes.md']]);
+    expect(world.claude.callsOf('prompt')).toEqual([
+      [session.sessionId, withSummaryRequest('Lis notes.md')],
+    ]);
     expect(world.bridge.listSessions()[0]).toEqual({
       sessionId: session.sessionId,
       agent: 'claude',
@@ -619,7 +622,7 @@ describe('a session goes live only once loaded and in its mode', () => {
     await expect(first).resolves.toBe('cancelled');
     await expect(second).resolves.toBe('cancelled');
     await expect(after).resolves.toBe('prompt');
-    expect(world.claude.callsOf('prompt')).toEqual([[sessionId, 'après']]);
+    expect(world.claude.callsOf('prompt')).toEqual([[sessionId, withSummaryRequest('après')]]);
   });
 
   it('does not take a resumed session for live while it loads', async () => {
@@ -809,6 +812,27 @@ describe('read-only commands in « valider » (ticket 13)', () => {
   });
 });
 
+describe('written summaries (ticket 12)', () => {
+  it('requests a report in the actual turn without changing the user message or starting another turn', async () => {
+    const { sessionId } = await world.bridge.createSession({
+      agent: 'codex',
+      project: 'regie-demo',
+      approvalMode: 'ask',
+      prompt: 'Lis notes.md',
+    });
+    expect(world.codex.callsOf('prompt')).toEqual([
+      [sessionId, withSummaryRequest('Lis notes.md')],
+    ]);
+    expect(world.ofType('user_message').at(-1)?.data).toEqual({
+      text: 'Lis notes.md',
+      delivery: 'prompt',
+    });
+    world.codex.endTurn(sessionId);
+    await flush();
+    expect(world.codex.callsOf('prompt')).toHaveLength(1);
+  });
+});
+
 describe('branches, left to the agent (ticket 13)', () => {
   const CWD = '/home/dev/projects/regie-demo';
   const userMessages = () => world.ofType('user_message').map((e) => e.data);
@@ -830,8 +854,8 @@ describe('branches, left to the agent (ticket 13)', () => {
       'Travaille sur la branche essai, crée-la depuis main si elle n’existe pas.',
     );
     expect(world.codex.callsOf('prompt')).toEqual([
-      [sessionId, `${prefix}\n\nLis notes.md`],
-      [sessionId, 'Continue'],
+      [sessionId, withSummaryRequest(`${prefix}\n\nLis notes.md`)],
+      [sessionId, withSummaryRequest('Continue')],
     ]);
     expect(userMessages()).toEqual([
       { text: 'Lis notes.md', delivery: 'prompt', prefix },
@@ -856,7 +880,7 @@ describe('branches, left to the agent (ticket 13)', () => {
     await world.bridge.prompt(sessionId, 'Go');
 
     expect(world.claude.callsOf('prompt')).toEqual([
-      [sessionId, `${branchInstruction('feature/x')}\n\nGo`],
+      [sessionId, withSummaryRequest(`${branchInstruction('feature/x')}\n\nGo`)],
     ]);
   });
 
@@ -872,7 +896,7 @@ describe('branches, left to the agent (ticket 13)', () => {
     await world.bridge.prompt(sessionId, 'Deux');
 
     expect(world.codex.callsOf('prompt')).toEqual([
-      [sessionId, `${branchInstruction('essai')}\n\nUn`],
+      [sessionId, withSummaryRequest(`${branchInstruction('essai')}\n\nUn`)],
     ]);
     expect(world.codex.callsOf('steer')).toEqual([[sessionId, 'Deux']]);
   });

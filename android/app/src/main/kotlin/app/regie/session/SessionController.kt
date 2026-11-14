@@ -29,7 +29,7 @@ sealed interface SessionAction {
 
     data class Send(val id: SessionId, val text: String) : SessionAction
     data class Interrupt(val id: SessionId) : SessionAction
-    data class SpeakSummary(val id: SessionId) : SessionAction
+    data class ShowSummary(val id: SessionId) : SessionAction
     data class StartDictation(val id: SessionId) : SessionAction
     data object StopDictation : SessionAction
     data object StartVoiceCommand : SessionAction
@@ -54,10 +54,14 @@ sealed interface SessionNotice {
 /** État de l'écran d'une session, partagé par les deux écrans de la console. */
 data class SessionControlState(
     val heldTriggers: Set<Trigger> = emptySet(),
-    /** Y : le point écrit est ouvert en haut (en attendant le point à voix haute). */
+    /** Y : le point écrit est ouvert en haut. */
     val summaryOpen: Boolean = false,
+    val dismissedSummary: String? = null,
     val notice: SessionNotice? = null,
-)
+) {
+    fun showsSummary(live: LiveSession): Boolean = summaryOpen ||
+        (!live.session.status.isBusy && dismissedSummary != live.summaryTurn)
+}
 
 /**
  * Applique les commandes du PRD à l'écran d'une session : L1 / R1 voisines, B retour, X diff,
@@ -140,15 +144,15 @@ class SessionController(
 
     private fun onPressed(button: Button) {
         val id = current() ?: return
-        val summaryOpen = _state.value.summaryOpen
+        val summaryOpen = live.value?.let { _state.value.showsSummary(it) } ?: _state.value.summaryOpen
         when (button) {
             Button.A -> send()
             Button.B -> if (summaryOpen) closeSummary() else dispatch(SessionAction.Back)
             Button.Y -> if (summaryOpen) {
                 closeSummary()
             } else {
-                _state.update { it.copy(summaryOpen = true) }
-                dispatch(SessionAction.SpeakSummary(id))
+                openSummary()
+                dispatch(SessionAction.ShowSummary(id))
             }
             Button.X -> _state.update { it.copy(notice = SessionNotice.DiffUnavailable) }
             Button.START -> if (live.value?.takeIf { it.session.id == id }?.canInterrupt == true) {
@@ -165,7 +169,11 @@ class SessionController(
         }
     }
 
-    private fun closeSummary() = _state.update { it.copy(summaryOpen = false) }
+    fun openSummary() = _state.update { it.copy(summaryOpen = true) }
+
+    private fun closeSummary() = _state.update { state ->
+        state.copy(summaryOpen = false, dismissedSummary = live.value?.summaryTurn)
+    }
 
     private fun onTrigger(trigger: Trigger, held: Boolean) {
         val before = _state.value.heldTriggers
