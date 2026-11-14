@@ -1,6 +1,6 @@
 # 09 — Ordres vocaux (R2)
 
-Statut : à fusionner
+Statut : fait
 Bloqué par : 08
 
 ## Objectif
