@@ -94,6 +94,8 @@
 
 - **14 novembre, ticket 17, correction de revue reprise/options (solo Codex)** : sélections sauvegardées conservées jusqu’au succès complet de la reprise, même après un refus partiel et un redémarrage ; trois régressions rouges puis vertes. Action tactile « Start · Interrompre » visible dans Options, y compris pendant busy, test Compose rouge puis vert. Android 320 tests + lint, pont 300 + typage/lint verts. Thor absente : émulateur deux écrans, même Codex repris en Terra/high/Tout autoriser, interruption tactile cancelled seq 1911 (captures review-interrupt-30–33). Agent/pont/AVD arrêtés ; aucun Claude ni sous-agent. ADR 02/protocole et pas à pas Thor complétés, statut à fusionner. Échecs ACP temporaires et busy couverts uniquement par les tests isolés.
 
+- **14 novembre, ticket 17, relecture après be2b89a** : diff main...HEAD et preuves relus en solo ; aucun nouveau blocage trouvé. Persistance/reprise partielle et bouton tactile/busy couverts par les régressions rouges/vertes. Aucun code/test modifié après les portes et l’essai verts. Session Codex stopped sans erreur, banc arrêté, statut à fusionner ; détail review-resume-relecture.txt.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

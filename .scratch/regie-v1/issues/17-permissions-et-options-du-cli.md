@@ -55,7 +55,8 @@ CRITÈRES:
 PORTE DE QUALITÉ: Android ./gradlew check : 320 tests + lint ; pont npm run check : 300 tests + typage/lint.
 THOR: absente ; émulateur deux écrans et pont Mac, reprise Terra/high/Tout autoriser,
 interruption tactile depuis Options. Codex, pont et émulateur arrêtés ; aucun Claude lancé.
-REVIEW: perte des sélections reproduite/corrigée ; action Start manquante ajoutée et testée.
+REVIEW: perte des sélections corrigée, Start visible/tactile testé ; diff main...HEAD relu après be2b89a,
+aucun nouveau blocage (review-resume-relecture.txt).
 DÉCISIONS PRISES: ADR 02 précisé ; options provisoires jusqu’au succès, règle d’interruption existante.
 POUR L’UTILISATEUR: 1. Rebrancher Thor, installer pont puis app (essai-emulateur.txt).
 2. Créer Codex/Tout autoriser, dicter une édition et une commande ; vérifier zéro validation.
