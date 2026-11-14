@@ -12,6 +12,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.SpanStyle
 import kotlinx.coroutines.delay
@@ -73,13 +77,14 @@ fun DictationBottomScreen(state: DictationReview, onButton: (Button) -> Unit, on
             BasicText("Réglages voix", style = sans(12.sp, color = Palette.textMuted), modifier = Modifier.tappable(onSettings))
         }
         Column(Modifier.then(if (compact) Modifier else Modifier.weight(1f)).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            if (!compact) {
-                // Actual recent PCM levels; no fabricated activity while the microphone is silent.
-                val levels = remember { mutableStateListOf<Float>() }
-                LaunchedEffect(state.durationMs) { levels.add(state.level); if (levels.size > 32) levels.removeAt(0) }
-                Row(Modifier.height(72.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    repeat(32) { index -> Box(Modifier.width(5.dp).height((4 + (levels.getOrNull(index) ?: 0f) * 180).coerceAtMost(72f).dp).background(Palette.mic, RoundedCornerShape(3.dp))) }
+            if (compact) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                    DictationLevel(state, compact = true)
+                    MicButton(state.phase == DictationPhase.RECORDING, { onHeld(true) }, { onHeld(false) }, size = 58.dp, halo = 4.dp)
                 }
+                Spacer(Modifier.height(12.dp))
+            } else {
+                DictationLevel(state, compact = false)
                 Spacer(Modifier.height(20.dp))
                 MicButton(state.phase == DictationPhase.RECORDING, { onHeld(true) }, { onHeld(false) }, size = 58.dp, halo = 4.dp)
                 Spacer(Modifier.height(16.dp))
@@ -101,6 +106,26 @@ fun DictationBottomScreen(state: DictationReview, onButton: (Button) -> Unit, on
                 BarAction("Y", "Compléter") { onButton(Button.Y) }
                 BarAction("X", "Corriger un mot") { onButton(Button.X) }
             }
+        }
+    }
+}
+
+@Composable
+private fun DictationLevel(state: DictationReview, compact: Boolean) {
+    // Actual recent PCM levels; no fabricated activity while the microphone is silent.
+    val levels = remember { mutableStateListOf<Float>() }
+    LaunchedEffect(state.durationMs, state.level) {
+        if (state.durationMs == 0L) levels.clear()
+        levels.add(state.level)
+        if (levels.size > 32) levels.removeAt(0)
+    }
+    val height = if (compact) 32f else 72f
+    Row(Modifier.height(height.dp).semantics {
+        contentDescription = "Niveau du micro"
+        progressBarRangeInfo = ProgressBarRangeInfo(state.level, 0f..1f)
+    }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        repeat(32) { index ->
+            Box(Modifier.width(5.dp).height((4 + (levels.getOrNull(index) ?: 0f) * height * 2.5f).coerceAtMost(height).dp).background(Palette.mic, RoundedCornerShape(3.dp)))
         }
     }
 }

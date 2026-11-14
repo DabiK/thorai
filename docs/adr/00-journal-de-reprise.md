@@ -46,6 +46,8 @@
 
 - **14 novembre, ticket 08, correction de revue du service micro (solo Codex)** : mutex commun aux instances de ForegroundMicrophone, de l'ouverture à la fermeture complète de l'audio puis stopService ; B/L2 immédiat ne laisse plus l'ancienne capture arrêter la nouvelle. Test déterministe rouge puis vert, annulation en attente et erreur/reprise couvertes. Android 215 tests + lint, voix 127 + lint, pont 268 + typage/lint verts. APK réinstallé ; reprise WAV locale et permission absente vérifiées sur Thor (33–37), aucun agent/message lancé, pont arrêté par Quitter à 02:12:30Z. Critère des deux fournisseurs toujours décoché : permission micro, clé ElevenLabs, vraie voix et preuve texte relu/reçu à faire avec l'utilisateur (essai-thor.txt, étapes 1–8). Statut à fusionner selon la consigne nocturne ; ADR 09 complété.
 
+- **14 novembre, ticket 08, correction de revue du panneau compact (solo Codex)** : micro tactile et niveau PCM rétablis en mode un écran, côte à côte ; deux régressions Compose/Robolectric rouges puis vertes après Compléter/Corriger. Android 217 tests + lint, voix 127 + lint, pont 268 + typage/lint verts. Thor : maintien tactile injecté sur display 0, WAV Thomas, complément puis remplacement du mot choisi à la croix, retour en deux écrans (38–48). Brouillon effacé sans envoi, aucun agent lancé ; pont quitté à 03:24:21 locale. Critère des deux fournisseurs toujours décoché : vraie voix, permission micro, clé et preuves relu/reçu restent à l'utilisateur. Statut à fusionner selon la consigne nocturne ; ADR 09 et pas à pas complétés.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |
