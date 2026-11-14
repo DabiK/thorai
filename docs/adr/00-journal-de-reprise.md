@@ -88,6 +88,8 @@
 
 - **14 novembre, ticket 17 à fusionner (solo Codex)** : Tout autoriser explicite, options modèle/réflexion ACP à la création et en session, mode visible, plan/reprise/Start et autres sélecteurs exposés (ADR 02, protocole). Android 316 tests + lint, pont 297 + typage/lint verts. Thor absente ; émulateur deux écrans, vrai Codex : apply_patch et shell avec redirection sans validation, Sol/low → Terra/high confirmé dans les turn_context, plan puis retour, reprise et interruption. Aucun Claude ni sous-agent ; vérifications physiques et Claude dans artifacts/screenshots/17/essai-emulateur.txt. Première passe corrigée : listes remplacées, accusé de réglage vérifié, rollback et aide sans masquer la consigne. Relecture après 949e61f : double échec changement/retour de mode corrigé (session suspendue, reprise obligatoire), deux tests rouges puis verts. Portes repassées, reprise et aller-retour plan/Tout autoriser rejoués sur émulateur.
 
+- **14 novembre, ticket 17, correction de revue Start (solo Codex)** : Start transmis au contrôleur d’interruption même dans les options occupées. Régression de composition rouge puis verte ; attente d’accusé/B bloqué et session au repos couverts, mutation busy détectée. Android 319 tests + lint et pont 297 + typage/lint verts. Thor absente ; émulateur deux écrans, même Codex de démo : Droite/Start, `turn_end cancelled` seq 1463, captures review-start-26–28. Agent, pont et AVD arrêtés. Aucun Claude ni sous-agent ; pas à pas Thor complété, ADR 02 précisé, statut à fusionner.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

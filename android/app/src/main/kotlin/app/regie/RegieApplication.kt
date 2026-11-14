@@ -90,8 +90,12 @@ class RegieApplication : Application() {
  * (vue d'ensemble ou session), la vue d'ensemble, la session ouverte, les contrôleurs, le routeur
  * d'entrées et le mode d'écran. C'est le seul endroit qui choisit la passerelle vers les agents (ADR 06).
  */
-class AppContainer(private val app: Application, displayManager: DisplayManager) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+class AppContainer(
+    private val app: Application,
+    displayManager: DisplayManager,
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
+    private val gatewayFactory: (() -> AgentGateway)? = null,
+) {
 
     private val _overview = MutableStateFlow(Overview.EMPTY)
     val overview: StateFlow<Overview> = _overview.asStateFlow()
@@ -194,6 +198,7 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
                 Button.RIGHT -> settingsReview?.change(1)
                 Button.A -> settingsReview?.apply()
                 Button.B -> settingsReview?.close()
+                Button.START -> sessionController.handle(input)
                 else -> Unit
             }
             return
@@ -383,7 +388,7 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
         val external = ExternalBridge()
         val launcher = if (hasTermux) TermuxBridgeLauncher(app) else external
         val androidAccess = if (hasTermux) WirelessDebuggingAccess(app) else external
-        val chosen: AgentGateway = if (replay) {
+        val chosen: AgentGateway = gatewayFactory?.invoke() ?: if (replay) {
             ReplayAgentGateway()
         } else {
             BridgeAgentGateway(

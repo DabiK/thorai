@@ -324,3 +324,14 @@ un écran et interruption Start (`stopReason: cancelled`) vérifiés. Thor absen
 aucun Claude lancé. Le premier texte long injecté par `adb input text` a été tronqué
 (comportement déjà relevé au ticket 11) ; la consigne complète a été transmise par
 WebSocket pour vérifier les actions, sans prétendre tester la voix humaine.
+
+### Correction de revue — Start pendant les réglages
+
+Start traverse le panneau d’options, y compris pendant l’attente d’un accusé
+(`busy`), et rejoint le contrôleur d’interruption existant. B reste bloqué pendant
+cette attente pour conserver la cible du réglage. Aucun changement des règles
+métier d’interruption ni du protocole. La racine de composition accepte un port
+et un scope injectés pour tester le parcours entier sans agent ni console.
+Régression initiale rouge puis verte ; mutation bloquant Start pendant `busy`
+détectée ; session au repos couverte. Essai réel Codex sur les deux écrans :
+Droite puis Start, `turn_end cancelled`, preuves `review-start-*` du ticket 17.

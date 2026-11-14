@@ -34,30 +34,32 @@ Retours de l'utilisateur, le 14 novembre :
 - Sur l'émulateur (ticket 16) avec une vraie session Codex :
   - [x] en « Tout autoriser », une écriture et une commande passent sans aucune demande → `artifacts/screenshots/17/acceptance.txt`, `events-final.json` (apply_patch et printf avec redirection, zéro approval_request) ;
   - [x] le changement de modèle et de niveau de réflexion en cours de session est pris en compte → captures 09–11 et `codex-turn-contexts.json` (Sol/low → Terra/high, never/danger-full-access).
-- [x] Les portes de qualité sont vertes → Android `./gradlew check` (316 tests + lint), pont `npm run check` (297 tests + typage/lint).
+- [x] Les portes de qualité sont vertes → Android `./gradlew check` (319 tests + lint), pont `npm run check` (297 tests + typage/lint).
 
+- [x] Start interrompt depuis les options, même pendant un réglage → `SessionSettingsInputTest`, mutation busy détectée ; vrai Codex `turn_end cancelled` seq 1463.
 
 ## Rapport
 
 STATUT: done
-RÉSUMÉ: Tout autoriser à la création et en session ; modèle/réflexion issus d’ACP,
-modifiables à la manette ou au tactile. Mode visible, plan, reprise et interruption.
+RÉSUMÉ: Tout autoriser, modèles et réflexion ACP disponibles à la création et en session.
+Start interrompt aussi depuis les options, même pendant l’application d’un réglage.
 CRITÈRES:
-- [x] Permissions explicites → mapping des deux agents testé ; Codex réel sans validation.
-- [x] Options dynamiques → domaine/passerelle/protocole, captures 04/10, vrais turn_context.
-- [x] Plan / reprendre / interrompre → captures 12/15/20, événements du pont.
-- [x] Contrat documenté et portes vertes → docs/protocole-pont.md, android-check.txt, bridge-check.txt.
-PORTE DE QUALITÉ: Android 316 tests et lint ; pont 297 tests, typage et lint, verts.
-THOR: absente ; émulateur Regie_Thor à deux écrans avec pont Mac et vrai Codex.
-REVIEW: première passe : options non confirmées, mode spontané, retour arrière du mode,
-consigne masquée par l’aide corrigés. Relecture main...HEAD après 949e61f : double
-échec changement/retour suspend désormais la session, deux tests rouges puis verts.
-DÉCISIONS PRISES: ADR 02 complété ; découverte ACP sans prompt avant A, sélecteurs reçus
-entiers, changement confirmé par A, pas de renvoi après résultat incertain.
-POUR L’UTILISATEUR: suivre les étapes 1–8 de artifacts/screenshots/17/essai-emulateur.txt :
-installer sur Thor, édition + commande en Tout autoriser, changer modèle/effort, plan,
-Start, reprise, manette/micro/écrans physiques ; Claude quand le quota le permet.
+- [x] Permissions explicites → mapping testé ; acceptance.txt et events-final.json.
+- [x] Modèle/réflexion effectifs → captures 09–11, codex-turn-contexts.json.
+- [x] Plan/reprise → captures 12/15 ; Start dans les options → captures review-start-26–28, seq 1463 cancelled.
+- [x] Start pendant busy → SessionSettingsInputTest, mutation détectée ; session au repos protégée.
+- [x] Protocole/domaine et portes vertes → docs/protocole-pont.md, review-start-*-check.txt.
+PORTE DE QUALITÉ: Android 319 tests + lint ; pont 297 tests + typage/lint, verts.
+THOR: absente ; émulateur deux écrans, pont Mac, vrai Codex interrompu depuis Options.
+Agent d’essai, pont et émulateur arrêtés ; aucun Claude lancé.
+REVIEW: constat bloquant Start corrigé ; test rouge puis vert, mutation busy détectée.
+Relecture complète main...HEAD consignée dans review-start-relecture.txt.
+DÉCISIONS PRISES: ADR 02 précisé ; routage vers le contrôleur existant, sans nouvelle règle produit.
+POUR L’UTILISATEUR: suivre essai-emulateur.txt, étapes 1–8 : installer sur Thor,
+créer en Tout autoriser, dicter édition/commande, changer modèle/effort, plan/reprise ;
+pendant un tour : Droite puis Start, B pour voir Interrompue ; refaire après A sur un réglage.
+Contrôler manette/micro/écrans physiques ; Claude quand le quota le permet.
 QUESTIONS: aucune.
-CAPTURES: artifacts/screenshots/17/ (04, 10, 12, 14–17, 20–25).
-HORS PÉRIMÈTRE: saisie longue adb input text tronquée, déjà relevée au ticket 11 ;
-la consigne exacte de vérification a été envoyée par WebSocket. Pas de voix réelle testée.
+CAPTURES: artifacts/screenshots/17/ ; nouvelles review-start-26haut/bas.png à 28haut/bas.png.
+HORS PÉRIMÈTRE: saisie longue adb tronquée déjà relevée au ticket 11 ; vraie voix non testée.
+Le cas busy est testé avec un accusé suspendu, pas forcé sur le vrai agent.
