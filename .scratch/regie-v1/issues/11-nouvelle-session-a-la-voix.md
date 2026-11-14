@@ -23,6 +23,7 @@ Bloqué par : 09
 
 - [x] Sur la Thor, trois phrases différentes produisent la bonne fiche, et la session lancée tourne sur la bonne branche. Preuve synthétique locale : corpus 01/02/05, captures 05–07/16/20, journaux session1-events.json, session2-final-events.json, session3-events.json et git-after-new.txt. Lecture humaine restant à vérifier ci-dessous.
 
+- [x] Consigne longue lisible intégralement au stick avant A → LongInstructionReviewTest (un/deux écrans), captures scroll-51/52/53, arrêt stable scroll-49/50.
 
 ## Rapport
 
@@ -32,7 +33,7 @@ Bloqué par : 09
 - Constat bloquant transmis : déjà corrigé dans le socle du ticket 10 (b868609).
   ResyncedExplanationTest réexécuté vert ; mutation ramenant les identifiants locaux
   détectée rouge, fichier restauré avant la porte complète. Aucun correctif à dupliquer.
-- Portes : Android 294 tests + lint, pont 271 tests + typage/lint, tous verts.
+- Portes actuelles : Android 296 tests + lint, pont 271 tests + typage/lint, tous verts.
 - Thor : APK réinstallé, WAV Thomas/local et sendevent, trois fiches rejouées,
   correction du niveau, redictée, collision de branche, un/deux écrans ; aucune
   nouvelle session pendant la reprise. Journaux des trois vrais lancements Codex
@@ -45,6 +46,20 @@ Bloqué par : 09
   succès emploie « travail / tout valider ». Aucun taux de reconnaissance humaine.
 - Captures et méthode complète : artifacts/screenshots/11/essai-thor.txt.
 
+### Correction du dernier constat de revue — 14 novembre, 09 h 21
+
+- Le stick droit fait défiler la fiche du haut ; le relâchement arrête le mouvement
+  même derrière un panneau. A/B restent accessibles, croix et lancement inchangés.
+- Deux régressions de rendu rouges puis vertes, avec 1 950 caractères et mesure de
+  la dernière ligne ; marche arrière et relâchement couverts. Aucun service réel.
+- Android check (296 tests + lint), pont check (271 + typage/lint) verts ; régression
+  resync du socle réexécutée sans cache, verte. ADR 13 complété.
+- Thor : APK réinstallé, R2/WAV Thomas 01, édition tactile longue, stick via sendevent
+  en un/deux écrans, B et Quitter. Texte réellement affiché : 1 670 caractères
+  (pertes de l'injection adb rapide, consignées) ; dernière ligne visible.
+- Aucun agent lancé. Pont et app arrêtés à 09:20:58 Paris. Débogage sans fil des
+  agents indisponible, signalé hors périmètre. Statut à fusionner maintenu.
+
 ### Vérification avec l'utilisateur
 
 1. Ouvrir Régie et accorder le micro si demandé. R2 : « Lance Codex sur test pour
@@ -55,7 +70,9 @@ Bloqué par : 09
 4. R2 : « Lance Codex sur test, nouvelle branche matin depuis lecture, tout valider,
    pour afficher la branche courante ». Employer un nom absent ; vérifier la base,
    A puis autorisation de Codex ; vérifier la branche obtenue.
-5. X depuis la régie : fiche vide ; B annule. Éteindre/rallumer physiquement l'écran
+5. Avec L2, dicter une consigne longue ; choisir Consigne puis faire défiler au stick
+   jusqu’à la dernière ligne. Relâcher : l’image doit rester stable. B annule.
+6. X depuis la régie : fiche vide ; B annule. Éteindre/rallumer physiquement l'écran
    bas pour vérifier le repli. Quitter pour arrêter les sessions.
 
 Statut à fusionner selon la consigne nocturne : tout ce qui ne dépend pas de

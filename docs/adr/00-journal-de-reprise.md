@@ -72,6 +72,8 @@
 
 - **14 novembre, ticket 11, relecture solo finale** : diff main...HEAD relu après 4b884f7, aucun nouveau blocage ; preuves, limites ASR et pas à pas humain explicités. Espaces finaux des traces nettoyés, aucun code/test changé après les portes vertes et les essais Thor. Détail : artifacts/screenshots/11/relecture.txt ; statut à fusionner maintenu.
 
+- **14 novembre, ticket 11, correction de revue du défilement (solo Codex)** : stick raccordé à la fiche, arrêt au relâchement même derrière un panneau, actions épinglées. Deux régressions Compose rouges puis vertes (1 950 caractères, dernière ligne réellement visible, un/deux écrans). Android 296 tests + lint et pont 271 + typage/lint verts ; resync du socle réexécuté vert sans cache. Thor : R2/WAV Thomas 01, saisie longue (1 670 caractères observés), stick sendevent, B, captures scroll-51–54. Aucun agent lancé ; app et pont quittés à 09:20:58 Paris. ADR 13 complété. Débogage sans fil agents indisponible, hors périmètre ; vrai micro et extinction physique au pas à pas. Statut à fusionner maintenu.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

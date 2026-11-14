@@ -175,7 +175,10 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
 
     fun handleInput(input: GamepadInput) {
         // A release belongs to the physical stick even while an overlay owns the inputs.
-        if (input is GamepadInput.Scroll && input.velocity == 0f) diffVelocity.value = 0f
+        if (input is GamepadInput.Scroll && input.velocity == 0f) {
+            diffVelocity.value = 0f
+            newSessionVelocity.value = 0f
+        }
         if (settingsOpen.value) {
             if (input == GamepadInput.Pressed(Button.B)) closeVoiceSettings()
             return
@@ -292,22 +295,27 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
 
     private var reviewNewSession: ReviewNewSession? = null
     val newSession = MutableStateFlow(NewSessionForm())
-    fun openNewSession(draft: NewSessionDraft? = null, text: String = "") { reviewNewSession?.open(draft, text) }
+    val newSessionVelocity = MutableStateFlow(0f)
+    fun openNewSession(draft: NewSessionDraft? = null, text: String = "") {
+        newSessionVelocity.value = 0f
+        reviewNewSession?.open(draft, text)
+    }
     fun selectNewSessionField(field: NewSessionField) { reviewNewSession?.select(field) }
     fun editNewInstruction(text: String) { reviewNewSession?.editInstruction(text) }
     fun editNewBranch(text: String) { reviewNewSession?.editBranch(text) }
 
     private fun handleNewSession(input: GamepadInput) {
+        if (input is GamepadInput.Scroll) { newSessionVelocity.value = input.velocity; return }
         val review = reviewNewSession ?: return
         when (input) {
             is GamepadInput.TriggerDown -> when (input.trigger) {
                 Trigger.L2 -> review.record()
-                Trigger.R2 -> if (review.state.value.editable) startVoiceCommand()
+                Trigger.R2 -> if (review.state.value.editable) { newSessionVelocity.value = 0f; startVoiceCommand() }
             }
             is GamepadInput.TriggerUp -> if (input.trigger == Trigger.L2) review.finish()
             is GamepadInput.Pressed -> when (input.button) {
-                Button.A -> review.launch()
-                Button.B -> review.back()
+                Button.A -> { newSessionVelocity.value = 0f; review.launch() }
+                Button.B -> { newSessionVelocity.value = 0f; review.back() }
                 Button.UP -> review.move(-1)
                 Button.DOWN -> review.move(1)
                 Button.LEFT -> review.change(-1)

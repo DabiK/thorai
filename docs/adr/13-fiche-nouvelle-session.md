@@ -123,3 +123,33 @@ nouveau lancement est correctement bloqué. Correction croix, L2, B et mode un �
 revérifiés sans création. Quitter a arrêté les quatre sessions Codex d'essai et le
 pont à 09:04:35 Paris. Méthode, limites ASR et pas à pas humain dans
 `artifacts/screenshots/11/essai-thor.txt` ; aucune preuve de voix humaine revendiquée.
+
+
+## Correction de revue : consigne longue au stick
+
+Le stick droit pilote maintenant la liste du haut, quelle que soit l'activité qui
+reçoit la manette, également en mode un écran. Les croix gardent leur rôle de sélection
+et de correction ; A/B restent épinglés. L'interface annonce le défilement au stick.
+Vitesse maximale de 500 dp/s, proportionnelle à l'axe et au temps entre images, comme
+le diff. C'est un choix d'interface réversible ; aucune règle de lancement ne change.
+Le relâchement est pris en compte même derrière les réglages ou l'ordre vocal.
+Ouverture, A, B et passage à R2 remettent également la vitesse à zéro.
+
+`LongInstructionReviewTest` exerce le vrai routeur et la racine de composition sans
+les démarrer, puis le rendu Compose : consigne valide de 1 950 caractères,
+dernière ligne initialement coupée, entièrement visible après le stick, marche
+arrière et relâchement derrière les réglages. Deux tests rouges puis verts, un/deux
+écrans. La mesure porte sur les coordonnées de la dernière ligne, pas sur la simple
+présence du texte dans l'arbre d'accessibilité. Aucun service ni agent dans ces tests.
+API vérifiée via Context7 : `ScrollableState.scrollBy`, `withFrameNanos`,
+`MainTestClock` et `getUnclippedBoundsInRoot` ; sources dans `scroll-docs-*.txt`.
+
+Android : 296 tests et lint verts ; pont : 271 tests, typage et lint verts.
+`ResyncedExplanationTest` du socle réexécuté sans cache : vert. Thor : WAV Thomas
+01 relu par le moteur local, consigne longue saisie au secours tactile, stick par
+sendevent, fin visible en un/deux écrans, arrêt stable et B. La saisie adb rapide
+a perdu des caractères : 1 670 réellement affichés et relevés par uiautomator,
+contre 1 950 exactement dans le test JVM. Aucune preuve de dictée longue humaine.
+Captures `scroll-51` à `scroll-54`, protocole dans `essai-thor.txt`. Aucun agent lancé ;
+Quitter a arrêté l'app et le pont à 09:20:58 Paris. Micro réel et extinction physique
+restent au pas à pas utilisateur. Le débogage sans fil des agents reste hors périmètre.

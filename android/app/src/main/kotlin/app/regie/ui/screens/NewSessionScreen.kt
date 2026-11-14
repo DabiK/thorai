@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,6 +18,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalDensity
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.regie.domain.model.*
@@ -26,8 +30,21 @@ import app.regie.ui.theme.*
 
 @Composable
 fun NewSessionScreen(state: NewSessionForm, bottom: Boolean, single: Boolean, onButton: (Button) -> Unit,
-    onHeld: (Boolean) -> Unit, onField: (NewSessionField) -> Unit, onInstruction: (String) -> Unit, onBranch: (String) -> Unit) {
+    onHeld: (Boolean) -> Unit, onField: (NewSessionField) -> Unit, onInstruction: (String) -> Unit, onBranch: (String) -> Unit, velocity: StateFlow<Float>) {
     val list = rememberLazyListState()
+    val speed = with(LocalDensity.current) { 500.dp.toPx() }
+    LaunchedEffect(list, velocity, bottom, speed) {
+        if (bottom) return@LaunchedEffect
+        velocity.collectLatest { value ->
+            if (value == 0f) return@collectLatest
+            var last = withFrameNanos { it }
+            while (true) {
+                val now = withFrameNanos { it }
+                list.scrollBy(value * speed * (now - last) / 1e9f)
+                last = now
+            }
+        }
+    }
     val held by rememberUpdatedState(onHeld)
     val editable by rememberUpdatedState(state.editable)
     LaunchedEffect(state.field) {
@@ -44,7 +61,7 @@ fun NewSessionScreen(state: NewSessionForm, bottom: Boolean, single: Boolean, on
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (state.heard.isNotEmpty()) BasicText("« ${state.heard} »", style = sans(14.sp, color = Palette.textMuted, lineHeight = 20.sp), maxLines = 2)
-                    BasicText("Ce que j’ai compris", style = sans(12.sp, color = Palette.textSubtle))
+                    BasicText("Ce que j’ai compris · stick droit pour faire défiler", style = sans(12.sp, color = Palette.textSubtle))
                 }
             }
             items(state.fields) { field ->

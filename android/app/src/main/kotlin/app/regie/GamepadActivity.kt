@@ -153,7 +153,7 @@ abstract class GamepadActivity : ComponentActivity() {
                         ThreadScroll(container.commandScroll, container.commandVelocity))
                 } else if (newSession.visible) {
                     app.regie.ui.screens.NewSessionScreen(newSession, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single,
-                        button, held, container::selectNewSessionField, container::editNewInstruction, container::editNewBranch)
+                        button, held, container::selectNewSessionField, container::editNewInstruction, container::editNewBranch, container.newSessionVelocity)
                 } else if (dictation.visible) {
                     if (this@GamepadActivity is BottomActivity) DictationBottomScreen(dictation, button, held, container::openVoiceSettings)
                     else DictationTopScreen(dictation, current.sessions.firstOrNull { it.id == dictation.target?.sessionId }, mode == ScreenMode.Single, button, held, container::openVoiceSettings, ThreadScroll(container.dictationScroll, container.dictationVelocity))

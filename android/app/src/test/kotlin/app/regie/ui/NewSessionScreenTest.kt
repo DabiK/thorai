@@ -17,6 +17,7 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
+import kotlinx.coroutines.flow.MutableStateFlow
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33], application = Application::class, qualifiers = "w832dp-h468dp-land-mdpi")
@@ -30,7 +31,7 @@ class NewSessionScreenTest {
         val state = mutableStateOf(form)
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
             host.setup().get().setContent { RegieTheme {
-                NewSessionScreen(state.value, bottom = false, single = true, onButton = { buttons += it }, onHeld = {}, onField = {}, onInstruction = {}, onBranch = {})
+                NewSessionScreen(state.value, bottom = false, single = true, onButton = { buttons += it }, onHeld = {}, onField = {}, onInstruction = {}, onBranch = {}, velocity = MutableStateFlow(0f))
             } }
             compose.onNodeWithText("Codex").assertIsDisplayed()
             compose.onNodeWithText("demo").assertIsDisplayed()
@@ -49,7 +50,7 @@ class NewSessionScreenTest {
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
             host.setup().get().setContent { RegieTheme {
                 NewSessionScreen(state.value, bottom = true, single = false,
-                    onButton = {}, onHeld = { holds += it; state.value = state.value.copy(capturing = it) }, onField = {}, onInstruction = {}, onBranch = { names += it })
+                    onButton = {}, onHeld = { holds += it; state.value = state.value.copy(capturing = it) }, onField = {}, onInstruction = {}, onBranch = { names += it }, velocity = MutableStateFlow(0f))
             } }
             compose.onNodeWithTag("branch-name").performTextReplacement("autre")
             compose.runOnIdle { assertEquals(listOf("autre"), names) }
