@@ -1,6 +1,6 @@
 # 10 — Relecture du diff
 
-Statut : à fusionner
+Statut : fait
 Bloqué par : 06, 08
 
 ## Objectif
