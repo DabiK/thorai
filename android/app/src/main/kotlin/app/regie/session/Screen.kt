@@ -9,6 +9,14 @@ sealed interface Screen {
 
     data object Approval : Screen
 
+    data class Diff(val id: SessionId) : Screen
+
     /** Une session en direct. */
     data class Session(val id: SessionId) : Screen
+}
+
+val Screen.sessionId: SessionId? get() = when (this) {
+    is Screen.Session -> id
+    is Screen.Diff -> id
+    else -> null
 }

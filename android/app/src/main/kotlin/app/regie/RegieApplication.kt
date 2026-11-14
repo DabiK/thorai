@@ -7,6 +7,9 @@ import app.regie.domain.usecase.InterpretVoiceCommand
 import app.regie.domain.usecase.ExecuteVoiceCommand
 import app.regie.domain.usecase.AnswerApproval
 import app.regie.domain.usecase.DeliverDictation
+import app.regie.session.sessionId
+import app.regie.domain.usecase.ReviewDiff
+import app.regie.domain.usecase.DiffReview
 import app.regie.domain.usecase.ReviewDictation
 import app.regie.input.Button
 import app.regie.input.GamepadInput
@@ -133,13 +136,14 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
         val shown = _screen.value
         val current = when (shown) {
             is Screen.Session -> shown.id
+            is Screen.Diff -> shown.id
             Screen.Approval -> approvalReview.value.request?.sessionId
             Screen.Overview -> controller.state.value.focusedId
         }
         val approval = when (shown) {
             Screen.Approval -> approvalReview.value.request
             Screen.Overview -> overview.value.firstPendingApproval?.approval
-            is Screen.Session -> null
+            is Screen.Session, is Screen.Diff -> null
         }
         voiceCommand.start(VoiceCommandContext(overview.value.sessions.toList(), current, approval, projects))
     }
@@ -170,6 +174,8 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
     }
 
     fun handleInput(input: GamepadInput) {
+        // A release belongs to the physical stick even while an overlay owns the inputs.
+        if (input is GamepadInput.Scroll && input.velocity == 0f) diffVelocity.value = 0f
         if (settingsOpen.value) {
             if (input == GamepadInput.Pressed(Button.B)) closeVoiceSettings()
             return
@@ -215,6 +221,7 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
         if (input is GamepadInput.TriggerDown && input.trigger == Trigger.L2) {
             when (val screen = _screen.value) {
                 is Screen.Session -> startDictation(screen.id)
+                is Screen.Diff -> if (diffReview.value.explanation == null) reviewDiff?.commentTarget()?.let(::beginDictation)
                 Screen.Overview -> controller.handle(input)
                 Screen.Approval -> approvalReview.value.takeIf { it.canAnswer(ApprovalDecision.REJECT) }?.request?.let {
                     beginDictation(DictationTarget.Rejection(it.sessionId, it.id))
@@ -226,6 +233,40 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
             Screen.Overview -> controller.handle(input)
             Screen.Approval -> approvalController.handle(input)
             is Screen.Session -> sessionController.handle(input)
+            is Screen.Diff -> handleDiffInput(input)
+        }
+    }
+    private var reviewDiff: ReviewDiff? = null
+    val diffReview = MutableStateFlow(DiffReview())
+    val diffVelocity = MutableStateFlow(0f)
+    val diffSteps = kotlinx.coroutines.flow.MutableSharedFlow<Int>(extraBufferCapacity = 16)
+    fun selectDiffFile(index: Int) { reviewDiff?.selectFile(index) }
+    private fun handleDiffInput(input: GamepadInput) {
+        val review = reviewDiff ?: return
+        when (input) {
+            is GamepadInput.Scroll -> diffVelocity.value = input.velocity
+            is GamepadInput.TriggerDown, is GamepadInput.TriggerUp -> Unit
+            is GamepadInput.Pressed -> {
+                if (review.state.value.explanation != null) {
+                    when (input.button) {
+                        Button.A -> review.confirmExplanation()
+                        Button.B -> { review.dismissExplanation(); diffVelocity.value = 0f }
+                        Button.UP -> diffSteps.tryEmit(-1)
+                        Button.DOWN -> diffSteps.tryEmit(1)
+                        Button.R1, Button.L1, Button.START -> sessionController.handle(input)
+                        else -> Unit
+                    }
+                } else when (input.button) {
+                    Button.UP -> review.moveLine(-1)
+                    Button.DOWN -> review.moveLine(1)
+                    Button.LEFT -> review.moveFile(-1)
+                    Button.RIGHT -> review.moveFile(1)
+                    Button.Y -> { diffVelocity.value = 0f; review.explain() }
+                    Button.B -> _screen.value.sessionId?.let { openSession(it) }
+                    Button.R1, Button.L1, Button.START -> sessionController.handle(input)
+                    else -> Unit
+                }
+            }
         }
     }
     private var reviewApprovals: ReviewApprovals? = null
@@ -251,7 +292,7 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
     private val startNewSession = StartNewSession()
 
     val controller = OverviewController(overview, ::execute)
-    val sessionController = SessionController(live, overview, current = { (_screen.value as? Screen.Session)?.id }, ::execute)
+    val sessionController = SessionController(live, overview, current = { _screen.value.sessionId }, ::execute)
 
     /** La manette va à l'écran affiché. */
     val inputRouter = InputRouter(::handleInput)
@@ -298,6 +339,7 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
             StartUp(chosen, WirelessDebuggingAccess(app), launcher).also { startUp = it }.report
         }
         gateway = chosen
+        reviewDiff = ReviewDiff(chosen, scope).also { review -> scope.launch { review.state.collect { diffReview.value = it } } }
         val answer = AnswerApproval(chosen)
         executeVoiceCommand = ExecuteVoiceCommand(chosen, answer) { openSession(it) }
         scope.launch { chosen.connection.collectLatest { connection ->
@@ -328,7 +370,7 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
         scope.launch {
             _screen.collectLatest { screen ->
                 _live.value = null
-                if (screen is Screen.Session) openSession(screen.id).collect { _live.value = it }
+                screen.sessionId?.let { id -> openSession(id).collect { _live.value = it } }
             }
         }
         // Preload vocabulary while browsing: pressing L2 never waits for the network.
@@ -377,6 +419,7 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
         // Jamais le texte d'un message dans le journal.
         Log.i(TAG, "action : ${if (action is SessionAction.Send) "Send(${action.id})" else action}")
         when (action) {
+            is SessionAction.OpenDiff -> navigate(Screen.Diff(action.id))
             is SessionAction.Open -> navigate(Screen.Session(action.id))
             SessionAction.Back -> navigate(Screen.Overview)
             is SessionAction.OpenApproval -> openApproval(action.id)
@@ -406,6 +449,9 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
         sessionController.releaseTriggers()
         sessionController.reset()
         approvalController.scrollVelocity.value = 0f
+        diffVelocity.value = 0f
+        reviewDiff?.close()
+        if (to is Screen.Diff) reviewDiff?.open(to.id)
         _screen.value = to
     }
 

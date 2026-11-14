@@ -123,7 +123,6 @@
     <string name="action_speak_summary_short">Point</string>
 
     <!-- Avis brefs, à la place de la phrase sous le micro. -->
-    <string name="notice_diff_unavailable">Le diff ne se consulte pas encore dans Régie.</string>
     <string name="notice_sending">Envoi…</string>
     <string name="delivery_prompt">Message envoyé.</string>
     <string name="delivery_steering">Pris en compte en cours de route.</string>

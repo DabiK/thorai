@@ -17,10 +17,15 @@ sealed interface ThreadEntry {
     val id: Long
 
     /** Un message envoyé à l'agent. D'où il vient (dictée, écrit) n'est pas connu du pont. */
-    data class UserMessage(override val id: Long, val text: String) : ThreadEntry
+    data class UserMessage(override val id: Long, val text: String,
+        /** Position persistante dans le journal, indépendante des identifiants reconstruits. */
+        val sequence: Long = id,
+    ) : ThreadEntry
 
-    /** Une suite de morceaux de réponse de l'agent, mis bout à bout. */
-    data class AgentText(override val id: Long, val text: String) : ThreadEntry
+    /** Une suite de morceaux de réponse de l'agent, mis bout à bout.
+     * [responseTo] identifie le UserMessage auquel ces morceaux répondent ; null si inconnu.
+     */
+    data class AgentText(override val id: Long, val text: String, val responseTo: Long? = null) : ThreadEntry
 
     /**
      * Une action de l'agent. [path] : le premier fichier concerné, relatif au projet. [changes] : les
@@ -38,13 +43,16 @@ sealed interface ThreadEntry {
         val result: String? = null,
         /** Tous les fichiers exposés par cet appel, avec le compte propre à chacun. */
         val files: List<ModifiedFile> = emptyList(),
+        val diffs: List<DiffFragment> = emptyList(),
+        /** Identité de l’appel conservée lors de la relecture du journal. */
+        val persistentId: String = id.toString(),
     ) : ThreadEntry
 
     /** Le tour a échoué ; [message] est celui du pont, s'il en donne un. */
-    data class TurnFailed(override val id: Long, val message: String?) : ThreadEntry
+    data class TurnFailed(override val id: Long, val message: String?, val responseTo: Long? = null) : ThreadEntry
 
     /** Le tour s'est terminé sur une interruption. */
-    data class Interrupted(override val id: Long) : ThreadEntry
+    data class Interrupted(override val id: Long, val responseTo: Long? = null) : ThreadEntry
 }
 
 enum class PlanStepStatus { DONE, IN_PROGRESS, PENDING }
@@ -73,6 +81,10 @@ data class SessionThread(
     val plan: List<PlanStep>? = null,
     val context: ContextUsage? = null,
     val loaded: Boolean = false,
+    /** Messages dont la réponse est terminée selon le journal, indépendamment du statut global. */
+    val completedMessages: Set<Long> = emptySet(),
+    /** Dernière position du journal appliquée ; ne dépend pas du nombre d'éléments visibles. */
+    val lastSequence: Long = entries.maxOfOrNull { it.id } ?: -1,
 ) {
     companion object {
         val EMPTY = SessionThread()

@@ -45,14 +45,86 @@ class ThreadBuilderTest {
         return builder.snapshot(loaded = true)
     }
 
+    @Test
+    fun `queued messages own only the response after their preceding turn ends`() {
+        val builder = ThreadBuilder(cwd = { null })
+        var seq = 0L
+        fun event(json: String) {
+            val data = Frames.parseObject(json)!!
+            builder.apply(BridgeEvent(seq++, null, "s",
+                if (data.string("sessionUpdate") != null) "session_update" else data.string("type")!!, data))
+        }
+        event("""{"type":"user_message","text":"Tests","delivery":"prompt"}""")
+        event("""{"type":"user_message","text":"Explique","delivery":"queued"}""")
+        event("""{"type":"user_message","text":"Suite","delivery":"queued"}""")
+        event("""{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"Tests verts"}}""")
+        assertEquals(0L, builder.snapshot(true).entries.filterIsInstance<ThreadEntry.AgentText>().single().responseTo)
+        assertTrue(builder.snapshot(true).completedMessages.isEmpty())
+        event("""{"type":"turn_end","stopReason":"end_turn"}""")
+        event("""{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"Ce bloc"}}""")
+        event("""{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":" initialise x."}}""")
+        val explaining = builder.snapshot(true)
+        assertEquals(listOf(0L, 1L), explaining.entries.filterIsInstance<ThreadEntry.AgentText>().map { it.responseTo })
+        assertEquals(listOf("Tests verts", "Ce bloc initialise x."), explaining.entries.filterIsInstance<ThreadEntry.AgentText>().map { it.text })
+        assertEquals(setOf(0L), explaining.completedMessages)
+        event("""{"type":"turn_end","stopReason":"end_turn"}""")
+        event("""{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"La suite"}}""")
+        assertEquals(listOf(0L, 1L, 2L), builder.snapshot(true).entries.filterIsInstance<ThreadEntry.AgentText>().map { it.responseTo })
+        assertEquals(setOf(0L, 1L), builder.snapshot(true).completedMessages)
+    }
+
+    @Test
+    fun `steering cancellation and failure retain their own message identity`() {
+        val result = thread(
+            """{"type":"user_message","text":"Initial","delivery":"prompt"}""",
+            """{"type":"user_message","text":"Queued","delivery":"queued"}""",
+            """{"type":"user_message","text":"Steering","delivery":"steering"}""",
+            """{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"Steered reply"}}""",
+            """{"type":"turn_end","stopReason":"cancelled"}""",
+            """{"type":"session_error","message":"Queued failure"}""",
+        )
+        assertEquals(2L, result.entries.filterIsInstance<ThreadEntry.AgentText>().single().responseTo)
+        assertEquals(2L, result.entries.filterIsInstance<ThreadEntry.Interrupted>().single().responseTo)
+        assertEquals(1L, result.entries.filterIsInstance<ThreadEntry.TurnFailed>().single().responseTo)
+        assertEquals(setOf(0L, 1L, 2L), result.completedMessages)
+    }
+
+    @Test
+    fun `completed message identities stay bounded and clear discards pending turns`() {
+        val builder = ThreadBuilder(cwd = { null }, maxEntries = 2)
+        var seq = 0L
+        fun event(type: String, json: String) = builder.apply(BridgeEvent(seq++, null, "s", type, Frames.parseObject(json)!!))
+        event("user_message", """{"text":"Old","delivery":"prompt"}""")
+        event("user_message", """{"text":"Queued","delivery":"queued"}""")
+        event("session_update", """{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"Old reply"}}""")
+        event("turn_end", """{"stopReason":"end_turn"}""")
+        assertTrue(builder.snapshot(true).completedMessages.isEmpty()) // Old message already evicted.
+        builder.clear()
+        event("user_message", """{"text":"New","delivery":"prompt"}""")
+        val newId = builder.snapshot(true).entries.single().id
+        event("turn_end", """{"stopReason":"end_turn"}""")
+        event("session_update", """{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"Unattributed"}}""")
+        assertNull(builder.snapshot(true).entries.filterIsInstance<ThreadEntry.AgentText>().single().responseTo)
+        assertEquals(setOf(newId), builder.snapshot(true).completedMessages)
+    }
+
     private fun ThreadEntry.ToolCall.essentials() = listOf(kind, title, command, path, changes, status, result)
+
+    @Test
+    fun `reported Claude patch retains its actual file coordinates`() {
+        val edits = replay(Fixtures.CLAUDE_SESSION, claudeId).entries.filterIsInstance<ThreadEntry.ToolCall>().filter { it.kind == ToolKind.EDIT }
+        val fragments = edits.single().diffs
+        assertEquals(listOf("todo.md"), fragments.map { it.path })
+        assertEquals(listOf(2, 3, 4, 5), fragments.single().lines.map { it.number })
+        assertEquals(app.regie.domain.model.DiffKind.ADDED, fragments.single().lines.last().kind)
+    }
 
     @Test
     fun `a Claude session reads two files, edits one with its diff counted, then answers`() {
         val thread = replay(Fixtures.CLAUDE_SESSION, claudeId)
         val entries = thread.entries
 
-        assertEquals(ThreadEntry.UserMessage(entries[0].id, prompt), entries[0])
+        assertEquals(ThreadEntry.UserMessage(0, prompt, sequence = 551), entries[0])
         val (notes, todo, edit) = entries.subList(1, 4).map { it as ThreadEntry.ToolCall }
         assertEquals(listOf(ToolKind.READ, "Read notes.md", null, "notes.md", null, ActionStatus.COMPLETED, null), notes.essentials())
         assertEquals("todo.md", todo.path)
@@ -79,7 +151,7 @@ class ThreadBuilderTest {
     fun `a Codex session streams tiny chunks into one text per run, and its commands give their last line`() {
         val entries = replay(Fixtures.CODEX_SESSION, codexId).entries
 
-        assertEquals(ThreadEntry.UserMessage(entries[0].id, prompt), entries[0])
+        assertEquals(ThreadEntry.UserMessage(0, prompt, sequence = 560), entries[0])
         assertEquals(
             "Je vais lire `notes.md` et `todo.md`, puis ajouter une seule ligne de résumé à la fin de `todo.md`.\n",
             (entries[1] as ThreadEntry.AgentText).text,

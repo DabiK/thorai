@@ -210,12 +210,11 @@ class SessionControllerTest {
     }
 
     @Test
-    fun `X says the diff cannot be seen yet`() {
+    fun `X opens the selected session diff`() {
         show("atelier")
         press(Button.X)
 
-        assertEquals(SessionNotice.DiffUnavailable, controller.state.value.notice)
-        assertTrue(actions.isEmpty())
+        assertEquals(listOf<SessionAction>(SessionAction.OpenDiff(SessionId("atelier"))), actions)
     }
 
     @Test

@@ -1,6 +1,6 @@
 # 10 — Relecture du diff
 
-Statut : en attente
+Statut : à fusionner
 Bloqué par : 06, 08
 
 ## Objectif
@@ -16,4 +16,33 @@ Bloqué par : 06, 08
 
 ## Critères d'acceptation
 
-- Sur la Thor, on relit le diff d'une vraie session, on commente une ligne à la voix, et l'agent en tient compte.
+- [x] Sur la Thor, on relit le diff d'une vraie session, on commente une ligne à la voix, et l'agent en tient compte.
+
+
+## Rapport
+
+STATUT: done
+RÉSUMÉ: La sélection survit à la resynchronisation du journal grâce à l’identité persistante de l’édition.
+L’explication termine son attente après l’arrêt connu de l’agent, avec erreur et texte partiel conservé. Statut : à fusionner.
+CRITÈRES:
+- [x] Diff réel, commentaire vocal et prise en compte → essai Thomas/local/Codex historique, seuil.ts de 70 à 80 (after-comment.json, 04–09).
+- [x] Sélection conservée au resync → DiffRecoveryTest rouge puis vert ; mutation vers l’identité locale détectée (recovery-red-identity.txt).
+- [x] Crash sans fin de tour → DiffRecoveryTest : erreur et réponse partielle, queued sans réponse, rechargement et absence de faux arrêt.
+- [x] Explication liée à sa demande persistante → QueuedExplanationReviewTest et ResyncedExplanationTest restent verts.
+PORTE DE QUALITÉ: cd android && ./gradlew check vert ; 277 tests, aucun échec/ignoré, lint vert (recovery-final-check.txt).
+THOR: APK réinstallé ; même Codex repris, Y/A ligne 2, adapter arrêté après le début de réponse ; texte partiel/erreur visibles en un/deux écrans (56–57).
+Contrôle final : navigation/Y annulé (60–61), Quitter a fermé app/pont à 05:33:49 ; aucun agent d’essai restant. Cet arrêt émet session_error : crash sans fin explicite et resync exact prouvés par tests, pas sur console. Aucun Claude ni permission accordée.
+REVIEW: Deux constats reproduits puis corrigés ; l’identité locale seule ne suffit pas, le test de mutation le vérifie. Diff main...f284d9a relu ; test ajouté pour l’arrêt avant accusé (mutation détectée), aucun autre blocage.
+DÉCISIONS PRISES: ADR 12 complété : identité ACP persistante, sélection conservée et actions suspendues pendant chargement, fin sur arrêt connu.
+POUR L’UTILISATEUR:
+1. Ouvrir Régie ; accorder si nécessaire RUN_COMMAND et le microphone via Réglages voix. Aucun droit accordé cette nuit.
+2. Ouvrir regie-diff10-20261114 puis X ; choisir seuil.ts avec ←→, une ligne avec ↑↓, essayer le stick droit.
+3. Maintenir physiquement L2, dire « Ajoute un test pour cette valeur », relâcher ; relire texte, fichier, ligne et côté supprimé éventuel.
+4. B efface ; A envoie. Vérifier la réponse de Codex et l’édition réelle dans le fil/diff.
+5. Y prépare une explication sans envoi ; A demande. Lire la réponse, défiler, puis B. Aucun son attendu.
+6. Éteindre physiquement l’écran inférieur via l’assistant Odin : vérifier le panneau sur l’écran haut, puis rallumer et vérifier son retour. Quitter Régie.
+QUESTIONS: aucune décision produit en attente.
+CAPTURES: artifacts/screenshots/10/recovery-54–58 et recovery-60–61 ; preuve vocale historique 04–09.
+HORS PÉRIMÈTRE: WrittenSummary.of (ticket 12) utilise encore le dernier message par position : risque pour les bilans queued déjà signalé, non corrigé ici.
+
+Détails des passages et preuves : artifacts/screenshots/10/essai-thor.txt.

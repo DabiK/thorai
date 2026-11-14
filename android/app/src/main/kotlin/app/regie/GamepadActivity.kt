@@ -159,6 +159,11 @@ abstract class GamepadActivity : ComponentActivity() {
                     }
                     Box(Modifier.weight(1f)) {
                 when (val shown = screen) {
+                    is Screen.Diff -> {
+                        val review by container.diffReview.collectAsStateWithLifecycle()
+                        app.regie.ui.screens.DiffScreen(review, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single,
+                            container.diffVelocity, button, container::selectDiffFile, held, container.diffSteps)
+                    }
                     Screen.Approval -> approval()
                     Screen.Overview -> {
                         val control by container.controller.state.collectAsStateWithLifecycle()

@@ -444,7 +444,7 @@ private fun UserMessage(line: ThreadLine.UserMessage) {
  * termine son dernier bloc.
  */
 @Composable
-private fun AgentText(line: ThreadLine.AgentText) {
+internal fun AgentText(line: ThreadLine.AgentText) {
     val blocks = remember(line.text) { Markdown.parse(line.text) }
     val style = sans(13.5.sp, color = Palette.agentText, lineHeight = 20.25.sp)
     val codeStyle = mono(12.sp, color = Palette.agentText, lineHeight = 17.sp)
@@ -700,7 +700,6 @@ private fun NoticeText(notice: SessionNotice, callbacks: SessionCallbacks, modif
 
 @Composable
 private fun noticeText(notice: SessionNotice): Pair<String, Color> = when (notice) {
-    SessionNotice.DiffUnavailable -> stringResource(R.string.notice_diff_unavailable) to Palette.textMuted
     SessionNotice.Sending -> stringResource(R.string.notice_sending) to Palette.textMuted
     SessionNotice.Interrupting -> stringResource(R.string.notice_interrupting) to Palette.textMuted
     is SessionNotice.Interrupted ->
