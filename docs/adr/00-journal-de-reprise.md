@@ -42,6 +42,8 @@
 
 - **14 novembre, ticket 08 à fusionner (solo Codex)** : composite voice, local par défaut, ElevenLabs réglable avec clé chiffrée, dictée L2/relecture A/B/Y/X, vocabulaire du dépôt via session.vocabulary, refus avec consigne, cible du futur diff, service micro (ADR 09). Android 210 tests + lint, voix 127 + lint, pont 268 + typage/lint verts. Thor : WAV français sur moteur local réel, manette et tactile, correction/complément, un/deux écrans, message et refus suivis de réponse Codex. Qualité ASR imparfaite sur noms techniques/phrase longue ; micro réel et ElevenLabs avec clé restent à l'utilisateur. Aucun Claude ni permission accordée ; session d'essai et pont arrêtés par Quitter. Preuves et pas à pas : artifacts/screenshots/08/essai-thor.txt.
 
+- **14 novembre, ticket 08, correction après relecture solo** : course entre résultat final/erreur et relâchement L2 corrigée dans le domaine ; deux régressions rouges puis vertes et tentative de changement de cible couverte. Android 212 tests + lint, voix 127 + lint, pont 268 + typage/lint verts. APK réinstallé, relecture WAV locale vérifiée (30–32), brouillon effacé sans envoi ; aucun nouvel agent, 30 sessions arrêtées, pont quitté à 02:03:33Z. Micro réel et ElevenLabs restent au pas à pas utilisateur ; statut à fusionner. Affichage « compriscompris » dans le fil relevé hors périmètre (30-haut).
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

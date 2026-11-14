@@ -39,8 +39,10 @@ Documentation actuelle vérifiée par Context7 (`ctx7 library Android`, puis `do
 
 Canvas distant inaccessible ; export local `project/Dictee.dc.html` lu en entier dans le cache du canvas, empreinte dans `artifacts/screenshots/08/maquette-sha256.txt`. Structure : texte 25 sp en haut, vocabulaire bleuté, niveau réel et durée en bas, A/B/Y/X. Un petit micro tactile permet aussi de maintenir la capture. Le mode un écran réunit contenu et actions.
 
-En debug uniquement, l'intent `--es voice_wav <nom>.wav` sélectionne un WAV du stockage privé de Régie. Il traverse le véritable fournisseur, la relecture et la livraison ; aucun faux texte ni fausse session n'est injecté. Une valeur vide rétablit le microphone. Ce réglage n'est pas persisté et n'existe pas en release. Il permet l'essai nocturne avec `say -v Thomas` sans permission micro ni intervention humaine.
+En debug uniquement, l'intent `--es voice_wav <nom>.wav` sélectionne un WAV du stockage privé de Régie. Il traverse le véritable fournisseur, la relecture et la livraison ; aucun faux texte ni fausse session n'est injecté. Une valeur qui ne désigne pas un WAV, par exemple `microphone`, rétablit le microphone. Ce réglage n'est pas persisté et n'existe pas en release. Il permet l'essai nocturne avec `say -v Thomas` sans permission micro ni intervention humaine.
 
 Preuves, limites de reconnaissance et marche à suivre avec l'utilisateur : `artifacts/screenshots/08/essai-thor.txt` et rapport du ticket.
 
 Le maintien tactile est suivi par la fenêtre jusqu'au véritable `UP`/`CANCEL` : le remplacement du micro de session par l'écran de dictée ne termine pas le geste. Une fin ou erreur du fournisseur annule aussi sa collecte, même s'il n'a pas encore fermé son flux : le micro ne reste pas détenu après un état terminal. Le texte long se consulte à la croix haut/bas ou au stick droit ; en correction, le mot choisi défile automatiquement en vue.
+
+Relecture après commit : le relâchement applique le dernier état de capture avant de quitter la phase d’enregistrement. Ainsi, un résultat final ou une erreur publié avant la reprise du collecteur ne laisse pas un partiel obsolète dans la relecture. Deux tests d’ordonnancement reproduisent le défaut avant correction.

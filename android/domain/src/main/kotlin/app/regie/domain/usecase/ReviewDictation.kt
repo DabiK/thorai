@@ -2,6 +2,7 @@ package app.regie.domain.usecase
 
 import app.regie.domain.model.*
 import app.regie.domain.port.DictationCapture
+import app.regie.domain.port.CaptureState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,30 +38,34 @@ class ReviewDictation(
         capture.start(before.vocabulary)
         watching?.cancel()
         watching = scope.launch {
-            capture.state.collect { event ->
-                val current = state.value
-                if (current.phase != DictationPhase.RECORDING && current.phase != DictationPhase.FINALIZING) return@collect
-                val text = when {
-                    event.error != null -> base // A failed partial must not overwrite a reviewed word.
-                    event.text.isBlank() -> base
-                    replacement != null -> base.replaceRange(replacement!!, event.text.trim())
-                    base.isBlank() -> event.text.trim()
-                    else -> "$base ${event.text.trim()}"
-                }
-                mutable.value = current.copy(
-                    text = text,
-                    phase = if ((event.complete || event.error != null) && !held) DictationPhase.REVIEW else current.phase,
-                    level = event.level, durationMs = event.durationMs,
-                    notice = event.error ?: event.notice,
-                )
-            }
+            capture.state.collect(::applyCapture)
         }
+    }
+
+    private fun applyCapture(event: CaptureState) {
+        val current = state.value
+        if (current.phase != DictationPhase.RECORDING && current.phase != DictationPhase.FINALIZING) return
+        val text = when {
+            event.error != null -> base // A failed partial must not overwrite a reviewed word.
+            event.text.isBlank() -> base
+            replacement != null -> base.replaceRange(replacement!!, event.text.trim())
+            base.isBlank() -> event.text.trim()
+            else -> "$base ${event.text.trim()}"
+        }
+        mutable.value = current.copy(
+            text = text,
+            phase = if ((event.complete || event.error != null) && !held) DictationPhase.REVIEW else current.phase,
+            level = event.level, durationMs = event.durationMs,
+            notice = event.error ?: event.notice,
+        )
     }
 
     fun finish() {
         held = false
         if (state.value.phase != DictationPhase.RECORDING) return
-        mutable.value = state.value.copy(phase = if (capture.state.value.complete || capture.state.value.error != null) DictationPhase.REVIEW else DictationPhase.FINALIZING, level = 0f)
+        // The producer may have published its final result before the collector resumes.
+        applyCapture(capture.state.value)
+        mutable.value = state.value.copy(phase = if (state.value.phase == DictationPhase.RECORDING) DictationPhase.FINALIZING else state.value.phase, level = 0f)
         capture.finish()
     }
 

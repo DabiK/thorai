@@ -25,6 +25,7 @@ class DictationReviewTest {
         runCurrent()
         assertEquals("Dans PassageCheck.ts, ajoute un test.", review.state.value.text)
         assertTrue(sent.isEmpty())
+        review.start(DictationTarget.Message(SessionId("other")), listOf("Other.kt"))
         review.send()
         review.send()
         runCurrent()
@@ -43,6 +44,38 @@ class DictationReviewTest {
         review.finish()
         review.send(); runCurrent()
         assertEquals(1, deliveries)
+    }
+
+    @Test fun `release consumes final result even before the collector resumes`() = runTest {
+        val capture = TestCapture()
+        val sent = mutableListOf<String>()
+        val review = ReviewDictation(capture, { _, text -> sent += text; DictationDelivery("ok") }, backgroundScope)
+        review.start(DictationTarget.Message(SessionId("one")), emptyList())
+        capture.events.value = CaptureState(text = "Dans Passage", recording = true)
+        runCurrent()
+        capture.events.value = CaptureState(text = "Dans PassageCheck.ts", complete = true)
+        review.finish()
+        runCurrent()
+        assertEquals("Dans PassageCheck.ts", review.state.value.text)
+        review.send(); runCurrent()
+        assertEquals(listOf("Dans PassageCheck.ts"), sent)
+    }
+
+    @Test fun `release consumes correction failure even before the collector resumes`() = runTest {
+        val capture = TestCapture()
+        val review = ReviewDictation(capture, { _, _ -> DictationDelivery("ok") }, backgroundScope)
+        review.start(DictationTarget.Message(SessionId("one")), emptyList())
+        capture.events.value = CaptureState(text = "Bonjour", complete = true)
+        runCurrent(); review.finish()
+        review.correct(); review.record()
+        capture.events.value = CaptureState(text = "partiel erroné", recording = true)
+        runCurrent()
+        capture.events.value = CaptureState(error = "Hors ligne")
+        review.finish()
+        runCurrent()
+        assertEquals("Bonjour", review.state.value.text)
+        assertEquals("Hors ligne", review.state.value.notice)
+        assertEquals(DictationPhase.REVIEW, review.state.value.phase)
     }
 
     @Test fun `Y appends and X replaces only the word chosen with the dpad`() = runTest {
