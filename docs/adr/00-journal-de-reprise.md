@@ -74,6 +74,8 @@
 
 - **14 novembre, ticket 11, correction de revue du défilement (solo Codex)** : stick raccordé à la fiche, arrêt au relâchement même derrière un panneau, actions épinglées. Deux régressions Compose rouges puis vertes (1 950 caractères, dernière ligne réellement visible, un/deux écrans). Android 296 tests + lint et pont 271 + typage/lint verts ; resync du socle réexécuté vert sans cache. Thor : R2/WAV Thomas 01, saisie longue (1 670 caractères observés), stick sendevent, B, captures scroll-51–54. Aucun agent lancé ; app et pont quittés à 09:20:58 Paris. ADR 13 complété. Débogage sans fil agents indisponible, hors périmètre ; vrai micro et extinction physique au pas à pas. Statut à fusionner maintenu.
 
+- **14 novembre, ticket 11, relecture après fed500e** : diff complet relu en solo, aucun autre blocage fonctionnel ; pas à pas corrigé pour rouvrir la fiche avant L2, anciennes campagnes distinguées des nouveaux essais. Aucun code/test changé après les portes vertes et l’essai matériel. Preuves `scroll-relecture.txt` ; statut à fusionner maintenu.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

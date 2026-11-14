@@ -34,7 +34,7 @@ Bloqué par : 09
   ResyncedExplanationTest réexécuté vert ; mutation ramenant les identifiants locaux
   détectée rouge, fichier restauré avant la porte complète. Aucun correctif à dupliquer.
 - Portes actuelles : Android 296 tests + lint, pont 271 tests + typage/lint, tous verts.
-- Thor : APK réinstallé, WAV Thomas/local et sendevent, trois fiches rejouées,
+- Reprises précédentes sur Thor : APK réinstallé, WAV Thomas/local et sendevent, trois fiches rejouées,
   correction du niveau, redictée, collision de branche, un/deux écrans ; aucune
   nouvelle session pendant la reprise. Journaux des trois vrais lancements Codex
   précédents relus : main, lecture, travail depuis lecture. Aucun Claude lancé.
@@ -70,8 +70,9 @@ Bloqué par : 09
 4. R2 : « Lance Codex sur test, nouvelle branche matin depuis lecture, tout valider,
    pour afficher la branche courante ». Employer un nom absent ; vérifier la base,
    A puis autorisation de Codex ; vérifier la branche obtenue.
-5. Avec L2, dicter une consigne longue ; choisir Consigne puis faire défiler au stick
-   jusqu’à la dernière ligne. Relâcher : l’image doit rester stable. B annule.
+5. B revient à la régie, X ouvre une fiche. Avec L2, dicter une consigne longue ;
+   choisir Consigne puis faire défiler au stick jusqu’à la dernière ligne.
+   Relâcher : l’image doit rester stable. B annule.
 6. X depuis la régie : fiche vide ; B annule. Éteindre/rallumer physiquement l'écran
    bas pour vérifier le repli. Quitter pour arrêter les sessions.
 
@@ -85,3 +86,10 @@ nouveau blocage fonctionnel. Preuves sensibles à la mutation resync ; ports/fau
 absence de mutation Git, prompts de base et verrou de création vérifiés. Traces
 texte nettoyées uniquement des espaces finaux ; code et tests inchangés depuis les
 portes vertes et l'APK essayé. Détail : artifacts/screenshots/11/relecture.txt.
+
+
+Relecture après `fed500e` : diff `main...HEAD` contrôlé en solo, architecture puis
+critères/preuves. Aucun autre blocage fonctionnel. Pas à pas humain corrigé pour
+rouvrir la fiche avant L2 ; ligne blanche finale du journal npm retirée. Aucun code
+ni test modifié depuis la porte finale et l'APK essayé. Détail :
+`artifacts/screenshots/11/scroll-relecture.txt`.
