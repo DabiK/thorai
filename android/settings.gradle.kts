@@ -17,7 +17,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "regie"
 
-include(":domain", ":gateway-bridge", ":bridge-fixtures", ":app")
+include(":command-model", ":domain", ":gateway-bridge", ":bridge-fixtures", ":app")
 
 // La voix vit dans un build Gradle séparé (ticket 04, ADR 01). Il est inclus
 // en composite build dès que le dossier existe, sans rien changer ici.

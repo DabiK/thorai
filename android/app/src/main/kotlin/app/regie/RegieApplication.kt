@@ -1,6 +1,10 @@
 package app.regie
 
 import app.regie.domain.model.*
+import app.regie.commandmodel.MistralCommandModel
+import app.regie.domain.usecase.ReviewVoiceCommand
+import app.regie.domain.usecase.InterpretVoiceCommand
+import app.regie.domain.usecase.ExecuteVoiceCommand
 import app.regie.domain.usecase.AnswerApproval
 import app.regie.domain.usecase.DeliverDictation
 import app.regie.domain.usecase.ReviewDictation
@@ -37,14 +41,11 @@ import app.regie.domain.model.ApprovalId
 import app.regie.approval.ApprovalController
 import app.regie.console.AndroidApprovalNotifications
 import app.regie.domain.usecase.OpenSession
-import app.regie.domain.usecase.PauseAll
 import app.regie.domain.usecase.Quit
 import app.regie.domain.usecase.SendMessage
 import app.regie.domain.usecase.StartNewSession
 import app.regie.domain.usecase.StartUp
 import app.regie.domain.usecase.StartUpReport
-import app.regie.domain.usecase.StartVoiceCommand
-import app.regie.domain.usecase.StopVoiceCommand
 import app.regie.gateway.bridge.BridgeAgentGateway
 import app.regie.gateway.bridge.ReplayAgentGateway
 import app.regie.input.InputRouter
@@ -120,34 +121,74 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
     val dictation = ReviewDictation(capture, { target, text ->
         deliverDictation?.invoke(target, text) ?: DictationDelivery("Pont indisponible", target)
     }, scope)
+    private var executeVoiceCommand: ExecuteVoiceCommand? = null
+    private var projects: List<String> = emptyList()
+    val voiceCommand = ReviewVoiceCommand(capture, InterpretVoiceCommand(MistralCommandModel(voicePreferences::commandKey)),
+        { command -> executeVoiceCommand?.invoke(command) ?: "Pont indisponible" }, scope)
+    val commandScroll = kotlinx.coroutines.flow.MutableSharedFlow<Int>(extraBufferCapacity = 16)
+    val commandVelocity = MutableStateFlow(0f)
+
+    private fun startVoiceCommand() {
+        if (dictation.state.value.visible || settingsOpen.value || controller.state.value.quit != null) return
+        val shown = _screen.value
+        val current = when (shown) {
+            is Screen.Session -> shown.id
+            Screen.Approval -> approvalReview.value.request?.sessionId
+            Screen.Overview -> controller.state.value.focusedId
+        }
+        val approval = when (shown) {
+            Screen.Approval -> approvalReview.value.request
+            Screen.Overview -> overview.value.firstPendingApproval?.approval
+            is Screen.Session -> null
+        }
+        voiceCommand.start(VoiceCommandContext(overview.value.sessions.toList(), current, approval, projects))
+    }
+    private fun stopVoiceCommand() = voiceCommand.finish()
+    fun saveCommandKey(key: String) = voicePreferences.saveCommandKey(key)
+
     val dictationScroll = kotlinx.coroutines.flow.MutableSharedFlow<Int>(extraBufferCapacity = 16)
     val dictationVelocity = MutableStateFlow(0f)
     private val vocabularies = mutableMapOf<SessionId, List<String>>()
     fun selectVoice(provider: DictationProvider) = voicePreferences.select(provider)
     fun saveVoiceKey(key: String) = voicePreferences.saveKey(key)
-    fun openVoiceSettings() { dictation.finish(); settingsOpen.value = true }
+    fun openVoiceSettings() { voiceCommand.finish(); dictation.finish(); settingsOpen.value = true }
     fun closeVoiceSettings() { settingsOpen.value = false }
     fun beginDictation(target: DictationTarget) {
-        if (settingsOpen.value) return
+        if (settingsOpen.value || voiceCommand.state.value.visible) return
         dictation.start(target, vocabularies[target.sessionId].orEmpty())
     }
     private fun startDictation(id: SessionId?) { id?.let { beginDictation(DictationTarget.Message(it)) } }
     private fun stopDictation() = dictation.finish()
 
-    private var touchDictation = false
-    /** A gesture survives the change from the session microphone to the dictation screen. */
+    private var touchDictation: Trigger? = null
+    /** The window owns the release even when the microphone changes screens. */
     fun touchTrigger(trigger: Trigger, held: Boolean) {
-        if (trigger != Trigger.L2) { handleInput(if (held) GamepadInput.TriggerDown(trigger) else GamepadInput.TriggerUp(trigger)); return }
-        if (held) { touchDictation = true; handleInput(GamepadInput.TriggerDown(trigger)) }
-        // The window owns the actual UP/CANCEL: disposing the old mic is not a physical release.
+        if (held) { touchDictation = trigger; handleInput(GamepadInput.TriggerDown(trigger)) }
     }
     fun releaseTouchDictation() {
-        if (touchDictation) { touchDictation = false; handleInput(GamepadInput.TriggerUp(Trigger.L2)) }
+        touchDictation?.let { trigger -> touchDictation = null; handleInput(GamepadInput.TriggerUp(trigger)) }
     }
 
     fun handleInput(input: GamepadInput) {
         if (settingsOpen.value) {
             if (input == GamepadInput.Pressed(Button.B)) closeVoiceSettings()
+            return
+        }
+        if (voiceCommand.state.value.visible) {
+            when (input) {
+                is GamepadInput.TriggerUp -> if (input.trigger == Trigger.R2) voiceCommand.finish()
+                is GamepadInput.TriggerDown -> if (input.trigger == Trigger.R2 && voiceCommand.state.value.phase in setOf(CommandPhase.REVIEW, CommandPhase.UNKNOWN, CommandPhase.DONE)) {
+                    voiceCommand.discard(); startVoiceCommand()
+                }
+                is GamepadInput.Pressed -> when (input.button) {
+                    Button.A -> voiceCommand.confirm()
+                    Button.B -> { voiceCommand.discard(); commandVelocity.value = 0f }
+                    Button.UP -> commandScroll.tryEmit(-1)
+                    Button.DOWN -> commandScroll.tryEmit(1)
+                    else -> Unit
+                }
+                is GamepadInput.Scroll -> commandVelocity.value = input.velocity
+            }
             return
         }
         if (dictation.state.value.visible) {
@@ -169,6 +210,8 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
             }
             return
         }
+        if (input is GamepadInput.TriggerDown && input.trigger == Trigger.R2) { startVoiceCommand(); return }
+        if (input is GamepadInput.TriggerUp && input.trigger == Trigger.R2) { stopVoiceCommand(); return }
         if (input is GamepadInput.TriggerDown && input.trigger == Trigger.L2) {
             when (val screen = _screen.value) {
                 is Screen.Session -> startDictation(screen.id)
@@ -185,8 +228,6 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
             is Screen.Session -> sessionController.handle(input)
         }
     }
-    private val startVoiceCommand = StartVoiceCommand()
-    private val stopVoiceCommand = StopVoiceCommand()
     private var reviewApprovals: ReviewApprovals? = null
     val approvalReview = MutableStateFlow(ApprovalReview())
     val approvalController = ApprovalController(
@@ -208,7 +249,6 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
     fun selectApproval(id: ApprovalId) { reviewApprovals?.open(id) }
 
     private val startNewSession = StartNewSession()
-    private val pauseAll = PauseAll()
 
     val controller = OverviewController(overview, ::execute)
     val sessionController = SessionController(live, overview, current = { (_screen.value as? Screen.Session)?.id }, ::execute)
@@ -259,6 +299,11 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
         }
         gateway = chosen
         val answer = AnswerApproval(chosen)
+        executeVoiceCommand = ExecuteVoiceCommand(chosen, answer) { openSession(it) }
+        scope.launch { chosen.connection.collectLatest { connection ->
+            if (connection == BridgeConnection.Connected) projects = chosen.projects()
+        } }
+
         val review = ReviewApprovals(chosen, scope, answer)
         deliverDictation = DeliverDictation(SendMessage(chosen, dictated), answer)
         reviewApprovals = review
@@ -373,11 +418,12 @@ class AppContainer(private val app: Application, displayManager: DisplayManager)
         is OverviewAction.OpenApproval -> openApproval(action.id)
         OverviewAction.NewSession -> startNewSession()
         is OverviewAction.ShowSummary -> action.target?.let { openSession(it, summary = true) }
-        OverviewAction.PauseAll -> pauseAll()
+        OverviewAction.PauseAll -> { scope.launch { executeVoiceCommand?.invoke(VoiceCommand.Pause(overview.value.sessions.map { it.id })) }; Unit }
         OverviewAction.Quit -> quitNow()
     }
 
     private fun quitNow() {
+        voiceCommand.discard()
         dictation.discard()
         scope.launch {
             startUpJob?.cancel()

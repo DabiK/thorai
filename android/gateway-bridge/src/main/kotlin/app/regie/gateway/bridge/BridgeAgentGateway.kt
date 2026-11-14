@@ -177,6 +177,30 @@ class BridgeAgentGateway(
         }
     }
 
+    override suspend fun projects(): List<String> {
+        val result = call("projects.list", timeout = 5.seconds)
+        if (result !is CallResult.Accepted) return emptyList()
+        return (result.value["projects"] as? JsonArray)?.mapNotNull { (it as? JsonObject)?.string("name") }.orEmpty()
+    }
+
+    override suspend fun createSession(draft: app.regie.domain.model.NewSessionDraft): app.regie.domain.model.SessionCreation {
+        val result = call("session.create", buildJsonObject {
+            put("agent", draft.agent.name.lowercase(java.util.Locale.ROOT))
+            put("project", draft.project)
+            put("approvalMode", draft.approvalMode)
+            draft.branch?.let { put("branch", it) }
+            draft.instruction?.let { put("prompt", it) }
+        })
+        return when (result) {
+            is CallResult.Accepted -> {
+                val id = result.value.obj("session")?.string("sessionId")?.let(::SessionId)
+                app.regie.domain.model.SessionCreation(id, uncertain = id == null)
+            }
+            CallResult.Unknown -> app.regie.domain.model.SessionCreation(uncertain = true)
+            else -> app.regie.domain.model.SessionCreation()
+        }
+    }
+
     override suspend fun vocabulary(id: SessionId): List<String> {
         val result = call("session.vocabulary", buildJsonObject { put("sessionId", id.value) }, timeout = 5.seconds)
         if (result !is CallResult.Accepted) return emptyList()

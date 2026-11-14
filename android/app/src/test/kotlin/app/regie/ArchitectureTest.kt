@@ -17,7 +17,7 @@ class ArchitectureTest {
 
     /** Les adapters : la passerelle vers le pont (module) et les accès à la console (Android). */
     private fun isAdapter(name: String) =
-        name.startsWith("app.regie.gateway.") || name.startsWith("app.regie.console.") || name.startsWith("app.regie.voice.")
+        name.startsWith("app.regie.commandmodel.") || name.startsWith("app.regie.gateway.") || name.startsWith("app.regie.console.") || name.startsWith("app.regie.voice.")
 
     private fun File.kotlinFiles() = walkTopDown().filter { it.extension == "kt" }.toList()
 
@@ -25,6 +25,19 @@ class ArchitectureTest {
 
     private fun violations(files: List<File>, forbidden: (String) -> Boolean) =
         files.flatMap { file -> file.imports().filter(forbidden).map { "${file.name} importe $it" } }
+
+    @Test
+    fun `command model is an isolated adapter and only composed in the root`() {
+        val model = File("../command-model/src/main/kotlin").kotlinFiles()
+        assertTrue(model.isNotEmpty())
+        assertEquals(emptyList(), violations(model) {
+            it.startsWith("android.") || it.startsWith("androidx.") ||
+                (it.startsWith("app.regie.") && !it.startsWith("app.regie.domain.") && !it.startsWith("app.regie.commandmodel."))
+        })
+        assertEquals(listOf("RegieApplication.kt"), appSources.kotlinFiles().filter { file ->
+            file.imports().any { it.startsWith("app.regie.commandmodel.") }
+        }.map { it.name })
+    }
 
     @Test
     fun `the sources are found`() {
