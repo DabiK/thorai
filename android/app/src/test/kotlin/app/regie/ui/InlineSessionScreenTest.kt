@@ -60,6 +60,22 @@ class InlineSessionScreenTest {
         }
     }
 
+    @Test fun `resolved approval keeps its close action on the bottom instead of advertising an intercepted X`() {
+        val request = Approval(ApprovalId("a"), session.id, ApprovalKind.COMMAND, "touch proof")
+        val review = ApprovalReview(request = request, answer = ApprovalAnswer(ApprovalReply.ACCEPTED))
+        var closed = false
+        Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
+            host.setup().get().setContent { RegieTheme {
+                SessionBottomScreen(LiveSession.of(session, SessionThread(loaded = true)), null,
+                    SessionControlState(), "", callbacks, approval = review, onDismissApproval = { closed = true })
+            } }
+            compose.onNodeWithText("Voir le diff").assertDoesNotExist()
+            compose.onNodeWithText("Fermer la validation").assertIsDisplayed().performClick()
+            kotlin.test.assertTrue(closed)
+            compose.onNodeWithText("Autoriser une fois").assertHasNoClickAction()
+        }
+    }
+
     @Test fun `tool details expand in place and collapse without losing output`() {
         val thread = SessionThread(entries = listOf(ThreadEntry.ToolCall(1, ToolKind.EXECUTE, "check", command = "npm test", result = "last", output = "first\nlast")), loaded = true)
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->

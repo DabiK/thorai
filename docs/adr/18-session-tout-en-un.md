@@ -17,7 +17,9 @@ revue dédiée au fil et partage `AnswerApproval` avec la file et la dictée. Ap
 réponse, la même identité reste affichée, boutons désactivés : un double A/X/B
 ne répond pas à la demande suivante. R1 sélectionne explicitement la suivante.
 Sans autre demande, Gauche ou « Fermer la validation » retire la carte résolue.
-Un nouvel événement peut alors présenter la prochaine demande. Une décision
+Le panneau inférieur conserve aussi ces actions tant que la carte existe : il ne
+réaffiche pas X « Voir le diff » avant sa fermeture. Un nouvel événement peut alors
+présenter la prochaine demande. Une décision
 programmée pour une ancienne carte vérifie aussi son identité à l’exécution.
 Le lien « Régie » navigue explicitement ; il ne doit pas être traduit en B/refus.
 

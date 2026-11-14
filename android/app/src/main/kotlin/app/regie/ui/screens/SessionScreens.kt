@@ -201,7 +201,7 @@ fun SessionTopScreen(
                 NoticeText(it, callbacks, Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
             }
             if (options != null) Box(Modifier.height(260.dp).fillMaxWidth()) { options() }
-            else if (approval.pending || approval.sending) InlineApproval(approval, onDecision, onNextApproval, details = false, onDismiss = onDismissApproval)
+            else if (approval.request != null) InlineApproval(approval, onDecision, onNextApproval, details = false, onDismiss = onDismissApproval)
             else CompactSessionPanel(live, control, draft, callbacks)
         }
     }
@@ -259,7 +259,7 @@ fun SessionBottomScreen(
         }
         MessageField(draft, callbacks, compact = false, modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = if (keyboardOpen) 10.dp else 8.dp))
         if (!keyboardOpen && options == null) {
-            if (approval.pending || approval.sending) InlineApproval(approval, onDecision, onNextApproval, details = false, onDismiss = onDismissApproval)
+            if (approval.request != null) InlineApproval(approval, onDecision, onNextApproval, details = false, onDismiss = onDismissApproval)
             else ActionGrid(live, callbacks)
         }
     }
