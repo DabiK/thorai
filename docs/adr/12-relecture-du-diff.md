@@ -44,7 +44,7 @@ Y prépare « explique-moi ce bloc » sur l’édition sélectionnée, bornée �
 au voisinage de la sélection. A confirme (principe du PRD : rien sans A), B annule.
 La demande précise « sans modifier les fichiers », réponse française écrite.
 Elle utilise la session et le tour normal de l’agent, sans synthèse ni second modèle.
-Le panneau suit les textes après le message utilisateur correspondant, jamais une
+Le panneau suit les textes rattachés au message utilisateur correspondant, jamais une
 ancienne réponse ou celle d’une demande suivante. Double A protégé ; seul un échec
 certain permet un nouvel essai. Un accusé incertain n’autorise pas de renvoi automatique.
 
@@ -119,3 +119,33 @@ Porte Android : 267 tests, aucun échec/erreur/ignoré, lint vert. Essai sur la 
 avec l’historique réel existant : navigation, Y annulé, L2/WAV local annulé,
 un/deux écrans. Les deux mutations de blocs sont prouvées dans les tests de domaine,
 pas reproduites sur la console. Aucun agent relancé. Preuves `identity-*`.
+
+
+## Correction de revue : réponse d’une explication mise en file
+
+La position d’un `user_message` ne marque pas le début de sa réponse : le pont le
+publie immédiatement, même avec `delivery=queued`. Le contrat existant distingue
+les messages en file et ceux injectés dans le tour courant (`steering`).
+`ThreadBuilder` décode cette chronologie : une file FIFO des messages attend la
+fin de chaque tour (`turn_end` ou `session_error`), tandis qu’un steering devient
+la cible des morceaux suivants du tour courant. Il ne crée pas de tour supplémentaire.
+Les morceaux de texte de deux tours ne sont jamais concaténés, même sans message
+utilisateur entre eux. Aucune modification du protocole ni du pont.
+
+Le domaine reçoit `responseTo` sur textes, erreurs et interruptions, et les
+`completedMessages` du fil. Ces identités sont locales au fil, comme ses identifiants
+existants ; les fins sont bornées aux messages encore présents et le rechargement
+vide la file. Une origine inconnue reste nulle, sans attribution par proximité.
+`ReviewDiff` choisit uniquement les éléments liés à sa demande et sa fin explicite,
+pas le statut global de la session ni l’arrivée d’un autre message en file.
+Le décodage reste dans la passerelle ; la sélection de la réponse à afficher reste
+dans le domaine, sans changement de l’interface.
+
+Régression indépendante reproduite rouge puis verte et étendue jusqu’à la bonne
+réponse, sa fin, puis une réponse suivante pendant que la session reste occupée.
+Décodage couvert avec deux demandes en file, morceaux contigus, steering, annulation,
+erreur, éviction et remise à zéro. 271 tests Android et lint verts.
+Thor : même Codex repris, Y/A pendant `sleep 25`, attente puis explication écrite en
+un/deux écrans (39–42). Le Codex installé accepte cette demande en `steering` :
+le scénario exact `queued` est prouvé par les tests, pas par cet essai matériel.
+Quitter arrête le Codex et le pont à 05:03:51 locale. Preuves `queued-*`.

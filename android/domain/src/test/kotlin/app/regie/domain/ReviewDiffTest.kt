@@ -120,13 +120,13 @@ class ReviewDiffTest {
         gateway.threadOf(SessionId("s")).value = SessionThread(initial + listOf(
             ThreadEntry.AgentText(3, "Autre réponse avant la demande"),
             ThreadEntry.UserMessage(4, request.prompt),
-            ThreadEntry.AgentText(5, "Ce seuil"),
+            ThreadEntry.AgentText(5, "Ce seuil", responseTo = 4),
         ), loaded = true)
         runCurrent()
         assertEquals("Ce seuil", review.state.value.explanation!!.reply)
         gateway.threadOf(SessionId("s")).value = SessionThread(initial + listOf(
-            ThreadEntry.UserMessage(4, request.prompt), ThreadEntry.AgentText(5, "Ce seuil vaut 70."),
-            ThreadEntry.UserMessage(6, "Autre question"), ThreadEntry.AgentText(7, "Autre réponse"),
+            ThreadEntry.UserMessage(4, request.prompt), ThreadEntry.AgentText(5, "Ce seuil vaut 70.", responseTo = 4),
+            ThreadEntry.UserMessage(6, "Autre question"), ThreadEntry.AgentText(7, "Autre réponse", responseTo = 6),
         ), loaded = true)
         runCurrent()
         assertEquals("Ce seuil vaut 70.", review.state.value.explanation!!.reply)

@@ -39,38 +39,69 @@ internal class ThreadBuilder(private val cwd: () -> String?, private val maxEntr
     private val calls = HashMap<String, Call>()
     private var plan: List<PlanStep>? = null
     private var context: ContextUsage? = null
+    // ACP queues prompts FIFO; a queued user_message is emitted before the running turn ends.
+    private var responseTo: Long? = null
+    private val pendingMessages = ArrayDeque<Long>()
+    private val completedMessages = mutableSetOf<Long>()
 
     fun clear() {
         items.clear()
         calls.clear()
         plan = null
         context = null
+        responseTo = null
+        pendingMessages.clear()
+        completedMessages.clear()
     }
 
     fun apply(event: BridgeEvent) {
         val data = event.data
         when (event.type) {
-            "user_message" -> data.string("text")?.let(::addUserMessage)
-            "session_error" -> add(Fixed(ThreadEntry.TurnFailed(nextId++, data.string("message")?.let(::oneLine)?.ifEmpty { null })))
+            "user_message" -> data.string("text")?.let { addUserMessage(it, data.string("delivery")) }
+            "session_error" -> {
+                add(Fixed(ThreadEntry.TurnFailed(nextId++, data.string("message")?.let(::oneLine)?.ifEmpty { null }, responseTo)))
+                finishResponse()
+            }
             "turn_end" -> {
                 val cancelled = data.string("stopReason") == "cancelled"
                 // Fin du tour : aucun résultat définitif connu ; une mise à jour tardive reste possible.
                 items.forEach { if (it is Call) it.endTurn(cancelled) }
                 if (cancelled) addInterruption()
+                finishResponse()
             }
             "session_update" -> applyUpdate(data)
         }
     }
 
-    fun addUserMessage(text: String) = add(Fixed(ThreadEntry.UserMessage(nextId++, text)))
+    fun addUserMessage(text: String, delivery: String? = null) {
+        val id = nextId++
+        add(Fixed(ThreadEntry.UserMessage(id, text)))
+        if (delivery == "queued") pendingMessages.addLast(id)
+        else {
+            // Steering owns subsequent chunks of the current turn, not an extra queued turn.
+            completeResponse()
+            responseTo = id
+        }
+    }
 
-    fun addInterruption() = add(Fixed(ThreadEntry.Interrupted(nextId++)))
+    private fun completeResponse() {
+        responseTo?.takeIf { id -> items.any { it.entry() is ThreadEntry.UserMessage && it.entry().id == id } }
+            ?.let(completedMessages::add)
+    }
+
+    private fun finishResponse() {
+        completeResponse()
+        responseTo = pendingMessages.removeFirstOrNull()
+    }
+
+    fun addInterruption() = add(Fixed(ThreadEntry.Interrupted(nextId++, responseTo)))
 
     fun snapshot(loaded: Boolean) = SessionThread(
         entries = items.map { it.entry() },
         plan = plan,
         context = context,
         loaded = loaded,
+        completedMessages = completedMessages.toSet(),
     )
 
     private fun applyUpdate(update: JsonObject) {
@@ -78,7 +109,8 @@ internal class ThreadBuilder(private val cwd: () -> String?, private val maxEntr
             "agent_message_chunk" -> {
                 val text = update.obj("content")?.takeIf { it.string("type") == "text" }?.string("text") ?: return
                 if (text.isEmpty()) return
-                val last = items.lastOrNull() as? Text ?: Text(nextId++).also(::add)
+                val last = (items.lastOrNull() as? Text)?.takeIf { it.responseTo == responseTo }
+                    ?: Text(nextId++, responseTo).also(::add)
                 last.append(text)
             }
             "tool_call" -> update.string("toolCallId")?.let { id ->
@@ -106,6 +138,7 @@ internal class ThreadBuilder(private val cwd: () -> String?, private val maxEntr
         while (items.size > maxEntries) {
             val dropped = items.removeFirst()
             if (dropped is Call) calls.remove(dropped.toolCallId)
+            completedMessages.remove(dropped.entry().id)
         }
     }
 
@@ -117,7 +150,7 @@ internal class ThreadBuilder(private val cwd: () -> String?, private val maxEntr
         override fun entry() = entry
     }
 
-    private class Text(private val id: Long) : Item {
+    private class Text(private val id: Long, val responseTo: Long?) : Item {
         private val text = StringBuilder()
         private var cached: ThreadEntry.AgentText? = null
 
@@ -126,7 +159,7 @@ internal class ThreadBuilder(private val cwd: () -> String?, private val maxEntr
             cached = null
         }
 
-        override fun entry() = cached ?: ThreadEntry.AgentText(id, text.toString()).also { cached = it }
+        override fun entry() = cached ?: ThreadEntry.AgentText(id, text.toString(), responseTo).also { cached = it }
     }
 
     private inner class Call(private val id: Long, val toolCallId: String) : Item {

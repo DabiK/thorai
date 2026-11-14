@@ -21,30 +21,27 @@ Bloqué par : 06, 08
 
 ## Rapport
 
-- Écran de diff livré : X, fichiers +/−, croix, stick, L2 et Y puis A, tactile et
-  mode un/deux écrans. Domaine derrière AgentGateway ; aucune règle d’envoi dans l’UI.
-- Critère prouvé avec voix synthétique WAV Thomas sur le vrai moteur local et un
-  vrai Codex : commentaire seuil.ts ligne 1 reçu une fois, fichier passé de 70 à 80,
-  explication écrite revenue. Vrai microphone et extinction physique restent à
-  vérifier avec l’utilisateur, selon le pas à pas de `artifacts/screenshots/10/essai-thor.txt`.
-- Android final : 267 tests + lint verts (`identity-android-check.txt`), tests d’abord (`red-*`, `identity-red-*`).
-- ADR 12 : éditions historiques par fichier, pas de diff Git inventé ; numéros
-  ancien/nouveau, coordonnées d’extrait signalées quand l’agent ne donne pas leur position.
-- Un Codex d’essai, aucun Claude. Quitter a arrêté l’agent et le pont (stopped.json).
-  Pas de permission accordée, reboot, push ou fusion. Seul app.regie installé.
-- Captures utiles : 01–04, 07–11 et 13 ; journaux avant/après et fichier final conservés.
-- Relecture solo après bec880e : sélection hors champ au bord, arrêt du stick pendant
-  les réglages et Markdown de l’explication corrigés ; quatre régressions rouges puis
-  vertes, attendu littéral renforcé. Réinstallation et essais Thor 15–16, 21–28 ; même
-  Codex repris puis arrêté, aucun autre agent. Le pas à pas humain reste applicable.
+STATUT: done
+RÉSUMÉ: Diff par fichier, navigation croix/stick, commentaire L2 contextualisé et explication Y/A écrite livrés.
+L’explication en file ignore désormais la réponse du tour précédent et suit sa propre fin. Statut : à fusionner.
+CRITÈRES:
+- [x] Diff réel, commentaire vocal et prise en compte → essai Thomas/local/Codex, seuil.ts passé de 70 à 80 (after-comment.json, captures 04–09).
+- [x] Explication liée à son tour → QueuedExplanationReviewTest et ThreadBuilderTest, rouges puis verts ; deux messages en file et réponse suivante couverts.
+- [x] Vérifications humaines explicites → pas à pas ci-dessous.
+PORTE DE QUALITÉ: cd android && ./gradlew check vert ; 271 tests, aucun échec/ignoré, lint vert (queued-android-check.txt).
+THOR: APK réinstallé ; même Codex repris, Y/A pendant sleep 25, attente puis réponse écrite en un/deux écrans (39–42).
+Codex a accepté en steering : queued exact vérifié par tests, pas reproduit sur console. Quitter a arrêté Codex/pont à 05:03:51 locale.
+REVIEW: Réponse précédente exclue, fin indépendante du statut global ; métadonnées de fin bornées après éviction. Relecture finale après commit consignée dans essai-thor.txt.
+DÉCISIONS PRISES: ADR 12 complété : identité des réponses décodée depuis delivery et les fins de tour, sélection dans le domaine. Aucun nouveau protocole ni bibliothèque.
+POUR L’UTILISATEUR:
+1. Ouvrir Régie ; accorder si nécessaire RUN_COMMAND et le microphone via Réglages voix. Aucun droit accordé cette nuit.
+2. Ouvrir la session regie-diff10-20261114 puis X ; choisir seuil.ts avec ←→, une ligne avec ↑↓, essayer le stick droit.
+3. Maintenir physiquement L2, dire « Ajoute un test pour cette valeur », relâcher ; relire texte, fichier, ligne et côté supprimé éventuel.
+4. B efface ; A envoie. Vérifier la réponse de Codex et l’édition réelle dans le fil/diff.
+5. Y prépare une explication sans envoi ; A demande. Lire la réponse, défiler, puis B. Aucun son attendu.
+6. Éteindre physiquement l’écran inférieur via l’assistant Odin : vérifier le panneau sur l’écran haut, puis rallumer et vérifier son retour. Quitter Régie.
+QUESTIONS: aucune décision produit en attente.
+CAPTURES: artifacts/screenshots/10/ : 01–04, 07–11, 13 ; identity-30–34 ; queued-38–42 (42-haut uniquement).
+HORS PÉRIMÈTRE: Permissions et redémarrage des tickets précédents ; micro humain et extinction physique à vérifier. Les fichiers sans diff exposé restent signalés.
 
-- Correction de la revue indépendante : sélection conservée par chemin, identité
-  du bloc et position interne lors d’une éviction ou d’une complétion antérieure.
-  Deux régressions rouges puis vertes vérifient sélection, cible complète L2 et Y.
-  ADR 12 précisé ; APK réinstallé, Thor : historique réel, navigation, Y annulé,
-  WAV local relu puis effacé, un/deux écrans (identity-30–34). Les mutations de
-  blocs sont vérifiées par tests de domaine, pas rejouées sur la console.
-  Aucun agent relancé ; 34 sessions inchangées et inactives, pont quitté à 04:52:39.
-- Relecture solo après 0e347e2 : diff contre main, séparation domaine/adapters/UI,
-  sensibilité des deux régressions et preuves du critère vérifiés. Aucun autre
-  constat bloquant ; git diff --check vert, aucun changement de code après la porte.
+Détails des passages et preuves : artifacts/screenshots/10/essai-thor.txt.

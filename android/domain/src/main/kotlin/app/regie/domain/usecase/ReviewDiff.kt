@@ -72,13 +72,18 @@ class ReviewDiff(private val gateway: AgentGateway, private val scope: Coroutine
                             val anchor = content.entries.filterIsInstance<ThreadEntry.UserMessage>()
                                 .firstOrNull { it.id > afterEntry && it.text == explanation.prompt }
                             if (anchor == null) explanation else {
-                                val replyEntries = content.entries.dropWhile { it.id <= anchor.id }.takeWhile { it !is ThreadEntry.UserMessage }
+                                val replyEntries = content.entries.filter { entry -> when (entry) {
+                                    is ThreadEntry.AgentText -> entry.responseTo == anchor.id
+                                    is ThreadEntry.TurnFailed -> entry.responseTo == anchor.id
+                                    is ThreadEntry.Interrupted -> entry.responseTo == anchor.id
+                                    else -> false
+                                } }
                                 explanation.copy(reply = replyEntries.mapNotNull { entry -> when (entry) {
                                     is ThreadEntry.AgentText -> entry.text
                                     is ThreadEntry.TurnFailed -> "Échec : ${entry.message ?: "sans détail"}"
                                     is ThreadEntry.Interrupted -> "Tour interrompu."
                                     else -> null
-                                } }.joinToString("\n\n"), ended = session?.status?.isBusy != true || content.entries.any { it is ThreadEntry.UserMessage && it.id > anchor.id })
+                                } }.joinToString("\n\n"), ended = anchor.id in content.completedMessages)
                             }
                         })
                 }
