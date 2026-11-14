@@ -90,6 +90,8 @@
 
 - **14 novembre, ticket 17, correction de revue Start (solo Codex)** : Start transmis au contrôleur d’interruption même dans les options occupées. Régression de composition rouge puis verte ; attente d’accusé/B bloqué et session au repos couverts, mutation busy détectée. Android 319 tests + lint et pont 297 + typage/lint verts. Thor absente ; émulateur deux écrans, même Codex de démo : Droite/Start, `turn_end cancelled` seq 1463, captures review-start-26–28. Agent, pont et AVD arrêtés. Aucun Claude ni sous-agent ; pas à pas Thor complété, ADR 02 précisé, statut à fusionner.
 
+- **14 novembre, ticket 17, relecture après e846a42** : diff main...HEAD relu en solo, aucun nouveau blocage ; mutation de garde busy détectée puis retirée, trois régressions vertes, preuves et limites vérifiées. La session Codex d’essai est stopped sans erreur, aucun appareil ADB restant après fermeture du banc. Aucun code/test modifié depuis les portes et essais verts. Statut à fusionner maintenu ; détail review-start-relecture.txt.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |
