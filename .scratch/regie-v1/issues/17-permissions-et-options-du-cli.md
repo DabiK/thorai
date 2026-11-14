@@ -1,6 +1,6 @@
 # 17 — Tout autoriser, modèle, niveau de réflexion : les options principales du CLI dans Régie
 
-Statut : à fusionner
+Statut : fait
 Bloqué par : 16
 Possède : `bridge/`, `android/`, `docs/protocole-pont.md`
 
