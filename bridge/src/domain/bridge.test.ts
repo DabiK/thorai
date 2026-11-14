@@ -156,8 +156,11 @@ describe('creating a session', () => {
       expect(world.codex.callsOf('setMode').at(-1)).toEqual([session.sessionId, expected]);
       await world.bridge.shutdown();
       world.restart();
+      const beforeResume = world.codex.callsOf('setMode').length;
       await world.bridge.resume(session.sessionId);
-      expect(world.codex.callsOf('setMode').at(-1)).toEqual([session.sessionId, expected]);
+      expect(world.codex.callsOf('setMode').slice(beforeResume)).toEqual([
+        [session.sessionId, expected],
+      ]);
     }
     expect(world.codex.callsOf('setConfig')).toEqual([
       ['codex-session-3', 'collaboration_mode', 'plan'],

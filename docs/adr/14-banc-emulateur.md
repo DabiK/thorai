@@ -45,8 +45,7 @@ pas quelles opérations autoriser. En `auto-edit`, le domaine autorise seulement
 les demandes structurées `edit`, jamais une écriture shell. `plan` ajoute toujours
 `collaboration_mode=plan`, `allow-all` garde `agent-full-access`. Le chemin PRoot
 reste inchangé. Les lectures natives n'ont pas besoin d'escalade.
-Les identifiants
-Codex du Mac sont réutilisés, sans copie ni modification. Claude est installé
+Les identifiants Codex du Mac sont réutilisés, sans copie ni modification. Claude est installé
 comme dépendance du pont mais **la démo ne lance aucune session Claude** (le pont relève seulement sa version).
 
 Troisième commande : `emu-install.sh` installe uniquement app.regie, accorde les
