@@ -1,6 +1,6 @@
 # 06 — Session en direct
 
-Statut : à fusionner
+Statut : fait
 Bloqué par : 05
 
 ## Objectif
