@@ -102,6 +102,9 @@ export class AcpConnector implements AgentConnector {
       setMode: async (sessionId, modeId) => {
         await agent.request('session/set_mode', { sessionId, modeId });
       },
+      setConfig: async (sessionId, configId, value) => {
+        await agent.request('session/set_config_option', { sessionId, configId, value });
+      },
       prompt: async (sessionId, text) => {
         const response = await agent.request<acp.PromptResponse>('session/prompt', {
           sessionId,

@@ -1,6 +1,6 @@
 # 07 — Validations
 
-Statut : bloqué
+Statut : à fusionner
 Bloqué par : 06
 
 ## Objectif
@@ -20,60 +20,39 @@ Bloqué par : 06
 
 ## Critères d'acceptation
 
-- [ ] Sur la Thor, une commande et une modification de fichier sont validées ou refusées pour chacun des deux agents, et l'agent reprend en conséquence. Non essayé : préparation Android partielle, arrêt sur erreur du lanceur de tests du pont.
-
+- [ ] Sur la Thor, une commande et une modification de fichier sont validées ou refusées pour chacun des deux agents, et l'agent reprend en conséquence. **Codex vérifié** (A, X et B, journal et effets sur disque) ; essai Claude laissé à l'utilisateur conformément à la consigne de quota.
+- [x] Écran, file, R1 et deux modes d'affichage → captures 09 à 17, tests `ReviewApprovalsTest` / contrôleurs.
+- [x] Refus avec consigne préparé pour 08 → `AnswerApproval` et tests d'accusé, livraison et concurrence.
+- [x] Trois niveaux au contrat de lancement, anciens modes conservés → tests du pont et essais Codex `plan` / `auto-edit` ; fiche visuelle au ticket 11.
+- [x] Notification via port et ouverture ciblée → tests domaine, permission Android présentée, intent ciblé vérifié ; publication réelle après permission à vérifier avec l'utilisateur.
 
 ## Rapport
 
-STATUT: failed
+STATUT: done
 
-Reprise solo Codex du 14 novembre 2026. Le blocage SDK est levé : la porte Android initiale et la porte après les changements passent. Le ticket reste `bloqué` : l’interface et les essais de bout en bout ne sont pas livrés.
+Reprise solo Codex du 14 novembre 2026. Ticket **à fusionner** selon la règle de reprise nocturne : tout le travail autonome est vert, les gestes de permission et le nouvel essai Claude restent explicitement à faire. Aucun sous-agent, push ou fusion.
 
-### Travail conservé, partiel
+- Écran 4 livré : commande/fichier exact, justification et cibles si exposées, avant/après, plan, file complète ; A une fois, X seulement si limité à la session, B refus. Double appui sans décision sur la demande suivante, R1 explicite. Deux écrans et panneau compact vérifiés.
+- R1 ouvre aussi la validation depuis le fil, selon la consigne de reprise ; test du comportement précédent révisé pour cette décision, navigation sans validation toujours couverte.
+- Refus dicté prêt derrière `ReviewApprovals.answer(REJECT, instruction)` pour le 08, sans envoyer la consigne après un refus incertain.
+- Modes `plan`, `auto-edit`, `ask` disponibles via `session.create`, traduits pour les deux agents ; `allow-all` historique conservé. Sélecteur visuel dans la fiche du ticket 11.
+- Notifications Android via un port : demande de permission, canal, retrait à la résolution, ouverture ciblée après relancement. Un refus de permission ne perd plus définitivement l'alerte (régression rouge puis verte).
+- Porte Android : **195 tests + lint verts**. Pont : **266 tests + lint + typage verts**. Aucun test ne contacte un agent ni la Thor.
+- Installation `scripts/thor-install.sh` réussie, pont actualisé. Codex : commande autorisée puis refusée, édition autorisée par X puis autre édition refusée ; reprise/annulation confirmée par événements et fichiers. File de deux demandes, double B, défilement, mode un écran, bas en arrière-plan et intent ciblé testés.
+- Limite observée : Codex accepte `allow_for_session`, exécute l'édition, mais redemande une validation pour une édition ultérieure du même fichier. Régie relaie ce qu'il expose, sans contourner sa décision. Détails ADR 08.
+- Claude réel et publication d'une notification après permission : **non revendiqués**. Le quota Claude est préservé ; aucune permission n'a été accordée à la place de l'utilisateur.
+- Maquettes Validation et Lancer retrouvées dans un export local, lues ; structure reprise, fraîcheur distante non vérifiée. Aucune mention de lecture à voix haute dans cet écran.
+- Quatre sessions Codex lancées, toutes arrêtées avec le pont via Quitter. Aucun redémarrage ni autre APK installé.
+- Relecture solo : voir le complément de revue ci-dessous. ADR créé : `docs/adr/08-validations.md`. Contrat `docs/protocole-pont.md` actualisé.
 
-- `Approval` conserve la commande exacte (retours à la ligne compris), la justification, le dossier, toutes les cibles, le plan, les diffs et les choix exposés.
-- `AgentGateway` expose la liste complète des validations et `answerApproval`. La passerelle réelle envoie `approval.answer` ; une coupure sans accusé donne `UNKNOWN`. La passerelle factice permet une réponse locale sans appeler un agent.
-- `AnswerApproval` prépare le refus avec consigne du ticket 08 : refuse d’abord, transmet ensuite la consigne uniquement après un accusé positif. Il empêche le second envoi d’une décision déjà envoyée, y compris sans accusé. **Ce cas d’usage n’est pas encore branché dans l’app.**
-- La sélection X ne retient que `allow_for_session`, lorsque proposé. `accept_execpolicy_amendment` et `allow-with-updates` ne sont pas présentés comme des autorisations de session. Le code installé de `claude-agent-acp` 0.107.0 (`permissions/effects.js`, `permissions/options/shared.js`) confirme que `allow-with-updates` applique un changement durable ; son seul `kind: allow_always` ne suffit pas.
-- Tests écrits et exécutés rouges avant les changements, puis verts. Trois nouveaux tests : conservation des détails, identifiants envoyés et accusé perdu, sélection non persistante et absence de double envoi. Le refus avec consigne, les réponses positives et la passerelle factice restent à compléter en couverture avant branchement UI.
+Preuves : `artifacts/screenshots/07/essai-thor.txt`, `*-check-current.txt`, `codex*-events.json`, `thor-stop.txt` et captures **09, 12, 14, 15, 16, 17** (haut et bas).
 
-### Échec d’environnement et arrêt
+### Vérifications avec l'utilisateur
 
-Le dossier `bridge/node_modules` était absent. J’ai exécuté `npm ci --omit=optional --no-fund --no-audit` : installation réussie, mais ce choix a également omis les dépendances natives du lanceur de tests. C’est une erreur de préparation de ma part : l’option issue de l’installation de production sur la Thor ne convient pas aux tests du Mac.
+1. Autoriser les notifications de Régie dans Android ; RUN_COMMAND et l'accès Android restent à traiter selon les tickets 05/14.
+2. Faire demander à Claude une commande puis une édition sur un fichier d'essai. R1 puis A ; vérifier l'effet et la reprise du fil. Répéter avec B et vérifier l'absence de l'effet.
+3. Sur Codex, vérifier la portée réelle de X si proposé, puis refaire une demande dans une nouvelle session.
+4. Mettre le haut en arrière-plan, provoquer une validation, vérifier la notification et la toucher : bonne demande ouverte, bas toujours visible. Aucun agent ne décide via la notification seule.
+5. Voix du refus : après ticket 08. Fiche et sélecteur du niveau de lancement : après ticket 11.
 
-`cd bridge && npm test -- src/domain/bridge.test.ts` échoue avant les tests. Extraits exacts :
-
-```text
-Error: Cannot find native binding. npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). Please try `npm i` again after removing both package-lock.json and node_modules directory.
-  cause: Error: Cannot find module '@rolldown/binding-wasm32-wasi'
-    cause: Error: Cannot find module './rolldown-binding.wasi.cjs'
-```
-
-Sortie complète : `artifacts/screenshots/07/red-modes.txt`. Installation : `artifacts/screenshots/07/npm-ci.txt`. Aucun nouvel essai du pont, conformément à « Une commande qui échoue pour une raison d’environnement […] : n’insiste pas ». Le test des modes encore non implémentés a été retiré ; aucun fichier de `bridge/` n’est modifié. Le verrou npm est intact.
-
-### Vérifications et limites
-
-- `cd android && ./gradlew check` : **184 tests et lint verts**, sortie `artifacts/screenshots/07/android-check-reprise.txt`.
-- `npm run check` : non lancé après l’échec préalable du lanceur de tests ; aucune porte verte revendiquée pour le pont.
-- Aucune installation sur la Thor, aucun agent lancé, aucun geste sur la console.
-- Maquettes `Validation.dc.html` et `Lancer.dc.html` absentes localement, outil Artifact indisponible et lien claude.ai inaccessible par l’outil web. Aucune conformité visuelle revendiquée.
-- Documentation actuelle consultée par Context7 : notifications Android et ACP `session/set_config_option` (sorties dans ce dossier de preuves). Aucun code de notification ou de mode n’est livré.
-- Relecture solo : aucun critère coché, aucune règle métier ajoutée dans un adapter, aucune permission durable exposée comme permission de session. Nettoyage des commentaires et du format. Aucun ADR créé : la restriction aux seules permissions de session découle du ticket.
-
-### Reprise technique
-
-1. Lors d’une nouvelle reprise, installer les dépendances de développement du pont **avec les dépendances facultatives de la plateforme Mac**, sans supprimer ni régénérer `package-lock.json` ; puis vérifier `npm run check`.
-2. Compléter les tests de `AnswerApproval` (refus et consigne, autorisation de session, réponse positive, requête disparue, concurrence) et les réponses de transport. Traiter distinctement `unknown_approval` / `unknown_option` avant de brancher l’UI.
-3. Brancher l’écran 4, la file complète, A/X/B, R1 et les modes un/deux écrans. Le cas vide `OpenApproval` reste inchangé ; aucune action de validation n’est encore accessible dans l’app.
-4. Implémenter les trois niveaux de lancement et leurs traductions, en conservant les anciens modes de sessions enregistrées. Codex expose `collaboration_mode=plan` par `session/set_config_option` ; les modes actuels du pont restent `ask` et `allow-all`.
-5. Implémenter les notifications via un port ; le bas reste visible en arrière-plan. Ajouter la permission Android et le chemin d’ouverture depuis la notification.
-6. Exécuter les portes, installer avec `scripts/thor-install.sh`, vérifier sur la Thor et capturer avec `scripts/thor-shot.sh artifacts/screenshots/07`. Toute nouvelle session réelle doit être Codex ; arrêter celles lancées par l’essai.
-
-### Vérification avec l’utilisateur, après implémentation
-
-1. Accorder les permissions demandées par Régie, notamment les notifications.
-2. Pour chaque agent, demander une commande puis une édition ; ouvrir la validation avec R1, accepter par A, vérifier l’action et la reprise du fil.
-3. Répéter avec B et vérifier que l’action refusée n’a pas eu lieu. Essayer X uniquement lorsqu’une option limitée à la session est proposée ; vérifier qu’une nouvelle session demande à nouveau.
-4. Passer Régie en arrière-plan, provoquer une validation, vérifier la notification, son ouverture et le maintien du bas.
-
-Aucun critère d’acceptation tenu ; ne pas fusionner cette préparation comme livraison du ticket 07.
+Hors périmètre : absence RUN_COMMAND / WRITE_SECURE_SETTINGS et association sans fil ; bas derrière Cocoon au premier réveil, récupéré par bascule debug un/deux écrans ; portée effective du choix Codex `acceptForSession`. Le pas à pas et les limites exactes sont dans `essai-thor.txt`.

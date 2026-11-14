@@ -491,6 +491,9 @@ export class Bridge {
     const modeId = modeIdFor(record.agent, record.approvalMode);
     try {
       await connection.setMode(record.sessionId, modeId);
+      if (record.agent === 'codex' && record.approvalMode === 'plan') {
+        await connection.setConfig(record.sessionId, 'collaboration_mode', 'plan');
+      }
       return null;
     } catch (error) {
       const message = `Mode ${modeId} refusé par ${AGENT_LABELS[record.agent]} : ${messageOf(error)}`;
@@ -599,7 +602,7 @@ export class Bridge {
     if (live === undefined || this.stopping !== null) {
       return Promise.resolve({ outcome: 'cancelled' });
     }
-    const automatic = this.readOnlyApproval(request);
+    const automatic = this.automaticApproval(request);
     if (automatic !== null) return Promise.resolve(automatic);
     const normalized = live.compensations.approval(request);
     const approval: ApprovalRequest = {
@@ -615,15 +618,18 @@ export class Bridge {
   }
 
   /**
-   * In « valider », a command that only reads is approved by the bridge, without asking the
-   * user (ticket 13). Its tool call stays in the feed like any other.
+   * Safe shell reads are automatic (ticket 13). In auto-edit, structured file edits are
+   * automatic too; shell writes still ask. Only a single-use choice is ever selected.
    */
-  private readOnlyApproval(request: PermissionRequest): PermissionOutcome | null {
+  private automaticApproval(request: PermissionRequest): PermissionOutcome | null {
     const record = this.records.get(request.sessionId);
-    if (record?.approvalMode !== 'ask') return null;
+    if (record === undefined || record.approvalMode === 'allow-all') return null;
     // « Autoriser une fois », never « toujours » : the next command is judged again.
     const allow = request.options.find((option) => option.kind === 'allow_once');
     if (allow === undefined) return null;
+    if (record.approvalMode === 'auto-edit' && request.toolCall.kind === 'edit') {
+      return { outcome: 'selected', optionId: allow.optionId };
+    }
     const command = this.readOnly.readOnlyCommandOf(request.toolCall);
     if (command === null) return null;
     this.deps.logger.info(

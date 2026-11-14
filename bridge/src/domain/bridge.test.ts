@@ -73,6 +73,31 @@ beforeEach(() => {
 });
 
 describe('creating a session', () => {
+  it('applies the three product levels on creation and restores plan on resume', async () => {
+    for (const agent of ['claude', 'codex'] as const) {
+      for (const approvalMode of ['plan', 'auto-edit', 'ask'] as const) {
+        await world.bridge.createSession({ agent, project: 'regie-demo', approvalMode });
+      }
+    }
+    expect(world.claude.callsOf('setMode').map(([, mode]) => mode)).toEqual([
+      'plan',
+      'acceptEdits',
+      'default',
+    ]);
+    expect(world.codex.callsOf('setMode').map(([, mode]) => mode)).toEqual([
+      'workspace-write',
+      'workspace-write',
+      'workspace-write',
+    ]);
+    expect(world.codex.callsOf('setConfig')).toEqual([
+      ['codex-session-1', 'collaboration_mode', 'plan'],
+    ]);
+    await world.bridge.shutdown();
+    world.restart();
+    await world.bridge.resume('codex-session-1');
+    expect(world.codex.callsOf('setConfig')).toHaveLength(2);
+  });
+
   it('forces the mode of the approval level after session/new, for each agent', async () => {
     await world.bridge.createSession({
       agent: 'claude',
@@ -277,6 +302,32 @@ describe('a turn', () => {
 });
 
 describe('approvals', () => {
+  it('auto-edit accepts only file edits and safe reads, still asks for shell writes', async () => {
+    const session = await world.bridge.createSession({
+      agent: 'codex',
+      project: 'regie-demo',
+      approvalMode: 'auto-edit',
+    });
+    const edit = world.codex.ask(session.sessionId, { toolCallId: 'e', kind: 'edit' }, [
+      ALLOW_ONCE,
+      REJECT,
+    ]);
+    await flush();
+    expect(world.bridge.pendingApprovals()).toHaveLength(0);
+    expect(await edit).toEqual({ outcome: 'selected', optionId: 'allow_once' });
+    const command = world.codex.ask(
+      session.sessionId,
+      { toolCallId: 'c', kind: 'execute', rawInput: { command: 'touch x' } },
+      [ALLOW_ONCE, REJECT],
+    );
+    await flush();
+    const pending = world.bridge.pendingApprovals()[0];
+    expect(pending).toBeDefined();
+    if (pending === undefined) throw new Error('missing approval');
+    world.bridge.answerApproval(pending.approvalId, 'cancel');
+    expect(await command).toEqual({ outcome: 'selected', optionId: 'cancel' });
+  });
+
   async function codexAsking() {
     const { sessionId } = await world.bridge.createSession({
       agent: 'codex',

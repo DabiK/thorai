@@ -540,6 +540,22 @@ class BridgeAgentGatewayTest {
     }
 
     @Test
+    fun `a vanished approval or option is unavailable rather than an uncertain answer`() {
+        val bridge = FakeBridge()
+        upgrade(bridge)
+        val gateway = gateway()
+        withGateway(gateway) {
+            val socket = connected(bridge, gateway)
+            for (code in listOf("unknown_approval", "unknown_option")) {
+                val answer = async { gateway.answerApproval(app.regie.domain.model.ApprovalId("a"), "allow_once") }
+                val request = bridge.next("approval.answer")
+                socket.send("""{"id":${request.long("id")},"error":{"code":"$code","message":"Indisponible"}}""")
+                assertEquals(app.regie.domain.model.ApprovalReply.UNAVAILABLE, answer.await())
+            }
+        }
+    }
+
+    @Test
     fun `interrupting sends session cancel`() {
         val bridge = FakeBridge()
         upgrade(bridge)

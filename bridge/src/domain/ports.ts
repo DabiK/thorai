@@ -34,6 +34,7 @@ export interface AgentConnection {
   newSession(cwd: string): Promise<string>;
   loadSession(sessionId: string, cwd: string): Promise<void>;
   setMode(sessionId: string, modeId: string): Promise<void>;
+  setConfig(sessionId: string, configId: string, value: string): Promise<void>;
   /** Resolves when the turn ends. */
   prompt(sessionId: string, text: string): Promise<TurnResult>;
   /** Injects a message in the running turn. `false` when the agent does not accept it. */

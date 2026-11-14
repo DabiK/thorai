@@ -7,6 +7,8 @@ sealed interface Screen {
     /** La vue d'ensemble (la régie). */
     data object Overview : Screen
 
+    data object Approval : Screen
+
     /** Une session en direct. */
     data class Session(val id: SessionId) : Screen
 }

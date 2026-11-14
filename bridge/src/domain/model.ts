@@ -8,12 +8,8 @@
 export const AGENT_KINDS = ['claude', 'codex'] as const;
 export type AgentKind = (typeof AGENT_KINDS)[number];
 
-/**
- * The two approval levels of the app (docs/adr/02):
- * - `ask`: « valider », the agent asks before acting;
- * - `allow-all`: « tout autoriser », the agent acts without asking.
- */
-export const APPROVAL_MODES = ['ask', 'allow-all'] as const;
+/** Product levels (ADR 08). `allow-all` remains compatible with recorded sessions. */
+export const APPROVAL_MODES = ['plan', 'auto-edit', 'ask', 'allow-all'] as const;
 export type ApprovalMode = (typeof APPROVAL_MODES)[number];
 
 /**

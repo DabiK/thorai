@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!-- Le pont, sur 127.0.0.1 (ADR 06). -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Démarrer et arrêter le pont dans Termux ; demandée au premier lancement. -->

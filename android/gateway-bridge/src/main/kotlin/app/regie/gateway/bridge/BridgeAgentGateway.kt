@@ -184,6 +184,7 @@ class BridgeAgentGateway(
             },
         )
         return when (result) {
+            CallResult.Unavailable -> Delivery.NOT_SENT
             CallResult.NotSent -> Delivery.NOT_SENT
             CallResult.Unknown -> Delivery.UNKNOWN
             is CallResult.Accepted -> when (result.value.string("delivery")) {
@@ -203,6 +204,7 @@ class BridgeAgentGateway(
             put("optionId", optionId)
         })) {
             is CallResult.Accepted -> ApprovalReply.ACCEPTED
+            CallResult.Unavailable -> ApprovalReply.UNAVAILABLE
             CallResult.NotSent -> ApprovalReply.NOT_SENT
             CallResult.Unknown -> ApprovalReply.UNKNOWN
         }
@@ -213,6 +215,7 @@ class BridgeAgentGateway(
     /** Résultat du transport : l'absence d'accusé ne prouve jamais un refus. */
     private sealed interface CallResult {
         data class Accepted(val value: JsonObject) : CallResult
+        data object Unavailable : CallResult
         data object NotSent : CallResult
         data object Unknown : CallResult
     }
@@ -314,6 +317,7 @@ class BridgeAgentGateway(
                             calls.remove(id)?.let { reply ->
                                 reply.complete(
                                     when {
+                                        incoming.error in setOf("unknown_approval", "unknown_option") -> CallResult.Unavailable
                                         incoming.error in setOf("bad_request", "unknown_session", "shutting_down") -> CallResult.NotSent
                                         incoming.error != null -> CallResult.Unknown
                                         incoming.result != null -> CallResult.Accepted(incoming.result)

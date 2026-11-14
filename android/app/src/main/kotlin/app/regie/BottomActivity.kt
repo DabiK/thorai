@@ -7,6 +7,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import app.regie.display.ScreenMode
+import app.regie.input.GamepadInput
+import app.regie.ui.screens.ApprovalTopScreen
+import app.regie.ui.screens.ApprovalBottomScreen
 import app.regie.ui.screens.OverviewBottomScreen
 import app.regie.ui.screens.SessionBottomScreen
 import kotlinx.coroutines.flow.combine
@@ -23,6 +26,10 @@ class BottomActivity : GamepadActivity() {
         }
 
         setScreen(
+            approval = {
+                val review by container.approvalReview.collectAsStateWithLifecycle()
+                ApprovalBottomScreen(review, { container.approvalController.handle(GamepadInput.Pressed(it)) })
+            },
             overview = { overview, control -> OverviewBottomScreen(overview, control, callbacks) },
             session = { shown, overview ->
                 val live by container.live.collectAsStateWithLifecycle()

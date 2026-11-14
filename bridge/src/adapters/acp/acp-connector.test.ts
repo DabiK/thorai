@@ -36,6 +36,10 @@ function fakeAgent(): { transport: AcpTransport; received: string[] } {
       received.push(`set_mode ${params.modeId}`);
       return {};
     })
+    .onRequest('session/set_config_option', async ({ params }) => {
+      received.push(`config ${params.sessionId} ${params.configId} ${params.value}`);
+      return { configOptions: [] };
+    })
     .onRequest('session/prompt', async ({ params, client }) => {
       received.push('session/prompt');
       await client.notify('session/update', {
@@ -138,6 +142,14 @@ describe('AcpConnector', () => {
       'allow_once',
       'cancel',
     ]);
+  });
+
+  it('transports the requested collaboration configuration to ACP', async () => {
+    const agent = fakeAgent();
+    const connection = await connector(agent.transport).connect(recordingHandlers().handlers);
+    await connection.setConfig('fake-1', 'collaboration_mode', 'plan');
+    expect(agent.received).toContain('config fake-1 collaboration_mode plan');
+    await connection.close();
   });
 
   it('passes on the login state only, never the account', async () => {

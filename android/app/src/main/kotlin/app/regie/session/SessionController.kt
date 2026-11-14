@@ -22,6 +22,8 @@ sealed interface SessionAction {
     data class Open(val id: SessionId) : SessionAction
 
     /** B : revenir à la vue d'ensemble. */
+    data class OpenApproval(val id: app.regie.domain.model.ApprovalId) : SessionAction
+
     data object Back : SessionAction
 
     data class Send(val id: SessionId, val text: String) : SessionAction
@@ -152,9 +154,10 @@ class SessionController(
                 _state.update { it.copy(notice = SessionNotice.Interrupting) }
                 dispatch(SessionAction.Interrupt(id))
             }
-            // Sur l'écran d'une session, R1 ne fait que « suivante » : la validation d'abord, c'est la vue d'ensemble.
+            // R1 donne la priorité à la validation en attente.
             Button.L1 -> overview.value.neighboursOf(id)?.previous?.let { dispatch(SessionAction.Open(it.id)) }
-            Button.R1 -> overview.value.neighboursOf(id)?.next?.let { dispatch(SessionAction.Open(it.id)) }
+            Button.R1 -> overview.value.firstPendingApproval?.let { dispatch(SessionAction.OpenApproval(it.approval.id)) }
+                ?: overview.value.neighboursOf(id)?.next?.let { dispatch(SessionAction.Open(it.id)) }
             Button.UP -> _scrollSteps.tryEmit(-1)
             Button.DOWN -> _scrollSteps.tryEmit(1)
             Button.LEFT, Button.RIGHT -> Unit
