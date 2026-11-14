@@ -39,6 +39,13 @@ class TermuxBridgeLauncher(private val context: Context) : BridgeLauncher {
     }
 
     companion object {
+        fun isInstalled(context: Context): Boolean = try {
+            context.packageManager.getPackageInfo(TERMUX, PackageManager.PackageInfoFlags.of(0))
+            true
+        } catch (_: PackageManager.NameNotFoundException) {
+            false
+        }
+
         /** Permission de Termux, demandée à l'utilisateur au premier lancement. */
         const val PERMISSION = "com.termux.permission.RUN_COMMAND"
         private const val TERMUX = "com.termux"

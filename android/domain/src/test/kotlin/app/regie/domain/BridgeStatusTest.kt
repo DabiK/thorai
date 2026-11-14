@@ -32,6 +32,11 @@ class BridgeStatusTest {
     }
 
     @Test
+    fun `an external bridge must be started on its host instead of promising a restart`() {
+        assertEquals(BridgeStatus.Unreachable(BridgeHint.START_EXTERNAL), unreachable(UnreachableReason.NOT_RESPONDING, LaunchResult.EXTERNAL))
+    }
+
+    @Test
     fun `otherwise Régie restarts the bridge on its own`() {
         assertEquals(BridgeStatus.Unreachable(BridgeHint.RESTARTING), unreachable(UnreachableReason.NOT_RESPONDING, LaunchResult.SENT))
         assertEquals(BridgeStatus.Unreachable(BridgeHint.RESTARTING), unreachable(UnreachableReason.NOT_RESPONDING, null))

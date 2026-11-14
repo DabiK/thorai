@@ -198,6 +198,7 @@ private fun Notices(overview: Overview, modifier: Modifier) {
 }
 
 private fun hintText(hint: BridgeHint) = when (hint) {
+    BridgeHint.START_EXTERNAL -> R.string.bridge_hint_start_external
     BridgeHint.GRANT_RUN_COMMAND -> R.string.bridge_hint_grant_run_command
     BridgeHint.TERMUX_MISSING -> R.string.bridge_hint_termux_missing
     BridgeHint.TOKEN_MISSING -> R.string.bridge_hint_token_missing

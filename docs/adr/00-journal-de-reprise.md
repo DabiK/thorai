@@ -80,6 +80,8 @@
 
 - **14 novembre, ticket 15, correction de relecture solo** : partiel du nom maintenu sur Projet, refus de collision explicite malgré « Nom remplacé ». Deux régressions Compose rouges puis vertes ; Android 306 tests + lint, pont 283 + typage/lint verts. APK réinstallé, R2/L2 WAV local et refus en un/deux écrans (20–23) ; aucun nouvel agent. Quitter a arrêté l’unique Codex d’essai et le pont à 10:36:56 Paris ; jeton restauré, vraie source micro/deux écrans remis, forward retiré. Diff main...HEAD relu, aucun autre blocage. Ticket à fusionner ; vrai micro et extinction physique au pas à pas utilisateur.
 
+- **14 novembre, ticket 16 à fusionner (solo Codex)** : banc Regie_Thor Android 36, deux écrans aux dimensions Thor, pont Mac/jeton/projets isolés, trois commandes avec vraie démo Codex (ADR 14). Absence de Termux prise en charge ; commandes manette A/B/L2/R2 et WAV Thomas/local essayés. Android 310 tests + lint, pont 285 + typage/lint, scripts 10 tests hors console. Deux Codex réels, tous deux arrêtés ; Quitter testé. Thor absente, pas à pas physique dans artifacts/screenshots/16/essai-emulateur.txt. Relance à froid réussie après ajout du retry reverse ; aucun Claude ni fusion/push. Relecture après commit à suivre.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

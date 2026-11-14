@@ -1,0 +1,10 @@
+1. Prérequis Mac Apple Silicon : SDK Android (`ANDROID_HOME`, défaut `/opt/homebrew/share/android-commandlinetools`), image `system-images;android-36;google_apis_playstore;arm64-v8a`, JDK, Node 24+, Python 3 et Codex déjà connecté.
+2. À la racine du worktree : `scripts/emu-start.sh` crée/démarre **Regie_Thor**, attend Android puis ajoute le second écran (1920×1080 et 1240×1080, 369 dpi).
+3. `scripts/bridge-mac.sh` installe les ACP locaux, prépare `~/Documents/regie-sandbox/projects/regie-demo`, démarre le pont et pose `adb reverse tcp:47600 tcp:47600`.
+4. `scripts/emu-install.sh` construit/installe **app.regie seulement**, copie le jeton par `run-as`, autorise les notifications du banc, lance une vraie démo **Codex** et ouvre sa session ; ces trois commandes suffisent.
+5. Sans Termux, Régie joint directement le pont externe : aucune demande RUN_COMMAND, aucun réglage du débogage sans fil ; aucun service au boot, aucun Claude lancé par la démo.
+6. Manette : `scripts/emu-key.sh A` ; maintien : `scripts/emu-key.sh L2 1500` ou `scripts/emu-key.sh R2 1500` ; troisième argument = display logique (0 par défaut, identifiant du bas dans `adb -s emulator-5580 shell dumpsys display`).
+7. Captures des deux écrans, dimensions vérifiées : `scripts/emu-shot.sh artifacts/screenshots/16/` ; ajouter un préfixe en deuxième argument pour garder plusieurs états.
+8. Mise à jour sans nouvel agent : `scripts/emu-install.sh --no-demo` ; voix simulée : WAV `say -v Thomas` puis injection debug `voice_wav` comme sur la Thor (`scripts/voice-corpus.sh`).
+9. Arrêt : « Quitter » dans Régie ou `scripts/bridge-mac.sh stop` arrête le pont et ses agents ; `adb -s emulator-5580 emu kill` ferme ensuite uniquement l’émulateur ; journaux dans `~/Documents/regie-sandbox/{bridge,emulator}.log`.
+10. `EMU_SERIAL` (défaut `emulator-5580`) et `REGIE_BENCH_DIR` sont surchargeables pour toutes les commandes ; garder les mêmes valeurs, un seul pont sur 47600 ; vérifications hors console : `python3 scripts/emu-test.py`, puis portes Android et pont ; limites et décisions : [ADR 14](adr/14-banc-emulateur.md).

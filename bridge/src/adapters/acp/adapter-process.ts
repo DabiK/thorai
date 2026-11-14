@@ -37,7 +37,11 @@ interface AdapterSpec {
   readonly env: Readonly<Record<string, string>>;
 }
 
-export function adapterSpec(agent: AgentKind, binaries: AgentBinaries): AdapterSpec {
+export function adapterSpec(
+  agent: AgentKind,
+  binaries: AgentBinaries,
+  platform: NodeJS.Platform = process.platform,
+): AdapterSpec {
   if (agent === 'claude') {
     return {
       packageName: '@agentclientprotocol/claude-agent-acp',
@@ -53,7 +57,9 @@ export function adapterSpec(agent: AgentKind, binaries: AgentBinaries): AdapterS
       NO_BROWSER: '1',
       // Mode of the sessions this process loads, until the bridge sets theirs.
       INITIAL_AGENT_MODE: 'workspace-write',
-      CODEX_CONFIG: JSON.stringify({ developer_instructions: CODEX_DEVELOPER_INSTRUCTIONS }),
+      CODEX_CONFIG: JSON.stringify(
+        platform === 'darwin' ? {} : { developer_instructions: CODEX_DEVELOPER_INSTRUCTIONS },
+      ),
     },
   };
 }

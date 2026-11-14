@@ -28,6 +28,13 @@ class QuitTest {
     }
 
     @Test
+    fun `an unreachable external bridge is not reported as stopped`() = runTest {
+        gateway.shutdownHeard = false
+        launcher.result = LaunchResult.EXTERNAL
+        assertEquals(QuitOutcome.NOT_STOPPED, Quit(gateway, launcher)())
+    }
+
+    @Test
     fun `without any way to reach the bridge, quitting still ends`() = runTest {
         gateway.shutdownHeard = false
         launcher.result = LaunchResult.PERMISSION_MISSING
