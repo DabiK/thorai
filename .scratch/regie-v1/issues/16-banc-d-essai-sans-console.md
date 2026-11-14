@@ -1,6 +1,6 @@
 # 16 — Banc d'essai sans la console : émulateur à deux écrans et pont sur le Mac
 
-Statut : à fusionner
+Statut : fait
 Bloqué par : rien
 Possède : `scripts/emu-*.sh`, `scripts/bridge-mac.sh`, `docs/emulateur.md`
 
