@@ -10,7 +10,7 @@ class DeliverDictationTest {
         val gateway = StubGateway()
         val deliver = DeliverDictation(SendMessage(gateway, DictatedMessages()), AnswerApproval(gateway))
         deliver(DictationTarget.DiffComment(SessionId("s"), "a.kt", 7, removed = true, fileCoordinates = false, selectedText = "const old = 4"), "Garde ceci")
-        assertEquals("Sur a.kt, ligne 7 supprimée de l’extrait (position dans le fichier non communiquée) :\nLigne sélectionnée : const old = 4\nGarde ceci", gateway.sent.single().second)
+        assertEquals("Sur a.kt, ligne 7 supprimée de l’extrait (position dans le fichier inconnue) :\nLigne sélectionnée : const old = 4\nGarde ceci", gateway.sent.single().second)
     }
 
     @Test fun `diff comment keeps selected path and line and is marked dictated`() = runTest {

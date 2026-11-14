@@ -71,7 +71,7 @@ class SessionActionsIntegrationTest {
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
             host.setup().get().setContent { SessionSurface(container) }
             compose.onNode(hasText("Envoyer") and hasText("A")).assertDoesNotExist()
-            compose.onNodeWithText("A · Appliquer").assertIsDisplayed()
+            compose.onNodeWithText("Appliquer").assertIsDisplayed()
             container.handleInput(GamepadInput.Pressed(Button.RIGHT))
             container.handleInput(GamepadInput.Pressed(Button.A)); runCurrent()
             assertEquals(listOf(gateway.target to SessionSetting(approvalMode = "allow-all")), gateway.configured)
@@ -92,7 +92,7 @@ class SessionActionsIntegrationTest {
 
     @Test @Config(qualifiers = "w832dp-h468dp-land-mdpi")
     fun `options hide approval shortcuts and touch still allows session on one screen`() =
-        approvalWithOptions(singleScreen = true, label = "Cette session", option = "allow_for_session")
+        approvalWithOptions(singleScreen = true, label = "Autoriser pour la session", option = "allow_for_session")
 
     @Test @Config(qualifiers = "w832dp-h468dp-land-mdpi")
     fun `options hide approval shortcuts and touch still refuses on two screens`() =
@@ -108,7 +108,7 @@ class SessionActionsIntegrationTest {
         container.handleInput(GamepadInput.Pressed(Button.RIGHT)); runCurrent()
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
             host.setup().get().setContent { SessionSurface(container, top = true, singleScreen = singleScreen) }
-            val shortcuts = listOf("A" to "Autoriser une fois", "X" to "Cette session", "B" to "Refuser")
+            val shortcuts = listOf("A" to "Autoriser une fois", "X" to "Autoriser pour la session", "B" to "Refuser")
             shortcuts.forEach { (key, action) ->
                 compose.onNode(hasText(key) and hasText(action)).assertDoesNotExist()
                 compose.onNodeWithText(action).assertIsDisplayed().assertHasClickAction()
@@ -134,10 +134,10 @@ class SessionActionsIntegrationTest {
             val next = gateway.request.copy(id = ApprovalId("next"))
             gateway.approvals.value = listOf(next); runCurrent()
             compose.onNodeWithText("Réponse reçue.").performScrollTo().assertIsDisplayed()
-            compose.onNode(hasText("R1") and hasText("Demande suivante (1)")).assertDoesNotExist()
+            compose.onNode(hasText("R1") and hasText("Voir la suivante (1)")).assertDoesNotExist()
             container.handleInput(GamepadInput.Pressed(Button.R1)); runCurrent()
             assertEquals(gateway.request.id, container.inlineApproval.value.request?.id)
-            compose.onNodeWithText("Demande suivante (1)").performScrollTo().assertIsDisplayed().performClick(); runCurrent()
+            compose.onNodeWithText("Voir la suivante (1)").performScrollTo().assertIsDisplayed().performClick(); runCurrent()
             assertEquals(next.id, container.inlineApproval.value.request?.id)
             compose.onNodeWithText("Refuser").performScrollTo().assertIsDisplayed().performClick(); runCurrent()
             assertTrue(container.sessionSettings.value.visible)

@@ -49,6 +49,7 @@ import app.regie.ui.components.ApprovalBanner
 import app.regie.ui.components.BarAction
 import app.regie.ui.components.MicButton
 import app.regie.ui.components.Notice
+import app.regie.ui.components.StateMessage
 import app.regie.ui.components.SessionCard
 import app.regie.ui.components.bottomDivider
 import app.regie.ui.components.topDivider
@@ -253,6 +254,10 @@ internal fun rememberNow(): State<Instant> = produceState(Clock.System.now()) {
 @Composable
 private fun SessionGrid(overview: Overview, control: ControlState, now: Instant, compact: Boolean, modifier: Modifier) {
     val sessions = overview.sessions
+    if (sessions.isEmpty() && overview.bridge == BridgeStatus.Connected) {
+        StateMessage("Aucune session. Crée une session avec X.", modifier)
+        return
+    }
     val focus = control.focusIn(sessions.take(OverviewGrid.VISIBLE_CARDS).map { it.id })
     Column(
         modifier = modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = if (compact) 12.dp else 16.dp),

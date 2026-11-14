@@ -131,6 +131,15 @@ class VoiceCommandsTest {
         assertEquals(ApprovalId("b") to "no", gateway.answers.last())
     }
 
+    @Test fun `a vanished session is reported without proposing an authorization`() = runTest {
+        val gateway = StubGateway()
+        val opened = mutableListOf<SessionId>()
+        val executor = ExecuteVoiceCommand(gateway, AnswerApproval(gateway), { opened += it })
+        assertEquals("Session indisponible.", executor(VoiceCommand.Navigate(one.id)))
+        assertTrue(opened.isEmpty())
+        assertTrue(gateway.answers.isEmpty())
+    }
+
     @Test fun `model timeout exception and no tool call cannot leave a confirmable order`() = runTest {
         val models = listOf(
             VoiceCommandModel { _, _ -> kotlinx.coroutines.delay(20_000); VoiceIntent("approve") },

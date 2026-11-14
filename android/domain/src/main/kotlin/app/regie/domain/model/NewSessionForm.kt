@@ -4,7 +4,7 @@ import app.regie.domain.usecase.validBranchName
 import app.regie.domain.usecase.projectFolderName
 
 data class ProjectChoice(val name: String, val currentBranch: String? = null, val branches: List<String> = emptyList())
-enum class NewSessionField(val label: String) { AGENT("Agent"), PROJECT("Projet"), BRANCH("Branche"), BASE("Depuis"), VALIDATION("Validation"), MODEL("Modèle"), THOUGHT("Réflexion"), INSTRUCTION("Consigne") }
+enum class NewSessionField(val label: String) { AGENT("Agent"), PROJECT("Projet"), BRANCH("Branche"), BASE("Depuis"), VALIDATION("Mode"), MODEL("Modèle"), THOUGHT("Réflexion"), INSTRUCTION("Consigne") }
 enum class BranchChoice { CURRENT, EXISTING, NEW }
 
 data class NewSessionForm(
@@ -44,7 +44,7 @@ data class NewSessionForm(
     val feedback: String get() = when {
         loading -> "Chargement des projets…"
         !capturing && !finalizing && !sending && !uncertain && problem != null -> problem!!
-        else -> notice.ifEmpty { "Rien ne démarre avant ton A." }
+        else -> notice
     }
     val dictatingName: Boolean get() = newProject && this.field == NewSessionField.PROJECT
     val branchLabel: String get() = when (branchChoice) {
@@ -57,7 +57,7 @@ data class NewSessionForm(
         optionsLoading -> "Chargement…"
         optionsNotice.isNotEmpty() -> optionsNotice
         agent == null -> "Choisis un agent"
-        else -> option(field)?.valueLabel ?: "Non exposé par cet agent"
+        else -> option(field)?.valueLabel ?: "Non communiqué par l’agent"
     }
     val configValues: Map<String, String> get() = configOptions.filter { it.category in listOf("model", "thought_level") }.mapNotNull { o -> o.currentValue?.let { o.id to it } }.toMap()
     val modeLabel: String get() = approvalModeLabel(approvalMode)

@@ -81,7 +81,7 @@ class ReviewDiff(private val gateway: AgentGateway, private val scope: Coroutine
         val reply = if (!content.loaded || anchor == null) explanation.reply else content.entries.mapNotNull { entry ->
             when (entry) {
                 is ThreadEntry.AgentText -> entry.text.takeIf { entry.responseTo == anchor.id }
-                is ThreadEntry.TurnFailed -> ("Échec : ${entry.message ?: "sans détail"}").takeIf { entry.responseTo == anchor.id }
+                is ThreadEntry.TurnFailed -> ("Échec : ${entry.message ?: "sans détail"}").takeIf { entry.responseTo == anchor.id }
                 is ThreadEntry.Interrupted -> "Tour interrompu.".takeIf { entry.responseTo == anchor.id }
                 else -> null
             }
@@ -91,7 +91,7 @@ class ReviewDiff(private val gateway: AgentGateway, private val scope: Coroutine
         val stopped = explanation.delivery?.canRetry == false && session?.active == false &&
             session.status in setOf(SessionStatus.FAILED, SessionStatus.STOPPED)
         val error = if (!stopped) null else if (session.status == SessionStatus.FAILED)
-            "Échec : ${session.lastError ?: "L’agent s’est arrêté."}"
+            "Échec : ${session.lastError ?: "L’agent s’est arrêté."}"
         else "Session arrêtée avant la fin de l’explication."
         return explanation.copy(reply = listOfNotNull(reply.takeIf { it.isNotBlank() }, error).joinToString("\n\n"), ended = stopped)
     }

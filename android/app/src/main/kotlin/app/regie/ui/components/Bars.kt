@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -66,4 +67,12 @@ fun Modifier.bottomDivider() = drawBehind {
 
 fun Modifier.startDivider() = drawBehind {
     drawLine(Palette.divider, Offset(0.5f, 0f), Offset(0.5f, size.height), strokeWidth = 1.dp.toPx())
+}
+
+/** Même état vide ou chargement sur les deux écrans. */
+@Composable
+fun StateMessage(text: String, modifier: Modifier = Modifier) {
+    Box(modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
+        BasicText(text, style = sans(14.sp, color = Palette.textMuted, lineHeight = 20.sp))
+    }
 }

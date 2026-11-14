@@ -31,11 +31,11 @@ fun VoiceCommandScreen(state: VoiceCommandReview, bottom: Boolean, single: Boole
     Column(Modifier.fillMaxSize().background(Palette.background)) {
         Row(Modifier.fillMaxWidth().bottomDivider().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             BasicText("Régie › Ordre vocal · R2", style = sans(13.sp, 600, Palette.mic))
-            if (bottom || single) BasicText("Réglages voix", style = sans(12.sp, color = Palette.textMuted), modifier = Modifier.tappable(onSettings))
+            if (bottom || single) BasicText("Régler la voix", style = sans(12.sp, color = Palette.textMuted), modifier = Modifier.tappable(onSettings))
         }
         if (!bottom) Column(Modifier.weight(1f).verticalScroll(scroll).padding(horizontal = 28.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            BasicText("« ${state.text.ifEmpty { "…" }} »", style = sans(25.sp, lineHeight = 35.sp))
-            BasicText(if (state.phase == CommandPhase.REVIEW) "Ce que j’ai compris" else "Ordre vocal", style = sans(12.sp, color = Palette.textSubtle))
+            BasicText("« ${state.text.ifEmpty { "…" }} »", style = sans(25.sp, lineHeight = 35.sp))
+            BasicText(if (state.phase == CommandPhase.REVIEW) "Action proposée" else "Ordre vocal", style = sans(12.sp, color = Palette.textSubtle))
             BasicText(state.notice, style = sans(17.sp, lineHeight = 24.sp))
         }
         if (bottom || single) {
@@ -49,10 +49,9 @@ fun VoiceCommandScreen(state: VoiceCommandReview, bottom: Boolean, single: Boole
                         BasicText("${state.durationMs / 1000} s · niveau ${(state.level * 100).toInt()} %\nRelâche R2 pour relire", style = mono(12.sp, color = Palette.textMuted))
                     }
                 }
-                if (state.canConfirm) BasicText("Rien ne se fait sans ton A", style = sans(13.sp, color = Palette.textMuted))
                 Row(Modifier.fillMaxWidth().topDivider().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(28.dp)) {
                     if (state.canConfirm) BarAction("A", "Confirmer") { onButton(Button.A) }
-                    if (state.phase != CommandPhase.RUNNING) BarAction("B", if (state.phase == CommandPhase.DONE) "Retour" else "Annuler") { onButton(Button.B) }
+                    if (state.phase != CommandPhase.RUNNING) BarAction("B", if (state.phase == CommandPhase.DONE) "Revenir" else "Annuler") { onButton(Button.B) }
                     if (state.phase in setOf(CommandPhase.REVIEW, CommandPhase.UNKNOWN, CommandPhase.DONE)) ButtonChip("R2", "Redire", modifier = Modifier.pointerInput(Unit) {
                         detectTapGestures(onPress = {
                             held(true)

@@ -133,6 +133,38 @@ class ReviewDiffTest {
         review.close()
     }
 
+    @Test fun `failed turn uses French spacing without rewriting the external detail`() = runTest {
+        val gateway = StubGateway()
+        gateway.sessions.value = listOf(session("s"))
+        gateway.threadOf(SessionId("s")).value = SessionThread(listOf(edit(1)), loaded = true)
+        val review = ReviewDiff(gateway, backgroundScope)
+        review.open(SessionId("s")); runCurrent()
+        review.explain(); review.confirmExplanation(); runCurrent()
+        val prompt = gateway.sent.single().second
+        gateway.threadOf(SessionId("s")).value = SessionThread(listOf(edit(1),
+            ThreadEntry.UserMessage(2, prompt),
+            ThreadEntry.TurnFailed(3, "Erreur externe : détail", responseTo = 2),
+        ), loaded = true, completedMessages = setOf(2))
+        runCurrent()
+        assertEquals("Échec\u00A0: Erreur externe : détail", review.state.value.explanation!!.reply)
+        assertTrue(review.state.value.explanation!!.ended)
+        review.close()
+    }
+
+    @Test fun `agent exit without detail shows the French fallback with nonbreaking spacing`() = runTest {
+        val gateway = StubGateway()
+        gateway.sessions.value = listOf(session("s"))
+        gateway.threadOf(SessionId("s")).value = SessionThread(listOf(edit(1)), loaded = true)
+        val review = ReviewDiff(gateway, backgroundScope)
+        review.open(SessionId("s")); runCurrent()
+        review.explain(); review.confirmExplanation(); runCurrent()
+        gateway.sessions.value = listOf(session("s").copy(status = SessionStatus.FAILED, active = false, lastError = null))
+        runCurrent()
+        assertEquals("Échec\u00A0: L’agent s’est arrêté.", review.state.value.explanation!!.reply)
+        assertTrue(review.state.value.explanation!!.ended)
+        review.close()
+    }
+
     @Test fun `missing diff cannot be commented and unknown delivery cannot be retried`() = runTest {
         val gateway = StubGateway()
         gateway.sessions.value = listOf(session("s").copy(modifiedFiles = listOf("missing.bin")))

@@ -30,7 +30,7 @@ class SummaryPanelTest {
                 RegieTheme { SummaryPanel(WrittenSummary(lines, true, question.removePrefix("Question : "))) }
             }
             var count = 0
-            for (text in lines + question + "Le point" + "Bilan de l’agent · détails dans le fil") {
+            for (text in lines + question.replace("Question :", "Question :") + "Point de session" + "Bilan de l’agent") {
                 val results = mutableListOf<TextLayoutResult>()
                 compose.onNodeWithText(text).assertIsDisplayed().performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(results) }
                 count += results.single().lineCount
@@ -49,8 +49,8 @@ class SummaryPanelTest {
             compose.onNodeWithText("Fait : Minimum corrigé.").assertIsDisplayed()
             compose.onNodeWithText("Tests : 68 passent.").assertIsDisplayed()
             compose.onNodeWithText("Suite : Commit à valider.").assertIsDisplayed()
-            compose.onNodeWithText("Y ou B pour fermer").assertIsDisplayed()
-            compose.onNodeWithText("Question : Veux-tu le commit ?").assertIsDisplayed()
+            compose.onNodeWithText("Fermer avec B ou Y").assertIsDisplayed()
+            compose.onNodeWithText("Question : Veux-tu le commit ?").assertIsDisplayed()
         }
     }
 }

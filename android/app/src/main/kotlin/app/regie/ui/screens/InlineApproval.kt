@@ -22,10 +22,10 @@ fun InlineApproval(review: ApprovalReview, onDecision: (ApprovalId, ApprovalDeci
         .border(1.dp, Palette.waiting.copy(alpha = .4f), RoundedCornerShape(12.dp)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         BasicText(approvalNotice(review, shortcutsEnabled), style = sans(12.sp, 600, Palette.waiting))
         if (details && (review.pending || review.sending)) {
-            BasicText(request.subject ?: "Action non précisée par l’agent", style = mono(13.sp, lineHeight = 18.sp))
+            BasicText(request.subject ?: "Action non précisée", style = mono(13.sp, lineHeight = 18.sp))
             request.workingDirectory?.let { BasicText(it, style = mono(10.sp, color = Palette.textSubtle)) }
             BasicText("Pourquoi", style = sans(11.sp, color = Palette.textMuted))
-            BasicText(request.reason ?: "L’agent n’a pas donné de justification.", style = sans(13.sp, lineHeight = 18.sp))
+            BasicText(request.reason ?: "Justification non communiquée.", style = sans(13.sp, lineHeight = 18.sp))
             val otherPaths = request.paths.filterNot { path -> request.changes.any { it.path == path } }
             if (otherPaths.isNotEmpty()) BasicText(otherPaths.joinToString(" · "), style = mono(11.sp, color = Palette.textMuted))
             request.plan?.let { BasicText(it, style = sans(13.sp)) }
@@ -37,11 +37,11 @@ fun InlineApproval(review: ApprovalReview, onDecision: (ApprovalId, ApprovalDeci
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             DecisionButton("A".takeIf { shortcutsEnabled }, "Autoriser une fois", review.canAnswer(ApprovalDecision.ONCE), Modifier.weight(1f)) { onDecision(request.id, ApprovalDecision.ONCE) }
-            if (request.optionFor(ApprovalDecision.SESSION) != null) DecisionButton("X".takeIf { shortcutsEnabled }, "Cette session", review.canAnswer(ApprovalDecision.SESSION), Modifier.weight(1f)) { onDecision(request.id, ApprovalDecision.SESSION) }
             DecisionButton("B".takeIf { shortcutsEnabled }, "Refuser", review.canAnswer(ApprovalDecision.REJECT), Modifier.weight(1f)) { onDecision(request.id, ApprovalDecision.REJECT) }
+            if (request.optionFor(ApprovalDecision.SESSION) != null) DecisionButton("X".takeIf { shortcutsEnabled }, "Autoriser pour la session", review.canAnswer(ApprovalDecision.SESSION), Modifier.weight(1f)) { onDecision(request.id, ApprovalDecision.SESSION) }
         }
         if (!review.pending && !review.sending && review.queue.isEmpty()) InlineApprovalAction("←", "Fermer la validation", shortcutsEnabled, onDismiss)
-        if (review.queue.any { it.id != request.id }) InlineApprovalAction("R1", "Demande suivante (${review.queue.count { it.id != request.id }})", shortcutsEnabled, onNext)
+        if (review.queue.any { it.id != request.id }) InlineApprovalAction("R1", "Voir la suivante (${review.queue.count { it.id != request.id }})", shortcutsEnabled, onNext)
     }
 }
 

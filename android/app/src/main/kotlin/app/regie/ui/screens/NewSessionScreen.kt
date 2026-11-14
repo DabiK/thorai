@@ -54,14 +54,13 @@ fun NewSessionScreen(state: NewSessionForm, bottom: Boolean, single: Boolean, on
     Column(Modifier.fillMaxSize().background(Palette.background)) {
         Row(Modifier.fillMaxWidth().bottomDivider().padding(horizontal = 20.dp, vertical = 13.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             BasicText("Régie › Nouvelle session", style = sans(13.sp, 600))
-            BasicText(if (state.heard.isEmpty()) "fiche vierge · X" else "ordre vocal · R2", style = sans(12.sp, color = Palette.textSubtle))
         }
         if (!bottom) LazyColumn(Modifier.weight(1f).padding(horizontal = 28.dp), state = list,
             contentPadding = PaddingValues(vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (state.heard.isNotEmpty()) BasicText("« ${state.heard} »", style = sans(14.sp, color = Palette.textMuted, lineHeight = 20.sp), maxLines = 2)
-                    BasicText("Ce que j’ai compris · stick droit pour faire défiler", style = sans(12.sp, color = Palette.textSubtle))
+                    if (state.heard.isNotEmpty()) BasicText("« ${state.heard} »", style = sans(14.sp, color = Palette.textMuted, lineHeight = 20.sp), maxLines = 2)
+                    BasicText("Défile avec le stick droit", style = sans(12.sp, color = Palette.textSubtle))
                 }
             }
             items(state.fields) { field ->
@@ -92,12 +91,11 @@ fun NewSessionScreen(state: NewSessionForm, bottom: Boolean, single: Boolean, on
         }
         if (bottom || single) Column(Modifier.then(if (bottom) Modifier.weight(1f) else Modifier).fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(if (single) 8.dp else 12.dp)) {
             if (bottom) Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                BasicText("Vérifie et lance", style = sans(18.sp, 600))
-                BasicText("Croix ↑ ↓ pour choisir une ligne, ← → pour la changer. R2 pour redire l’ordre complet.", style = sans(13.sp, color = Palette.textMuted, lineHeight = 18.sp))
+                BasicText("Vérifie la session", style = sans(18.sp, 600))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    BarAction("↑", "Précédent") { onButton(Button.UP) }
+                    BarAction("↑", "Choisir avant") { onButton(Button.UP) }
                     BasicText(state.field.label, style = sans(13.sp, 600))
-                    BarAction("↓", "Suivant") { onButton(Button.DOWN) }
+                    BarAction("↓", "Choisir après") { onButton(Button.DOWN) }
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     BarAction("←", "Changer") { onButton(Button.LEFT) }
@@ -109,7 +107,7 @@ fun NewSessionScreen(state: NewSessionForm, bottom: Boolean, single: Boolean, on
                         modifier = Modifier.fillMaxWidth().background(Palette.surface, RoundedCornerShape(8.dp)).padding(12.dp).testTag("project-name"))
                 }
                 if (state.field == NewSessionField.BRANCH && state.branchChoice == BranchChoice.NEW) {
-                    BasicText("Nom facultatif · sinon l’agent le choisit", style = sans(12.sp, color = Palette.textMuted))
+                    BasicText("Nom facultatif, choisi sinon par l’agent", style = sans(12.sp, color = Palette.textMuted))
                     BasicTextField(state.branch, onBranch, enabled = state.editable, singleLine = true, textStyle = mono(14.sp),
                         modifier = Modifier.fillMaxWidth().background(Palette.surface, RoundedCornerShape(8.dp)).padding(12.dp).testTag("branch-name"))
                 }
@@ -121,17 +119,18 @@ fun NewSessionScreen(state: NewSessionForm, bottom: Boolean, single: Boolean, on
                 if (state.capturing) "L2 · ${(state.level * 100).toInt()} % · ${state.partial.ifBlank { "Écoute…" }}" else "Transcription…",
                 style = sans(13.sp, color = Palette.mic), maxLines = 2)
             if (state.field == NewSessionField.VALIDATION) BasicText(approvalModeHelp(state.approvalMode), style = sans(12.sp, color = Palette.textMuted), maxLines = 2)
-            BasicText(state.feedback, style = sans(12.sp, color = Palette.textMuted), maxLines = 2)
+            if (state.feedback.isNotBlank()) BasicText(state.feedback, style = sans(12.sp, color = Palette.textMuted), maxLines = 2)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Row(Modifier.weight(1f).background(if (state.canLaunch) Palette.text else Palette.textSubtle, RoundedCornerShape(12.dp))
                     .clickable(enabled = state.canLaunch) { onButton(Button.A) }.padding(horizontal = 16.dp, vertical = if (single) 12.dp else 18.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    BasicText("A", style = sans(12.sp, 600, Palette.text), modifier = Modifier.background(Palette.background, RoundedCornerShape(20.dp)).padding(horizontal = 7.dp, vertical = 4.dp))
+                    KeyChip("A")
                     BasicText(if (state.sending) "Lancement…" else "Lancer la session", style = sans(if (single) 14.sp else 17.sp, 600, Palette.background))
                 }
                 if (single) BarAction("B", "Annuler") { onButton(Button.B) }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                if (!single && !state.sending) BarAction("B", "Annuler") { onButton(Button.B) }
                 ButtonChip("L2", if (state.dictatingName) "Dicter le nom du projet" else "Redicter la consigne", modifier = Modifier.pointerInput(Unit) {
                     detectTapGestures(onPress = {
                         if (editable) {
@@ -140,7 +139,6 @@ fun NewSessionScreen(state: NewSessionForm, bottom: Boolean, single: Boolean, on
                         }
                     })
                 })
-                if (!single && !state.sending) BarAction("B", "Annuler") { onButton(Button.B) }
             }
         }
     }

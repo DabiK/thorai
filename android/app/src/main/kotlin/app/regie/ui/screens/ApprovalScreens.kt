@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.sp
 import app.regie.domain.model.*
 import app.regie.domain.usecase.ApprovalReview
 import app.regie.input.Button
+import app.regie.ui.components.KeyChip
 import app.regie.ui.components.AgentTag
 import app.regie.ui.components.BarAction
 import app.regie.ui.components.tappable
@@ -53,17 +54,17 @@ fun ApprovalTopScreen(
             Column(Modifier.weight(1f).verticalScroll(scroll).padding(horizontal = 30.dp, vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 val request = review.request
                 if (request == null) {
-                    BasicText("Cette demande n’est plus en attente.", style = sans(16.sp))
+                    BasicText("Validation terminée.", style = sans(16.sp))
                 } else {
                     BasicText(when (request.kind) {
                         ApprovalKind.COMMAND -> "Exécuter une commande"
                         ApprovalKind.FILE_CHANGE -> "Modifier un fichier"
                         ApprovalKind.OTHER -> "Autoriser une action"
                     }, style = sans(22.sp, 600))
-                    CodeBlock(request.subject ?: "Action non précisée par l’agent")
+                    CodeBlock(request.subject ?: "Action non précisée")
                     request.workingDirectory?.let { BasicText("dans $it", style = mono(11.5.sp, color = Palette.textSubtle)) }
-                    Detail("Pourquoi", request.reason ?: "L’agent n’a pas donné de justification.")
-                    Detail("Ce que ça touche", request.paths.takeIf { it.isNotEmpty() }?.joinToString("\n") ?: "Cibles non précisées par l’agent.")
+                    Detail("Pourquoi", request.reason ?: "Justification non communiquée.")
+                    Detail("Fichiers concernés", request.paths.takeIf { it.isNotEmpty() }?.joinToString("\n") ?: "Fichiers non précisés.")
                     request.plan?.let { Detail("Plan proposé", it) }
                     request.changes.forEach { change ->
                         Detail("Fichier", change.path)
@@ -75,13 +76,13 @@ fun ApprovalTopScreen(
                 }
             }
             Row(Modifier.fillMaxWidth().heightIn(max = 80.dp).verticalScroll(rememberScrollState()).padding(horizontal = 30.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                BasicText("Aussi en attente", style = sans(12.sp, color = Palette.textMuted))
+                BasicText("Autres validations", style = sans(12.sp, color = Palette.textMuted))
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     review.queue.filter { it.id != review.request?.id }.forEach { request ->
                         BasicText("${overview.sessions.firstOrNull { it.id == request.sessionId }?.project ?: "Session"} · ${request.subject ?: "Action"}",
                             style = mono(11.5.sp), maxLines = 2, modifier = Modifier.tappable { onSelect(request.id) })
                     }
-                    if (review.queue.none { it.id != review.request?.id }) BasicText("Aucune autre demande", style = sans(12.sp, color = Palette.textSubtle))
+                    if (review.queue.none { it.id != review.request?.id }) BasicText("Aucune autre validation", style = sans(12.sp, color = Palette.textSubtle))
                 }
             }
         }
@@ -107,51 +108,50 @@ private fun CodeBlock(text: String) {
 fun ApprovalBottomScreen(review: ApprovalReview, onButton: (Button) -> Unit, compact: Boolean = false) {
     Column(Modifier.then(if (compact) Modifier.fillMaxWidth() else Modifier.fillMaxSize()).background(Palette.background).padding(if (compact) 12.dp else 24.dp), verticalArrangement = Arrangement.spacedBy(if (compact) 10.dp else 18.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            BarAction("L1", "Régie") { onButton(Button.L1) }
-            BarAction("R1", "Demande suivante") { onButton(Button.R1) }
+            BarAction("L1", "Revenir") { onButton(Button.L1) }
+            BarAction("R1", "Voir la suivante") { onButton(Button.R1) }
         }
         BasicText(approvalNotice(review), style = sans(if (compact) 12.sp else 17.sp, 500, Palette.waiting))
         if (compact) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 DecisionButton("A", "Autoriser une fois", review.canAnswer(ApprovalDecision.ONCE), Modifier.weight(1f)) { onButton(Button.A) }
-                if (review.request?.optionFor(ApprovalDecision.SESSION) != null) {
-                    DecisionButton("X", "Cette session", review.canAnswer(ApprovalDecision.SESSION), Modifier.weight(1f)) { onButton(Button.X) }
-                }
                 DecisionButton("B", "Refuser", review.canAnswer(ApprovalDecision.REJECT), Modifier.weight(1f)) { onButton(Button.B) }
+                if (review.request?.optionFor(ApprovalDecision.SESSION) != null) {
+                    DecisionButton("X", "Autoriser pour la session", review.canAnswer(ApprovalDecision.SESSION), Modifier.weight(1f)) { onButton(Button.X) }
+                }
             }
         } else {
             DecisionButton("A", "Autoriser une fois", review.canAnswer(ApprovalDecision.ONCE), Modifier.fillMaxWidth(), primary = true) { onButton(Button.A) }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (review.request?.optionFor(ApprovalDecision.SESSION) != null) {
-                    DecisionButton("X", "Toujours dans cette session", review.canAnswer(ApprovalDecision.SESSION), Modifier.weight(1f)) { onButton(Button.X) }
-                }
                 DecisionButton("B", "Refuser", review.canAnswer(ApprovalDecision.REJECT), Modifier.weight(1f)) { onButton(Button.B) }
+                if (review.request?.optionFor(ApprovalDecision.SESSION) != null) {
+                    DecisionButton("X", "Autoriser pour la session", review.canAnswer(ApprovalDecision.SESSION), Modifier.weight(1f)) { onButton(Button.X) }
+                }
             }
         }
         if (!compact) {
             if (review.request?.optionFor(ApprovalDecision.SESSION) == null) {
-                BasicText("L’agent ne propose pas d’autorisation limitée à cette session.", style = sans(12.sp, color = Palette.textSubtle))
+                BasicText("Autorisation pour la session indisponible.", style = sans(12.sp, color = Palette.textSubtle))
             }
             Spacer(Modifier.weight(1f))
-            BasicText("L2 maintenu : refuser avec une consigne, puis A pour confirmer.", style = sans(13.sp, color = Palette.textMuted))
-            BasicText("Une décision concerne uniquement la demande affichée en haut.", style = sans(13.sp, color = Palette.textMuted))
+            BasicText("Maintiens L2 pour dicter une consigne de refus.", style = sans(13.sp, color = Palette.textMuted))
         }
     }
 }
 
 @Composable
 internal fun DecisionButton(key: String?, label: String, enabled: Boolean, modifier: Modifier, primary: Boolean = false, onClick: () -> Unit) {
-    Row(modifier.height(if (primary) 68.dp else 48.dp).background(if (primary && enabled) Palette.text else Palette.surface, RoundedCornerShape(14.dp)).then(if (enabled) Modifier.tappable(onClick) else Modifier).padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        if (key != null) BasicText(key, style = mono(14.sp, 600, if (primary && enabled) Palette.background else if (enabled) Palette.text else Palette.textSubtle))
+    Row(modifier.heightIn(min = if (primary) 68.dp else 48.dp).background(if (primary && enabled) Palette.text else Palette.surface, RoundedCornerShape(14.dp)).then(if (enabled) Modifier.tappable(onClick) else Modifier).padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        if (key != null) KeyChip(key)
         BasicText(label, style = sans(if (primary) 17.sp else 13.sp, weight = if (primary) 600 else 400, color = if (primary && enabled) Palette.background else if (enabled) Palette.text else Palette.textSubtle))
     }
 }
 
 internal fun approvalNotice(review: ApprovalReview, shortcutsEnabled: Boolean = true): String = when {
     review.sending -> "Réponse en cours…"
-    review.answer?.reply == ApprovalReply.ACCEPTED -> if (shortcutsEnabled && review.queue.any { it.id != review.request?.id }) "Réponse reçue. R1 ouvre la demande suivante." else "Réponse reçue."
-    review.answer?.reply == ApprovalReply.UNKNOWN -> "Réponse non confirmée. Vérifie le fil de la session avant de poursuivre."
+    review.answer?.reply == ApprovalReply.ACCEPTED -> if (shortcutsEnabled && review.queue.any { it.id != review.request?.id }) "Réponse reçue. R1 ouvre la validation suivante." else "Réponse reçue."
+    review.answer?.reply == ApprovalReply.UNKNOWN -> "Réponse non confirmée. Vérifie le fil avant de poursuivre."
     review.answer?.reply == ApprovalReply.NOT_SENT -> "Réponse non envoyée. Tu peux réessayer."
-    review.answer?.reply == ApprovalReply.UNAVAILABLE || !review.pending -> "Cette demande n’est plus disponible."
-    else -> "L’agent attend ta décision"
+    review.answer?.reply == ApprovalReply.UNAVAILABLE || !review.pending -> "Validation indisponible."
+    else -> "Attend ta validation"
 }

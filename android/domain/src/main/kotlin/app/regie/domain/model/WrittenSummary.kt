@@ -16,20 +16,20 @@ data class WrittenSummary(val lines: List<String>, val fromAgent: Boolean, val q
             val next = field("Suite")
             val complete = report.contains("[/Point Régie]") && done != null && tests != null && next != null
             if (complete) return WrittenSummary(
-                listOf("Fait : $done", "Tests : $tests", "Suite : $next").map(::short), true,
+                listOf("Fait : $done", "Tests : $tests", "Suite : $next").map(::short), true,
                 field("Question")?.takeUnless { it.equals("aucune", ignoreCase = true) || it.equals("aucune.", ignoreCase = true) }?.let(::short),
             )
             val completed = current.filterIsInstance<ThreadEntry.ToolCall>().count { it.status == ActionStatus.COMPLETED }
             val remaining = thread.plan.orEmpty().filter { it.status != PlanStepStatus.DONE }.joinToString(" ; ") { it.text }
             return WrittenSummary(listOf(
-                if (completed > 0) "Fait : $completed actions terminées ; bilan non communiqué." else "Fait : bilan non communiqué par l’agent.",
-                "Tests : résultats non communiqués dans un bilan.",
+                if (completed > 0) "Fait : $completed actions terminées ; bilan non communiqué." else "Fait : bilan non communiqué par l’agent.",
+                "Tests : résultats non communiqués dans un bilan.",
                 when {
-                    session.pendingApproval != null -> "Suite : validation attendue — ${session.pendingApproval.subject ?: "ouvrir la demande"}"
-                    session.status == SessionStatus.FAILED -> "Suite : échec — ${session.lastError ?: "consulter le fil"}"
-                    remaining.isNotEmpty() -> "Suite : $remaining"
-                    session.status.isBusy -> "Suite : ${session.progress?.currentStep ?: session.lastAction?.description ?: "agent au travail"}"
-                    else -> "Suite : non communiquée ; consulter le fil."
+                    session.pendingApproval != null -> "Suite : validation attendue — ${session.pendingApproval.subject ?: "ouvrir la demande"}"
+                    session.status == SessionStatus.FAILED -> "Suite : échec — ${session.lastError ?: "consulter le fil"}"
+                    remaining.isNotEmpty() -> "Suite : $remaining"
+                    session.status.isBusy -> "Suite : ${session.progress?.currentStep ?: session.lastAction?.description ?: "agent au travail"}"
+                    else -> "Suite : non communiquée ; consulter le fil."
                 },
             ).map(::short), false, question = if (!session.status.isBusy) {
                 LiveSession.lastSentence(text)?.takeIf { it.endsWith('?') && !it.contains('`') }?.let(::short)

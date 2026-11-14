@@ -70,7 +70,7 @@ class ReviewDictation(
     }
 
     fun append() { if (state.value.editable) mutable.value = state.value.copy(phase = DictationPhase.APPEND, notice = "Maintiens L2 pour compléter") }
-    fun correct() { if (state.value.editable && state.value.words.isNotEmpty()) mutable.value = state.value.copy(phase = DictationPhase.CORRECT, selectedWord = 0, notice = "Choisis un mot à la croix, puis maintiens L2") }
+    fun correct() { if (state.value.editable && state.value.words.isNotEmpty()) mutable.value = state.value.copy(phase = DictationPhase.CORRECT, selectedWord = 0, notice = "Choisis un mot. Maintiens L2 pour le remplacer.") }
     fun moveWord(delta: Int) {
         val current = state.value
         if (current.phase == DictationPhase.CORRECT) mutable.value = current.copy(selectedWord = (current.selectedWord + delta).coerceIn(0, (current.words.size - 1).coerceAtLeast(0)))

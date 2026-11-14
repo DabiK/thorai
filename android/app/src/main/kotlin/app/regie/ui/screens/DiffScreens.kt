@@ -10,6 +10,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.*
+import androidx.compose.ui.res.pluralStringResource
+import app.regie.R
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
@@ -35,7 +37,7 @@ fun DiffScreen(review: DiffReview, bottom: Boolean, single: Boolean, velocity: S
         if (!bottom) {
             Row(Modifier.fillMaxWidth().height(44.dp).bottomDivider().padding(horizontal = 20.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                BasicText("Régie › ${review.project} › Diff", style = sans(13.sp, color = Palette.textMuted))
+                BasicText("Régie › ${review.project} › Modifications", style = sans(13.sp, color = Palette.textMuted))
                 BasicText(review.file?.path.orEmpty(), style = mono(12.sp), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 Counts(review.file?.changes)
                 BasicText(if (review.files.isEmpty()) "0 / 0" else "${review.fileIndex + 1} / ${review.files.size}", style = mono(11.sp, color = Palette.textSubtle))
@@ -50,7 +52,7 @@ fun DiffScreen(review: DiffReview, bottom: Boolean, single: Boolean, velocity: S
             Column(if (bottom) Modifier.weight(1f).padding(16.dp) else Modifier.fillMaxWidth().topDivider().padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (review.explanation == null) {
-                    if (bottom) BasicText("${review.files.size} fichiers · éditions suivies", style = sans(13.sp, color = Palette.textMuted))
+                    if (bottom) BasicText("${pluralStringResource(R.plurals.diff_files, review.files.size, review.files.size)} · modifications suivies", style = sans(13.sp, color = Palette.textMuted))
                     val list = rememberLazyListState()
                     LaunchedEffect(review.fileIndex) { if (review.files.isNotEmpty()) list.scrollToItem(review.fileIndex) }
                     if (bottom) LazyColumn(state = list, modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -63,14 +65,14 @@ fun DiffScreen(review: DiffReview, bottom: Boolean, single: Boolean, velocity: S
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             BasicText(review.selected?.let { "Ligne ${it.line.number}" + (if (it.line.kind == DiffKind.REMOVED) " supprimée" else "") +
                                 (if (it.block.fileCoordinates) "" else " de l’extrait") } ?: "Aucune ligne à commenter", style = sans(13.sp))
-                            BasicText("L2 : commenter · ↑↓ : ligne · ←→ : fichier", style = sans(11.sp, color = Palette.textMuted))
+                            BasicText("L2 : commenter · ↑↓ : ligne · ←→ : fichier", style = sans(11.sp, color = Palette.textMuted))
                         }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                        if (review.selected != null) BarAction("Y", "Explique-moi ce bloc") { onButton(Button.Y) }
-                        BarAction("B", "Retour") { onButton(Button.B) }
+                        BarAction("B", "Revenir") { onButton(Button.B) }
+                        if (review.selected != null) BarAction("Y", "Expliquer le bloc") { onButton(Button.Y) }
                     }
-                    if (bottom) BasicText("Stick droit : défiler · L1/R1 : sessions / validation", style = sans(12.sp, color = Palette.textSubtle))
+                    if (bottom) BasicText("Stick droit : défiler · L1/R1 : naviguer", style = sans(12.sp, color = Palette.textSubtle))
                 } else {
                     val explanation = requireNotNull(review.explanation)
                     BasicText(explanation.label, style = mono(12.sp))
@@ -79,7 +81,7 @@ fun DiffScreen(review: DiffReview, bottom: Boolean, single: Boolean, velocity: S
                     Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                         if (!explanation.sending && (explanation.delivery == null || explanation.delivery?.canRetry == true))
                             BarAction("A", "Demander") { onButton(Button.A) }
-                        BarAction("B", "Revenir au diff") { onButton(Button.B) }
+                        BarAction("B", "Revenir aux modifications") { onButton(Button.B) }
                     }
                 }
             }
@@ -88,7 +90,7 @@ fun DiffScreen(review: DiffReview, bottom: Boolean, single: Boolean, velocity: S
 }
 
 @Composable private fun Counts(changes: LineChanges?) {
-    if (changes == null) BasicText("+/− ?", style = mono(12.sp, color = Palette.textSubtle))
+    if (changes == null) BasicText("+/− ?", style = mono(12.sp, color = Palette.textSubtle))
     else Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         BasicText("+${changes.added}", style = mono(12.sp, color = Palette.added))
         BasicText("−${changes.removed}", style = mono(12.sp, color = Palette.removed))
@@ -108,13 +110,11 @@ fun DiffScreen(review: DiffReview, bottom: Boolean, single: Boolean, velocity: S
 @Composable private fun DiffLines(review: DiffReview, velocity: StateFlow<Float>) {
     val rows = review.rows
     if (rows.isEmpty()) {
-        Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-            BasicText(when {
-                review.loading -> "Chargement des éditions…"
-                review.file != null -> "Diff non communiqué par l’agent pour ce fichier."
-                else -> "Aucune édition suivie. Les fichiers écrits par une commande n’y figurent pas."
-            }, style = sans(15.sp, color = Palette.textMuted))
-        }
+        StateMessage(when {
+            review.loading -> "Chargement des modifications…"
+            review.file != null -> "Modifications non communiquées pour ce fichier."
+            else -> "Aucune modification suivie. Les écritures par commande peuvent manquer."
+        })
         return
     }
     val list = rememberLazyListState()
@@ -151,12 +151,12 @@ fun DiffScreen(review: DiffReview, bottom: Boolean, single: Boolean, velocity: S
 
 private fun explanationStatus(value: DiffExplanation): String = when {
     value.sending -> "Demande en cours…"
-    value.delivery == null -> "Relis le bloc. A demande une explication écrite à l’agent."
+    value.delivery == null -> "Relis le bloc, puis demande une explication."
     value.delivery?.canRetry == true -> "Demande non livrée. A pour réessayer."
-    value.delivery == Delivery.UNKNOWN -> "Envoi non confirmé. Vérifie le fil avant toute nouvelle demande."
-    value.ended && value.reply.isBlank() -> "Tour terminé sans explication. Consulte le fil."
-    value.reply.isNotBlank() -> "Réponse de l’agent · écrite uniquement"
-    value.delivery == Delivery.QUEUED -> "Demande en attente de la fin du tour en cours."
+    value.delivery == Delivery.UNKNOWN -> "Envoi non confirmé. Vérifie le fil avant de renvoyer."
+    value.ended && value.reply.isBlank() -> "Aucune explication reçue. Consulte le fil."
+    value.reply.isNotBlank() -> "Réponse de l’agent"
+    value.delivery == Delivery.QUEUED -> "En attente de la réponse en cours."
     else -> "L’agent prépare son explication…"
 }
 
@@ -172,7 +172,7 @@ private fun explanationStatus(value: DiffExplanation): String = when {
     val text = if (explanation.delivery == null && !explanation.sending) explanation.prompt
         else explanation.reply.ifBlank { explanationStatus(explanation) }
     LazyColumn(state = list, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp)) {
-        item { BasicText("Explique-moi ce bloc", style = sans(18.sp, weight = 600), modifier = Modifier.padding(bottom = 12.dp)) }
+        item { BasicText("Expliquer le bloc", style = sans(18.sp, weight = 600), modifier = Modifier.padding(bottom = 12.dp)) }
         if (explanation.reply.isNotBlank()) {
             item { AgentText(ThreadLine.AgentText(0, explanation.reply, streaming = !explanation.ended)) }
         } else {

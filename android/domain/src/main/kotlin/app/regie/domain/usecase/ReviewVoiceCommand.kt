@@ -75,7 +75,7 @@ class ReviewVoiceCommand(
         job?.cancel()
         job = scope.launch {
             val result = try { execute(command) } catch (e: CancellationException) { throw e } catch (_: Exception) {
-                "Résultat incertain. Vérifie la session ; l’ordre ne sera pas renvoyé."
+                "Résultat incertain. Vérifie la session. Aucun renvoi automatique."
             }
             mutable.value = current.copy(phase = CommandPhase.DONE, notice = result)
         }

@@ -45,9 +45,9 @@ class SessionSettingsScreenTest {
             compose.onNodeWithText("1 / 1").assertIsDisplayed()
             compose.onNodeWithText("draft kept").assertIsDisplayed()
             compose.onNodeWithText("Model two").assertIsDisplayed()
-            compose.onNodeWithText("A · Appliquer").assertIsDisplayed().performClick()
+            compose.onNodeWithText("Appliquer").assertIsDisplayed().performClick()
             assertEquals(listOf(Button.A), buttons)
-            compose.onNodeWithText("B · Fermer").assertIsDisplayed()
+            compose.onNodeWithText("Fermer").assertIsDisplayed()
         }
     }
 
@@ -58,14 +58,14 @@ class SessionSettingsScreenTest {
         val buttons = mutableListOf<Button>()
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
             host.setup().get().setContent { RegieTheme { SessionSettingsScreen(state.value, { buttons += it }, {}) } }
-            compose.onNodeWithText("Start · Interrompre").assertIsDisplayed().assertIsEnabled().performClick()
+            compose.onNodeWithText("Interrompre").assertIsDisplayed().assertIsEnabled().performClick()
             compose.runOnIdle { state.value = state.value.copy(busy = true) }
-            compose.onNodeWithText("Start · Interrompre").assertIsDisplayed().assertIsEnabled().performClick()
+            compose.onNodeWithText("Interrompre").assertIsDisplayed().assertIsEnabled().performClick()
             compose.onNodeWithText("Application…").assertIsDisplayed().assertIsNotEnabled()
-            compose.onNodeWithText("B · Fermer").assertIsDisplayed().assertIsNotEnabled()
+            compose.onNodeWithText("Fermer").assertIsDisplayed().assertIsNotEnabled()
             assertEquals(listOf(Button.START, Button.START), buttons)
             compose.runOnIdle { state.value = state.value.copy(session = session.copy(status = SessionStatus.IDLE)) }
-            compose.onNodeWithText("Start · Interrompre").assertDoesNotExist()
+            compose.onNodeWithText("Interrompre").assertDoesNotExist()
         }
     }
     @Test fun `prepared replacements stay visible on other rows and A announces joint confirmation`() {
@@ -81,8 +81,8 @@ class SessionSettingsScreenTest {
             host.setup().get().setContent { RegieTheme { SessionSettingsScreen(state, { buttons += it }, {}) } }
             compose.onNodeWithText("New model").assertIsDisplayed()
             compose.onNodeWithText("Low").assertIsDisplayed()
-            compose.onNodeWithText("2 choix préparés · A confirme l’ensemble pour reprendre.").assertIsDisplayed()
-            compose.onNodeWithText("A · Appliquer").assertIsEnabled().performClick()
+            compose.onNodeWithText("2 choix préparés. Applique-les pour reprendre.").assertIsDisplayed()
+            compose.onNodeWithText("Appliquer").assertIsEnabled().performClick()
             assertEquals(listOf(Button.A), buttons)
         }
     }
@@ -94,13 +94,13 @@ class SessionSettingsScreenTest {
         val buttons = mutableListOf<Button>()
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
             host.setup().get().setContent { RegieTheme { SessionSettingsScreen(state.value, { buttons += it }, {}) } }
-            compose.onNodeWithText("En cours : Je valide chaque action").assertIsDisplayed()
+            compose.onNodeWithText("Mode : Je valide chaque action").assertIsDisplayed()
             compose.onNodeWithText("Remote two").assertIsDisplayed()
-            compose.onNodeWithText("A · Appliquer").assertIsDisplayed().performClick()
+            compose.onNodeWithText("Appliquer").assertIsDisplayed().performClick()
             assertEquals(listOf(Button.A), buttons)
             compose.runOnIdle { state.value = state.value.copy(busy = true) }
             compose.onNodeWithText("Application…").assertIsNotEnabled()
-            compose.onNodeWithText("B · Fermer").assertIsNotEnabled()
+            compose.onNodeWithText("Fermer").assertIsNotEnabled()
         }
     }
 
@@ -117,8 +117,8 @@ class SessionSettingsScreenTest {
             host.setup().get().setContent { RegieTheme { SessionSettingsScreen(state, { buttons += it }, {}) } }
             compose.onNodeWithText("New model").assertIsDisplayed()
             compose.onNodeWithText("high").assertIsDisplayed()
-            compose.onNodeWithText("En cours : Tout autoriser").assertIsDisplayed()
-            compose.onNodeWithText("A · Appliquer").assertIsDisplayed().assertIsEnabled().performClick()
+            compose.onNodeWithText("Mode : Tout autoriser").assertIsDisplayed()
+            compose.onNodeWithText("Appliquer").assertIsDisplayed().assertIsEnabled().performClick()
             assertEquals(listOf(Button.A), buttons)
         }
     }

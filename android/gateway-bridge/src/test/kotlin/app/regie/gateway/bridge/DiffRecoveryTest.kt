@@ -106,9 +106,9 @@ class DiffRecoveryTest {
         fixture.beginResync(); runCurrent()
         fixture.stop(); runCurrent()
         assertTrue(review.state.value.explanation!!.ended)
-        assertEquals("Ce bloc initialise\n\nÉchec : Codex s’est arrêté.", review.state.value.explanation!!.reply)
+        assertEquals("Ce bloc initialise\n\nÉchec\u00A0: Codex s’est arrêté.", review.state.value.explanation!!.reply)
         fixture.reload(); runCurrent()
-        assertEquals("Ce bloc initialise\n\nÉchec : Codex s’est arrêté.", review.state.value.explanation!!.reply)
+        assertEquals("Ce bloc initialise\n\nÉchec\u00A0: Codex s’est arrêté.", review.state.value.explanation!!.reply)
         review.close()
     }
 
@@ -138,7 +138,7 @@ class DiffRecoveryTest {
         assertFalse(review.state.value.explanation!!.sending)
         assertEquals(Delivery.UNKNOWN, review.state.value.explanation!!.delivery)
         assertTrue(review.state.value.explanation!!.ended)
-        assertEquals("Ce bloc initialise\n\nÉchec : Codex s’est arrêté.", review.state.value.explanation!!.reply)
+        assertEquals("Ce bloc initialise\n\nÉchec\u00A0: Codex s’est arrêté.", review.state.value.explanation!!.reply)
         review.confirmExplanation(); runCurrent()
         assertEquals(1, fixture.history.count { it.type == "user_message" })
         review.close()
