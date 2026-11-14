@@ -174,3 +174,37 @@ l’ancienne réponse après plusieurs rechargements. Les fixtures réelles vér
 lint verts. Thor : même Codex repris, Y/deux A, un seul message 3398, réponse terminée
 3612, un/deux écrans. La resynchronisation exacte est prouvée par le test, pas par
 cet essai console. Quitter a arrêté la session et le pont à 05:16:14 locale.
+
+## Correction de revue : sélection pendant resync et arrêt de l’agent
+
+`loaded=false` décrit un instantané incomplet, pas la disparition des éditions.
+Le domaine conserve donc la liste et la sélection précédentes pendant le rechargement,
+et suspend la navigation, L2 et la préparation par Y jusqu’au journal chargé.
+Les blocs sont désormais identifiés par `ToolCall.persistentId` (le `toolCallId`
+ACP décodé par la passerelle), puis l’index du fragment dans cet appel. Cette identité
+survit aux reconstructions d’identifiants locaux ; le chemin et la position interne
+restent les autres composantes de la sélection. Le repli sur l’index borné ne
+s’applique qu’après chargement, si l’édition a réellement disparu. Aucun rapprochement
+par texte, qui peut être identique dans plusieurs éditions.
+
+La fin explicite de la réponse reste prioritaire. Exception nécessaire : une session
+inactive `FAILED` ou `STOPPED` termine aussi une explication envoyée, même sans
+`turn_end` ni `session_error`. On conserve le texte partiel et ajoute l’erreur du
+pont, ou une indication d’arrêt. Une coupure réseau seule, une session encore active,
+une demande non confirmée ou non livrée ne suffisent pas. Une explication terminée
+reste figée ; le crash d’un tour suivant ne lui est pas attribué. Le même calcul est
+fait au retour de l’accusé d’envoi, car l’arrêt peut avoir été reçu avant cet accusé.
+Ces règles sont dans `ReviewDiff`, derrière le port existant ; aucun nouveau protocole,
+service, bibliothèque ni changement de maquette.
+
+`DiffRecoveryTest` utilise le vrai décodeur : instantané vide observé séparément,
+rechargements, éviction d’une édition antérieure, texte identique dans deux blocs,
+cible L2 et bloc Y exacts ; crash sans fin avec réponse partielle et resync ; arrêt
+avec demande queued sans réponse ; demande non confirmée et réponse déjà terminée.
+Trois tests rouges avant correction, puis quatre verts. Une mutation remettant
+l’identité locale fait échouer la sélection même avec la conservation de la liste.
+Porte Android : 276 tests sans échec ni ignoré, lint vert.
+Thor : même Codex repris, Y/A ligne 2, SIGTERM ciblé sur son adapter après le premier
+morceau ; réponse partielle et erreur affichées, un/deux écrans (56–57), retour sur la
+ligne 2 (58). Cet arrêt réel émet `session_error` avant `active=false` : le cas sans
+aucune fin explicite est prouvé par test uniquement, comme la resynchronisation exacte.

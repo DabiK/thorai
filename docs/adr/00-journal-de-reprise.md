@@ -66,6 +66,8 @@
 
 - **14 novembre, ticket 10, correction de revue resync (solo Codex)** : seuil d’explication fondé sur la séquence persistante du journal, sans comparaison entre identifiants locaux reconstruits. Régression vrai décodeur/domaine rouge puis verte, ancienne demande identique exclue ; 272 tests Android + lint verts. APK réinstallé ; même Codex repris, un seul envoi malgré deux A, réponse écrite un/deux écrans (resync-47–50). Resync exact couvert par test, pas forcé sur console. Quitter arrête Codex/pont à 05:16:14 ; aucun Claude ni permission. ADR 12 et preuves resync-* complétés ; statut à fusionner, vrai micro/extinction physique au pas à pas utilisateur.
 
+- **14 novembre, ticket 10, correction sélection resync et arrêt agent (solo Codex)** : instantané incomplet conservé, identité persistante ACP des éditions, fin d’explication sur arrêt connu avec texte partiel et erreur. DiffRecoveryTest rouge puis vert et mutation d’identité détectée ; Android 276 tests + lint verts. Thor : même Codex repris, Y/A ligne 2, arrêt ciblé de son adapter après début de réponse, erreur/partiel un-deux écrans (recovery-56–57), sélection retrouvée (58). Le vrai arrêt émet session_error ; absence de toute fin et resync exact couverts hors console. Aucun Claude ni permission ; ADR 12 complété. Statut à fusionner, vrai micro/extinction physique au pas à pas utilisateur.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

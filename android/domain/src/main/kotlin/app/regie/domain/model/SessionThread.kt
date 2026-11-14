@@ -44,6 +44,8 @@ sealed interface ThreadEntry {
         /** Tous les fichiers exposés par cet appel, avec le compte propre à chacun. */
         val files: List<ModifiedFile> = emptyList(),
         val diffs: List<DiffFragment> = emptyList(),
+        /** Identité de l’appel conservée lors de la relecture du journal. */
+        val persistentId: String = id.toString(),
     ) : ThreadEntry
 
     /** Le tour a échoué ; [message] est celui du pont, s'il en donne un. */

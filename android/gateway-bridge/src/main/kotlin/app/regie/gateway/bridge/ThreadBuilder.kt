@@ -233,6 +233,7 @@ internal class ThreadBuilder(private val cwd: () -> String?, private val maxEntr
             result = output?.let(::lastLine),
             files = (paths + diffs.keys).map { ModifiedFile(it, diffs[it]) },
             diffs = fragments.values.flatten(),
+            persistentId = toolCallId,
         ).also { cached = it }
     }
 
