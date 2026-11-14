@@ -91,9 +91,27 @@ export class AcpConnector implements AgentConnector {
       throw error;
     }
     const prompt = (text: string) => [{ type: 'text' as const, text }];
+    // MCP declarations, tool permissions and global instructions belong to the agent.
+    // Empty mcpServers means no CLIENT additions, not an empty agent configuration.
+    // Pin Claude's SDK loading options on both new and load; Codex reads its own config.
+    const sessionConfig = {
+      mcpServers: [],
+      ...(this.agent === 'claude'
+        ? {
+            _meta: {
+              claudeCode: {
+                options: {
+                  settingSources: ['user', 'project', 'local'],
+                  strictMcpConfig: false,
+                },
+              },
+            },
+          }
+        : {}),
+    };
     return {
       newSession: async (cwd) => {
-        const response = await agent.request('session/new', { cwd, mcpServers: [] });
+        const response = await agent.request('session/new', { cwd, ...sessionConfig });
         if (response.configOptions != null)
           handlers.update(response.sessionId, {
             sessionUpdate: 'config_option_update',
@@ -102,7 +120,7 @@ export class AcpConnector implements AgentConnector {
         return response.sessionId;
       },
       loadSession: async (sessionId, cwd) => {
-        const response = await agent.request('session/load', { sessionId, cwd, mcpServers: [] });
+        const response = await agent.request('session/load', { sessionId, cwd, ...sessionConfig });
         if (response.configOptions != null)
           handlers.update(sessionId, {
             sessionUpdate: 'config_option_update',
