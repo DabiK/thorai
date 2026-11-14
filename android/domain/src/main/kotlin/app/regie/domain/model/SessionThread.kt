@@ -46,6 +46,8 @@ sealed interface ThreadEntry {
         val diffs: List<DiffFragment> = emptyList(),
         /** Identité de l’appel conservée lors de la relecture du journal. */
         val persistentId: String = id.toString(),
+        /** Bounded output exposed by the agent, including line breaks. */
+        val output: String? = null,
     ) : ThreadEntry
 
     /** Le tour a échoué ; [message] est celui du pont, s'il en donne un. */
@@ -78,6 +80,7 @@ data class ContextUsage(val used: Long, val size: Long) {
  */
 data class SessionThread(
     val entries: List<ThreadEntry> = emptyList(),
+    val timestamps: Map<Long, kotlin.time.Instant> = emptyMap(),
     val plan: List<PlanStep>? = null,
     val context: ContextUsage? = null,
     val loaded: Boolean = false,

@@ -22,9 +22,19 @@ import kotlin.test.assertEquals
 @Config(sdk = [33], application = RegieApplication::class, qualifiers = "w832dp-h468dp-land-mdpi")
 class SystemInsetsTest {
     @get:Rule val compose = createEmptyComposeRule()
+    @Test fun `opening session options preserves the session content in the shared activity`() {
+        Robolectric.buildActivity(InsetActivity::class.java).use { host ->
+            val activity = host.setup().get()
+            compose.runOnIdle { activity.openOptionsForTest() }
+            compose.onNodeWithTag("session-content").assertIsDisplayed()
+        }
+    }
+
     @Test fun `shared activity content stays below status bar and above navigation bar`() {
         Robolectric.buildActivity(InsetActivity::class.java).use { host ->
             val activity = host.setup().get()
+            kotlin.test.assertFalse(activity.window.isNavigationBarContrastEnforced)
+            kotlin.test.assertFalse(androidx.core.view.WindowCompat.getInsetsController(activity.window, activity.window.decorView).isAppearanceLightNavigationBars)
             fun applyInsets(top: Int, bottom: Int) = compose.runOnIdle {
                 val insets = WindowInsetsCompat.Builder()
                     .setInsets(WindowInsetsCompat.Type.statusBars(), Insets.of(0, top, 0, 0))
@@ -42,9 +52,13 @@ class SystemInsetsTest {
 }
 
 class InsetActivity : GamepadActivity() {
+    fun openOptionsForTest() {
+        container.openSession(app.regie.domain.model.SessionId("test"))
+        container.sessionSettings.value = app.regie.domain.model.SessionSettingsReview(visible = true)
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Does not start AppContainer: no service, bridge or agent.
-        setScreen(overview = { _, _ -> Box(Modifier.fillMaxSize().testTag("safe-content")) }, session = { _, _ -> }, approval = {})
+        setScreen(overview = { _, _ -> Box(Modifier.fillMaxSize().testTag("safe-content")) }, session = { _, _ -> Box(Modifier.fillMaxSize().testTag("session-content")) }, approval = {})
     }
 }

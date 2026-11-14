@@ -71,6 +71,8 @@ abstract class GamepadActivity : ComponentActivity() {
     }
 
     protected val sessionCallbacks = object : SessionCallbacks {
+        override fun onOverview() = container.openOverview()
+        override fun onOptions() = container.openSessionSettings()
         override fun onButton(button: Button) = container.handleInput(GamepadInput.Pressed(button))
 
         override fun onTrigger(trigger: Trigger, held: Boolean) = container.touchTrigger(trigger, held)
@@ -91,6 +93,8 @@ abstract class GamepadActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        window.isNavigationBarContrastEnforced = false
+        androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightNavigationBars = false
         androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = false
         window.callback = GamepadWindowCallback(window.callback, container.inputRouter, container::releaseTouchDictation)
         // « Quitter » est allé au bout : les deux écrans se ferment, même en arrière-plan.
@@ -132,7 +136,7 @@ abstract class GamepadActivity : ComponentActivity() {
                     val controlsHere = this@GamepadActivity is BottomActivity || mode == ScreenMode.Single
                     val button: (Button) -> Unit = { container.handleInput(GamepadInput.Pressed(it)) }
                     val held: (Boolean) -> Unit = { container.touchTrigger(Trigger.L2, it) }
-                    if (sessionSettings.visible) {
+                    if (sessionSettings.visible && screen !is Screen.Session) {
                         app.regie.ui.screens.SessionSettingsScreen(sessionSettings, button, container::selectSessionSetting)
                     } else if (settingsOpen && controlsHere) {
                         VoiceSettingsScreen(settings, container::selectVoice, container::saveVoiceKey,

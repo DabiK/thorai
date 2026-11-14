@@ -39,8 +39,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.layout.onSizeChanged
+import kotlinx.coroutines.launch
+import app.regie.domain.usecase.ApprovalReview
+import app.regie.domain.model.ApprovalId
+import app.regie.domain.model.ApprovalDecision
+import app.regie.domain.model.ThreadEntry
+import app.regie.domain.model.DiffKind
+import app.regie.ui.markdown.highlightCode
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
@@ -123,12 +134,15 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlin.time.Instant
 
 /** Ce que l'écran d'une session peut demander, au doigt comme à la manette. */
 interface SessionCallbacks {
     fun onButton(button: Button)
+    fun onOverview() = onButton(Button.B)
+    fun onOptions() = onButton(Button.RIGHT)
     fun onTrigger(trigger: Trigger, held: Boolean)
     fun onDraftChange(text: String)
 
@@ -156,6 +170,11 @@ fun SessionTopScreen(
     singleScreen: Boolean,
     scroll: ThreadScroll,
     callbacks: SessionCallbacks,
+    approval: ApprovalReview = ApprovalReview(),
+    onDecision: (ApprovalId, ApprovalDecision) -> Unit = { _, _ -> },
+    onNextApproval: () -> Unit = {},
+    onDismissApproval: () -> Unit = {},
+    options: (@Composable () -> Unit)? = null,
 ) {
     val now by rememberNow()
     Column(Modifier.fillMaxSize().background(Palette.background).imePadding()) {
@@ -164,16 +183,16 @@ fun SessionTopScreen(
             val labels = listOf(app.regie.domain.model.approvalModeLabel(session.approvalMode)) +
                 session.configOptions.filter { it.category in listOf("model", "thought_level") }.map { it.valueLabel } + "→ Options"
             BasicText(labels.joinToString(" · "), style = sans(12.sp, color = Palette.textMuted), maxLines = 2,
-                modifier = Modifier.fillMaxWidth().tappable { callbacks.onButton(Button.RIGHT) }.bottomDivider().padding(horizontal = 20.dp, vertical = 7.dp))
+                modifier = Modifier.fillMaxWidth().tappable { callbacks.onOptions() }.bottomDivider().padding(horizontal = 20.dp, vertical = 7.dp))
         }
         Row(Modifier.weight(1f).fillMaxWidth()) {
             Box(Modifier.weight(1f).fillMaxHeight()) {
                 when {
                     live == null -> Centered(stringResource(if (gone) R.string.session_gone else R.string.thread_opening))
                     // Une liste par session : passer à la voisine repart de la fin de son fil.
-                    else -> key(live.session.id) { ThreadList(live, scroll) }
+                    else -> key(live.session.id) { ThreadList(live, scroll, approval, onDecision, onNextApproval, onDismissApproval) }
                 }
-                if (live != null && control.showsSummary(live)) SummaryPanel(live.writtenSummary, live.loading)
+                if (live != null && approval.request == null && control.showsSummary(live)) SummaryPanel(live.writtenSummary, live.loading)
             }
             if (live != null) SidePanel(live)
         }
@@ -181,7 +200,9 @@ fun SessionTopScreen(
             control.notice?.let {
                 NoticeText(it, callbacks, Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
             }
-            CompactSessionPanel(live, control, draft, callbacks)
+            if (options != null) Box(Modifier.height(260.dp).fillMaxWidth()) { options() }
+            else if (approval.pending || approval.sending) InlineApproval(approval, onDecision, onNextApproval, details = false, onDismiss = onDismissApproval)
+            else CompactSessionPanel(live, control, draft, callbacks)
         }
     }
 }
@@ -194,13 +215,20 @@ fun SessionBottomScreen(
     control: SessionControlState,
     draft: String,
     callbacks: SessionCallbacks,
+    approval: ApprovalReview = ApprovalReview(),
+    onDecision: (ApprovalId, ApprovalDecision) -> Unit = { _, _ -> },
+    onNextApproval: () -> Unit = {},
+    onDismissApproval: () -> Unit = {},
+    options: (@Composable () -> Unit)? = null,
 ) {
     // Clavier ouvert, l'écran du bas n'a plus que la moitié de sa hauteur : l'avis passe juste au-dessus
     // du champ, et les quatre boutons s'effacent le temps de la saisie (la manette les garde).
     val keyboardOpen = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     Column(Modifier.fillMaxSize().background(Palette.background).imePadding()) {
-        NeighbourBar(neighbours, callbacks)
-        if (keyboardOpen) {
+        NeighbourBar(neighbours, callbacks, approval)
+        if (options != null) {
+            Box(Modifier.weight(1f).fillMaxWidth()) { options() }
+        } else if (keyboardOpen) {
             Box(Modifier.weight(1f).fillMaxWidth().clipToBounds().padding(horizontal = 16.dp, vertical = 8.dp), contentAlignment = Alignment.BottomStart) {
                 control.notice?.let { NoticeText(it, callbacks, Modifier) }
             }
@@ -230,7 +258,10 @@ fun SessionBottomScreen(
             }
         }
         MessageField(draft, callbacks, compact = false, modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = if (keyboardOpen) 10.dp else 8.dp))
-        if (!keyboardOpen) ActionGrid(live, callbacks)
+        if (!keyboardOpen && options == null) {
+            if (approval.pending || approval.sending) InlineApproval(approval, onDecision, onNextApproval, details = false, onDismiss = onDismissApproval)
+            else ActionGrid(live, callbacks)
+        }
     }
 }
 
@@ -246,7 +277,7 @@ private fun SessionHeader(session: Session?, live: LiveSession?, now: Instant, c
         BasicText(
             stringResource(R.string.session_breadcrumb),
             style = sans(13.sp, color = Palette.textMuted),
-            modifier = Modifier.tappable { callbacks.onButton(Button.B) },
+            modifier = Modifier.tappable { callbacks.onOverview() },
         )
         if (session == null) return@Row
         AgentTag(session.agent)
@@ -267,7 +298,7 @@ private fun SessionHeader(session: Session?, live: LiveSession?, now: Instant, c
 
 /** « L1 Codex · atelier-meubles   1 / 4   Claude · montage R1 », sans boucler aux bouts. */
 @Composable
-private fun NeighbourBar(neighbours: Neighbours?, callbacks: SessionCallbacks) {
+private fun NeighbourBar(neighbours: Neighbours?, callbacks: SessionCallbacks, approval: ApprovalReview) {
     Row(
         modifier = Modifier.fillMaxWidth().height(44.dp).bottomDivider().padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -290,7 +321,9 @@ private fun NeighbourBar(neighbours: Neighbours?, callbacks: SessionCallbacks) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
         ) {
-            neighbours?.next?.let {
+            if (approval.request != null) {
+                if (approval.queue.any { it.id != approval.request?.id }) BasicText("R1 · Demande suivante", style = label)
+            } else neighbours?.next?.let {
                 BasicText(sessionName(it), style = label, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                 KeyChip("R1")
             }
@@ -304,52 +337,94 @@ private fun sessionName(session: Session) = "${agentName(session.agent)} · ${se
 // --- Le fil ---
 
 /**
- * Le fil, le plus récent en bas. Liste inversée : tant qu'on est en bas, un texte qui s'allonge et une
- * ligne qui arrive restent en vue ; remonté (croix, stick, doigt), le fil ne bouge plus.
+ * The latest content stays visible until the reader scrolls up. Normal layout anchors the
+ * top of the visible item while a paused streaming response grows below it.
  */
 @Composable
-private fun ThreadList(live: LiveSession, scroll: ThreadScroll) {
-    val lines = live.lines
+private fun ThreadList(live: LiveSession, scroll: ThreadScroll, approval: ApprovalReview,
+    onDecision: (ApprovalId, ApprovalDecision) -> Unit, onNextApproval: () -> Unit, onDismissApproval: () -> Unit) {
+    val lines = live.lines.filterNot { it is ThreadLine.AwaitingApproval && approval.request != null }
     val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
     var follow by remember { mutableStateOf(true) }
+    var viewportHeight by remember { mutableIntStateOf(0) }
     val step = with(LocalDensity.current) { STEP.toPx() }
     val speed = with(LocalDensity.current) { STICK_SPEED.toPx() }
-
-    // Dans une liste inversée, défiler « en avant » remonte vers le plus ancien.
-    LaunchedEffect(listState) { scroll.steps.collect { listState.animateScrollBy(-it * step) } }
+    val lastIndex = lines.size - 1 + if (approval.request != null) 1 else 0
+    suspend fun bottom() {
+        if (lastIndex < 0) return
+        listState.scrollToItem(lastIndex)
+        listState.scrollBy(listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == lastIndex }?.size?.toFloat() ?: 0f)
+    }
+    LaunchedEffect(listState, lastIndex) {
+        scroll.steps.collect { direction ->
+            if (direction == 0) { follow = true; bottom() }
+            else { if (direction < 0) follow = false; listState.animateScrollBy(direction * step) }
+        }
+    }
     LaunchedEffect(listState) {
         scroll.velocity.collectLatest { velocity ->
             if (velocity == 0f) return@collectLatest
+            if (velocity < 0f) follow = false
             var last = withFrameNanos { it }
             while (true) {
                 val frame = withFrameNanos { it }
-                listState.scrollBy(-velocity * speed * (frame - last) / 1e9f)
+                listState.scrollBy(velocity * speed * (frame - last) / 1e9f)
                 last = frame
             }
         }
     }
-    // Le fil suit la fin tant qu'on n'est pas remonté.
     LaunchedEffect(listState) {
-        snapshotFlow { listState.isScrollInProgress }.filter { !it }.collect { follow = !listState.canScrollBackward }
+        snapshotFlow { listState.isScrollInProgress }.drop(1).filter { !it }.collect { follow = !listState.canScrollForward }
     }
-    LaunchedEffect(lines.size, lines.lastOrNull()?.key) { if (follow) listState.scrollToItem(0) }
-
-    when {
-        live.loading -> Centered(stringResource(R.string.thread_loading))
-        lines.isEmpty() -> Centered(stringResource(R.string.thread_empty))
-        else -> LazyColumn(
-            state = listState,
-            reverseLayout = true,
-            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            items(count = lines.size, key = { lines[lines.size - 1 - it].key }) { index ->
-                val position = lines.size - 1 - index
-                // Les actions qui se suivent forment un bloc serré, comme la maquette.
-                Box(Modifier.padding(top = gapBefore(lines.getOrNull(position - 1), lines[position]).dp)) {
-                    ThreadLineView(lines[position])
+    // Normal order preserves the reader's top anchor even when the same streaming item grows.
+    LaunchedEffect(lines, approval, viewportHeight) { if (follow) bottom() }
+    Box(Modifier.fillMaxSize()) {
+        when {
+            live.loading && approval.request == null -> Centered(stringResource(R.string.thread_loading))
+            lines.isEmpty() && approval.request == null -> Centered(stringResource(R.string.thread_empty))
+            else -> LazyColumn(state = listState,
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
+                modifier = Modifier.fillMaxSize().testTag("session-thread").onSizeChanged { viewportHeight = it.height }) {
+                items(count = lines.size, key = { lines[it].key }) { position ->
+                    val line = lines[position]
+                    Column(Modifier.padding(top = gapBefore(lines.getOrNull(position - 1), line).dp)) {
+                        live.timestamps[line.key]?.let { time ->
+                            val formatted = remember(time) { java.time.format.DateTimeFormatter.ofPattern("HH:mm")
+                                .withZone(java.time.ZoneId.systemDefault()).format(java.time.Instant.ofEpochMilli(time.toEpochMilliseconds())) }
+                            BasicText(formatted, style = mono(9.sp, color = Palette.textSubtle), modifier = Modifier.padding(bottom = 3.dp))
+                        }
+                        val action = live.actionDetails[line.key]
+                        if (action != null) ExpandableAction(line, action) else ThreadLineView(line)
+                    }
+                }
+                if (approval.request != null) item(key = "inline-approval") {
+                    Box(Modifier.padding(top = 12.dp)) { InlineApproval(approval, onDecision, onNextApproval, onDismiss = onDismissApproval) }
                 }
             }
+        }
+        if (!follow) BasicText("↓ Revenir en bas", style = sans(12.sp, 600), modifier = Modifier
+            .align(Alignment.BottomEnd).padding(12.dp).background(Palette.chipBackground, RoundedCornerShape(16.dp))
+            .tappable { scope.launch { follow = true; bottom() } }.padding(horizontal = 14.dp, vertical = 10.dp))
+    }
+}
+
+@Composable
+private fun ExpandableAction(line: ThreadLine, action: ThreadEntry.ToolCall) {
+    var expanded by remember(action.persistentId) { mutableStateOf(false) }
+    Column {
+        Row(Modifier.fillMaxWidth().tappable { expanded = !expanded }, verticalAlignment = Alignment.CenterVertically) {
+            BasicText(if (expanded) "▾" else "▸", style = mono(12.sp, color = Palette.textMuted))
+            Box(Modifier.weight(1f)) { ThreadLineView(line) }
+        }
+        if (expanded) Column(Modifier.fillMaxWidth().background(Palette.codeBackground, RoundedCornerShape(8.dp)).padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            action.output?.takeIf { it.isNotEmpty() }?.let { BasicText(it, style = mono(12.sp, lineHeight = 17.sp)) }
+            action.diffs.forEach { diff ->
+                BasicText(diff.path, style = mono(11.sp, color = Palette.textMuted))
+                diff.lines.forEach { part -> BasicText(when (part.kind) { DiffKind.ADDED -> "+"; DiffKind.REMOVED -> "−"; DiffKind.CONTEXT -> " " } + part.text,
+                    style = mono(12.sp, color = when (part.kind) { DiffKind.ADDED -> Palette.done; DiffKind.REMOVED -> Palette.failed; DiffKind.CONTEXT -> Palette.textMuted })) }
+            }
+            if (action.output.isNullOrEmpty() && action.diffs.isEmpty()) BasicText("Détail non communiqué par l’agent.", style = sans(12.sp, color = Palette.textMuted))
         }
     }
 }
@@ -468,7 +543,7 @@ internal fun AgentText(line: ThreadLine.AgentText) {
             val streaming = line.streaming && index == blocks.lastIndex
             when (block) {
                 is MdBlock.CodeBlock -> BasicText(
-                    withCursor(AnnotatedString(block.code), streaming),
+                    withCursor(remember(block.code) { highlightCode(block.code) }, streaming),
                     style = codeStyle,
                     inlineContent = cursor,
                     modifier = Modifier

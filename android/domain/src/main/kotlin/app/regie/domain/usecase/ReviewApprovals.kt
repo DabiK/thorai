@@ -21,6 +21,7 @@ data class ApprovalReview(
 }
 
 class ReviewApprovals(private val gateway: AgentGateway, scope: CoroutineScope, private val answerApproval: AnswerApproval = AnswerApproval(gateway)) {
+    private var sessionFilter: SessionId? = null
     private var selectedId: ApprovalId? = null
     private val answers = mutableMapOf<ApprovalId, ApprovalAnswer>()
     private val sending = mutableSetOf<ApprovalId>()
@@ -31,21 +32,39 @@ class ReviewApprovals(private val gateway: AgentGateway, scope: CoroutineScope, 
         scope.launch { gateway.approvals.collect { refresh() } }
     }
 
+    /** A dedicated review can follow a session without ever selecting another session's request. */
+    fun followSession(id: SessionId) {
+        if (sessionFilter == id) return
+        sessionFilter = id
+        selectedId = null
+        mutable.value = ApprovalReview()
+        refresh()
+    }
+
+    private fun queue() = gateway.approvals.value.filter { sessionFilter == null || it.sessionId == sessionFilter }
+
     fun open(id: ApprovalId) {
         selectedId = id
-        val request = gateway.approvals.value.firstOrNull { it.id == id }
+        val request = queue().firstOrNull { it.id == id }
         mutable.value = ApprovalReview(request = request)
         refresh()
     }
 
+    fun dismissResolved() {
+        if (mutable.value.pending || mutable.value.sending || queue().isNotEmpty()) return
+        selectedId = null
+        mutable.value = ApprovalReview()
+    }
+
     fun next() {
-        val queue = gateway.approvals.value
+        val queue = queue()
         val index = queue.indexOfFirst { it.id == selectedId }
         (queue.getOrNull(index + 1) ?: queue.firstOrNull())?.let { open(it.id) }
     }
 
-    suspend fun answer(decision: ApprovalDecision, instruction: String? = null) {
+    suspend fun answer(decision: ApprovalDecision, instruction: String? = null, expectedId: ApprovalId? = null) {
         val before = mutable.value
+        if (expectedId != null && before.request?.id != expectedId) return
         if (!before.canAnswer(decision)) return
         val id = before.request?.id ?: return
         sending += id
@@ -59,7 +78,8 @@ class ReviewApprovals(private val gateway: AgentGateway, scope: CoroutineScope, 
     }
 
     private fun refresh() {
-        val queue = gateway.approvals.value
+        val queue = queue()
+        if (selectedId == null && sessionFilter != null) selectedId = queue.firstOrNull()?.id
         val old = mutable.value
         val id = selectedId
         val pending = queue.firstOrNull { it.id == id }

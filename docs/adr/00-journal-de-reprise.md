@@ -111,6 +111,8 @@
 
 - **14 novembre, ticket 19, relecture solo après bd0231d** : diff main...HEAD relu ; contrat sensible aux permissions prouvé par mutation approve→prompt (demande de validation détectée). Nettoyage des profils temporaires étendu aux erreurs de préparation ; chemin Codex par défaut compatible avec la Debian. 288 tests + typage/lint et contrat Mac repassés verts, inventaires sans prompt Claude et deux appels Codex avant/après reprise ; tous les processus d’essai arrêtés. Aucun changement Android/thor ni usage de l’émulateur/47600 ; statut à fusionner, vérification physique différée selon la consigne.
 
+- **14 novembre, ticket 18 à fusionner (solo Codex)** : validations dans le fil, options sur le bas sans remplacer le haut, sorties/diffs dépliables, coloration/date/suivi du fil et barres sombres (ADR 18). 342 tests Android + lint verts ; Thor absente, vrai Codex sur émulateur deux écrans : A/X/B, modèle Astra → Terra confirmé au tour suivant, mode un écran et défilement. Suivi initial/redimensionnement et identité des réponses corrigés par régressions. Agent/pont/AVD arrêtés, aucun Claude ni sous-agent. Preuves et pas à pas physique dans artifacts/screenshots/18/essai-emulateur.txt ; relecture après commit consignée séparément.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

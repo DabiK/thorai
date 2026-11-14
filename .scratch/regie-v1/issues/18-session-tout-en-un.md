@@ -1,6 +1,6 @@
 # 18 — Session tout-en-un : validations dans le fil, options sur place, interface plus fluide
 
-Statut : prêt
+Statut : à fusionner
 Bloqué par : 17
 Possède : `android/`
 
@@ -28,6 +28,32 @@ Il demande aussi de travailler l'interface pour qu'elle soit plus fluide et plus
 
 ## Critères d'acceptation
 
-- Sur l'émulateur, avec une vraie session Codex : une demande de validation se traite entièrement depuis le fil.
-- Le changement de modèle se fait depuis l'écran du bas de la session, sans changer de page.
-- Captures avant et après dans `artifacts/screenshots/18/`.
+- [x] Sur l'émulateur, avec une vraie session Codex : une demande de validation se traite entièrement depuis le fil.
+- [x] Le changement de modèle se fait depuis l'écran du bas de la session, sans changer de page.
+- [x] Captures avant et après dans `artifacts/screenshots/18/`.
+
+## Rapport
+
+STATUT: done
+RÉSUMÉ: validations A/X/B dans le fil, options dans le panneau inférieur, fil enrichi et barres sombres.
+Le vrai Codex a autorisé une commande et une édition, refusé une autre commande et changé de modèle sans quitter la session.
+CRITÈRES:
+- [x] Validation depuis le fil → événements 2391/2519/2625, captures after-inline et edit-pending.
+- [x] Modèle depuis le bas → model-confirmed-haut/bas et codex-turn-context.json (Astra → Terra).
+- [x] Captures avant/après → artifacts/screenshots/18/, before-validation et final-pending.
+- [x] Défilement, Markdown coloré, actions/diffs dépliables, dates, en-tête → 342 tests et captures markdown/output-expanded/review-scroll.
+PORTE DE QUALITÉ: android/./gradlew check vert, 342 tests + lint ; android-check.txt.
+THOR: absente ; émulateur deux écrans et mode un écran forcé, vrai Codex, manette injectée et toucher.
+REVIEW: suivi initial/redimensionnement, identité des réponses, double appui et lien Régie corrigés ; relecture après commit consignée dans relecture.txt.
+DÉCISIONS PRISES: ADR 18 ; file séparée conservée depuis la régie, carte résolue gardée jusqu'à fermeture explicite, coloration lexicale sans dépendance.
+POUR L'UTILISATEUR:
+1. Rebrancher THOR0000000001, lancer scripts/thor-install.sh puis Régie ; traiter les permissions Android si demandées.
+2. Lancer Codex en mode validation dans un projet de test ; autoriser/refuser commande et édition avec les vrais A/X/B.
+3. Ouvrir Droite sur le bas, changer modèle/réflexion/mode à la croix et A ; B ferme, le fil reste visible.
+4. Remonter au stick pendant une réponse, attendre, revenir en bas ; déplier une action au toucher.
+5. Éteindre/rallumer le bas, essayer L2 au micro ; capturer avec scripts/thor-shot.sh artifacts/screenshots/18/thor puis Quitter.
+QUESTIONS: aucune.
+CAPTURES: before-validation-*, after-inline-*, model-confirmed-*, edit-pending-*, markdown-haut.png, output-expanded-haut.png, review-single-options-*.
+HORS PÉRIMÈTRE: justification absente du flux ACP Codex observé (signalée comme absente) ; voix/gestes physiques non testés. Aucun Claude lancé.
+
+Preuves et étapes détaillées : `artifacts/screenshots/18/essai-emulateur.txt`. Session, pont et AVD arrêtés (`stop.txt`).

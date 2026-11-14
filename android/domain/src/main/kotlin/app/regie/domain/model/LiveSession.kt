@@ -62,6 +62,8 @@ data class LiveSession(
     val writtenSummary: WrittenSummary,
     /** Identifies a turn even if its title or branch changes after completion. */
     val summaryTurn: String,
+    val timestamps: Map<Long, kotlin.time.Instant> = emptyMap(),
+    val actionDetails: Map<Long, ThreadEntry.ToolCall> = emptyMap(),
 ) {
     /** Start n'interrompt qu'une session qui travaille ou attend une validation. */
     val canInterrupt: Boolean get() = session.status.isBusy
@@ -86,6 +88,8 @@ data class LiveSession(
             val approval = session.pendingApproval?.let { ThreadLine.AwaitingApproval(it.subject) }
             return LiveSession(
                 session = session,
+                timestamps = thread.timestamps,
+                actionDetails = thread.entries.filterIsInstance<ThreadEntry.ToolCall>().associateBy { it.id },
                 lines = if (approval != null) lines + approval else lines,
                 plan = thread.plan,
                 modifiedFiles = modifiedFiles(session.modifiedFiles, thread.entries),

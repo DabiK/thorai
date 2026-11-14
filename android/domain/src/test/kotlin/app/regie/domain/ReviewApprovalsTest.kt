@@ -118,4 +118,63 @@ class ReviewApprovalsTest {
         assertEquals(listOf(next.id to "yes"), gateway.answers)
     }
 
+    @Test fun `inline review follows only its session and never advances on a double answer`() = runTest {
+        val gateway = StubGateway()
+        val other = request("other").copy(sessionId = SessionId("other"))
+        val first = request("first")
+        val second = request("second")
+        val review = ReviewApprovals(gateway, backgroundScope)
+        review.followSession(SessionId("s"))
+        gateway.approvals.value = listOf(other, first, second)
+        runCurrent()
+        assertEquals(first, review.state.value.request)
+        assertEquals(listOf(first, second), review.state.value.queue)
+        review.answer(ApprovalDecision.ONCE)
+        gateway.approvals.value = listOf(other, second)
+        runCurrent()
+        review.answer(ApprovalDecision.ONCE)
+        assertEquals(listOf(first.id to "yes"), gateway.answers)
+        assertEquals(first, review.state.value.request)
+        review.next()
+        assertEquals(second, review.state.value.request)
+        review.answer(ApprovalDecision.REJECT)
+        assertEquals(listOf(first.id to "yes", second.id to "no"), gateway.answers)
+        review.followSession(SessionId("other"))
+        assertEquals(other, review.state.value.request)
+        review.followSession(SessionId("empty"))
+        assertNull(review.state.value.request)
+        review.answer(ApprovalDecision.ONCE)
+        assertEquals(2, gateway.answers.size)
+    }
+
+    @Test fun `an answer scheduled for a previous card cannot answer the new selection`() = runTest {
+        val gateway = StubGateway()
+        val first = request("first")
+        val second = request("second")
+        gateway.approvals.value = listOf(first, second)
+        val review = ReviewApprovals(gateway, backgroundScope)
+        review.open(first.id)
+        review.next()
+        review.answer(ApprovalDecision.ONCE, expectedId = first.id)
+        assertTrue(gateway.answers.isEmpty())
+        review.answer(ApprovalDecision.ONCE, expectedId = second.id)
+        assertEquals(listOf(second.id to "yes"), gateway.answers)
+    }
+
+    @Test fun `closing a resolved inline card restores the next incoming request without closing a pending one`() = runTest {
+        val gateway = StubGateway()
+        val request = request("a")
+        gateway.approvals.value = listOf(request)
+        val review = ReviewApprovals(gateway, backgroundScope)
+        review.followSession(request.sessionId)
+        review.dismissResolved()
+        assertEquals(request, review.state.value.request)
+        review.answer(ApprovalDecision.ONCE)
+        gateway.approvals.value = emptyList(); runCurrent()
+        review.dismissResolved()
+        assertNull(review.state.value.request)
+        gateway.approvals.value = listOf(request("b")); runCurrent()
+        assertEquals(ApprovalId("b"), review.state.value.request?.id)
+    }
+
 }

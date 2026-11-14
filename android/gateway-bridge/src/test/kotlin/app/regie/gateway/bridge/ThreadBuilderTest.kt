@@ -24,6 +24,23 @@ import kotlin.test.assertTrue
 /** Le fil d'une session, sur les enregistrements réels du pont (bridge/fixtures/bridge-ws). */
 class ThreadBuilderTest {
 
+    @Test fun `thread exposes full output tail and original event times without changing them on chunks`() {
+        val builder = ThreadBuilder({ null }, maxEntries = 2)
+        val at = Instant.parse("2026-11-14T12:00:00Z")
+        fun apply(seq: Long, data: String) = builder.apply(BridgeEvent(seq, at + kotlin.time.Duration.parse("${seq}s"), "s", "session_update", Frames.parseObject(data)!!))
+        apply(0, """{"sessionUpdate":"tool_call","toolCallId":"a","kind":"execute","title":"printf"}""")
+        apply(1, """{"sessionUpdate":"tool_call_update","toolCallId":"a","content":[{"type":"content","content":{"type":"text","text":"first\nlast"}}]}""")
+        apply(2, """{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"hello"}}""")
+        apply(3, """{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":" world"}}""")
+        val thread = builder.snapshot(true)
+        assertEquals("first\nlast", (thread.entries.first() as ThreadEntry.ToolCall).output)
+        assertEquals(mapOf(0L to at, 1L to at + kotlin.time.Duration.parse("2s")), thread.timestamps)
+        apply(4, """{"sessionUpdate":"tool_call","toolCallId":"b","kind":"execute"}""")
+        assertEquals(setOf(1L, 2L), builder.snapshot(true).timestamps.keys)
+        builder.clear()
+        assertTrue(builder.snapshot(true).timestamps.isEmpty())
+    }
+
     private val claudeId = "00000000-0000-4000-8000-000000000044"
     private val codexId = "00000000-0000-4000-8000-000000000018"
     private val prompt = "Lis notes.md et ajoute son résumé en une seule ligne à la fin de todo.md. Ne modifie aucun autre fichier."

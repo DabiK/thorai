@@ -23,6 +23,34 @@ import kotlin.time.Instant
 @Config(sdk = [33], application = Application::class, qualifiers = "w538dp-h468dp-land-mdpi")
 class SessionSettingsScreenTest {
     @get:Rule val compose = createEmptyComposeRule()
+    @Test fun `compact options keep session neighbours and selected model with apply on the bottom screen`() {
+        val session = Session(SessionId("s"), Agent.CODEX, "demo", null, null, SessionStatus.IDLE, true,
+            Instant.fromEpochMilliseconds(0), Instant.fromEpochMilliseconds(0), approvalMode = "ask",
+            configOptions = listOf(SessionOption("model", "Model", "model", "one", listOf(OptionValue("one", "Model one"), OptionValue("two", "Model two")))))
+        val settings = SessionSettingsReview(visible = true, session = session, selected = 1, value = "two")
+        val buttons = mutableListOf<Button>()
+        val callbacks = object : app.regie.ui.screens.SessionCallbacks {
+            override fun onButton(button: Button) { buttons += button }
+            override fun onTrigger(trigger: app.regie.input.Trigger, held: Boolean) {}
+            override fun onDraftChange(text: String) {}
+            override fun onSend() {}
+            override fun onNoticeSeen(notice: app.regie.session.SessionNotice) {}
+        }
+        Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
+            host.setup().get().setContent { RegieTheme {
+                app.regie.ui.screens.SessionBottomScreen(LiveSession.of(session, SessionThread(loaded = true)),
+                    Neighbours(null, null, 1, 1), app.regie.session.SessionControlState(), "draft kept", callbacks,
+                    options = { SessionSettingsScreen(settings, { buttons += it }, {}, compact = true) })
+            } }
+            compose.onNodeWithText("1 / 1").assertIsDisplayed()
+            compose.onNodeWithText("draft kept").assertIsDisplayed()
+            compose.onNodeWithText("Model two").assertIsDisplayed()
+            compose.onNodeWithText("A · Appliquer").assertIsDisplayed().performClick()
+            assertEquals(listOf(Button.A), buttons)
+            compose.onNodeWithText("B · Fermer").assertIsDisplayed()
+        }
+    }
+
     @Test fun `interrupt stays visible and clickable while applying then disappears when idle`() {
         val session = Session(SessionId("s"), Agent.CODEX, "demo", null, null, SessionStatus.WORKING, true,
             Instant.fromEpochMilliseconds(0), Instant.fromEpochMilliseconds(0), approvalMode = "ask")
