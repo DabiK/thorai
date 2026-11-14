@@ -454,8 +454,20 @@ class BridgeAgentGatewayTest {
             withTimeout(5.seconds) {
                 thread.first { t -> t.entries.any { it is ThreadEntry.UserMessage && it.text == "Relance les tests" } }
             }
+            val reconnected = FakeBridge()
+            upgrade(reconnected)
             socket.close(1001, "accusé perdu")
             assertEquals(Delivery.UNKNOWN, sent.await())
+            val hello = reconnected.next("hello")
+            assertEquals(11, hello.obj("params")?.long("since"))
+            val nextSocket = reconnected.socket()
+            nextSocket.send(helloResult(hello.long("id")!!, "j", lastSeq = 11, sessions = sessionJson("s", "working", "2026-11-13T21:00:11Z")))
+            val request = reconnected.requests.receive()
+            assertEquals("agents.versions", request.string("method"))
+            nextSocket.send(versions(request.long("id")!!))
+            withTimeout(5.seconds) { gateway.agents.first { it.isNotEmpty() } }
+            assertTrue(reconnected.requests.tryReceive().isFailure, "aucun prompt rejoué après reconnexion")
+            assertEquals(1, thread.value.entries.filterIsInstance<ThreadEntry.UserMessage>().size)
             coroutineContext.cancelChildren()
         }
     }
@@ -478,7 +490,7 @@ class BridgeAgentGatewayTest {
     fun `a timed out message is unknown and a late reply does not resend it`() {
         val bridge = FakeBridge()
         upgrade(bridge)
-        val gateway = gateway(requestTimeout = 100.milliseconds)
+        val gateway = gateway(requestTimeout = 1.seconds)
         withGateway(gateway) {
             val socket = connected(bridge, gateway)
             val sent = async { gateway.sendMessage(SessionId("s"), "x") }
