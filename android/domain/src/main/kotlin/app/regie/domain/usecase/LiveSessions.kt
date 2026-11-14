@@ -51,7 +51,7 @@ class SendMessage(private val gateway: AgentGateway, private val dictated: Dicta
         // Retenu avant l'envoi : le pont peut renvoyer le message dans le fil avant de répondre.
         if (dictated) this.dictated.remember(id, message)
         val delivery = gateway.sendMessage(id, message)
-        if (dictated && (delivery == Delivery.NOT_SENT || delivery == Delivery.CANCELLED)) this.dictated.forget(id, message)
+        if (dictated && delivery.canRetry) this.dictated.forget(id, message)
         return delivery
     }
 }

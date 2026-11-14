@@ -34,7 +34,7 @@ Le ticket 06 livre l'écran 3 de la maquette : suivre une session en direct (le 
 
 Trois ajouts :
 - `thread(id): Flow<SessionThread>` : le fil d'une session. L'observer charge son journal (`session.events`) s'il ne l'est pas encore, y compris au-delà des 4 cartes affichées. Après un `resync`, le journal des fils observés est rechargé, comme celui des cartes ;
-- `sendMessage(id, text): Delivery` : `session.prompt`. `PROMPT`, `STEERING`, `QUEUED` et `CANCELLED` viennent du pont. `NOT_SENT` veut dire : pas connecté, erreur du pont, ou pas de réponse en 2 minutes (le temps de recharger une session de l'historique) ;
+- `sendMessage(id, text): Delivery` : `session.prompt`. `PROMPT`, `STEERING`, `QUEUED` et `CANCELLED` viennent du pont. `NOT_SENT` veut dire : pas connecté, refus de mise en file locale, ou refus certain du pont (`bad_request`, `unknown_session`, `shutting_down`). `UNKNOWN` signifie que la requête a été mise en file, mais que son accusé manque (coupure, délai de 2 minutes dépassé) ou ne permet pas de conclure (autre erreur, réponse non comprise) ;
 - `interrupt(id): Boolean` : `session.cancel`.
 
 Les deux passerelles l'implémentent. La factice ajoute au fil le message envoyé (réponse `PROMPT`) et une ligne « Interrompue » ; l'agent enregistré, lui, n'en sait rien.
@@ -115,3 +115,12 @@ Les deux passerelles l'implémentent. La factice ajoute au fil le message envoy�
 - 174 tests et lint passent avec `cd android && ./gradlew check` ; aucun test ne lance un agent ni ne contacte la Thor.
 - Reprise sans sous-agent : revue du code et tests de régression écrits avant les corrections (diff multi-fichier, message annulé avant livraison, lecture échouée/interrompue).
 - Preuves et limites des essais : `artifacts/screenshots/06/essai-thor.txt`. Claude est confirmé par les captures du passage précédent et son journal réel ; seule une nouvelle session Codex a été lancée pendant cette reprise.
+
+## Correction après revue : accusé de réception perdu (14 novembre 2026)
+
+- Un `user_message` peut arriver avant la réponse à `session.prompt`. Une coupure entre les deux ne doit jamais présenter le message comme non envoyé.
+- La passerelle distingue résultat reçu, refus certain et livraison inconnue. Une fermeture WebSocket, une erreur générique ou un délai dépassé après mise en file donnent `UNKNOWN`. Aucun renvoi automatique, même après reconnexion ; une réponse tardive est ignorée.
+- La règle `Delivery.canRetry` vit dans le domaine : seuls `NOT_SENT` et `CANCELLED` permettent de restaurer le texte ou d'oublier son origine dictée. Le contrôleur affiche « Envoi non confirmé. Vérifie le fil avant de renvoyer. » pour `UNKNOWN`, sans remettre le texte dans le champ.
+- On ne déduit pas le mode de livraison en comparant le texte au fil : le protocole n'y expose pas l'identifiant de la requête, et deux messages identiques sont possibles. Le fil reste la preuve visible ; l'accusé atelier inconnu.
+- Documentation OkHttp consultée via Context7 : `WebSocket.send` retourne `true` pour la mise en file, sans garantir la réception. Référence : https://square.github.io/okhttp/5.x/okhttp/okhttp3/-web-socket/send.html (index Context7 redirigé vers https://lysine.dev/okhttp/5.x/okhttp/okhttp3/-web-socket/send.html).
+- Quatre tests de transport rouges avant correction, puis verts : événement reçu avant coupure, coupure sans événement, délai et réponse tardive, erreur générique. Trois tests complémentaires protègent le second A, la mention dictée après rattrapage et les seuls états autorisant le renvoi. Total : 181 tests Android et lint verts.

@@ -24,6 +24,8 @@ Bloqué par : 05
 - [x] Sur la Thor, on suit une vraie session Claude et une vraie session Codex jusqu'à la fin, on en interrompt une, et on passe de l'une à l'autre avec L1/R1. Preuves : `artifacts/screenshots/06/essai-thor.txt`, captures 10–11 (Claude, passage précédent confirmé par le journal), 16–21 (Codex et navigation, reprise Codex). Start annule le tour ; la limite de la commande shell est explicitée dans le rapport.
 
 
+- [x] Une coupure avant accusé ne restaure pas un message potentiellement livré → quatre régressions de transport, test du second A et test du marquage dicté ; `delivery-red.txt` puis `delivery-check.txt`.
+
 ## Rapport
 
 - Écran 3 livré : fil en flux, markdown, lectures regroupées, actions et résultats, plan ACP quand présent, fichiers avec +/− par fichier. L'origine « dicté » est testée dans le domaine ; capture vocale au ticket 08.
@@ -37,3 +39,11 @@ Bloqué par : 05
 - Preuves : `artifacts/screenshots/06/` (captures), `android-check.txt`, `bridge-events.jsonl`, `manette-envoi.txt`, `essai-thor.txt`.
 - Sessions d'essai arrêtées par Quitter ; aucune fusion, aucun push.
 - Relecture finale de `git diff main...HEAD` : périmètre, frontières domaine/adapters, assertions et provenance des captures vérifiés ; ligne vide finale supprimée et commentaire sur les résultats tardifs corrigé. Aucun critère de démarrage automatique ni de destruction du shell déclaré tenu.
+
+### Reprise après revue bloquante
+
+- Défaut reproduit avant correction : `user_message` reçu, WebSocket fermé avant réponse, résultat auparavant `NOT_SENT`. `UNKNOWN` distingue désormais une livraison inconnue d'un refus certain ; champ non restauré, aucun renvoi automatique. Règle de renvoi dans le domaine, ADR 07 mis à jour.
+- `cd android && ./gradlew check` : **181 tests**, zéro échec ni ignoré, lint vert. Preuves : `delivery-red.txt` (4 régressions rouges avant correction), `delivery-check.txt` (vert). Aucun vrai service dans les tests.
+- `scripts/thor-install.sh` : Success. Essai du véritable Codex depuis l'écran de session : A envoie, réponse terminée, champ vide, second A sans nouvel envoi ; R1 vers l'historique Claude, L1 vers Codex. La coupure exacte avant accusé est testée avec MockWebServer, pas injectée sur la console.
+- Maquette relue depuis l'export local `project/Session.dc.html` du canvas (accès distant indisponible). Aucune modification de disposition ; seul l'avis de livraison inconnue est ajouté.
+- Essai fermé par Quitter : pont et adapter Codex arrêtés, preuve dans `essai-thor.txt` et `delivery-thor-log.txt`. Captures 29–32 ; permissions du ticket 05 toujours à traiter avec l’utilisateur selon le pas à pas existant.

@@ -95,7 +95,7 @@ class BridgeAgentGateway(
     /** La connexion ouverte, pour les requêtes venues d'ailleurs ([shutdownBridge], [sendMessage]…). */
     @Volatile
     private var socket: WebSocket? = null
-    private val calls = ConcurrentHashMap<Long, CompletableDeferred<JsonObject?>>()
+    private val calls = ConcurrentHashMap<Long, CompletableDeferred<CallResult>>()
 
     /** Le fil de chaque session observée ; publié par la boucle de connexion. */
     private val threads = ConcurrentHashMap<String, MutableStateFlow<SessionThread>>()
@@ -156,7 +156,7 @@ class BridgeAgentGateway(
         }.getOrDefault(false)
     }
 
-    override suspend fun shutdownBridge(): Boolean = call("bridge.shutdown", timeout = shutdownTimeout) != null
+    override suspend fun shutdownBridge(): Boolean = call("bridge.shutdown", timeout = shutdownTimeout) is CallResult.Accepted
 
     override fun thread(id: SessionId): Flow<SessionThread> = flow {
         val key = id.value
@@ -177,35 +177,48 @@ class BridgeAgentGateway(
                 put("sessionId", id.value)
                 put("text", text)
             },
-        ) ?: return Delivery.NOT_SENT
-        return when (result.string("delivery")) {
-            "prompt" -> Delivery.PROMPT
-            "steering" -> Delivery.STEERING
-            "queued" -> Delivery.QUEUED
-            "cancelled" -> Delivery.CANCELLED
-            // Le pont l'a pris sans dire comment : il est parti.
-            else -> Delivery.PROMPT
+        )
+        return when (result) {
+            CallResult.NotSent -> Delivery.NOT_SENT
+            CallResult.Unknown -> Delivery.UNKNOWN
+            is CallResult.Accepted -> when (result.value.string("delivery")) {
+                "prompt" -> Delivery.PROMPT
+                "steering" -> Delivery.STEERING
+                "queued" -> Delivery.QUEUED
+                "cancelled" -> Delivery.CANCELLED
+                // Une réponse non comprise ne prouve ni la livraison ni son absence.
+                else -> Delivery.UNKNOWN
+            }
         }
     }
 
     override suspend fun interrupt(id: SessionId): Boolean =
-        call("session.cancel", buildJsonObject { put("sessionId", id.value) }) != null
+        call("session.cancel", buildJsonObject { put("sessionId", id.value) }) is CallResult.Accepted
 
-    /**
-     * Une requête sur la connexion ouverte. Son résultat, ou `null` : pas connecté, erreur du pont, ou
-     * pas de réponse dans le délai.
-     */
-    private suspend fun call(method: String, params: JsonObject = JsonObject(emptyMap()), timeout: Duration = requestTimeout): JsonObject? {
-        val ws = socket ?: return null
-        if (_connection.value != BridgeConnection.Connected) return null
+    /** Résultat du transport : l'absence d'accusé ne prouve jamais un refus. */
+    private sealed interface CallResult {
+        data class Accepted(val value: JsonObject) : CallResult
+        data object NotSent : CallResult
+        data object Unknown : CallResult
+    }
+
+    private suspend fun call(
+        method: String,
+        params: JsonObject = JsonObject(emptyMap()),
+        timeout: Duration = requestTimeout,
+    ): CallResult {
+        val ws = socket ?: return CallResult.NotSent
+        if (_connection.value != BridgeConnection.Connected) return CallResult.NotSent
         val id = nextId.incrementAndGet()
-        val reply = CompletableDeferred<JsonObject?>()
+        val reply = CompletableDeferred<CallResult>()
         calls[id] = reply
-        if (!ws.send(Frames.request(id, method, params))) {
+        try {
+            // true signifie seulement « mis en file localement », pas « reçu par le pont ».
+            if (!ws.send(Frames.request(id, method, params))) return CallResult.NotSent
+            return withTimeoutOrNull(timeout) { reply.await() } ?: CallResult.Unknown
+        } finally {
             calls.remove(id)
-            return null
         }
-        return withTimeoutOrNull(timeout) { reply.await() }.also { if (it == null) calls.remove(id) }
     }
 
     /** Une connexion, de l'ouverture à la coupure. */
@@ -284,7 +297,14 @@ class BridgeAgentGateway(
                         is Incoming.Response -> {
                             val id = incoming.id ?: continue
                             calls.remove(id)?.let { reply ->
-                                reply.complete(incoming.result.takeIf { incoming.error == null })
+                                reply.complete(
+                                    when {
+                                        incoming.error in setOf("bad_request", "unknown_session", "shutting_down") -> CallResult.NotSent
+                                        incoming.error != null -> CallResult.Unknown
+                                        incoming.result != null -> CallResult.Accepted(incoming.result)
+                                        else -> CallResult.Unknown
+                                    },
+                                )
                                 continue
                             }
                             val (method, params) = requests.remove(id) ?: continue
@@ -338,7 +358,7 @@ class BridgeAgentGateway(
             if (wake === signals) wake = null
             socket = null
             ws.cancel()
-            calls.values.forEach { it.complete(null) }
+            calls.values.forEach { it.complete(CallResult.Unknown) }
             calls.clear()
         }
     }

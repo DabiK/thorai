@@ -93,6 +93,12 @@ enum class Delivery {
     /** Le message n'est pas parti : la session a été interrompue pendant qu'il attendait. */
     CANCELLED,
 
-    /** Le pont n'a pas pris le message : injoignable, ou il l'a refusé. */
-    NOT_SENT,
+    /** La requête est partie, mais son accusé est perdu ou non compris. Ne pas proposer de renvoi. */
+    UNKNOWN,
+
+    /** Le message n'a pas été mis en file, ou le pont a explicitement refusé la requête. */
+    NOT_SENT;
+
+    /** Seule une non-livraison certaine permet de restaurer le texte pour un nouvel envoi. */
+    val canRetry: Boolean get() = this == NOT_SENT || this == CANCELLED
 }

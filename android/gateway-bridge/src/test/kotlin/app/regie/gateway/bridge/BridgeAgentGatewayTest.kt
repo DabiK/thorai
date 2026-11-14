@@ -49,13 +49,14 @@ class BridgeAgentGatewayTest {
     @AfterTest
     fun stop() = server.close()
 
-    private fun gateway(unreachableAfter: Int = 2) = BridgeAgentGateway(
+    private fun gateway(unreachableAfter: Int = 2, requestTimeout: kotlin.time.Duration = 2.seconds) = BridgeAgentGateway(
         baseUrl = server.url("/").toString(),
         token = { token },
         retryDelay = { 20.milliseconds },
         unreachableAfter = unreachableAfter,
         historyCount = 4,
         shutdownTimeout = 2.seconds,
+        requestTimeout = requestTimeout,
         log = { lines += it },
     )
 
@@ -433,6 +434,77 @@ class BridgeAgentGatewayTest {
             val refused = async { gateway.sendMessage(SessionId("zz"), "?") }
             socket.send("""{"id":${bridge.next("session.prompt").long("id")},"error":{"code":"unknown_session","message":"Session inconnue."}}""")
             assertEquals(Delivery.NOT_SENT, refused.await())
+        }
+    }
+
+    @Test
+    fun `a message echoed in the thread before disconnection is never reported as not sent`() {
+        val bridge = FakeBridge()
+        upgrade(bridge)
+        val gateway = gateway()
+        withGateway(gateway) {
+            val socket = connected(bridge, gateway)
+            val thread = gateway.thread(SessionId("s")).stateIn(this)
+            val sent = async { gateway.sendMessage(SessionId("s"), "Relance les tests") }
+            bridge.next("session.prompt")
+            socket.send(
+                """{"event":{"seq":11,"at":"2026-11-13T21:00:11Z","sessionId":"s","type":"user_message",
+                   "data":{"text":"Relance les tests","delivery":"prompt"}}}""",
+            )
+            withTimeout(5.seconds) {
+                thread.first { t -> t.entries.any { it is ThreadEntry.UserMessage && it.text == "Relance les tests" } }
+            }
+            socket.close(1001, "accusé perdu")
+            assertEquals(Delivery.UNKNOWN, sent.await())
+            coroutineContext.cancelChildren()
+        }
+    }
+
+    @Test
+    fun `a disconnect without an echo leaves delivery unknown too`() {
+        val bridge = FakeBridge()
+        upgrade(bridge)
+        val gateway = gateway()
+        withGateway(gateway) {
+            val socket = connected(bridge, gateway)
+            val sent = async { gateway.sendMessage(SessionId("s"), "x") }
+            bridge.next("session.prompt")
+            socket.close(1001, "coupure")
+            assertEquals(Delivery.UNKNOWN, sent.await())
+        }
+    }
+
+    @Test
+    fun `a timed out message is unknown and a late reply does not resend it`() {
+        val bridge = FakeBridge()
+        upgrade(bridge)
+        val gateway = gateway(requestTimeout = 100.milliseconds)
+        withGateway(gateway) {
+            val socket = connected(bridge, gateway)
+            val sent = async { gateway.sendMessage(SessionId("s"), "x") }
+            val prompt = bridge.next("session.prompt")
+            assertEquals(Delivery.UNKNOWN, sent.await())
+            socket.send("""{"id":${prompt.long("id")},"result":{"delivery":"prompt"}}""")
+            val interrupted = async { gateway.interrupt(SessionId("s")) }
+            val cancel = bridge.requests.receive()
+            assertEquals("session.cancel", cancel.string("method"))
+            socket.send("""{"id":${cancel.long("id")},"result":{}}""")
+            assertTrue(interrupted.await())
+            assertTrue(bridge.requests.tryReceive().isFailure)
+        }
+    }
+
+    @Test
+    fun `an unspecified bridge failure does not prove non delivery`() {
+        val bridge = FakeBridge()
+        upgrade(bridge)
+        val gateway = gateway()
+        withGateway(gateway) {
+            val socket = connected(bridge, gateway)
+            val sent = async { gateway.sendMessage(SessionId("s"), "x") }
+            val prompt = bridge.next("session.prompt")
+            socket.send("""{"id":${prompt.long("id")},"error":{"code":"internal_error","message":"Erreur"}}""")
+            assertEquals(Delivery.UNKNOWN, sent.await())
         }
     }
 

@@ -71,6 +71,22 @@ class LiveSessionsTest {
     }
 
     @Test
+    fun `unknown delivery keeps the dictated origin when the message arrives later`() = runTest {
+        gateway.sessions.value = listOf(session("s"))
+        gateway.delivery = Delivery.UNKNOWN
+        assertEquals(Delivery.UNKNOWN, SendMessage(gateway, dictated)(id, "Relance les tests", dictated = true))
+        gateway.threadOf(id).value = SessionThread(listOf(ThreadEntry.UserMessage(1, "Relance les tests")), loaded = true)
+        val live = OpenSession(gateway, dictated)(id).first { it != null }!!
+        assertEquals(listOf<ThreadLine>(ThreadLine.UserMessage(1, "Relance les tests", dictated = true)), live.lines)
+        assertEquals(listOf(id to "Relance les tests"), gateway.sent)
+    }
+
+    @Test
+    fun `only certain non delivery allows retry`() {
+        assertEquals(setOf(Delivery.NOT_SENT, Delivery.CANCELLED), Delivery.entries.filter { it.canRetry }.toSet())
+    }
+
+    @Test
     fun `interrupting asks the bridge only for a session at work`() = runTest {
         val interrupt = InterruptSession(gateway)
 

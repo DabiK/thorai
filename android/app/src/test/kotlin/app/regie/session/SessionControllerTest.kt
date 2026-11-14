@@ -145,6 +145,18 @@ class SessionControllerTest {
     }
 
     @Test
+    fun `an unknown delivery leaves the draft empty and a second A cannot duplicate it`() {
+        show("atelier")
+        controller.onDraftChange("Relance les tests")
+        press(Button.A)
+        controller.onDelivered(SessionId("atelier"), "Relance les tests", Delivery.UNKNOWN)
+        assertEquals("", controller.draft.value)
+        assertEquals(SessionNotice.Delivered(Delivery.UNKNOWN), controller.state.value.notice)
+        press(Button.A)
+        assertEquals(listOf<SessionAction>(SessionAction.Send(SessionId("atelier"), "Relance les tests")), actions)
+    }
+
+    @Test
     fun `a message cancelled before delivery comes back for retry`() {
         show("atelier")
         controller.onDraftChange("Relance les tests")

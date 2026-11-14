@@ -735,6 +735,7 @@ private fun noticeText(notice: SessionNotice): Pair<String, Color> = when (notic
         Delivery.STEERING -> stringResource(R.string.delivery_steering) to Palette.text
         Delivery.QUEUED -> stringResource(R.string.delivery_queued) to Palette.waiting
         Delivery.CANCELLED -> stringResource(R.string.delivery_cancelled) to Palette.waiting
+        Delivery.UNKNOWN -> stringResource(R.string.delivery_unknown) to Palette.waiting
         Delivery.NOT_SENT -> stringResource(R.string.delivery_not_sent) to Palette.failed
     }
 }

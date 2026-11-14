@@ -110,7 +110,7 @@ class SessionController(
     /** Réponse du pont à un envoi. Un message qui n'est pas parti revient dans le champ, s'il est vide. */
     fun onDelivered(id: SessionId, text: String, delivery: Delivery) {
         if (current() != id) return
-        if ((delivery == Delivery.NOT_SENT || delivery == Delivery.CANCELLED) && draft.value.isEmpty()) draft.value = text
+        if (delivery.canRetry && draft.value.isEmpty()) draft.value = text
         _state.update { it.copy(notice = SessionNotice.Delivered(delivery)) }
     }
 

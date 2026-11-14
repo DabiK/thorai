@@ -129,6 +129,7 @@
     <string name="delivery_steering">Pris en compte en cours de route.</string>
     <string name="delivery_queued">En attente de la fin du tour.</string>
     <string name="delivery_cancelled">Pas parti : la session a été interrompue.</string>
+    <string name="delivery_unknown">Envoi non confirmé. Vérifie le fil avant de renvoyer.</string>
     <string name="delivery_not_sent">Le message n\'est pas parti.</string>
     <string name="notice_interrupting">Interruption demandée…</string>
     <string name="notice_interrupted">Interruption envoyée.</string>
