@@ -1,6 +1,6 @@
 # 20 — Revue d'ensemble, homogénéisation et vitrine du projet
 
-Statut : à fusionner
+Statut : fait
 Bloqué par : 17, 18, 19
 Possède : tout le dépôt (passe de nettoyage), `README.md`
 
