@@ -231,7 +231,7 @@ Trois niveaux produit, plus `allow-all` conservé pour les sessions existantes. 
 ### Lectures acceptées par le pont
 
 En `ask`, `plan` et `auto-edit`, le pont répond seul à une demande de validation (ticket 13) quand toutes ces conditions tiennent :
-- l'appel est une commande shell : `kind: "execute"`, la commande dans `rawInput.command`. C'est la forme des deux agents : `Bash` de Claude, exec de Codex. Une édition, un plan, un outil MCP remontent toujours ;
+- l'appel est une commande shell : `kind: "execute"`, la commande dans `rawInput.command`. C'est la forme des deux agents : `Bash` de Claude, exec de Codex. Une édition, un plan ou un outil MCP ne relève pas de cette règle de lecture ; les éditions structurées en `auto-edit` suivent la règle distincte décrite plus haut ;
 - `rawInput` ne porte que la commande et sa description (`command`, `cwd`, `description`, `command_description`, `timeout`, `run_in_background`). Un accès réseau (`url`) ou des permissions en plus (`additionalPermissions`) demandés par Codex remontent ;
 - l'agent propose une option `allow_once` : le pont choisit celle-là, jamais « toujours » ;
 - la commande ne fait que lire (règle ci-dessous).
