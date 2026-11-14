@@ -1,6 +1,6 @@
 # 18 — Session tout-en-un : validations dans le fil, options sur place, interface plus fluide
 
-Statut : à fusionner
+Statut : fait
 Bloqué par : 17
 Possède : `android/`
 
