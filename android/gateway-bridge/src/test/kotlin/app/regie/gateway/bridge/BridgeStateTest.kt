@@ -36,6 +36,26 @@ class BridgeStateTest {
            "updatedAt":"$updatedAt","lastError":null,"active":true,"pendingApprovals":[$pending]}"""
 
     @Test
+    fun `approval keeps exact command reason all files and choices until resolved`() {
+        val state = BridgeState()
+        state.apply(event("""{"seq":1,"type":"approval_request","sessionId":"s","data":{
+          "approvalId":"a","sessionId":"s","toolCall":{"kind":"execute",
+          "rawInput":{"command":"printf 'a\nb' > x","description":"Créer le résultat","cwd":"/project"},
+          "locations":[{"path":"/project/x"},{"path":"/project/y"}]},
+          "options":[{"optionId":"allow_once","kind":"allow_once","name":"Yes"},
+          {"optionId":"allow_for_session","kind":"allow_always","name":"Session"},
+          {"optionId":"cancel","kind":"reject_once","name":"No"}]}}"""))
+        val approval = state.pendingApprovals().single()
+        assertEquals("printf 'a\nb' > x", approval.subject)
+        assertEquals("Créer le résultat", approval.reason)
+        assertEquals(listOf("/project/x", "/project/y"), approval.paths)
+        assertEquals("/project", approval.workingDirectory)
+        assertEquals(listOf("allow_once", "allow_for_session", "cancel"), approval.options.map { it.id })
+        state.apply(event("""{"seq":2,"type":"approval_resolved","sessionId":"s","data":{"approvalId":"a"}}"""))
+        assertTrue(state.pendingApprovals().isEmpty())
+    }
+
+    @Test
     fun `a Claude session waits for the edit of a file, named relative to the project`() {
         val session = replay(Fixtures.CLAUDE_SESSION, upTo = 595)
 

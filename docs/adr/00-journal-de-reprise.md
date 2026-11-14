@@ -32,6 +32,8 @@
 
 - **14 novembre, ticket 07 en échec d'environnement (`bloqué`)** : reprise solo Codex, branche propre sans travail antérieur. La porte initiale `cd android && ./gradlew check` échoue avant les tests : `SDK location not found`, aucun `android/local.properties` dans le worktree. Arrêt sans nouvel essai conformément à la consigne ; aucun code changé, aucune installation ni session d'agent lancée. Sortie exacte : `artifacts/screenshots/07/android-check.txt`. Configurer le SDK indiqué dans `CLAUDE.md`, puis reprendre le ticket tests d'abord ; détails dans son rapport.
 
+- **14 novembre, ticket 07, deuxième reprise solo en échec (`bloqué`)** : SDK corrigé, préparation partielle du modèle des validations et des ports Android (184 tests + lint verts). Pas d’écran, pas de notification ni de nouveaux modes livrés. Installation npm faite à tort avec `--omit=optional` sur le Mac : Vitest échoue avant les tests (`Cannot find native binding`, `@rolldown/binding-wasm32-wasi` absent). Arrêt sans nouvel essai conformément à la consigne ; aucun changement du pont, aucune installation Thor ni session d’agent. Conserver les changements Android testés ; reprise détaillée dans le ticket, sortie exacte `artifacts/screenshots/07/red-modes.txt`. Claude `allow-with-updates` est durable, donc exclu du choix « cette session ». Ne pas considérer cette branche comme le ticket 07 livré.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

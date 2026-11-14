@@ -115,6 +115,25 @@ class BridgeAgentGatewayTest {
     }
 
     @Test
+    fun `approval answer sends exact ids and a lost receipt stays unknown`() {
+        val bridge = FakeBridge()
+        upgrade(bridge)
+        val gateway = gateway()
+        withGateway(gateway) {
+            val ws = bridge.socket()
+            val hello = bridge.next("hello")
+            ws.send(helloResult(hello.long("id")!!, "j", 0, ""))
+            gateway.connection.first { it == BridgeConnection.Connected }
+            val answer = async { gateway.answerApproval(app.regie.domain.model.ApprovalId("approval-1"), "allow_once") }
+            val request = bridge.next("approval.answer")
+            assertEquals("approval-1", request.obj("params")!!.string("approvalId"))
+            assertEquals("allow_once", request.obj("params")!!.string("optionId"))
+            ws.close(1000, "lost receipt")
+            assertEquals(app.regie.domain.model.ApprovalReply.UNKNOWN, answer.await())
+        }
+    }
+
+    @Test
     fun `the token goes in the Authorization header and the first hello has no since`() {
         val bridge = FakeBridge()
         upgrade(bridge)

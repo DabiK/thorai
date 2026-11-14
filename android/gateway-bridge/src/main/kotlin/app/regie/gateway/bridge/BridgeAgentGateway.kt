@@ -1,5 +1,8 @@
 package app.regie.gateway.bridge
 
+import app.regie.domain.model.Approval
+import app.regie.domain.model.ApprovalId
+import app.regie.domain.model.ApprovalReply
 import app.regie.domain.model.AgentVersion
 import app.regie.domain.model.BridgeConnection
 import app.regie.domain.model.Delivery
@@ -78,6 +81,8 @@ class BridgeAgentGateway(
 ) : AgentGateway {
 
     private val url = baseUrl.trimEnd('/')
+    private val _approvals = MutableStateFlow<List<Approval>>(emptyList())
+    override val approvals: StateFlow<List<Approval>> = _approvals.asStateFlow()
     private val _sessions = MutableStateFlow<List<Session>>(emptyList())
     private val _agents = MutableStateFlow<List<AgentVersion>>(emptyList())
     private val _connection = MutableStateFlow<BridgeConnection>(BridgeConnection.Connecting)
@@ -191,6 +196,16 @@ class BridgeAgentGateway(
             }
         }
     }
+
+    override suspend fun answerApproval(id: ApprovalId, optionId: String): ApprovalReply =
+        when (call("approval.answer", buildJsonObject {
+            put("approvalId", id.value)
+            put("optionId", optionId)
+        })) {
+            is CallResult.Accepted -> ApprovalReply.ACCEPTED
+            CallResult.NotSent -> ApprovalReply.NOT_SENT
+            CallResult.Unknown -> ApprovalReply.UNKNOWN
+        }
 
     override suspend fun interrupt(id: SessionId): Boolean =
         call("session.cancel", buildJsonObject { put("sessionId", id.value) }) is CallResult.Accepted
@@ -364,6 +379,7 @@ class BridgeAgentGateway(
     }
 
     private fun publish() {
+        _approvals.value = state.pendingApprovals()
         _sessions.value = state.sessions()
         _agents.value = state.agents
         publishThreads()
