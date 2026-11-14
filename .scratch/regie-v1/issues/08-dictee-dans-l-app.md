@@ -30,19 +30,19 @@ Bloqué par : 01, 04, 06
 
 STATUT: done
 RÉSUMÉ: Dictée locale et ElevenLabs intégrées, relecture A/B/Y/X, réglages et vocabulaire du dépôt.
-Session et refus avec consigne livrés ; cible de commentaire prête pour l'écran du ticket 10.
-À fusionner selon la consigne nocturne, avec essais utilisateur explicitement restant à faire.
+La reprise immédiate attend désormais la fermeture de l'ancien micro : son service ne peut plus arrêter la nouvelle capture.
+Ticket à fusionner selon la consigne nocturne ; validation vocale des deux fournisseurs toujours à faire avec l'utilisateur.
 CRITÈRES:
-- [x] Composite build et choix du fournisseur → Android check, capture 23, erreur ElevenLabs capture 24.
-- [x] L2, partiels, niveau/durée, relecture et correction → tests domaine/capture ; Thor 10–18, 22, 26.
-- [x] Cibles session/refus/diff → DeliverDictationTest ; journal réel seq 2151, 2274 puis 2282 ; diff prêt pour 10.
-- [x] Service microphone et permission → manifest, porte Android ; refus de permission réel capture 27.
-- [ ] Consigne avec noms de fichiers correcte avec les deux fournisseurs → qualité ASR locale imparfaite avec Thomas ; clé ElevenLabs et vraie voix utilisateur manquantes.
-PORTE DE QUALITÉ: Android 212 tests + lint ; voice 127 tests + lint ; bridge 268 tests + typage/lint, verts.
-THOR: app.regie seule installée ; WAV Thomas sur vrai moteur local, manette sendevent, maintien tactile ; Codex reçoit et répond ; refus réel vérifié.
-REVIEW: main...HEAD relu en solo ; course résultat final/relâchement corrigée avec deux régressions rouges puis vertes ; verrouillage de cible testé ; APK revérifié (30–32).
-DÉCISIONS PRISES: ADR 09, local/hotwords par défaut, instantané borné du vocabulaire, cible du diff explicite, aucune correction automatique de l'ASR.
-POUR L'UTILISATEUR: suivre artifacts/screenshots/08/essai-thor.txt : autoriser micro, dicter local, relire/corriger/envoyer, vérifier service, saisir clé et refaire avec ElevenLabs.
+- [x] Composite build et choix du fournisseur → Android check ; captures 23–24 du premier passage.
+- [x] L2, partiels, niveau/durée et relecture → tests domaine ; Thor 10–18, 22, 26 et reprise WAV 35.
+- [x] Cibles session/refus/diff → DeliverDictationTest ; preuves précédentes seq 2151, 2274, 2282 ; écran diff au ticket 10.
+- [x] Service micro protégé contre B/L2 immédiat → ForegroundMicrophoneTest rouge puis vert ; annulation en attente et erreur/reprise couvertes.
+- [ ] Consigne française avec noms de fichiers reçue après relecture avec chacun des deux fournisseurs → clé ElevenLabs, permission micro et vraie voix utilisateur manquantes ; ASR local imparfait sur WAV Thomas.
+PORTE DE QUALITÉ: Android ./gradlew check : 215 tests + lint ; voice ./gradlew check : 127 + lint ; bridge npm run check : 268 + typage/lint, verts.
+THOR: app.regie réinstallée ; WAV Thomas sur vrai moteur local, B/L2 par sendevent, relecture puis effacement ; permission micro absente confirmée. Aucun nouvel agent ni message ; pont arrêté par Quitter.
+REVIEW: course de propriété du service corrigée ; test reproduisant [start, start] avant correction. Critère des deux fournisseurs conservé décoché ; aucune simulation présentée comme preuve micro réelle.
+DÉCISIONS PRISES: mutex commun aux captures pour attendre fermeture audio et arrêt du service ; ADR 09 complété, aucune décision produit nouvelle.
+POUR L'UTILISATEUR: suivre artifacts/screenshots/08/essai-thor.txt, étapes 1–8 : autoriser micro, tester local et B/L2, saisir la clé, refaire avec ElevenLabs ; conserver texte relu et message reçu pour chaque fournisseur.
 QUESTIONS: aucune décision produit en attente.
-CAPTURES: artifacts/screenshots/08/10–32 (voir essai-thor.txt pour les noms exacts).
-HORS PÉRIMÈTRE: noms techniques et phrase longue mal reconnus par le moteur local ; contrôleur de permissions Android a planté sur Retour ; droits 05/14 absents ; réponse « compriscompris » affichée dans le fil (30-haut). Aucun nouveau Claude.
+CAPTURES: artifacts/screenshots/08/33–37 (noms complets dans essai-thor.txt) ; preuves précédentes 10–32 conservées.
+HORS PÉRIMÈTRE: ASR local imparfait sur noms techniques/phrase longue ; droits 05/14 absents ; ancien affichage « compriscompris » dans le fil. Aucun nouveau Claude.

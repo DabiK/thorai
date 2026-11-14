@@ -44,6 +44,8 @@
 
 - **14 novembre, ticket 08, correction après relecture solo** : course entre résultat final/erreur et relâchement L2 corrigée dans le domaine ; deux régressions rouges puis vertes et tentative de changement de cible couverte. Android 212 tests + lint, voix 127 + lint, pont 268 + typage/lint verts. APK réinstallé, relecture WAV locale vérifiée (30–32), brouillon effacé sans envoi ; aucun nouvel agent, 30 sessions arrêtées, pont quitté à 02:03:33Z. Micro réel et ElevenLabs restent au pas à pas utilisateur ; statut à fusionner. Affichage « compriscompris » dans le fil relevé hors périmètre (30-haut).
 
+- **14 novembre, ticket 08, correction de revue du service micro (solo Codex)** : mutex commun aux instances de ForegroundMicrophone, de l'ouverture à la fermeture complète de l'audio puis stopService ; B/L2 immédiat ne laisse plus l'ancienne capture arrêter la nouvelle. Test déterministe rouge puis vert, annulation en attente et erreur/reprise couvertes. Android 215 tests + lint, voix 127 + lint, pont 268 + typage/lint verts. APK réinstallé ; reprise WAV locale et permission absente vérifiées sur Thor (33–37), aucun agent/message lancé, pont arrêté par Quitter à 02:12:30Z. Critère des deux fournisseurs toujours décoché : permission micro, clé ElevenLabs, vraie voix et preuve texte relu/reçu à faire avec l'utilisateur (essai-thor.txt, étapes 1–8). Statut à fusionner selon la consigne nocturne ; ADR 09 complété.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |
