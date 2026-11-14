@@ -92,3 +92,19 @@ Cinq tests intégrés couvrent affichage/routage, options et envoi tactile, appr
 refus et disparition avant confirmation. Documentation Compose vérifiée via Context7
 (`revision-docs-compose.txt`). Essai Codex et WAV Thomas réels, preuves et limites :
 `artifacts/screenshots/18/revision-essai.txt`.
+
+## Correction de revue — carte pendant les options
+
+Pendant les options, la carte conserve ses décisions tactiles explicites, mais
+masque les touches A/X/B : A applique le réglage, B ferme les options, X est ignoré.
+La même règle d'affichage vaut pour R1/Gauche et l'avis de réponse, puisque les
+options capturent aussi ces touches. À leur fermeture, les raccourcis reviennent.
+Le fil reçoit l'état des options même en mode deux écrans ; le panneau compact
+seul ne suffit pas. Les callbacks, identités et gardes du domaine sont inchangés.
+
+Trois scénarios intégrés supplémentaires exercent le vrai AppContainer avec ports
+factices : routage A/X/B, fermeture/réouverture, trois décisions tactiles, brouillon,
+passage à la demande suivante et fermeture tactile. Un/deux écrans couverts.
+Essai Codex séparé : mode modifié sans réponse, B restaure les raccourcis, puis
+validation tactile en mode un écran. Preuves : `options-essai.txt`, `options-*`
+dans `artifacts/screenshots/18/`. Aucun nouveau choix produit durable.

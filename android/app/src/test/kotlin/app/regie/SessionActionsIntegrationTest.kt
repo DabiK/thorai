@@ -42,7 +42,7 @@ class SessionActionsIntegrationTest {
         container.start(replay = true); container.openSession(gateway.target); runCurrent()
         container.sessionController.onDraftChange("draft to send")
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
-            host.setup().get().setContent { Bottom(container) }
+            host.setup().get().setContent { SessionSurface(container) }
             compose.onNode(hasText("Envoyer") and hasText("A")).assertDoesNotExist()
             compose.onNodeWithText("Autoriser une fois").assertIsDisplayed()
             container.handleInput(GamepadInput.Pressed(Button.A)); runCurrent()
@@ -69,7 +69,7 @@ class SessionActionsIntegrationTest {
         container.sessionController.onDraftChange("touch draft")
         container.handleInput(GamepadInput.Pressed(Button.RIGHT)); runCurrent()
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
-            host.setup().get().setContent { Bottom(container) }
+            host.setup().get().setContent { SessionSurface(container) }
             compose.onNode(hasText("Envoyer") and hasText("A")).assertDoesNotExist()
             compose.onNodeWithText("A · Appliquer").assertIsDisplayed()
             container.handleInput(GamepadInput.Pressed(Button.RIGHT))
@@ -83,6 +83,71 @@ class SessionActionsIntegrationTest {
             container.sessionController.onDraftChange("after options")
             container.handleInput(GamepadInput.Pressed(Button.B)); runCurrent()
             compose.onNode(hasText("Envoyer") and hasText("A")).assertIsDisplayed()
+        }
+    }
+
+    @Test @Config(qualifiers = "w832dp-h468dp-land-mdpi")
+    fun `options hide approval shortcuts and touch still allows once on two screens`() =
+        approvalWithOptions(singleScreen = false, label = "Autoriser une fois", option = "once")
+
+    @Test @Config(qualifiers = "w832dp-h468dp-land-mdpi")
+    fun `options hide approval shortcuts and touch still allows session on one screen`() =
+        approvalWithOptions(singleScreen = true, label = "Cette session", option = "allow_for_session")
+
+    @Test @Config(qualifiers = "w832dp-h468dp-land-mdpi")
+    fun `options hide approval shortcuts and touch still refuses on two screens`() =
+        approvalWithOptions(singleScreen = false, label = "Refuser", option = "no")
+
+    private fun approvalWithOptions(singleScreen: Boolean, label: String, option: String) = runTest {
+        val gateway = ActionsGateway()
+        gateway.approvals.value = listOf(gateway.request)
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        val container = AppContainer(app, app.getSystemService(DisplayManager::class.java), backgroundScope) { gateway }
+        container.start(replay = true); container.openSession(gateway.target); runCurrent()
+        container.sessionController.onDraftChange("preserved draft")
+        container.handleInput(GamepadInput.Pressed(Button.RIGHT)); runCurrent()
+        Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
+            host.setup().get().setContent { SessionSurface(container, top = true, singleScreen = singleScreen) }
+            val shortcuts = listOf("A" to "Autoriser une fois", "X" to "Cette session", "B" to "Refuser")
+            shortcuts.forEach { (key, action) ->
+                compose.onNode(hasText(key) and hasText(action)).assertDoesNotExist()
+                compose.onNodeWithText(action).assertIsDisplayed().assertHasClickAction()
+            }
+            container.handleInput(GamepadInput.Pressed(Button.RIGHT))
+            container.handleInput(GamepadInput.Pressed(Button.A)); runCurrent()
+            assertEquals(listOf(gateway.target to SessionSetting(approvalMode = "allow-all")), gateway.configured)
+            container.handleInput(GamepadInput.Pressed(Button.X)); runCurrent()
+            assertTrue(gateway.answers.isEmpty())
+            container.handleInput(GamepadInput.Pressed(Button.B)); runCurrent()
+            assertFalse(container.sessionSettings.value.visible)
+            assertTrue(gateway.answers.isEmpty())
+            // In single-screen mode the compact footer also shows these shortcuts.
+            shortcuts.forEach { (key, action) ->
+                compose.onAllNodes(hasText(key) and hasText(action)).assertCountEquals(if (singleScreen) 2 else 1)
+            }
+            container.handleInput(GamepadInput.Pressed(Button.RIGHT)); runCurrent()
+            compose.onNodeWithText(label).assertIsDisplayed().performClick(); runCurrent()
+            assertEquals(listOf(gateway.request.id to option), gateway.answers)
+            assertTrue(container.sessionSettings.value.visible)
+            assertTrue(gateway.sent.isEmpty())
+            assertEquals("preserved draft", container.sessionController.draft.value)
+            val next = gateway.request.copy(id = ApprovalId("next"))
+            gateway.approvals.value = listOf(next); runCurrent()
+            compose.onNodeWithText("Réponse reçue.").performScrollTo().assertIsDisplayed()
+            compose.onNode(hasText("R1") and hasText("Demande suivante (1)")).assertDoesNotExist()
+            container.handleInput(GamepadInput.Pressed(Button.R1)); runCurrent()
+            assertEquals(gateway.request.id, container.inlineApproval.value.request?.id)
+            compose.onNodeWithText("Demande suivante (1)").performScrollTo().assertIsDisplayed().performClick(); runCurrent()
+            assertEquals(next.id, container.inlineApproval.value.request?.id)
+            compose.onNodeWithText("Refuser").performScrollTo().assertIsDisplayed().performClick(); runCurrent()
+            assertTrue(container.sessionSettings.value.visible)
+            gateway.approvals.value = emptyList(); runCurrent()
+            compose.onNode(hasText("←") and hasText("Fermer la validation")).assertDoesNotExist()
+            container.handleInput(GamepadInput.Pressed(Button.LEFT)); runCurrent()
+            assertEquals(next.id, container.inlineApproval.value.request?.id)
+            compose.onNodeWithText("Fermer la validation").performScrollTo().assertIsDisplayed().performClick(); runCurrent()
+            assertNull(container.inlineApproval.value.request)
+            assertEquals(listOf(gateway.request.id to option, next.id to "no"), gateway.answers)
         }
     }
 
@@ -119,7 +184,7 @@ class SessionActionsIntegrationTest {
         assertTrue(gateway.sent.isEmpty())
     }
 
-    @Composable private fun Bottom(container: AppContainer) {
+    @Composable private fun SessionSurface(container: AppContainer, top: Boolean = false, singleScreen: Boolean = false) {
         val live by container.live.collectAsState()
         val approval by container.inlineApproval.collectAsState()
         val settings by container.sessionSettings.collectAsState()
@@ -135,13 +200,20 @@ class SessionActionsIntegrationTest {
         val options: (@Composable () -> Unit)? = if (settings.visible) ({
             SessionSettingsScreen(settings, callbacks::onButton, container::selectSessionSetting, compact = true)
         }) else null
-        RegieTheme { SessionBottomScreen(live, null, control, draft, callbacks, approval = approval, options = options) }
+        RegieTheme {
+            if (top) SessionTopScreen(live, false, control, draft, singleScreen,
+                ThreadScroll(container.sessionController.scrollSteps, container.sessionController.scrollVelocity), callbacks,
+                approval = approval, onDecision = container::answerInline, onNextApproval = container::nextInlineApproval,
+                onDismissApproval = container::dismissInlineApproval, options = options)
+            else SessionBottomScreen(live, null, control, draft, callbacks, approval = approval, options = options)
+        }
     }
 }
 
 private class ActionsGateway : AgentGateway {
     val target = SessionId("displayed")
     val request = Approval(ApprovalId("visible"), target, ApprovalKind.COMMAND, "touch proof", options = listOf(
+        ApprovalOption("allow_for_session", ApprovalOptionKind.ALLOW_ALWAYS, "Session"),
         ApprovalOption("once", ApprovalOptionKind.ALLOW_ONCE, "Once"), ApprovalOption("no", ApprovalOptionKind.REJECT_ONCE, "No")))
     private val time = Instant.fromEpochMilliseconds(0)
     override val sessions = MutableStateFlow(listOf(Session(target, Agent.CODEX, "demo", null, null, SessionStatus.WORKING, true, time, time, approvalMode = "ask")))

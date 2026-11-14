@@ -119,6 +119,8 @@
 
 - **14 novembre, ticket 18, relecture après c35a222 (solo Codex)** : diff main...HEAD et preuves relus, aucun nouveau blocage. Affichage/routage et identité vocale confrontés aux cinq tests intégrés ; deux réponses Codex uniques, aucun brouillon envoyé. Limites de voix synthétique et modèle confirmé précisées ; aucun code/test changé après la porte et les essais verts. Banc arrêté ; détail revision-relecture.txt. Statut à fusionner maintenu.
 
+- **14 novembre, ticket 18, correction de revue carte/options (solo Codex)** : A/X/B et indications R1/Gauche masqués dans la carte quand les options capturent ces touches ; actions tactiles conservées. Trois régressions intégrées rouges/vertes, un/deux écrans, 351 tests Android + lint verts. Thor absente : vrai Codex sur émulateur, mode appliqué sans répondre, B restaure les raccourcis, toucher autorise la demande 3207 (résolution 3210), modèle Astra → Terra confirmé depuis le bas. Agent/pont/AVD arrêtés, aucun Claude ni sous-agent. ADR 18 et pas à pas Thor complétés ; preuves options-essai.txt. Statut à fusionner maintenu.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

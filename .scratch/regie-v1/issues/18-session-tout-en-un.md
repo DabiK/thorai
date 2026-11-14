@@ -35,29 +35,30 @@ Il demande aussi de travailler l'interface pour qu'elle soit plus fluide et plus
 ## Rapport
 
 STATUT: done
-RÉSUMÉ: validations et options réunies dans la session, fil enrichi et barres sombres.
-Les deux blocages de revue sont corrigés : raccourci A cohérent et R2 ciblant la carte affichée.
+RÉSUMÉ: la carte du fil masque ses raccourcis lorsque les options capturent la manette.
+Les décisions tactiles restent actives ; fermer les options restaure les raccourcis. Ticket à fusionner.
 CRITÈRES:
-- [x] Validation dans le fil → essais précédents A/X/B ; nouvel essai R2/A, événements 2992 et 3070.
-- [x] Modèle depuis le bas → revision-model-confirmed, Astra → Terra confirmé, brouillon conservé.
-- [x] Captures avant/après → artifacts/screenshots/18/, before-validation et revision-*.
-- [x] Affichage/routage A et contexte R2 → 5 tests intégrés, régressions rouges puis vertes.
-PORTE DE QUALITÉ: android/./gradlew check vert, 348 tests + lint ; revision-android-check.txt.
-THOR: absente ; émulateur deux écrans, mode un écran forcé, vrai Codex, WAV Thomas/local et touches injectées.
-REVIEW: deux blocages corrigés ; diff main...HEAD relu après c35a222, aucun nouveau blocage (revision-relecture.txt).
-DÉCISIONS PRISES: ADR 18 complété ; envoi tactile conservé sans puce A quand ce bouton sert ailleurs.
+- [x] Validation depuis le fil → vrai Codex, toucher pendant Options, allow_once seq 3210 puis end_turn 3273.
+- [x] Modèle depuis le bas → Astra → Terra confirmé, options-model-confirmed-* et options-session.json.
+- [x] Captures avant/après → captures initiales conservées et options-* dans artifacts/screenshots/18/.
+- [x] Aucun faux A/X/B dans la carte pendant Options → trois régressions intégrées rouges puis vertes, un/deux écrans.
+PORTE DE QUALITÉ: android/./gradlew check vert ; 351 tests, zéro échec/ignoré, lint vert (options-android-check.txt).
+THOR: absente ; émulateur deux écrans + mode un écran forcé, vrai Codex, touches et toucher injectés. Banc arrêté.
+REVIEW: blocage corrigé ; même incohérence R1/Gauche traitée dans la carte, clics de test précédés du défilement nécessaire.
+DÉCISIONS PRISES: ADR 18 complété ; masquage visuel seulement, callbacks et règles du domaine conservés.
 POUR L'UTILISATEUR:
-1. Rebrancher THOR0000000001, lancer scripts/thor-install.sh puis Régie ; traiter les permissions demandées.
-2. Lancer Codex en mode validation ; tester commande/édition avec les vrais A/X/B depuis le fil.
-3. Saisir un brouillon pendant une demande : Envoyer sans A ; A traite la demande et garde le brouillon.
-4. Sur une nouvelle demande, maintenir R2, dire « approuve » puis relâcher : rien avant A. Refaire avec « refuse » ; B annule la relecture.
-5. Droite ouvre les options sur le bas ; changer modèle/réflexion/mode et confirmer A sans envoyer le brouillon ; B ferme.
-6. Fermer la carte résolue avec Gauche : A Envoyer revient. Vérifier le stick pendant le flux et déplier une action au toucher.
-7. Éteindre/rallumer le bas, essayer L2 au vrai micro ; scripts/thor-shot.sh artifacts/screenshots/18/thor puis Quitter.
+1. Rebrancher THOR0000000001 ; scripts/thor-install.sh ; ouvrir Régie et traiter les permissions demandées.
+2. Lancer Codex en mode validation et demander une commande ; Droite ouvre les options : carte sans A/X/B.
+3. Préparer un mode puis A : réglage appliqué, commande toujours en attente ; X sans effet ; B ferme et restaure A/X/B.
+4. Réouvrir les options et toucher Autoriser une fois ; répéter avec Refuser puis Cette session sur une édition qui le propose.
+5. Changer modèle/réflexion depuis le bas, confirmer A ; vérifier le brouillon conservé et Envoyer sans faux raccourci A.
+6. Sur une nouvelle demande, maintenir R2, dire « approuve », relâcher puis A ; refaire « refuse », B annule la relecture.
+7. Fermer la carte résolue avec Gauche : A Envoyer revient ; tester stick en flux et déplier une action au toucher.
+8. Éteindre/rallumer le bas, essayer L2 au vrai micro ; scripts/thor-shot.sh artifacts/screenshots/18/thor puis Quitter.
 QUESTIONS: aucune.
-CAPTURES: artifacts/screenshots/18/revision-{draft-pending,draft-options,voice-review,refuse-current,model-confirmed,single-options,send-restored}-*.png ; captures initiales conservées.
-HORS PÉRIMÈTRE: justification ACP Codex parfois absente (signalée) ; vraie voix/manette/extinction Thor non testées. Aucun Claude lancé.
+CAPTURES: artifacts/screenshots/18/options-{open,closed,single-settled,touch-accepted,model-confirmed}-*.png.
+HORS PÉRIMÈTRE: justification ACP parfois absente ; vraie voix/manette/extinction Thor restent à vérifier. Aucun Claude lancé.
 
-Preuves initiales : `artifacts/screenshots/18/essai-emulateur.txt`.
-Correction : `artifacts/screenshots/18/revision-essai.txt`, événements `revision-events-final.json`.
-Session Codex, pont et AVD arrêtés (`revision-stop.txt`).
+Preuves initiales : `artifacts/screenshots/18/essai-emulateur.txt` et `revision-essai.txt` (A/X/B, R2/WAV).
+Correction actuelle : `artifacts/screenshots/18/options-essai.txt`, `options-events.json`.
+Session Codex, pont et AVD arrêtés (`options-stop.txt`).

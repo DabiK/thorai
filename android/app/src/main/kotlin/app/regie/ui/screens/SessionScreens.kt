@@ -190,7 +190,7 @@ fun SessionTopScreen(
                 when {
                     live == null -> Centered(stringResource(if (gone) R.string.session_gone else R.string.thread_opening))
                     // Une liste par session : passer à la voisine repart de la fin de son fil.
-                    else -> key(live.session.id) { ThreadList(live, scroll, approval, onDecision, onNextApproval, onDismissApproval) }
+                    else -> key(live.session.id) { ThreadList(live, scroll, approval, onDecision, onNextApproval, onDismissApproval, shortcutsEnabled = options == null) }
                 }
                 if (live != null && approval.request == null && control.showsSummary(live)) SummaryPanel(live.writtenSummary, live.loading)
             }
@@ -343,7 +343,7 @@ private fun sessionName(session: Session) = "${agentName(session.agent)} · ${se
  */
 @Composable
 private fun ThreadList(live: LiveSession, scroll: ThreadScroll, approval: ApprovalReview,
-    onDecision: (ApprovalId, ApprovalDecision) -> Unit, onNextApproval: () -> Unit, onDismissApproval: () -> Unit) {
+    onDecision: (ApprovalId, ApprovalDecision) -> Unit, onNextApproval: () -> Unit, onDismissApproval: () -> Unit, shortcutsEnabled: Boolean) {
     val lines = live.lines.filterNot { it is ThreadLine.AwaitingApproval && approval.request != null }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -400,7 +400,7 @@ private fun ThreadList(live: LiveSession, scroll: ThreadScroll, approval: Approv
                     }
                 }
                 if (approval.request != null) item(key = "inline-approval") {
-                    Box(Modifier.padding(top = 12.dp)) { InlineApproval(approval, onDecision, onNextApproval, onDismiss = onDismissApproval) }
+                    Box(Modifier.padding(top = 12.dp)) { InlineApproval(approval, onDecision, onNextApproval, shortcutsEnabled = shortcutsEnabled, onDismiss = onDismissApproval) }
                 }
             }
         }
