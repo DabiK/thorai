@@ -32,7 +32,7 @@ CRITÈRES:
 PORTE DE QUALITÉ: cd android && ./gradlew check vert ; 272 tests, aucun échec/ignoré, lint vert (resync-android-check.txt).
 THOR: APK réinstallé ; même Codex repris, Y puis deux A : un seul message (3398), réponse écrite terminée (3612), un/deux écrans (47–50).
 Resynchronisation exacte couverte par test, pas forcée sur console. Quitter a arrêté Codex/pont à 05:16:14 locale.
-REVIEW: Constat bloquant reproduit puis corrigé par la séquence persistante ; réponse et fin vérifiées, ancienne demande identique exclue après rechargements. Relecture finale après commit à consigner dans essai-thor.txt.
+REVIEW: Constat bloquant reproduit puis corrigé par la séquence persistante ; réponse et fin vérifiées, ancienne demande identique exclue après rechargements. Diff main...b868609 relu ; aucune autre correction de code, git diff --check vert.
 DÉCISIONS PRISES: ADR 12 complété : séquences persistantes pour retrouver la demande, liens locaux au sein du même instantané. Aucun nouveau protocole ni bibliothèque.
 POUR L’UTILISATEUR:
 1. Ouvrir Régie ; accorder si nécessaire RUN_COMMAND et le microphone via Réglages voix. Aucun droit accordé cette nuit.
