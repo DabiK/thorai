@@ -1,6 +1,6 @@
 # 12 — Points écrits et notifications
 
-Statut : à fusionner
+Statut : fait
 Bloqué par : 04, 05
 
 ## Objectif
