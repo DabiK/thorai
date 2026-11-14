@@ -31,7 +31,7 @@ CRITÈRES:
 PORTE DE QUALITÉ: cd android && ./gradlew check vert ; 271 tests, aucun échec/ignoré, lint vert (queued-android-check.txt).
 THOR: APK réinstallé ; même Codex repris, Y/A pendant sleep 25, attente puis réponse écrite en un/deux écrans (39–42).
 Codex a accepté en steering : queued exact vérifié par tests, pas reproduit sur console. Quitter a arrêté Codex/pont à 05:03:51 locale.
-REVIEW: Réponse précédente exclue, fin indépendante du statut global ; métadonnées de fin bornées après éviction. Relecture finale après commit consignée dans essai-thor.txt.
+REVIEW: Réponse précédente exclue, fin indépendante du statut global ; métadonnées de fin bornées après éviction. Diff main...a2a2cbc relu ; aucun autre blocage, git diff --check vert. Détails dans essai-thor.txt.
 DÉCISIONS PRISES: ADR 12 complété : identité des réponses décodée depuis delivery et les fins de tour, sélection dans le domaine. Aucun nouveau protocole ni bibliothèque.
 POUR L’UTILISATEUR:
 1. Ouvrir Régie ; accorder si nécessaire RUN_COMMAND et le microphone via Réglages voix. Aucun droit accordé cette nuit.
@@ -42,6 +42,6 @@ POUR L’UTILISATEUR:
 6. Éteindre physiquement l’écran inférieur via l’assistant Odin : vérifier le panneau sur l’écran haut, puis rallumer et vérifier son retour. Quitter Régie.
 QUESTIONS: aucune décision produit en attente.
 CAPTURES: artifacts/screenshots/10/ : 01–04, 07–11, 13 ; identity-30–34 ; queued-38–42 (42-haut uniquement).
-HORS PÉRIMÈTRE: Permissions et redémarrage des tickets précédents ; micro humain et extinction physique à vérifier. Les fichiers sans diff exposé restent signalés.
+HORS PÉRIMÈTRE: WrittenSummary.of (ticket 12) utilise encore le dernier message par position : même risque pour les bilans queued, relevé statiquement, non corrigé ici. Permissions/redémarrage des tickets précédents inchangés.
 
 Détails des passages et preuves : artifacts/screenshots/10/essai-thor.txt.
