@@ -99,3 +99,23 @@ Thor : sélection ramenée en vue (15–16), Codex repris pour une seule nouvell
 après deux A (seq 3006), Markdown réel en un/deux écrans (23–24), réglages voix ouverts
 pendant un mouvement puis relâchement et retour stables (25–27). Quitter a de nouveau
 arrêté l’unique session d’essai et le pont à 04:44:27 locale. Aucun autre agent lancé.
+
+## Correction de revue : identité de la sélection
+
+L’index aplati sert à l’affichage, pas à reconnaître une ligne après une mise à jour.
+`ReviewDiff` retrouve le chemin, l’identité du bloc et la position dans ce bloc
+avant de recalculer l’index. L’éviction d’une édition antérieure ou sa complétion
+ne change donc ni la cible du prochain L2 ni le bloc du prochain Y. Si le bloc
+raccourcit, la position est bornée à sa dernière ligne. Si le bloc disparaît,
+le repli existant sur l’index borné reste applicable ; une liste vide ne propose
+aucun commentaire. Il n’y a aucune recherche par texte ou numéro de ligne,
+qui peuvent se répéter entre éditions.
+
+Deux régressions reproduites avant correction puis vertes : éviction du premier
+bloc parmi trois et complétion d’une édition antérieure en attente. Elles visent
+une ligne interne au bloc, vérifient la cible complète du commentaire, y compris
+côté supprimé et coordonnées d’extrait, ainsi que la demande d’explication entière.
+Porte Android : 267 tests, aucun échec/erreur/ignoré, lint vert. Essai sur la Thor
+avec l’historique réel existant : navigation, Y annulé, L2/WAV local annulé,
+un/deux écrans. Les deux mutations de blocs sont prouvées dans les tests de domaine,
+pas reproduites sur la console. Aucun agent relancé. Preuves `identity-*`.

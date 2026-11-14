@@ -59,7 +59,15 @@ class ReviewDiff(private val gateway: AgentGateway, private val scope: Coroutine
                     val files = session?.let { sessionDiff(it, content) }.orEmpty()
                     val index = files.indexOfFirst { it.path == before.file?.path }.coerceAtLeast(0)
                     val updated = before.copy(project = session?.project.orEmpty(), files = files, fileIndex = index, loading = !content.loaded)
-                    mutable.value = updated.copy(lineIndex = before.lineIndex.coerceIn(0, (updated.rows.size - 1).coerceAtLeast(0)),
+                    val selected = before.selected
+                    val rows = updated.rows
+                    // Earlier edits can disappear or finish: the flattened index is not an identity.
+                    val blockStart = if (updated.file?.path == before.file?.path && selected != null)
+                        rows.indexOfFirst { it.block.id == selected.block.id } else -1
+                    val lineIndex = if (blockStart >= 0 && selected != null)
+                        blockStart + selected.lineIndex.coerceAtMost(rows[blockStart].block.lines.lastIndex)
+                    else before.lineIndex.coerceIn(0, (rows.size - 1).coerceAtLeast(0))
+                    mutable.value = updated.copy(lineIndex = lineIndex,
                         explanation = before.explanation?.let { explanation ->
                             val anchor = content.entries.filterIsInstance<ThreadEntry.UserMessage>()
                                 .firstOrNull { it.id > afterEntry && it.text == explanation.prompt }

@@ -27,7 +27,7 @@ Bloqué par : 06, 08
   vrai Codex : commentaire seuil.ts ligne 1 reçu une fois, fichier passé de 70 à 80,
   explication écrite revenue. Vrai microphone et extinction physique restent à
   vérifier avec l’utilisateur, selon le pas à pas de `artifacts/screenshots/10/essai-thor.txt`.
-- Android final : 265 tests + lint verts (`review-android-check.txt`), tests d’abord (`red-*`).
+- Android final : 267 tests + lint verts (`identity-android-check.txt`), tests d’abord (`red-*`, `identity-red-*`).
 - ADR 12 : éditions historiques par fichier, pas de diff Git inventé ; numéros
   ancien/nouveau, coordonnées d’extrait signalées quand l’agent ne donne pas leur position.
 - Un Codex d’essai, aucun Claude. Quitter a arrêté l’agent et le pont (stopped.json).
@@ -37,3 +37,11 @@ Bloqué par : 06, 08
   les réglages et Markdown de l’explication corrigés ; quatre régressions rouges puis
   vertes, attendu littéral renforcé. Réinstallation et essais Thor 15–16, 21–28 ; même
   Codex repris puis arrêté, aucun autre agent. Le pas à pas humain reste applicable.
+
+- Correction de la revue indépendante : sélection conservée par chemin, identité
+  du bloc et position interne lors d’une éviction ou d’une complétion antérieure.
+  Deux régressions rouges puis vertes vérifient sélection, cible complète L2 et Y.
+  ADR 12 précisé ; APK réinstallé, Thor : historique réel, navigation, Y annulé,
+  WAV local relu puis effacé, un/deux écrans (identity-30–34). Les mutations de
+  blocs sont vérifiées par tests de domaine, pas rejouées sur la console.
+  Aucun agent relancé ; 34 sessions inchangées et inactives, pont quitté à 04:52:39.

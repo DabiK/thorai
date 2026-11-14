@@ -60,6 +60,8 @@
 
 - **14 novembre, ticket 10, relecture solo terminée** : sélection hors champ au bord du fichier, relâchement du stick dans les panneaux voix et Markdown de l’explication corrigés, quatre régressions rouges puis vertes. 265 tests Android + lint verts. APK réinstallé ; Thor : retour sélection, même Codex repris pour une seule nouvelle explication, un/deux écrans, réglages pendant défilement. Quitter arrête le Codex et le pont à 04:44:27 locale ; zéro session active, aucun Claude. ADR 12 et preuves 15–28 complétés. Statut à fusionner maintenu ; vrai micro et extinction physique au pas à pas utilisateur.
 
+- **14 novembre, ticket 10, correction après revue indépendante (solo Codex)** : sélection retrouvée par chemin/bloc/position interne, sans déplacement de cible lors de l’éviction ou de la complétion d’une édition antérieure. Deux régressions rouges puis vertes ; 267 tests Android + lint verts. APK réinstallé, historique réel Codex consulté sur Thor, navigation/Y annulé/L2 WAV local annulé/un-deux écrans (identity-30–34). Mutations de blocs couvertes par tests de domaine uniquement. Aucun agent relancé, 34 sessions inchangées et inactives, pont quitté à 04:52:39 locale. ADR 12 précisé, preuves identity-*, pas à pas humain inchangé. Statut à fusionner maintenu.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

@@ -14,6 +14,57 @@ class ReviewDiffTest {
         files = listOf(ModifiedFile("a.kt", LineChanges(1, 0))),
         diffs = listOf(DiffFragment("a.kt", listOf(line), true)),
     )
+    @Test fun `evicting an earlier block preserves the selected block and its inner line`() = runTest {
+        val gateway = StubGateway()
+        gateway.sessions.value = listOf(session("s"))
+        val selectedEdit = edit(2).copy(diffs = listOf(DiffFragment("a.kt", listOf(
+            DiffLine(DiffKind.REMOVED, "old limit", 41, null),
+            DiffLine(DiffKind.ADDED, "new limit", null, 41),
+        ), true)))
+        gateway.threadOf(SessionId("s")).value = SessionThread(listOf(edit(1), selectedEdit, edit(3)), loaded = true)
+        val review = ReviewDiff(gateway, backgroundScope)
+        review.open(SessionId("s")); runCurrent()
+        review.moveLine(2)
+
+        gateway.threadOf(SessionId("s")).value = SessionThread(listOf(selectedEdit, edit(3)), loaded = true)
+        runCurrent()
+
+        assertEquals(1, review.state.value.lineIndex)
+        assertEquals("2:0", review.state.value.selected?.block?.id)
+        assertEquals(1, review.state.value.selected?.lineIndex)
+        assertEquals(DictationTarget.DiffComment(SessionId("s"), "a.kt", 41,
+            selectedText = "new limit"), review.commentTarget())
+        review.close()
+    }
+    @Test fun `completing an earlier edit preserves the selected removed line and explanation`() = runTest {
+        val gateway = StubGateway()
+        gateway.sessions.value = listOf(session("s"))
+        val selectedEdit = edit(2).copy(diffs = listOf(DiffFragment("a.kt", listOf(
+            DiffLine(DiffKind.CONTEXT, "context", 40, 40),
+            DiffLine(DiffKind.REMOVED, "old limit", 41, null),
+        ), false)))
+        gateway.threadOf(SessionId("s")).value = SessionThread(
+            listOf(edit(1, ActionStatus.PENDING), selectedEdit, edit(3)), loaded = true)
+        val review = ReviewDiff(gateway, backgroundScope)
+        review.open(SessionId("s")); runCurrent()
+        review.moveLine(1)
+
+        gateway.threadOf(SessionId("s")).value = SessionThread(listOf(edit(1), selectedEdit, edit(3)), loaded = true)
+        runCurrent()
+
+        assertEquals(2, review.state.value.lineIndex)
+        assertEquals("2:0", review.state.value.selected?.block?.id)
+        assertEquals(1, review.state.value.selected?.lineIndex)
+        assertEquals(DictationTarget.DiffComment(SessionId("s"), "a.kt", 41,
+            removed = true, fileCoordinates = false, selectedText = "old limit"), review.commentTarget())
+        review.explain()
+        assertEquals("Explique-moi ce bloc, sans modifier les fichiers. Réponds en français par écrit.\n" +
+            "a.kt · ligne 41 de l’extrait supprimée\nÉdition historique exposée par l’agent ; numéros ancien/nouveau" +
+            " relatifs à l’extrait, position dans le fichier non communiquée.\n" +
+            "Extrait autour de la sélection :\n40/40   context\n41/- - old limit", review.state.value.explanation?.prompt)
+        review.close()
+    }
+
     @Test fun `review keeps completed edits separately and names files without exposed diff`() {
         val files = sessionDiff(session("s").copy(modifiedFiles = listOf("unknown.bin", "a.kt")),
             SessionThread(listOf(edit(1), edit(2, ActionStatus.FAILED), edit(3), edit(4, ActionStatus.PENDING)), loaded = true))
