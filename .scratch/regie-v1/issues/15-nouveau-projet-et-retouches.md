@@ -1,6 +1,6 @@
 # 15 — Nouveau projet depuis Régie, liste des projets à jour, barre d'état
 
-Statut : à fusionner
+Statut : fait
 Bloqué par : rien (tickets 01 à 14 fusionnés)
 Possède : `android/`, `bridge/`, `docs/protocole-pont.md`
 
