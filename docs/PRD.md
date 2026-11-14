@@ -52,7 +52,7 @@ L'écran du bas affiche toujours les boutons utiles à cet instant.
    - Une fois L2 relâché : A envoie, B efface, Y complète, X corrige un mot.
 3. **Session en direct.**
    - En haut : le fil (message dicté, réponses, actions résumées en une ligne, texte en cours), le plan de l'agent et les fichiers modifiés.
-   - En bas : parler à l'agent sans l'arrêter, voir le diff, faire le point à voix haute, interrompre.
+   - En bas : parler à l'agent sans l'arrêter, voir le diff, faire le point (résumé écrit), interrompre.
 4. **Validation.**
    - En haut : la commande ou le fichier, pourquoi, et ce que ça touche.
    - En bas : autoriser une fois, toujours dans cette session, refuser ; ou refuser en dictant une consigne.
@@ -80,13 +80,13 @@ Chaque lot correspond à un ou plusieurs tickets.
 - **Accès des agents à la console** : Claude et Codex peuvent voir l'écran d'Android et agir dessus (computer use), avec des outils existants.
 - **Voix** :
   - **Transcription** : en français en direct, avec le vocabulaire du dépôt.
-  - **Synthèse** : des résumés courts lus à voix haute.
+  - **Pas de lecture à voix haute** (décision de l'utilisateur, 14 novembre) : les résumés sont écrits à l'écran.
   - **Fournisseurs** : la voix locale et gratuite par défaut (transcription et synthèse) ; ElevenLabs reste branchable par un réglage.
 - **Vue d'ensemble, session en direct, validations, diff, nouvelle session** : comme décrits dans les parcours.
 - **Ordres vocaux (R2)** : règles fixes pour les ordres courants, plus un petit modèle de langage quand la phrase est ambiguë.
-- **Lecture à voix haute et notifications** :
-  - fin de session, validation demandée, ou point d'avancement à la demande ;
-  - un appui sur une gâchette coupe la voix.
+- **Points écrits et notifications** :
+  - fin de session, validation demandée, ou point d'avancement à la demande (Y), sous forme de résumé écrit ;
+  - aucune lecture à voix haute.
 
 ## Voix
 

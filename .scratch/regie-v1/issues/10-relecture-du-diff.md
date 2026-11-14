@@ -12,7 +12,7 @@ Bloqué par : 06, 08
 - **En haut** : le diff par fichier, ligne par ligne à la croix, défilement au stick droit, coloration simple.
 - **En bas** : la liste des fichiers (+/−).
 - **Commentaire dicté** sur la ligne sélectionnée (L2), envoyé à l'agent avec le fichier et la ligne.
-- **Y : « explique-moi ce bloc »**, demandé à l'agent, avec la réponse lue à voix haute quand le ticket 12 existe.
+- **Y : « explique-moi ce bloc »**, demandé à l'agent, avec la réponse affichée à l'écran (pas de lecture à voix haute, décision de l'utilisateur du 14 novembre).
 
 ## Critères d'acceptation
 

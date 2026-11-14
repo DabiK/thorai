@@ -69,6 +69,8 @@ Les tickets qui touchent `android/` passent **un par un**. Ils installent tous l
 
 - 13 novembre, sur les questions du ticket 03, **et cela remplace les décisions de sécurité prises plus tôt** : les agents peuvent tout piloter sur Android, les deux écrans, Régie comprise, avec la méthode la plus libre (mobilecli). Pas de validation pour ces gestes, pas de règle « vraie main » dans Régie. Les restrictions viendront plus tard, si l'utilisateur en veut (ticket 14).
 
+- 14 novembre : **pas de lecture à voix haute**. Les points et les résumés sont écrits. Le ticket 12 devient « Points écrits et notifications ».
+
 ## Questions en attente
 
 - Nom définitif de l'app (« Régie » est un nom de travail).
