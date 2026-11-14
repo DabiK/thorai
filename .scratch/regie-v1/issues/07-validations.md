@@ -1,6 +1,6 @@
 # 07 — Validations
 
-Statut : à fusionner
+Statut : fait
 Bloqué par : 06
 
 ## Objectif
