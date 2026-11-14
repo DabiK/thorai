@@ -28,6 +28,7 @@ class PublicationAuditTest(unittest.TestCase):
     def test_detects_personal_data(self):
         for content in ["192.168." + "12.34", "10.42." + "0.2", "172.31." + "4.5",
                         "person@" + "private-company.fr", "this@" + "private-company.fr",
+                        "developer@" + "github.com",
                         "/home/" + "private-person/file"]:
             with self.subTest(content=content):
                 self.assertEqual(1, self.audit(content).returncode)
@@ -37,7 +38,8 @@ class PublicationAuditTest(unittest.TestCase):
                              'user@example.invalid', 'bench@regie.invalid', 'someone@example.com',
                              'this@Fixture.sessions', 'this@until.collect',
                              '"token": "<redacted>"', 'Authorization: Bearer ${token}',
-                             'noreply@anthropic.com', '/home/USER/file', '`/home/USER`'])
+                             'noreply@anthropic.com', 'git@github.com:example/repo.git',
+                             '/home/USER/file', '`/home/USER`'])
         result = self.audit(content)
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
 

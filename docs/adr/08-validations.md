@@ -36,8 +36,9 @@ Le mode Codex `agent` reste écarté : son examen automatique peut aussi autoris
 
 ## Interface et références
 
-La consultation distante du canvas a échoué. Export local retrouvé et lu en entier :
-`/tmp/claude-501/-home-USER-Documents-demo/da64a343-c4d9-4ad3-9b28-50ba7e77476b/scratchpad/regie/project/{Validation,Lancer}.dc.html`.
+La consultation distante du canvas a échoué. Fichiers lus en entier dans un export
+local du canvas : `project/{Validation,Lancer}.dc.html`. Le cache local n’est pas
+versionné ; son ancien chemin personnel a été retiré au ticket 20.
 Empreintes conservées dans `artifacts/screenshots/07/maquette-sha256.txt` ; fraîcheur distante non vérifiée.
 
 Structure reprise : en-tête agent/projet, commande ou fichier en pleine largeur avec contour ambre, justification, cibles, autres demandes en bas ; grand A clair, X conditionnel et B sur l'écran inférieur. Avant/après et plan sont défilables par croix/stick. Mode un écran : actions compactes sous le contenu. Les effets et justifications absents sont annoncés, jamais inférés d'une commande. La mention « lu à voix haute » est omise conformément à la décision du 14 novembre.

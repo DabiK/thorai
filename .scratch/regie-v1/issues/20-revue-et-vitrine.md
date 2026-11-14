@@ -51,7 +51,7 @@ CRITÈRES:
 - [ ] Thor physique → absente ; essais différés explicitement sans bloquer la fusion.
 PORTE DE QUALITÉ: ./gradlew check Android/voix et npm run check verts ; 13 tests émulateur, 5 tests audit et tests shell verts.
 THOR: absente d’ADB. Banc deux écrans : vraie démo Codex, fil, options, un/deux écrans, Quitter ; agent/pont/app/AVD arrêtés.
-REVIEW: contrôles avant commit effectués ; relecture du diff commité consignée dans la suite du rapport.
+REVIEW: diff main...HEAD relu après 6583269 ; référence supprimée et chemins de cache corrigés, URL SSH couverte rouge/vert ; trois portes et essai historique repassés. Détail : artifacts/screenshots/20/relecture.md.
 DÉCISIONS PRISES: numérotation continue des ADR, conservation des preuves utiles, anonymisation des chemins ; aucune décision produit ni nouvel ADR.
 POUR L’UTILISATEUR: suivre les étapes 1–9 de artifacts/screenshots/20/essai-emulateur.txt (permissions, association, vrai micro, manette, notifications, extinction, redémarrage autorisé).
 QUESTIONS: aucune question bloquante.

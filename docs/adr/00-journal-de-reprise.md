@@ -130,6 +130,8 @@ physiques différés restent requis même lorsqu’un ticket est marqué fait.
 
 - **14 novembre, ticket 20 à fusionner (solo Codex)** : README vitrine français et installation complète, revue des six périmètres, cas vide sans appelant retiré, SpokenSummary renommé SessionSummary sans changement de comportement. ADR 18/19 renumérotés 15/16, décisions périmées signalées, chemins personnels des preuves anonymisés, trois compilations transitoires non référencées retirées. Android 351 tests + lint, voix 127 + lint, pont 308 + typage/lint ; 13 tests banc, 5 tests audit rg et tests shell verts. Thor absente : vraie démo Codex sur émulateur, APK final, fil/options/un-deux écrans et Quitter vérifiés ; agent/pont/app/AVD arrêtés. Aucun Claude, sous-agent, push ni fusion. Captures inspectées, preuves et pas à pas Thor dans artifacts/screenshots/20/. Installation vierge et historique Git non certifiés ; revue après commit consignée ensuite.
 
+- **14 novembre, ticket 20, relecture après 6583269 (solo Codex)** : diff complet relu ; substitutions mécaniques vérifiées, référence au cas vide et chemins de cache anonymisés corrigés, guide de clonage complété. Faux positif de l’URL SSH dans l’audit reproduit rouge puis corrigé, autre adresse du même domaine toujours détectée. Trois portes repassées vertes (351/127/308), cinq tests audit ; APK réinstallé sans nouveau prompt, historique réel sur deux écrans, Quitter et arrêt du banc vérifiés. Aucun nouveau Claude/Codex ni sous-agent. Statut à fusionner maintenu ; détail artifacts/screenshots/20/relecture.md.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

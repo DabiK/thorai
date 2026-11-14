@@ -21,11 +21,12 @@ RULES = {
 
 def allowed(kind, value):
     if kind == "email":
-        local, domain = value.rsplit("@", 1)
-        # Reserved example domains, Kotlin receiver labels, public commit attribution.
+        domain = value.rsplit("@", 1)[1]
+        # Reserved domains, Kotlin labels, public attribution and GitHub's SSH user.
         return (domain.endswith(".invalid") or domain in {"example.com", "example.org", "example.net"}
                 or value in {"this@Fixture.sessions", "this@until.collect",
-                             "this@CountingSpeechToText.request", "noreply@anthropic.com"})
+                             "this@CountingSpeechToText.request", "noreply@anthropic.com",
+                             "git@github.com"})
     if kind == "literal-token":
         return value == "API_" + "KEY: 'regie-contract-no-inference'"
     return kind == "personal-path" and value == "/home/USER"

@@ -71,7 +71,8 @@ https://developer.android.com/reference/android/app/Notification.Builder
 https://developer.android.com/guide/components/intents-filters
 Extraits : `artifacts/screenshots/12/docs-notifications.txt`.
 
-Exports locaux lus : `/tmp/claude-501/-home-USER-Documents-demo/da64a343-c4d9-4ad3-9b28-50ba7e77476b/scratchpad/regie/project/{Main,Session}.dc.html`.
+Exports locaux lus : `project/{Main,Session}.dc.html` dans le cache du canvas,
+non versionné. Son ancien chemin personnel a été retiré au ticket 20.
 Pas d'outil Artifact Claude connecté ; fraîcheur distante non vérifiée. Polices, couleurs,
 fil et panneau latéral conservés. Le libellé vocal de la maquette est remplacé par
 « Faire le point », selon la décision utilisateur. Pas de maquette dédiée au résumé :

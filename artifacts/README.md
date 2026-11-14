@@ -29,5 +29,5 @@ déjà caviardées restent intactes. Les références d’ADR suivent la nouvell
 Le contrôle `python3 scripts/repo-audit.py` parcourt le texte versionné et les
 nouveaux fichiers non ignorés, avec `rg`. Il ne parcourt pas l’historique Git,
 les dépendances ignorées ou le contenu visuel des images. Les domaines d’exemple,
-labels Kotlin et un marqueur de contrat explicitement invalide sont des exceptions
+labels Kotlin, l’utilisateur SSH GitHub et un marqueur de contrat explicitement invalide sont des exceptions
 documentées dans le script. Aucune valeur détectée n’est imprimée.

@@ -126,7 +126,14 @@ C’est le contournement PRoot de la configuration Thor : le sandbox Linux ne fo
 
 ### 4. Construire l’app et déployer le pont
 
-Sur le **Mac**, obtenir ce dépôt avec son accès Git habituel. Installer JDK 25 (ou 21), Node 24+, Android SDK avec la plateforme 36, les build-tools et platform-tools. `adb` doit être dans le PATH. Depuis la racine du dépôt :
+Sur le **Mac**, obtenir ce dépôt avec son accès Git habituel :
+
+```sh
+git clone git@github.com:DabiK/regie.git
+cd regie
+```
+
+Le dépôt est privé : cet accès doit déjà être autorisé. Installer JDK 25 (ou 21), Node 24+, Android SDK avec la plateforme 36, les build-tools et platform-tools. `adb` doit être dans le PATH. Depuis la racine du dépôt :
 
 ```sh
 export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools  # adapter à son SDK
@@ -260,4 +267,4 @@ Ces commandes lancent une **vraie démo Codex**, jamais Claude. `emu-install.sh 
 
 Le travail suit [CLAUDE.md](CLAUDE.md), le [PRD](docs/PRD.md), le [journal de reprise](docs/adr/00-journal-de-reprise.md) et les [tickets](.scratch/regie-v1/issues). Un ticket par branche/worktree, tests d’abord, portes vertes, essai réel, rapport et Conventional Commit ; l’orchestrateur relit, fusionne et pousse. Les tickets d’interface passent un par un sur la console partagée. Les preuves sont rangées par ticket dans [artifacts](artifacts/README.md).
 
-Avant de partager des changements, l’audit `rg` vérifie le texte versionné et les nouveaux fichiers non ignorés : clés usuelles, jetons littéraux, IP privées, adresses personnelles et chemins de comptes. Ses exceptions sont explicites et testées (données fictives réservées, labels Kotlin, attribution publique). Il ne certifie ni l’historique Git ni les images : les deux captures de cette page ont été inspectées visuellement. Aucun push ni publication n’est effectué par ce contrôle.
+Avant de partager des changements, l’audit `rg` vérifie le texte versionné et les nouveaux fichiers non ignorés : clés usuelles, jetons littéraux, IP privées, adresses personnelles et chemins de comptes. Ses exceptions sont explicites et testées (données fictives réservées, labels Kotlin, attribution publique, utilisateur SSH GitHub). Il ne certifie ni l’historique Git ni les images : les deux captures de cette page ont été inspectées visuellement. Aucun push ni publication n’est effectué par ce contrôle.
