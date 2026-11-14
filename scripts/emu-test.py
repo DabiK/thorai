@@ -1,10 +1,13 @@
 """Offline CLI contract tests. adb is a temporary fake, never a device."""
 import os
-import struct
 from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+import struct
+import zlib
+
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parent
 
@@ -40,7 +43,7 @@ esac
 ''')
         adb.chmod(0o755)
         for name, dimensions in [('top', (1920, 1080)), ('bottom', (1240, 1080))]:
-            (self.folder / name).write_bytes(b'\x89PNG\r\n\x1a\n' + b'\x00' * 8 + struct.pack('>II', *dimensions))
+            Image.new('RGB', dimensions, color=(20, 40, 60)).save(self.folder / name, format='PNG')
         self.calls = self.folder / 'calls'
         self.env = dict(os.environ, PATH=f'{self.folder}:{os.environ["PATH"]}',
                         CALLS=str(self.calls), EMU_SERIAL='emulator-5580',
@@ -98,6 +101,37 @@ esac
 
     def test_invalid_capture_is_not_published(self):
         (self.folder / 'bottom').write_text('screencap failed')
+        target = self.folder / 'captures'
+        result = self.run_script('emu-shot.sh', str(target))
+        self.assertNotEqual(0, result.returncode)
+        self.assertFalse((target / 'haut.png').exists())
+        self.assertFalse((target / 'bas.png').exists())
+
+    def test_truncated_png_is_not_published_and_preserves_previous_captures(self):
+        target = self.folder / 'captures'
+        target.mkdir()
+        for name in ['haut', 'bas']:
+            (target / f'{name}.png').write_bytes(b'previous capture')
+        good = (self.folder / 'bottom').read_bytes()
+        for broken in [good[:24], good[:len(good) // 2], good[:-12]]:
+            with self.subTest(length=len(broken)):
+                (self.folder / 'bottom').write_bytes(broken)
+                result = self.run_script('emu-shot.sh', str(target))
+                self.assertNotEqual(0, result.returncode)
+                for name in ['haut', 'bas']:
+                    self.assertEqual(b'previous capture', (target / f'{name}.png').read_bytes())
+
+    def test_valid_chunks_with_missing_pixels_are_not_published(self):
+        # All CRCs and IEND are valid; verify() alone accepts this PNG.
+        def chunk(kind, data):
+            return (struct.pack('>I', len(data)) + kind + data +
+                    struct.pack('>I', zlib.crc32(kind + data)))
+        data = (b'\x89PNG\r\n\x1a\n' +
+                chunk(b'IHDR', struct.pack('>IIBBBBB', 1240, 1080, 8, 2, 0, 0, 0)) +
+                chunk(b'IDAT', zlib.compress(b'\x00')) + chunk(b'IEND', b''))
+        (self.folder / 'bottom').write_bytes(data)
+        with Image.open(self.folder / 'bottom') as image:
+            image.verify()
         target = self.folder / 'captures'
         result = self.run_script('emu-shot.sh', str(target))
         self.assertNotEqual(0, result.returncode)

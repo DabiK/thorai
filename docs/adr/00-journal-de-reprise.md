@@ -84,6 +84,8 @@
 
 - **14 novembre, ticket 16, relecture solo terminée** : après 9b11414, contrôle du chemin source du pont ajouté pour refuser la réutilisation d’un autre worktree ; régression rouge puis verte. Android 310 tests + lint, pont 285 + typage/lint, scripts 11 tests verts. Pont relancé deux fois, APK réinstallé sans nouvelle session, historique et Quitter vérifiés (12). Arrêt final pont/app à 10:06:41Z, deux Codex stopped, émulateur fermé. Aucune session Claude (seul --version relevé). Guide toujours dix lignes ; ticket à fusionner, aucune question restante. Preuves : relecture.txt et final-stop.txt.
 
+- **14 novembre, ticket 16, corrections de revue (solo Codex)** : sur Mac, `ask`/`auto-edit`/`plan` passent en ACP `read-only` dans le domaine, configuration initiale comprise ; PRoot inchangé (ADR 14). Régressions rouges puis vertes ; shell et apply_patch réels refusés par B puis autorisés par A, auto-edit autorise seulement l’édition. Captures PNG entièrement vérifiées et décodées, fixtures réelles, troncatures et mutation du décodage détectées. Android 310 tests + lint, pont 286 + typage/lint, scripts 13 tests verts. Trois commandes rejouées, quatre Codex arrêtés, aucun Claude ; Thor absente, vérifications physiques dans `artifacts/screenshots/16/revision-validation.txt`. Statut à fusionner ; relecture après commit à consigner.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

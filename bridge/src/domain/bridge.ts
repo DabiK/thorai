@@ -1,4 +1,4 @@
-import { AGENT_LABELS, isTestedBinary, modeIdFor } from './agents.ts';
+import { AGENT_LABELS, type CodexSandbox, isTestedBinary, modeIdFor } from './agents.ts';
 import { SessionCompensations } from './compensations.ts';
 import { EventJournal, type EventListener } from './event-journal.ts';
 import {
@@ -36,6 +36,8 @@ import { ReadOnlyCommands } from './read-only-command.ts';
 import { withSummaryRequest } from './written-summary.ts';
 
 export interface BridgeDeps {
+  /** Native sandbox blocks writes until approval; PRoot needs the Thor workaround. */
+  readonly codexSandbox?: CodexSandbox;
   readonly connectors: readonly AgentConnector[];
   readonly events: EventStore;
   readonly sessions: SessionStore;
@@ -500,7 +502,7 @@ export class Bridge {
     record: SessionRecord,
     connection: AgentConnection,
   ): Promise<BridgeError | null> {
-    const modeId = modeIdFor(record.agent, record.approvalMode);
+    const modeId = modeIdFor(record.agent, record.approvalMode, this.deps.codexSandbox);
     try {
       await connection.setMode(record.sessionId, modeId);
       if (record.agent === 'codex' && record.approvalMode === 'plan') {

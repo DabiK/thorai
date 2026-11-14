@@ -31,6 +31,7 @@ class World {
   readonly workspace = new FakeWorkspace();
   readonly clock = new FakeClock();
   readonly logger = new MemoryLogger();
+  codexSandbox: 'native' | 'proot' = 'proot';
   retentionDays: number | undefined = undefined;
   bridge = this.newBridge();
 
@@ -44,6 +45,7 @@ class World {
       ids: counterIds('approval'),
       logger: this.logger,
       shell: new WordsShellParser(),
+      codexSandbox: this.codexSandbox,
       ...(this.retentionDays === undefined ? {} : { retentionDays: this.retentionDays }),
       shutdownGraceMs: 10,
     });
@@ -139,6 +141,28 @@ describe('creating a session', () => {
     world.restart();
     await world.bridge.resume('codex-session-1');
     expect(world.codex.callsOf('setConfig')).toHaveLength(2);
+  });
+
+  it('keeps native sandbox writes behind approval on creation and resume in every product mode', async () => {
+    world.codexSandbox = 'native';
+    world.restart();
+    for (const approvalMode of ['ask', 'auto-edit', 'plan', 'allow-all'] as const) {
+      const session = await world.bridge.createSession({
+        agent: 'codex',
+        project: 'regie-demo',
+        approvalMode,
+      });
+      const expected = approvalMode === 'allow-all' ? 'agent-full-access' : 'read-only';
+      expect(world.codex.callsOf('setMode').at(-1)).toEqual([session.sessionId, expected]);
+      await world.bridge.shutdown();
+      world.restart();
+      await world.bridge.resume(session.sessionId);
+      expect(world.codex.callsOf('setMode').at(-1)).toEqual([session.sessionId, expected]);
+    }
+    expect(world.codex.callsOf('setConfig')).toEqual([
+      ['codex-session-3', 'collaboration_mode', 'plan'],
+      ['codex-session-3', 'collaboration_mode', 'plan'],
+    ]);
   });
 
   it('forces the mode of the approval level after session/new, for each agent', async () => {

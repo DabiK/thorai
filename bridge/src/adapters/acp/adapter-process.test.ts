@@ -14,6 +14,6 @@ describe('Codex runtime configuration', () => {
     const spec = adapterSpec('codex', binaries, 'darwin');
     expect(JSON.parse(spec.env.CODEX_CONFIG ?? '{}')).not.toHaveProperty('developer_instructions');
     expect(spec.env.CODEX_PATH).toBe('/test/codex');
-    expect(spec.env.INITIAL_AGENT_MODE).toBe('workspace-write');
+    expect(spec.env.INITIAL_AGENT_MODE).toBe('read-only');
   });
 });

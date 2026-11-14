@@ -16,11 +16,23 @@ trap 'rm -rf "$tmp"' EXIT
 adb -s "$EMU_SERIAL" exec-out screencap -p -d "$top" > "$tmp/haut.png"
 adb -s "$EMU_SERIAL" exec-out screencap -p -d "$bottom" > "$tmp/bas.png"
 python3 - "$tmp" <<'PNG'
-import pathlib, struct, sys
+import pathlib, sys
+try:
+    from PIL import Image
+except ImportError:
+    raise SystemExit('Pillow requis : python3 -m pip install Pillow')
 for name, size in [('haut', (1920, 1080)), ('bas', (1240, 1080))]:
-    data = (pathlib.Path(sys.argv[1]) / f'{name}.png').read_bytes()
-    if data[:8] != b'\x89PNG\r\n\x1a\n' or struct.unpack('>II', data[16:24]) != size:
-        raise SystemExit(f'Capture {name} invalide ou résolution incorrecte')
+    path = pathlib.Path(sys.argv[1]) / f'{name}.png'
+    try:
+        with Image.open(path) as capture:
+            if capture.format != 'PNG' or capture.size != size:
+                raise ValueError('format ou résolution incorrecte')
+            capture.verify()  # Check PNG structure and chunk checksums through IEND.
+        with Image.open(path) as capture:
+            capture.load()  # Decode all pixels; header-only checks cannot detect truncation.
+    except (OSError, SyntaxError, ValueError) as error:
+        raise SystemExit(f'Capture {name} invalide : {error}')
+
 PNG
 mv "$tmp/haut.png" "$dir/${prefix}haut.png"
 mv "$tmp/bas.png" "$dir/${prefix}bas.png"

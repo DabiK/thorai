@@ -1,4 +1,4 @@
-1. Prérequis Mac Apple Silicon : SDK Android (`ANDROID_HOME`, défaut `/opt/homebrew/share/android-commandlinetools`), image `system-images;android-36;google_apis_playstore;arm64-v8a`, JDK, Node 24+, Python 3 et Codex déjà connecté.
+1. Prérequis Mac Apple Silicon : SDK Android (`ANDROID_HOME`, défaut `/opt/homebrew/share/android-commandlinetools`), image `system-images;android-36;google_apis_playstore;arm64-v8a`, JDK, Node 24+, Python 3 avec Pillow (`python3 -m pip install Pillow`) et Codex déjà connecté.
 2. À la racine du worktree : `scripts/emu-start.sh` crée/démarre **Regie_Thor**, attend Android puis ajoute le second écran (1920×1080 et 1240×1080, 369 dpi).
 3. `scripts/bridge-mac.sh` installe les ACP locaux, prépare `~/Documents/regie-sandbox/projects/regie-demo`, démarre le pont et pose `adb reverse tcp:47600 tcp:47600`.
 4. `scripts/emu-install.sh` construit/installe **app.regie seulement**, copie le jeton par `run-as`, autorise les notifications du banc, lance une vraie démo **Codex** et ouvre sa session ; ces trois commandes suffisent.

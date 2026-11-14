@@ -36,7 +36,16 @@ ni relancer ni arrêter un processus externe injoignable. La reconnexion et
 
 Sur macOS seulement, la configuration de l'adapter Codex n'injecte plus la
 consigne Linux/PRoot imposant l'escalade : le sandbox natif est utilisable.
-Les modes ACP et les règles métier du pont restent inchangés. Les identifiants
+Après la revue, les trois niveaux `ask`, `auto-edit` et `plan` utilisent le mode
+ACP **`read-only`** sur Mac, y compris avant/après une reprise. `workspace-write`
+autorisait les écritures du projet sans demande à Régie et ne tenait donc pas le
+contrat. `INITIAL_AGENT_MODE` prend aussi `read-only`. La composition transmet
+la capacité `native` au domaine, qui choisit le mode ; les adapters ne décident
+pas quelles opérations autoriser. En `auto-edit`, le domaine autorise seulement
+les demandes structurées `edit`, jamais une écriture shell. `plan` ajoute toujours
+`collaboration_mode=plan`, `allow-all` garde `agent-full-access`. Le chemin PRoot
+reste inchangé. Les lectures natives n'ont pas besoin d'escalade.
+Les identifiants
 Codex du Mac sont réutilisés, sans copie ni modification. Claude est installé
 comme dépendance du pont mais **la démo ne lance aucune session Claude** (le pont relève seulement sa version).
 
@@ -67,3 +76,24 @@ et [configuration AVD](https://github.com/mirror/qemu-android/blob/emu-master-de
 via Context7 ; syntaxe multidisplay et input confirmée par l'aide des binaires
 installés, conservée avec les preuves. Context7 a renvoyé du Vulkan pour la
 requête multidisplay spécifique : l'aide locale fait foi pour cette commande.
+
+## Correction de revue — validations et intégrité des captures
+
+La documentation actuelle obtenue par Context7 pour `codex-acp` vise un autre
+adapter (Rust, ancien namespace Zed) : ses noms de modes ne sont pas extrapolés.
+Le code installé de `@agentclientprotocol/codex-acp` **2.6.0**, `AgentMode.ReadOnly`,
+confirme `on-request`, reviewer `user`, sandbox `readOnly`, réseau fermé.
+La [documentation officielle OpenAI](https://learn.chatgpt.com/docs/agent-approvals-security)
+distingue également le sandbox lecture seule de l'autorisation d'écrire dans le
+workspace. Tests hors agent : création/reprise des quatre modes, maintien de plan,
+configuration initiale Mac et configuration PRoot. Essais réels séparés : voir
+`artifacts/screenshots/16/revision-validation.txt`.
+
+`emu-shot.sh` exige désormais Pillow, ajouté aux prérequis du guide (toujours
+dix lignes). `Image.verify()` contrôle les chunks puis, après réouverture,
+`Image.load()` décode tous les pixels avant de publier les deux fichiers.
+Aucun mode permissif pour les PNG tronqués. Les fixtures positives sont de vrais
+PNG. Les en-têtes seuls, les pixels tronqués et l'absence de IEND sont refusés,
+sans remplacer les captures précédentes.
+Source [Pillow Image](https://pillow.readthedocs.io/en/stable/reference/Image.html),
+consultée via Context7 ; extraits dans `revision-pillow-docs.txt`.

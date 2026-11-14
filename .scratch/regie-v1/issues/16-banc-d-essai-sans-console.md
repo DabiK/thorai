@@ -30,20 +30,21 @@ L'utilisateur est parti avec la Thor. Les tickets suivants doivent pouvoir être
 ## Rapport
 
 STATUT: done
-RÉSUMÉ: Banc autonome livré en trois commandes, avec un vrai Codex sur un projet isolé.
-Régie fonctionne sur les deux écrans sans Termux ; les sessions d’essai sont arrêtées.
+RÉSUMÉ: Banc en trois commandes confirmé avec Codex réel sur deux écrans.
+Sur Mac, les écritures demandent maintenant validation ; les PNG sont entièrement décodés.
 CRITÈRES:
-- [x] Trois commandes et vraie session Codex → artifacts/screenshots/16/three-commands.txt, captures 09.
-- [x] Écrans 1920×1080 et 1240×1080, 369 dpi → captures vérifiées par emu-shot.sh.
-- [x] Pont local, jeton propre et run-as, reverse → scripts/bridge-mac.sh, emu-install.sh ; essai-emulateur.txt.
-- [x] Absence de Termux → ExternalBridgeTest, BridgeStatusTest, QuitTest ; essai réel sans permission RUN_COMMAND.
-- [x] A/B/L2/R2 et voix synthétique → captures 02–08, onze tests de scripts hors console.
-- [x] Mode d’emploi de dix lignes et repli solo → docs/emulateur.md, scripts/ticket-solo.md.
-PORTE DE QUALITÉ: Android ./gradlew check : 310 tests + lint ; pont npm run check : 285 tests + typage/lint ; scripts : 11 tests.
-THOR: absente ; essais sur Regie_Thor Android 16 (API 36), displays 0/2, pont Mac, deux Codex arrêtés.
-REVIEW: diff main...HEAD relu après 9b11414 ; réutilisation d’un pont provenant d’un autre worktree refusée (régression rouge puis verte), redémarrage du pont documenté. Captures et preuves relues, aucun autre blocage.
-DÉCISIONS PRISES: ADR 14 ; AVD dédié, état séparé, pont externe sans commande locale, consigne PRoot retirée sur Mac.
-POUR L’UTILISATEUR: 1. Rebrancher Thor ; 2. thor-install.sh ; 3. vérifier Termux et vrais boutons ; 4. micro réel et écran bas éteint/rallumé ; 5. Quitter (détail dans essai-emulateur.txt).
-QUESTIONS: aucune pour le ticket.
-CAPTURES: artifacts/screenshots/16/09-cold-demo-{haut,bas}.png ; 06-r2-wav et 08-l2-review.
-HORS PÉRIMÈTRE: « Fais le point sur la session » est bien transcrit mais non reconnu comme ordre par les règles existantes ; aucune modification de cet interpréteur.
+- [x] Trois commandes et vraie démo Codex → revision-{emu-start,bridge-start,install-demo}.txt, captures revision-17.
+- [x] Écrans 1920×1080 et 1240×1080 → 34 PNG décodés, emu-shot.sh.
+- [x] Modes Mac conformes → refus B / autorisation A de shell et apply_patch ; auto-edit conserve la validation shell (revision-validation.txt).
+- [x] PNG incomplets rejetés → 13 tests scripts, cas tronqués et mutation du décodage détectée.
+- [x] Absence de Termux → ExternalBridgeTest, BridgeStatusTest, QuitTest et démo réelle.
+- [x] A/B/L2/R2 et voix synthétique → captures initiales 02–08 ; A/B/R1 rejoués pendant la correction.
+- [x] Guide dix lignes et repli solo → docs/emulateur.md, scripts/ticket-solo.md.
+PORTE DE QUALITÉ: Android ./gradlew check : 310 tests + lint ; pont npm run check : 286 tests + typage/lint ; scripts : 13 tests.
+THOR: absente ; Regie_Thor API 36 et pont Mac testés ; quatre nouveaux Codex arrêtés, aucun Claude lancé.
+REVIEW: deux constats corrigés tests d’abord ; modes contrôlés après création/reprise, PNG valides sans pixels également rejetés. Relecture après commit à consigner.
+DÉCISIONS PRISES: ADR 14 complété ; modes Mac read-only décidés dans le domaine, PRoot conservé ; Pillow requis pour les captures.
+POUR L'UTILISATEUR: 1. Rebrancher Thor ; 2. thor-install.sh et permission Termux ; 3. refuser/autoriser shell et édition avec les boutons ; 4. micro réel et écran bas ; 5. Quitter. Pas à pas : revision-validation.txt.
+QUESTIONS: aucune.
+CAPTURES: artifacts/screenshots/16/revision-{13-shell-pending,14-edit-pending,16-auto-shell,17-demo}-{haut,bas}.png.
+HORS PÉRIMÈTRE: phrase vocale « Fais le point sur la session » non reconnue par les règles existantes (constat initial conservé).
