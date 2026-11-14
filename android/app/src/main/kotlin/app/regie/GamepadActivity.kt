@@ -137,6 +137,7 @@ abstract class GamepadActivity : ComponentActivity() {
                 val current by container.overview.collectAsStateWithLifecycle()
                 val dictation by container.dictation.state.collectAsStateWithLifecycle()
                 val command by container.voiceCommand.state.collectAsStateWithLifecycle()
+                val newSession by container.newSession.collectAsStateWithLifecycle()
                 val settingsOpen by container.settingsOpen.collectAsStateWithLifecycle()
                 val settings by container.voiceSettings.collectAsStateWithLifecycle()
                 val mode by container.displays.mode.collectAsStateWithLifecycle()
@@ -150,6 +151,9 @@ abstract class GamepadActivity : ComponentActivity() {
                     VoiceCommandScreen(command, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single,
                         button, { container.touchTrigger(Trigger.R2, it) }, container::openVoiceSettings,
                         ThreadScroll(container.commandScroll, container.commandVelocity))
+                } else if (newSession.visible) {
+                    app.regie.ui.screens.NewSessionScreen(newSession, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single,
+                        button, held, container::selectNewSessionField, container::editNewInstruction, container::editNewBranch, container.newSessionVelocity)
                 } else if (dictation.visible) {
                     if (this@GamepadActivity is BottomActivity) DictationBottomScreen(dictation, button, held, container::openVoiceSettings)
                     else DictationTopScreen(dictation, current.sessions.firstOrNull { it.id == dictation.target?.sessionId }, mode == ScreenMode.Single, button, held, container::openVoiceSettings, ThreadScroll(container.dictationScroll, container.dictationVelocity))

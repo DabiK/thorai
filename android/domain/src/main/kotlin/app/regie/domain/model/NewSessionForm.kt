@@ -1,0 +1,38 @@
+package app.regie.domain.model
+
+import app.regie.domain.usecase.validBranchName
+
+data class ProjectChoice(val name: String, val currentBranch: String? = null, val branches: List<String> = emptyList())
+enum class NewSessionField(val label: String) { AGENT("Agent"), PROJECT("Projet"), BRANCH("Branche"), BASE("Depuis"), VALIDATION("Validation"), INSTRUCTION("Consigne") }
+enum class BranchChoice { CURRENT, EXISTING, NEW }
+
+data class NewSessionForm(
+    val visible: Boolean = false, val heard: String = "", val agent: Agent? = null, val project: String? = null,
+    val branchChoice: BranchChoice = BranchChoice.CURRENT, val branch: String = "", val base: String = "",
+    val approvalMode: String = "plan", val instruction: String = "",
+    val projects: List<ProjectChoice> = emptyList(), val field: NewSessionField = NewSessionField.AGENT,
+    val loading: Boolean = false, val sending: Boolean = false, val uncertain: Boolean = false,
+    val capturing: Boolean = false, val finalizing: Boolean = false, val partial: String = "", val level: Float = 0f,
+    val notice: String = "",
+) {
+    val selectedProject: ProjectChoice? get() = projects.singleOrNull { it.name == project }
+    val fields: List<NewSessionField> get() = NewSessionField.entries.filter { it != NewSessionField.BASE || branchChoice == BranchChoice.NEW }
+    val editable: Boolean get() = visible && !loading && !sending && !uncertain && !capturing && !finalizing
+    val problem: String? get() = when {
+        agent == null -> "Choisis un agent."
+        selectedProject == null -> "Choisis un projet disponible."
+        branchChoice == BranchChoice.EXISTING && branch !in selectedProject!!.branches -> "Branche indisponible."
+        branchChoice == BranchChoice.NEW && base !in selectedProject!!.branches -> "Choisis la base de la nouvelle branche."
+        branchChoice == BranchChoice.NEW && branch.isNotBlank() && !validBranchName(branch) -> "Nom de branche invalide."
+        branchChoice == BranchChoice.NEW && branch in selectedProject!!.branches -> "Cette branche existe déjà."
+        instruction.length > 2000 -> "Consigne limitée à 2 000 caractères."
+        else -> null
+    }
+    val canLaunch: Boolean get() = editable && problem == null
+    val branchLabel: String get() = when (branchChoice) {
+        BranchChoice.CURRENT -> "Courante${selectedProject?.currentBranch?.let { " · $it" }.orEmpty()}"
+        BranchChoice.EXISTING -> branch
+        BranchChoice.NEW -> "Nouvelle · ${branch.ifBlank { "nom choisi par l’agent" }}"
+    }
+    val modeLabel: String get() = when (approvalMode) { "ask" -> "Tout valider"; "auto-edit" -> "Modifs auto"; else -> "Plan d’abord" }
+}

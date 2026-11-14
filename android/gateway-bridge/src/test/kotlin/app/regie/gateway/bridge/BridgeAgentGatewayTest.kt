@@ -128,6 +128,11 @@ class BridgeAgentGatewayTest {
             val catalog = bridge.next("projects.list")
             ws.send("""{"id":${catalog.long("id")},"result":{"projects":[{"name":"demo","branch":"main"}]}}""")
             assertEquals(listOf("demo"), projects.await())
+            val choices = async { gateway.projectCatalog() }
+            val catalogRequest = bridge.next("projects.list")
+            ws.send("""{"id":${catalogRequest.long("id")},"result":{"projects":[{"name":"demo","branch":"main","branches":["main","feature/x"]},{"name":"plain","branch":null}]}}""")
+            assertEquals(listOf(app.regie.domain.model.ProjectChoice("demo", "main", listOf("main", "feature/x")),
+                app.regie.domain.model.ProjectChoice("plain")), choices.await())
             val creation = async { gateway.createSession(app.regie.domain.model.NewSessionDraft(app.regie.domain.model.Agent.CODEX, "demo", "feature", "Corrige le test")) }
             val request = bridge.next("session.create")
             val params = request.obj("params")!!

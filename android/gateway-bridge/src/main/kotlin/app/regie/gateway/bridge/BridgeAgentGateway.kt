@@ -177,10 +177,19 @@ class BridgeAgentGateway(
         }
     }
 
-    override suspend fun projects(): List<String> {
+    override suspend fun projects(): List<String> = projectCatalog().map { it.name }
+
+    override suspend fun projectCatalog(): List<app.regie.domain.model.ProjectChoice> {
         val result = call("projects.list", timeout = 5.seconds)
         if (result !is CallResult.Accepted) return emptyList()
-        return (result.value["projects"] as? JsonArray)?.mapNotNull { (it as? JsonObject)?.string("name") }.orEmpty()
+        return (result.value["projects"] as? JsonArray)?.mapNotNull { item ->
+            val project = item as? JsonObject ?: return@mapNotNull null
+            val name = project.string("name") ?: return@mapNotNull null
+            val branch = project.string("branch")
+            val branches = (project["branches"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.content }
+                ?: listOfNotNull(branch)
+            app.regie.domain.model.ProjectChoice(name, branch, branches)
+        }.orEmpty()
     }
 
     override suspend fun createSession(draft: app.regie.domain.model.NewSessionDraft): app.regie.domain.model.SessionCreation {

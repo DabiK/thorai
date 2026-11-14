@@ -1,6 +1,6 @@
 # 11 — Nouvelle session à la voix
 
-Statut : en attente
+Statut : à fusionner
 Bloqué par : 09
 
 ## Objectif
@@ -21,4 +21,75 @@ Bloqué par : 09
 
 ## Critères d'acceptation
 
-- Sur la Thor, trois phrases différentes produisent la bonne fiche, et la session lancée tourne sur la bonne branche.
+- [x] Sur la Thor, trois phrases différentes produisent la bonne fiche, et la session lancée tourne sur la bonne branche. Preuve synthétique locale : corpus 01/02/05, captures 05–07/16/20, journaux session1-events.json, session2-final-events.json, session3-events.json et git-after-new.txt. Lecture humaine restant à vérifier ci-dessous.
+
+- [x] Consigne longue lisible intégralement au stick avant A → LongInstructionReviewTest (un/deux écrans), captures scroll-51/52/53, arrêt stable scroll-49/50.
+
+## Rapport
+
+- Fiche R2 et X, correction croix/L2, lancement A vers le direct et annulation B livrés.
+- Règles dans ReviewNewSession ; catalogue de branches en lecture seule, intention
+  Git dans la consigne uniquement. ADR 13 ; aucun sous-agent utilisé.
+- Constat bloquant transmis : déjà corrigé dans le socle du ticket 10 (b868609).
+  ResyncedExplanationTest réexécuté vert ; mutation ramenant les identifiants locaux
+  détectée rouge, fichier restauré avant la porte complète. Aucun correctif à dupliquer.
+- Portes actuelles : Android 296 tests + lint, pont 271 tests + typage/lint, tous verts.
+- Reprises précédentes sur Thor : APK réinstallé, WAV Thomas/local et sendevent, trois fiches rejouées,
+  correction du niveau, redictée, collision de branche, un/deux écrans ; aucune
+  nouvelle session pendant la reprise. Journaux des trois vrais lancements Codex
+  précédents relus : main, lecture, travail depuis lecture. Aucun Claude lancé.
+- Les quatre Codex d'essai laissés ouverts ont été arrêtés par Quitter, ainsi que le
+  pont, à 09:04:35 Paris. Aucune permission, clé, installation tierce ni reboot.
+- Relecture : contrôles de resync effectifs ; corrections antérieures des prompts
+  de branche, du premier R2, du maintien tactile et du lancement en attente conservées.
+- Limites : phrase « essai / modifs auto » mal transcrite et refusée ; le troisième
+  succès emploie « travail / tout valider ». Aucun taux de reconnaissance humaine.
+- Captures et méthode complète : artifacts/screenshots/11/essai-thor.txt.
+
+### Correction du dernier constat de revue — 14 novembre, 09 h 21
+
+- Le stick droit fait défiler la fiche du haut ; le relâchement arrête le mouvement
+  même derrière un panneau. A/B restent accessibles, croix et lancement inchangés.
+- Deux régressions de rendu rouges puis vertes, avec 1 950 caractères et mesure de
+  la dernière ligne ; marche arrière et relâchement couverts. Aucun service réel.
+- Android check (296 tests + lint), pont check (271 + typage/lint) verts ; régression
+  resync du socle réexécutée sans cache, verte. ADR 13 complété.
+- Thor : APK réinstallé, R2/WAV Thomas 01, édition tactile longue, stick via sendevent
+  en un/deux écrans, B et Quitter. Texte réellement affiché : 1 670 caractères
+  (pertes de l'injection adb rapide, consignées) ; dernière ligne visible.
+- Aucun agent lancé. Pont et app arrêtés à 09:20:58 Paris. Débogage sans fil des
+  agents indisponible, signalé hors périmètre. Statut à fusionner maintenu.
+
+### Vérification avec l'utilisateur
+
+1. Ouvrir Régie et accorder le micro si demandé. R2 : « Lance Codex sur test pour
+   lire la branche courante ». Relire, puis B.
+2. R2 : « Lance Codex sur test, branche lecture, tout valider, pour afficher la
+   branche courante ». Corriger le niveau à la croix ; L2 redicte la consigne.
+3. A : vérifier le direct, autoriser le changement demandé par Codex, vérifier lecture.
+4. R2 : « Lance Codex sur test, nouvelle branche matin depuis lecture, tout valider,
+   pour afficher la branche courante ». Employer un nom absent ; vérifier la base,
+   A puis autorisation de Codex ; vérifier la branche obtenue.
+5. B revient à la régie, X ouvre une fiche. Avec L2, dicter une consigne longue ;
+   choisir Consigne puis faire défiler au stick jusqu’à la dernière ligne.
+   Relâcher : l’image doit rester stable. B annule.
+6. X depuis la régie : fiche vide ; B annule. Éteindre/rallumer physiquement l'écran
+   bas pour vérifier le repli. Quitter pour arrêter les sessions.
+
+Statut à fusionner selon la consigne nocturne : tout ce qui ne dépend pas de
+l'utilisateur est vert. Le micro réel et l'extinction physique restent à vérifier.
+
+### Relecture après commit
+
+Diff `main...HEAD` relu après 4b884f7, axes architecture et ticket séparés : aucun
+nouveau blocage fonctionnel. Preuves sensibles à la mutation resync ; ports/faux,
+absence de mutation Git, prompts de base et verrou de création vérifiés. Traces
+texte nettoyées uniquement des espaces finaux ; code et tests inchangés depuis les
+portes vertes et l'APK essayé. Détail : artifacts/screenshots/11/relecture.txt.
+
+
+Relecture après `fed500e` : diff `main...HEAD` contrôlé en solo, architecture puis
+critères/preuves. Aucun autre blocage fonctionnel. Pas à pas humain corrigé pour
+rouvrir la fiche avant L2 ; ligne blanche finale du journal npm retirée. Aucun code
+ni test modifié depuis la porte finale et l'APK essayé. Détail :
+`artifacts/screenshots/11/scroll-relecture.txt`.

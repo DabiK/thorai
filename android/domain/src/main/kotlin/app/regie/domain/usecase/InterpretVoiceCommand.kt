@@ -11,9 +11,10 @@ class InterpretVoiceCommand(private val model: VoiceCommandModel) {
     suspend operator fun invoke(text: String, context: VoiceCommandContext): CommandInterpretation {
         val normalized = normalize(text)
         val unknown = CommandInterpretation(null, "Ordre non compris : « ${text.take(1000)} ». Reformule un seul ordre avec le nom de la session.")
-        if (normalized.isBlank() || text.length > 2000 || Regex("\\b(pas|jamais|ne|puis|ensuite|sinon|si)\\b|\\bn[' ]").containsMatchIn(normalized) ||
-            Regex("\\bet (approuve|refuse|mets|lance|ouvre|passe|interromps)\\b").containsMatchIn(normalized)) return unknown
-        val fixed = fixed(text, normalized)
+        val launch = launchPhrase(text)
+        if (normalized.isBlank() || text.length > 2000 || (launch == null && Regex("\\b(pas|jamais|ne|puis|ensuite|sinon|si)\\b|\\bn[' ]").containsMatchIn(normalized)) ||
+            (launch == null && Regex("\\bet (approuve|refuse|mets|lance|ouvre|passe|interromps)\\b").containsMatchIn(normalized))) return unknown
+        val fixed = launch ?: fixed(text, normalized)
         val intent = fixed ?: try {
             withTimeoutOrNull(12_000) { model.interpret(text, context) }
         } catch (e: CancellationException) { throw e } catch (_: Exception) { null }
@@ -49,7 +50,7 @@ class InterpretVoiceCommand(private val model: VoiceCommandModel) {
     }
 
     private fun resolve(intent: VoiceIntent, context: VoiceCommandContext): VoiceCommand? {
-        if (intent.action != "launch" && listOf(intent.agent, intent.project, intent.branch, intent.instruction).any { it != null }) return null
+        if (intent.action != "launch" && (listOf(intent.agent, intent.project, intent.branch, intent.instruction, intent.approvalMode, intent.baseBranch).any { it != null } || intent.newBranch)) return null
         fun target(): SessionId? {
             val name = intent.target?.let(::normalize)
             if (name == null) return context.current?.takeIf { id -> context.sessions.any { it.id == id } }
@@ -73,8 +74,10 @@ class InterpretVoiceCommand(private val model: VoiceCommandModel) {
                 val project = context.projects.singleOrNull { normalize(it) == normalize(intent.project.orEmpty()) } ?: return null
                 val branch = intent.branch
                 if (branch != null && (branch.length > 200 || !branch.matches(Regex("[A-Za-z0-9][A-Za-z0-9_./-]*")) || branch.contains(".."))) return null
+                if (intent.baseBranch != null && !validBranchName(intent.baseBranch)) return null
+                if (intent.approvalMode != null && intent.approvalMode !in listOf("plan", "auto-edit", "ask")) return null
                 if ((intent.instruction?.length ?: 0) > 2000) return null
-                VoiceCommand.Launch(NewSessionDraft(agent, project, branch, intent.instruction))
+                VoiceCommand.Launch(NewSessionDraft(agent, project, branch, intent.instruction, intent.approvalMode ?: "plan", intent.newBranch, intent.baseBranch))
             }
             else -> null
         }
