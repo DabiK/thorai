@@ -63,7 +63,8 @@ PORTE DE QUALITÉ: Android ./gradlew check : 326 tests + lint ; pont npm run che
 THOR: absente ; émulateur deux écrans/pont Mac, vrai Codex repris, deux choix retirés simulés
 uniquement dans la sauvegarde du banc. Sol/low/Tout autoriser confirmés, prompt puis seconde reprise.
 Agent, pont et émulateur arrêtés ; aucun Claude ni sous-agent.
-REVIEW: les deux constats corrigés ; option sans choix sauvegardé également couverte et corrigée.
+REVIEW: deux constats et option sans sélection corrigés ; diff main...HEAD relu après a744d45, aucun autre blocage trouvé.
+Preuve : review-joint-relecture.txt. Travail commité, aucun push ni fusion.
 DÉCISIONS PRISES: ADR 02 complété ; table conjointe explicite, A confirme, B abandonne, aucun fallback.
 POUR L'UTILISATEUR: 1. Rebrancher Thor et installer pont/app selon essai-emulateur.txt.
 2. Options > Reprendre ; si plusieurs choix sont retirés, préparer modèle et effort, puis un seul A.
