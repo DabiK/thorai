@@ -24,6 +24,8 @@ préexistants de cette console, pas des prérequis ni des livrables de ThorAI.
 | Tactile | non | oui (fts_ts_3) |
 
 - Android voit l'écran bas comme un écran séparé, avec les drapeaux PRESENTATION et TRUSTED et sa propre barre de navigation. Une appli ordinaire peut y lancer une activité (`ActivityOptions.setLaunchDisplayId(4)` + `FLAG_ACTIVITY_NEW_TASK`). Le launcher Cocoon Shell le fait déjà.
+- Une appli déjà ouverte en haut et rouverte depuis Cocoon Shell (écran du bas) voit sa tâche `singleTask` déplacée sur l'écran du bas, sans être recréée : seul `onConfigurationChanged` le signale. ThorAI se remet alors sur l'écran du haut (ticket 54).
+- La touche B de la manette arrive en `KEYCODE_BUTTON_B` (`Vendor_2020_Product_0111.kl`, code 0x131) ; le retour système (`KEYCODE_BACK`) est une autre touche (0x9e) et la barre de navigation.
 - `screencap -d` attend l'identifiant **physique** de l'écran, pas le `displayId`. On le trouve avec `adb shell dumpsys SurfaceFlinger --display-id`.
 
 ## Manette

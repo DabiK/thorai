@@ -85,6 +85,15 @@ class OverviewController(
         }
     }
 
+    /**
+     * La session choisie ailleurs que dans la liste : celle du coursier, sur le hameau (ticket 45).
+     * L2 (dictée), R2 (ordre vocal) et le mode console la visent comme la ligne qui a le focus.
+     */
+    fun focus(id: SessionId) {
+        val index = visibleIds.indexOf(id)
+        if (index >= 0 && _state.value.focusedId != id) setFocus(index)
+    }
+
     /** Toucher le bandeau de validation sur l'écran du bas : comme R1. */
     fun openPendingApproval() {
         overview.value.firstPendingApproval?.let { dispatch(OverviewAction.OpenApproval(it.approval.id)) }

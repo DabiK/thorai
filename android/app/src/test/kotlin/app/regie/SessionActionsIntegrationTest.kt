@@ -15,8 +15,10 @@ import app.regie.domain.port.CaptureState
 import app.regie.input.*
 import app.regie.session.Screen
 import app.regie.session.SessionNotice
-import app.regie.ui.screens.*
-import app.regie.ui.theme.RegieTheme
+import app.regie.ui.SessionCallbacks
+import app.regie.ui.ThreadScroll
+import app.regie.ui.game.GameSessionBottom
+import app.regie.ui.game.GameSessionTop
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.*
@@ -31,7 +33,7 @@ import kotlin.time.Instant
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [33], application = Application::class, qualifiers = "w538dp-h468dp-land-mdpi")
+@Config(sdk = [33], application = Application::class, qualifiers = "w538dp-h468dp-land-369dpi")
 class SessionActionsIntegrationTest {
     @get:Rule val compose = createEmptyComposeRule()
 
@@ -87,15 +89,15 @@ class SessionActionsIntegrationTest {
         }
     }
 
-    @Test @Config(qualifiers = "w832dp-h468dp-land-mdpi")
+    @Test @Config(qualifiers = "w832dp-h468dp-land-369dpi")
     fun `options hide approval shortcuts and touch still allows once on two screens`() =
         approvalWithOptions(singleScreen = false, label = "Autoriser une fois", option = "once")
 
-    @Test @Config(qualifiers = "w832dp-h468dp-land-mdpi")
+    @Test @Config(qualifiers = "w832dp-h468dp-land-369dpi")
     fun `options hide approval shortcuts and touch still allows session on one screen`() =
         approvalWithOptions(singleScreen = true, label = "Autoriser pour la session", option = "allow_for_session")
 
-    @Test @Config(qualifiers = "w832dp-h468dp-land-mdpi")
+    @Test @Config(qualifiers = "w832dp-h468dp-land-369dpi")
     fun `options hide approval shortcuts and touch still refuses on two screens`() =
         approvalWithOptions(singleScreen = false, label = "Refuser", option = "no")
 
@@ -108,7 +110,7 @@ class SessionActionsIntegrationTest {
         container.sessionController.onDraftChange("preserved draft")
         container.handleInput(GamepadInput.Pressed(Button.RIGHT)); runCurrent()
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
-            host.setup().get().setContent { SessionSurface(container, top = true, singleScreen = singleScreen) }
+            host.setup().get().setContent { SessionSurface(container, singleScreen = singleScreen) }
             val shortcuts = listOf("A" to "Autoriser une fois", "X" to "Autoriser pour la session", "B" to "Refuser")
             shortcuts.forEach { (key, action) ->
                 compose.onNode(hasText(key) and hasText(action)).assertDoesNotExist()
@@ -122,9 +124,9 @@ class SessionActionsIntegrationTest {
             container.handleInput(GamepadInput.Pressed(Button.B)); runCurrent()
             assertFalse(container.sessionSettings.value.visible)
             assertTrue(gateway.answers.isEmpty())
-            // In single-screen mode the compact footer also shows these shortcuts.
+            // Options closed, the menu advertises its keys again; one menu, in the notebook, on one or two screens.
             shortcuts.forEach { (key, action) ->
-                compose.onAllNodes(hasText(key) and hasText(action)).assertCountEquals(if (singleScreen) 2 else 1)
+                compose.onAllNodes(hasText(key) and hasText(action)).assertCountEquals(1)
             }
             container.handleInput(GamepadInput.Pressed(Button.RIGHT)); runCurrent()
             compose.onNodeWithText(label).assertIsDisplayed().performClick(); runCurrent()
@@ -134,19 +136,20 @@ class SessionActionsIntegrationTest {
             assertEquals("preserved draft", container.sessionController.draft.value)
             val next = gateway.request.copy(id = ApprovalId("next"))
             gateway.approvals.value = listOf(next); runCurrent()
-            compose.onNodeWithText("Réponse reçue.").performScrollTo().assertIsDisplayed()
-            compose.onNode(hasText("R1") and hasText("Voir la suivante (1)")).assertDoesNotExist()
+            compose.onNodeWithText("Réponse reçue.", substring = true).assertIsDisplayed()
+            // The options keep the R1 key, but a touch on « Voir la suivante » still shows the next request (touch as a fallback).
             container.handleInput(GamepadInput.Pressed(Button.R1)); runCurrent()
             assertEquals(gateway.request.id, container.inlineApproval.value.request?.id)
-            compose.onNodeWithText("Voir la suivante (1)").performScrollTo().assertIsDisplayed().performClick(); runCurrent()
+            compose.onNodeWithText("Voir la suivante").assertIsDisplayed().performClick(); runCurrent()
             assertEquals(next.id, container.inlineApproval.value.request?.id)
-            compose.onNodeWithText("Refuser").performScrollTo().assertIsDisplayed().performClick(); runCurrent()
+            assertTrue(container.sessionSettings.value.visible)
+            compose.onNodeWithText("Refuser").assertIsDisplayed().performClick(); runCurrent()
             assertTrue(container.sessionSettings.value.visible)
             gateway.approvals.value = emptyList(); runCurrent()
             compose.onNode(hasText("←") and hasText("Fermer la validation")).assertDoesNotExist()
             container.handleInput(GamepadInput.Pressed(Button.LEFT)); runCurrent()
             assertEquals(next.id, container.inlineApproval.value.request?.id)
-            compose.onNodeWithText("Fermer la validation").performScrollTo().assertIsDisplayed().performClick(); runCurrent()
+            compose.onNodeWithText("Fermer la validation").assertIsDisplayed().performClick(); runCurrent()
             assertNull(container.inlineApproval.value.request)
             assertEquals(listOf(gateway.request.id to option, next.id to "no"), gateway.answers)
         }
@@ -269,7 +272,11 @@ class SessionActionsIntegrationTest {
         wav.delete()
     }
 
-    @Composable private fun SessionSurface(container: AppContainer, top: Boolean = false, singleScreen: Boolean = false) {
+    /**
+     * La maison branchée comme dans l'app (ticket 46) : sur deux écrans, le carnet du bas porte le fil,
+     * la validation et les réglages ; sur un seul, il passe à droite de la pièce.
+     */
+    @Composable private fun SessionSurface(container: AppContainer, singleScreen: Boolean = false) {
         val live by container.live.collectAsState()
         val approval by container.inlineApproval.collectAsState()
         val settings by container.sessionSettings.collectAsState()
@@ -281,18 +288,13 @@ class SessionActionsIntegrationTest {
             override fun onDraftChange(text: String) = container.sessionController.onDraftChange(text)
             override fun onSend() = container.sessionController.send()
             override fun onNoticeSeen(notice: SessionNotice) {}
+            override fun onNextApproval() = container.nextInlineApproval()
         }
-        val options: (@Composable () -> Unit)? = if (settings.visible) ({
-            SessionSettingsScreen(settings, callbacks::onButton, container::selectSessionSetting, compact = true)
-        }) else null
-        RegieTheme {
-            if (top) SessionTopScreen(live, false, control, draft, singleScreen,
-                ThreadScroll(container.sessionController.scrollSteps, container.sessionController.scrollVelocity), callbacks,
-                approval = approval, onDecision = container::answerInline, onNextApproval = container::nextInlineApproval,
-                onDismissApproval = container::dismissInlineApproval, options = options)
-            else SessionBottomScreen(live, null, control, draft, callbacks, approval = approval,
-                settings = settings, onSelectSetting = container::selectSessionSetting)
-        }
+        val scroll = ThreadScroll(container.sessionController.scrollSteps, container.sessionController.scrollVelocity)
+        if (singleScreen) GameSessionTop(live, false, null, control, draft, settings, true, scroll, callbacks, approval,
+            container::answerInline, container::dismissInlineApproval, container::selectSessionSetting, DictationReview(), null)
+        else GameSessionBottom(live, false, null, control, draft, settings, scroll, callbacks, approval,
+            container::answerInline, container::dismissInlineApproval, container::selectSessionSetting)
     }
 }
 

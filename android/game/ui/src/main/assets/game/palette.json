@@ -1,0 +1,17 @@
+{
+ "colors": ["#222F36", "#203648", "#503835", "#1F583A", "#1B5F53", "#615039", "#605751", "#9E5A37",
+            "#5A718C", "#A16948", "#22944C", "#DB6633", "#DF724A", "#05ACAB", "#718EA0", "#63A53A",
+            "#58A949", "#A19E5C", "#A0A0A0", "#8FB237", "#71C645", "#73C839", "#27D1CB", "#E5A669",
+            "#D8AFA1", "#A0D944", "#A2DA3B", "#53E6DE", "#DDDC2C", "#DCDA5F", "#F1D8A6", "#F0DDD1"],
+ "roles": {
+  "grass.light": "#DCDA5F", "grass.base": "#A0D944", "grass.dark": "#73C839", "grass.deep": "#58A949",
+  "path.light": "#F0DDD1", "path.base": "#F1D8A6", "path.dark": "#E5A669",
+  "plaza.light": "#F0DDD1", "plaza.base": "#F1D8A6", "plaza.dark": "#D8AFA1",
+  "water.light": "#53E6DE", "water.base": "#05ACAB", "water.dark": "#1B5F53", "water.mid": "#27D1CB",
+  "bridge.light": "#E5A669", "bridge.base": "#A16948", "bridge.dark": "#615039",
+  "stone.light": "#F0DDD1", "stone.base": "#A0A0A0", "stone.dark": "#605751",
+  "flower.0": "#F0DDD1", "flower.1": "#D8AFA1", "flower.2": "#DF724A", "flower.3": "#DDDC2C",
+  "outline": "#1F583A"
+ },
+ "roofKeys": ["#3C78FF", "#1E50D2", "#0F2D96"]
+}

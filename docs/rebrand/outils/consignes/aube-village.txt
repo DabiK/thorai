@@ -1,0 +1,10 @@
+WHAT TO DRAW
+A small hamlet of workshops on a sunny morning, seen from above. In the centre, a cobbled plaza with a small round fountain and a blank wooden signpost. Around it, three cottage-workshops, each clearly different:
+(1) on the left, a scribe's cottage with a TERRACOTTA ORANGE roof, a round window, stacks of paper on the porch, warm light in the windows and a plume of chimney smoke: it is busy;
+(2) at the top right, a tinkerer's workshop with a SLATE GREY-BLUE roof, a small waterwheel on its side, door closed: it is quiet;
+(3) at the bottom right, a cartographer's cabin with a MOSS GREEN roof and a little lantern by the door.
+Also an empty fenced plot with a few wooden planks and stakes, ready for a new building (construction site).
+A dirt path connects everything; a small river with a wooden bridge in one corner; trees, bushes, flower beds, fences.
+A tiny player character (a young courier with a short red-orange scarf and a leather satchel, seen from behind, about 24 art pixels tall) stands on the path in the plaza. No other people.
+Keep all important content inside the central part of the image: about 8% on every side will be cropped.
+No text, letters, numbers, logos, UI, speech bubbles or watermark anywhere.

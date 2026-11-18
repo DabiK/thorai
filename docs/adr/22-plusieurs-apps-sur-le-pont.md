@@ -3,6 +3,12 @@
 Statut : accepté, 18 novembre 2026 (ticket 50, branche du jeu). Complète
 l'ADR 06 (connexion) et l'ADR 20 (jeton sans `run-as`).
 
+Mise à jour du 18 novembre au soir : la branche du jeu est fusionnée dans main,
+et le jeu devient ThorAI (décision de l'utilisateur). Le suffixe `.jeu` et les
+libellés « ThorAI jeu » sont retirés : l'app est de nouveau `app.thorai`, qui
+s'installe par-dessus l'app classique. Le pont multi-jetons reste : il ne coûte
+rien et sert à toute autre build installée à côté.
+
 ## Contexte
 
 L'utilisateur garde l'app classique installée et s'en sert chaque jour. La

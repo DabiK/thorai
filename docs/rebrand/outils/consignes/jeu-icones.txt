@@ -1,0 +1,6 @@
+WHAT TO DRAW
+A sheet of small item icons for the attached game, each icon alone on the magenta background, evenly spaced on three rows.
+Row 1: a sealed letter with a red wax seal (about 16 x 12 art pixels); a large unrolled cream parchment (16 x 16); a rolled parchment tied with a red ribbon (16 x 12); a small brass bell (14 x 16); a white messenger bird with a small red satchel, flying, wings up (20 x 16); the same bird, flying, wings down (20 x 14).
+Row 2: three puffs of chimney smoke, small, medium and big (6, 9 and 12 art pixels wide, pale grey-white round stepped pixel clouds); a small four-point sparkle star (7 x 7, pale yellow); a bigger four-point sparkle star (11 x 11); a small heart (9 x 8, coral).
+Row 3: a small microphone (10 x 14); a feather quill (14 x 14); a small brass gear (12 x 12); an hourglass (10 x 14); a brass key (14 x 8); a folded map (16 x 12).
+No text, letters, numbers or watermark.

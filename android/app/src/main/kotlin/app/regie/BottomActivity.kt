@@ -8,9 +8,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import app.regie.display.ScreenMode
 import app.regie.input.GamepadInput
-import app.regie.ui.screens.ApprovalBottomScreen
-import app.regie.ui.screens.OverviewBottomScreen
-import app.regie.ui.screens.SessionBottomScreen
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
@@ -28,20 +25,43 @@ class BottomActivity : GamepadActivity() {
         setScreen(
             approval = {
                 val review by container.approvalReview.collectAsStateWithLifecycle()
-                ApprovalBottomScreen(review, { container.handleInput(GamepadInput.Pressed(it)) })
+                val overview by container.overview.collectAsStateWithLifecycle()
+                // Le menu de choix de la validation (ticket 47).
+                app.regie.ui.game.GameApprovalBottom(review, overview, { container.handleInput(GamepadInput.Pressed(it)) },
+                    { container.touchTrigger(app.regie.input.Trigger.L2, it) }, container::selectApproval)
             },
-            overview = { overview, control -> OverviewBottomScreen(overview, control, callbacks) },
+            overview = { overview, control ->
+                // Le carnet du hameau (ticket 45) : la ligne choisie suit le coursier quand le haut le montre.
+                val scene by container.village.scene.collectAsStateWithLifecycle()
+                val topVisible by container.topStarted.collectAsStateWithLifecycle()
+                val mapOpen by container.village.mapOpen.collectAsStateWithLifecycle()
+                val mapStreet by container.village.mapStreet.collectAsStateWithLifecycle()
+                val shownScene = scene
+                // Pendant un chantier (ticket 48), la carte du hameau ; B la ferme et le carnet revient.
+                if (mapOpen && topVisible && shownScene != null) app.regie.ui.game.GameVillageMap(shownScene, mapStreet, mapCallbacks)
+                else app.regie.ui.game.GameOverviewBottom(scene, villageShown = topVisible, overview, control, setupLeft(overview), carnetCallbacks,
+                    scrollVelocity = container.controller.scrollVelocity)
+            },
             session = { shown, overview ->
                 val live by container.live.collectAsStateWithLifecycle()
                 val control by container.sessionController.state.collectAsStateWithLifecycle()
                 val draft by container.sessionController.draft
                 val approval by container.inlineApproval.collectAsStateWithLifecycle()
                 val settings by container.sessionSettings.collectAsStateWithLifecycle()
-                // Mode console : une autre appli occupe le haut, le fil compact passe en bas (ticket 25).
+                // La maison (ticket 46) : le fil brut est toujours en bas. Mode console : une autre appli
+                // occupe le haut, le carnet nomme la session suivie (ticket 25).
                 val topVisible by container.topStarted.collectAsStateWithLifecycle()
-                SessionBottomScreen(live, overview.neighboursOf(shown.id), control, draft, sessionCallbacks, approval = approval,
-                    onDecision = container::answerInline, onNextApproval = container::nextInlineApproval, onDismissApproval = container::dismissInlineApproval,
-                    settings = settings, onSelectSetting = container::selectSessionSetting, console = threadScroll.takeUnless { topVisible })
+                val neighbours = overview.neighboursOf(shown.id)
+                val session = live?.session?.takeIf { it.id == shown.id } ?: overview.sessions.firstOrNull { it.id == shown.id }
+                // Vue jeu (ticket 49) : la session console, quand une autre appli occupe le haut, a la tour en
+                // en-tête ; le carnet du 46 reste dessous, avec son fil, ses avis et son brouillon.
+                if (!topVisible && session?.project == app.regie.domain.usecase.ConsoleSession.PROJECT) {
+                    app.regie.ui.game.ConsoleSessionBottom(session, live, gone = neighbours == null, neighbours, control, draft, settings, threadScroll,
+                        sessionCallbacks, approval, container::answerInline, container::dismissInlineApproval,
+                        container::selectSessionSetting)
+                } else app.regie.ui.game.GameSessionBottom(live, gone = neighbours == null, neighbours, control, draft, settings, threadScroll, sessionCallbacks,
+                    approval, container::answerInline, container::dismissInlineApproval, container::selectSessionSetting,
+                    console = !topVisible)
             },
         )
 
@@ -50,6 +70,15 @@ class BottomActivity : GamepadActivity() {
                 combine(container.displays.mode, container.topAlive) { mode, topAlive -> belongsHere(mode, topAlive) }
                     .collect { if (!it) finish() }
             }
+        }
+    }
+
+    /** La carte du hameau, au doigt : une rue touchée y envoie le coursier. */
+    private val mapCallbacks by lazy {
+        object : app.regie.game.ui.chantier.MapCallbacks {
+            override fun onGoTo(street: Int) = container.village.goToStreet(street)
+            override fun onMove(delta: Int) = container.village.moveOnMap(delta)
+            override fun onClose() = container.village.closeMap()
         }
     }
 

@@ -15,9 +15,10 @@ class ArchitectureTest {
     private val domainSources = File("../domain/src/main/kotlin")
     private val gatewaySources = File("../gateway-bridge/src/main/kotlin")
 
-    /** Les adapters : la passerelle vers le pont (module) et les accès à la console (Android). */
+    /** Les adapters : la passerelle vers le pont (module), les accès à la console et le stockage (Android). */
     private fun isAdapter(name: String) =
-        name.startsWith("app.regie.commandmodel.") || name.startsWith("app.regie.gateway.") || name.startsWith("app.regie.console.") || name.startsWith("app.regie.voice.")
+        name.startsWith("app.regie.commandmodel.") || name.startsWith("app.regie.gateway.") || name.startsWith("app.regie.console.") || name.startsWith("app.regie.voice.") ||
+            name.startsWith("app.regie.storage.")
 
     private fun File.kotlinFiles() = walkTopDown().filter { it.extension == "kt" }.toList()
 
@@ -92,6 +93,29 @@ class ArchitectureTest {
         val found = violations(voice) {
             it.startsWith("app.regie.gateway.") || it.startsWith("app.regie.voice.local.") ||
                 it.startsWith("app.regie.voice.elevenlabs.") || it.startsWith("app.regie.voice.fake.")
+        }
+        assertEquals(emptyList(), found)
+    }
+
+    @Test
+    fun `the game view only talks to the domain and the game engine`() {
+        val gameUi = File("../game/ui/src/main/kotlin").kotlinFiles()
+        assertTrue(gameUi.isNotEmpty(), "sources de la vue jeu introuvables")
+        val found = violations(gameUi) {
+            isAdapter(it) || it.startsWith("app.regie.domain.port.") ||
+                it == "app.regie.AppContainer" || it == "app.regie.RegieApplication" ||
+                (it.startsWith("app.regie.") && !it.startsWith("app.regie.domain.") && !it.startsWith("app.regie.game."))
+        }
+        assertEquals(emptyList(), found)
+    }
+
+    @Test
+    fun `the game engine is pure Kotlin, without Android nor the game view`() {
+        val engine = File("../game/engine/src/main/kotlin").kotlinFiles()
+        assertTrue(engine.isNotEmpty(), "sources du moteur du jeu introuvables")
+        val found = violations(engine) {
+            it.startsWith("android.") || it.startsWith("androidx.") ||
+                (it.startsWith("app.regie.") && !it.startsWith("app.regie.domain.") && !it.startsWith("app.regie.game.engine."))
         }
         assertEquals(emptyList(), found)
     }

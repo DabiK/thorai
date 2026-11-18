@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Une validation demandée</title>
+<link rel="stylesheet" href="../outils/thorai-pixel.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jersey+10&amp;family=Pixelify+Sans:wght@400;600;700&amp;family=VT323&amp;display=swap">
+<style>body{margin:0}.kv{display:flex;flex-direction:column;gap:4px}.kv .l{font-size:24px;color:#5E6B5F}.kv .v{font-size:36px;line-height:1.2}</style>
+</helmet>
+<div class="thor t-aube" style="width: 1920px; height: 2200px;">
+  <div class="top">
+    <img class="px world" src="../assets/aube/validation.png" alt="Le scribe tend un parchemin au coursier">
+    <div class="marker bob" style="left: 948px; top: 600px;">
+      <div class="pbox" style="background: #F5B53D; color: #3A2A10; padding: 6px 16px;"><span class="ico" style="font-size: 52px;">!</span></div>
+      <div class="tip"></div>
+    </div>
+    <div class="frame" style="position: absolute; left: 96px; right: 96px; top: 56px; box-sizing: border-box; padding: 36px 44px; display: flex; gap: 40px; align-items: flex-start;">
+      <span class="nameplate" style="background: #C1663F;">Claude</span>
+      <img class="px" src="../assets/aube/parchemin.png" alt="" style="width: 189px; height: 174px; flex: none; margin-top: 10px;">
+      <div style="flex: 1; display: flex; flex-direction: column; gap: 18px;">
+        <span style="font-size: 42px; line-height: 1.25;">Je voudrais lancer cette commande. D'accord ?</span>
+        <div class="kv"><span class="l">Commande</span><span class="v code" style="font-size: 46px; background: #F1DBB3; padding: 4px 14px; align-self: flex-start;">./gradlew :app:connectedCheck</span></div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px;">
+          <div class="kv"><span class="l">Pourquoi</span><span class="v">Vérifier le tri dans l'app, sur la console.</span></div>
+          <div class="kv"><span class="l">Ce que ça touche</span><span class="v">Installe l'app de test sur la Thor.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="hinge"></div>
+  <div class="bot">
+    <div class="screen">
+      <div class="head">
+        <h1>Validation</h1>
+        <span class="tag wait">! regie · tri des sessions</span>
+      </div>
+      <div class="body" style="padding-top: 8px;">
+        <div class="frame menu" style="margin: 10px; gap: 10px;">
+          <div class="opt on"><span>Autoriser une fois</span><span class="k r">A</span></div>
+          <div class="opt"><span>Toujours dans cette session</span><span class="k r">X</span></div>
+          <div class="opt"><span>Refuser</span><span class="k r">B</span></div>
+          <div class="opt"><span>Refuser et dicter une consigne</span><span class="k">L2</span></div>
+        </div>
+        <p class="muted" style="margin: 6px 12px 0; font-size: 26px;">Mode de la session : Je valide chaque action.</p>
+      </div>
+      <div class="hints">
+        <span class="hint"><span class="k">Croix</span>Choisir</span>
+        <span class="hint"><span class="k">L1</span><span class="k">R1</span>Autre validation</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1920,"height":2200}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -13,9 +13,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import app.regie.console.TermuxBridgeLauncher
 import app.regie.display.ScreenMode
 import app.regie.input.GamepadInput
-import app.regie.ui.screens.ApprovalTopScreen
-import app.regie.ui.screens.OverviewTopScreen
-import app.regie.ui.screens.SessionTopScreen
 import kotlinx.coroutines.launch
 
 /** Écran du haut (display 0). Il lance l'écran du bas quand celui-ci est allumé. */
@@ -61,6 +58,9 @@ class TopActivity : GamepadActivity() {
             askRunCommandPermission()
             if (!askingPermission) askNotificationPermission()
         }
+        // Vue jeu (ticket 49) : l'écran titre, au premier lancement du processus. Le parcours d'accueil
+        // passe devant tant qu'il est ouvert ; une notification ouverte écarte le titre.
+        container.showTitle()
         openNotification(intent)
 
         setScreen(
@@ -68,14 +68,20 @@ class TopActivity : GamepadActivity() {
                 val review by container.approvalReview.collectAsStateWithLifecycle()
                 val overview by container.overview.collectAsStateWithLifecycle()
                 val mode by container.displays.mode.collectAsStateWithLifecycle()
-                ApprovalTopScreen(review, overview, mode == ScreenMode.Single,
+                // Le parchemin et le menu de choix (ticket 47).
+                app.regie.ui.game.GameApprovalTop(review, overview, mode == ScreenMode.Single,
                     container.approvalController.scrollSteps, container.approvalController.scrollVelocity,
                     onButton = { container.handleInput(GamepadInput.Pressed(it)) },
+                    onHeld = { container.touchTrigger(app.regie.input.Trigger.L2, it) },
                     onSelect = container::selectApproval)
             },
             overview = { overview, control ->
                 val mode by container.displays.mode.collectAsStateWithLifecycle()
-                OverviewTopScreen(overview, control, singleScreen = mode == ScreenMode.Single, callbacks = callbacks,
+                val scene by container.village.scene.collectAsStateWithLifecycle()
+                // Le hameau (ticket 45) : le coursier entre dans une maison, l'iris fermé ouvre la session.
+                val construction by container.village.construction.collectAsStateWithLifecycle()
+                app.regie.ui.game.GameOverviewTop(scene, overview, control, singleScreen = mode == ScreenMode.Single, construction = construction,
+                    setupLeft = setupLeft(overview), callbacks = carnetCallbacks, onEnterHouse = container::enterHouse,
                     scrollVelocity = container.controller.scrollVelocity)
             },
             session = { shown, overview ->
@@ -86,16 +92,17 @@ class TopActivity : GamepadActivity() {
                 val approval by container.inlineApproval.collectAsStateWithLifecycle()
                 val options by container.sessionSettings.collectAsStateWithLifecycle()
                 val dictation by container.dictation.state.collectAsStateWithLifecycle()
-                val panel: (@androidx.compose.runtime.Composable () -> Unit)? = if (options.visible) ({
-                    app.regie.ui.screens.SessionSettingsScreen(options, { container.handleInput(GamepadInput.Pressed(it)) }, container::selectSessionSetting, compact = true)
+                val single = mode == ScreenMode.Single
+                // La maison (ticket 46). Un seul écran : le fil reste, la dictée prend la place de la table, du champ et des touches.
+                val dictationPanel: (@androidx.compose.runtime.Composable () -> Unit)? = if (single && dictation.visible) ({
+                    app.regie.ui.game.GameDictation(dictation, overview.sessions.firstOrNull { it.id == dictation.target?.sessionId },
+                        { container.handleInput(GamepadInput.Pressed(it)) }, { container.touchTrigger(app.regie.input.Trigger.L2, it) },
+                        container::openVoiceSettings, dictationScroll, compact = true)
                 }) else null
-                // Un seul écran : la dictée prend le panneau du bas, le fil reste au-dessus.
-                val dictationPanel: (@androidx.compose.runtime.Composable () -> Unit)? = if (mode == ScreenMode.Single && dictation.visible) ({
-                    app.regie.ui.screens.DictationBottomScreen(dictation, { container.handleInput(GamepadInput.Pressed(it)) },
-                        { container.touchTrigger(app.regie.input.Trigger.L2, it) }, container::openVoiceSettings, compact = true,
-                        session = overview.sessions.firstOrNull { it.id == dictation.target?.sessionId }, transcript = dictationScroll)
-                }) else null
-                SessionTopScreen(live, gone = overview.neighboursOf(shown.id) == null, control, draft, singleScreen = mode == ScreenMode.Single, scroll = threadScroll, callbacks = sessionCallbacks, approval = approval, onDecision = container::answerInline, onNextApproval = container::nextInlineApproval, onDismissApproval = container::dismissInlineApproval, options = panel, dictation = dictationPanel, dictating = dictation.visible)
+                val neighbours = overview.neighboursOf(shown.id)
+                app.regie.ui.game.GameSessionTop(live, gone = neighbours == null, neighbours, control, draft, options, single, threadScroll, sessionCallbacks,
+                    approval, container::answerInline, container::dismissInlineApproval, container::selectSessionSetting,
+                    dictation, dictationPanel)
             },
         )
 
@@ -111,6 +118,7 @@ class TopActivity : GamepadActivity() {
 
     override fun onStart() {
         super.onStart()
+        backToTopScreen()
         container.topStarted.value = true
         // À chaque retour au premier plan : le pont a pu s'arrêter, la console redémarrer.
         if (!relaunched && !askingPermission) container.runStartUp()
@@ -125,6 +133,12 @@ class TopActivity : GamepadActivity() {
         if (checkSelfPermission(TermuxBridgeLauncher.PERMISSION) == PackageManager.PERMISSION_GRANTED) return
         askingPermission = true
         runCommandPermission.launch(TermuxBridgeLauncher.PERMISSION)
+    }
+
+    /** Android a déplacé l'activité sur un autre écran : la taille d'écran change, sans recréation. */
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        backToTopScreen()
     }
 
     override fun onStop() {
@@ -144,6 +158,22 @@ class TopActivity : GamepadActivity() {
     override fun onDestroy() {
         if (isFinishing && !relaunched) container.topAlive.value = false
         super.onDestroy()
+    }
+
+    /**
+     * Rouverte depuis le lanceur de l'écran du bas (Cocoon Shell), alors qu'elle vivait déjà : Android
+     * déplace la tâche `singleTask` sur l'écran du bas, derrière BottomActivity, sans recréer l'activité
+     * (elle gère elle-même `density` et `screenSize`). Le haut montrait alors l'accueil d'Android, la
+     * vue d'ensemble passait en mode console : pas de hameau, Start et B ne ramenaient à rien (ticket 54).
+     * Le déplacement arrive par [onConfigurationChanged] (la taille d'écran change) : elle demande à
+     * revenir sur le display par défaut, et Android l'y ramène sans la recréer. Sans changement de
+     * configuration en retour, pas de nouvelle demande : rien ne boucle si Android refusait.
+     */
+    private fun backToTopScreen() {
+        if (relaunched) return
+        val target = container.displays.topScreenTarget(display.displayId) ?: return
+        android.util.Log.i("Regie", "écran du haut ouvert sur le display ${display.displayId} : retour sur le display $target")
+        returnTopScreenTo(target)
     }
 
     /**
@@ -193,4 +223,15 @@ class TopActivity : GamepadActivity() {
         /** En debug : `--ez fake_gateway true` au premier lancement du processus branche la passerelle factice. */
         const val EXTRA_FAKE_GATEWAY = "fake_gateway"
     }
+}
+
+/**
+ * Ramène l'écran du haut, déjà vivant, sur [displayId] : Android y déplace sa tâche `singleTask` et lui
+ * remet l'intention, sans la recréer ni la fermer (ticket 54).
+ */
+internal fun android.app.Activity.returnTopScreenTo(displayId: Int) {
+    startActivity(
+        Intent(this, TopActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        ActivityOptions.makeBasic().setLaunchDisplayId(displayId).toBundle(),
+    )
 }

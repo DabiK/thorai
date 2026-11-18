@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Écran titre et menu principal</title>
+<link rel="stylesheet" href="../outils/thorai-pixel.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jersey+10&amp;family=Pixelify+Sans:wght@400;600;700&amp;family=VT323&amp;display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div class="thor t-aube" style="width: 1920px; height: 2200px;">
+  <div class="top">
+    <img class="px world" src="../assets/aube/titre.png" alt="Le hameau au lever du soleil, vu de loin">
+    <div style="position: absolute; left: 0; right: 0; top: 70px; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+      <span class="disp" style="font-size: 300px; color: #2D5354; text-shadow: 8px 0 0 #FBE6B2, -8px 0 0 #FBE6B2, 0 8px 0 #FBE6B2, 0 -8px 0 #FBE6B2, 8px 8px 0 #FBE6B2, -8px 8px 0 #FBE6B2, 8px -8px 0 #FBE6B2, -8px -8px 0 #FBE6B2, 0 16px 0 #1F583A;">ThorAI</span>
+    </div>
+    <div class="pbox" style="position: absolute; left: 50%; bottom: 72px; transform: translateX(-50%); padding: 14px 28px; display: flex; align-items: center; gap: 16px; font-size: 34px; animation: pulse 1.2s steps(1) infinite;">
+      <span class="k r">A</span>Commencer
+    </div>
+  </div>
+  <div class="hinge"></div>
+  <div class="bot">
+    <div class="screen">
+      <div class="head">
+        <h1>Menu</h1>
+        <span class="pill" style="background: #D9F0C4;"><span class="dot" style="color: #1A8657;"></span>Pont prêt</span>
+      </div>
+      <div class="body" style="padding-top: 8px;">
+        <div class="frame menu" style="margin: 10px;">
+          <div class="opt on"><span>Continuer</span><small>3 sessions · 1 validation</small></div>
+          <div class="opt"><span>Nouvelle session</span><small>Bâtir une maison</small></div>
+          <div class="opt"><span>Agents</span><small>2 connectés sur 3</small></div>
+          <div class="opt"><span>Réglages</span><small>Voix, manette, affichage</small></div>
+          <div class="opt"><span>Quitter</span><small>Arrête le pont et les sessions</small></div>
+        </div>
+        <p class="muted" style="margin: 8px 0 0; font-size: 24px; text-align: center;">Les sessions continuent quand tu quittes le jeu sans « Quitter ».</p>
+      </div>
+      <div class="hints">
+        <span class="hint"><span class="k r">A</span>Choisir</span>
+        <span class="hint"><span class="k">L2</span>Maintenir pour dicter</span>
+        <span class="hint"><span class="k">R2</span>Ordre vocal</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1920,"height":2200}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

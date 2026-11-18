@@ -85,7 +85,7 @@ class SetupInputTest {
         job.cancel()
     }
 
-    @Test fun `Configurer resumes at the first step not done and the end opens the new session form`() = runTest {
+    @Test fun `Préparer la console resumes at the first step not done and the end opens the new session form`() = runTest {
         val gateway = SetupGateway()
         val container = container(gateway)
         container.openSetup(); runCurrent()

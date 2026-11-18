@@ -3,20 +3,10 @@ package app.regie
 import android.os.Bundle
 import android.Manifest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.focus.onFocusChanged
 import app.regie.display.ScreenMode
-import app.regie.ui.components.tappable
-import app.regie.ui.screens.VoiceCommandScreen
-import app.regie.ui.screens.DictationTopScreen
-import app.regie.ui.screens.DictationBottomScreen
-import app.regie.ui.screens.VoiceSettingsScreen
-import app.regie.ui.theme.Palette
-import app.regie.ui.theme.sans
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -38,14 +28,15 @@ import app.regie.input.Trigger
 import app.regie.input.TriggerAxes
 import app.regie.overview.ControlState
 import app.regie.domain.model.Overview
+import app.regie.ui.game.carnet
 import app.regie.domain.model.SetupPermission
 import app.regie.session.Screen
 import app.regie.session.SessionNotice
-import app.regie.ui.screens.ControlCallbacks
-import app.regie.ui.screens.SessionCallbacks
-import app.regie.ui.screens.ThreadScroll
-import app.regie.ui.theme.RegieTheme
+import app.regie.ui.ControlCallbacks
+import app.regie.ui.SessionCallbacks
+import app.regie.ui.ThreadScroll
 import kotlinx.coroutines.launch
+import app.regie.game.ui.theme.GameTheme
 import kotlin.math.max
 
 /**
@@ -62,8 +53,6 @@ abstract class GamepadActivity : ComponentActivity() {
 
         override fun onTrigger(trigger: Trigger, held: Boolean) = container.touchTrigger(trigger, held)
 
-        override fun onOpenApproval() = container.controller.openPendingApproval()
-
         override fun onQuit() = container.controller.requestQuit()
 
         override fun onConfirmQuit() = container.controller.confirmQuit()
@@ -72,7 +61,6 @@ abstract class GamepadActivity : ComponentActivity() {
     }
 
     protected val sessionCallbacks = object : SessionCallbacks {
-        override fun onOverview() = container.openOverview()
         override fun onOptions() = container.openSessionSettings()
         override fun onSettingRow(row: String) = container.openSessionSettings(row)
         override fun onButton(button: Button) = container.handleInput(GamepadInput.Pressed(button))
@@ -84,6 +72,20 @@ abstract class GamepadActivity : ComponentActivity() {
         override fun onSend() = container.sessionController.send()
 
         override fun onNoticeSeen(notice: SessionNotice) = container.sessionController.dismissNotice(notice)
+
+        override fun onNextApproval() = container.nextInlineApproval()
+    }
+
+    /** Les rappels du carnet du hameau (ticket 45) : une ligne touchée y envoie le coursier. */
+    protected val carnetCallbacks by lazy {
+        callbacks.carnet(container::goToHouse, container::openSetup, container::openVoiceSettings)
+    }
+
+    /** Une étape facultative du parcours d'accueil reste à faire : un point la signale (ticket 30). */
+    @Composable
+    protected fun setupLeft(overview: Overview): Boolean {
+        val console by container.consoleService.collectAsStateWithLifecycle()
+        return (!console && !container.replaying) || overview.androidAccessMissing
     }
 
     protected val threadScroll by lazy {
@@ -109,7 +111,8 @@ abstract class GamepadActivity : ComponentActivity() {
         window.isNavigationBarContrastEnforced = false
         androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightNavigationBars = false
         androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = false
-        window.callback = GamepadWindowCallback(window.callback, container.inputRouter, container::releaseTouchDictation)
+        window.hideSystemBars()
+        window.callback = GamepadWindowCallback(window.callback, container.inputRouter, container::releaseTouchDictation, ::keyboardFirst)
         // « Quitter » est allé au bout : les deux écrans se ferment, même en arrière-plan.
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.CREATED) {
@@ -137,6 +140,39 @@ abstract class GamepadActivity : ComponentActivity() {
         container.gamepadFocus(this, isTopResumedActivity)
     }
 
+    /** Un champ de texte de l'écran a le focus (message de secours, clé, fiche) : le clavier est ouvert. */
+    private var textFocused = false
+    private var focusManager: androidx.compose.ui.focus.FocusManager? = null
+
+    /**
+     * Le clavier passe d'abord, comme pour le retour système (ticket 54). Après un message tapé, le
+     * champ gardait le focus : le clavier restait ouvert par-dessus le fil, et B quittait la maison
+     * sans avoir rendu le fil. Désormais, champ actif :
+     * - B ferme le clavier et rend l'écran (le fil), sans rien d'autre ; le B suivant fait « retour » ;
+     * - A garde son action (envoyer, valider la clé, lancer la fiche), puis ferme le clavier.
+     * Vrai si la touche est prise ici. Les autres touches suivent le routeur, comme avant.
+     */
+    private fun keyboardFirst(keyCode: Int, isDown: Boolean, route: () -> Boolean): Boolean {
+        if (!textFocused || !isDown) return route()
+        return when (keyCode) {
+            KeyEvent.KEYCODE_BUTTON_B -> { closeKeyboard(); true }
+            KeyEvent.KEYCODE_BUTTON_A -> route().also { closeKeyboard() }
+            else -> route()
+        }
+    }
+
+    private fun closeKeyboard() {
+        focusManager?.clearFocus(force = true)
+        textFocused = false
+        androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).hide(androidx.core.view.WindowInsetsCompat.Type.ime())
+    }
+
+    /** Un clavier, une autre appli ou une boîte système ont pu rendre les barres : on les recache au retour. */
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) window.hideSystemBars()
+    }
+
     override fun onDestroy() {
         container.gamepadFocus(this, false)
         super.onDestroy()
@@ -159,8 +195,11 @@ abstract class GamepadActivity : ComponentActivity() {
         approval: @Composable () -> Unit,
     ) {
         setContent {
-            RegieTheme {
-                Box(Modifier.fillMaxSize().background(Palette.background).safeDrawingPadding()) {
+            GameTheme {
+                // Les barres système sont cachées (plein écran, ticket 51) ; le clavier et une découpe gardent leur place.
+                focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+                // Un champ de texte a le focus quelque part dessous : le clavier passe d'abord (ticket 54).
+                Box(Modifier.fillMaxSize().safeDrawingPadding().onFocusChanged { textFocused = it.hasFocus }) {
                     val authentication by container.agentAuthentication.collectAsStateWithLifecycle()
                     val setup by container.setup.state.collectAsStateWithLifecycle()
                     val screen by container.screen.collectAsStateWithLifecycle()
@@ -168,49 +207,65 @@ abstract class GamepadActivity : ComponentActivity() {
                     val dictation by container.dictation.state.collectAsStateWithLifecycle()
                     val command by container.voiceCommand.state.collectAsStateWithLifecycle()
                     val newSession by container.newSession.collectAsStateWithLifecycle()
-                    val sessionSettings by container.sessionSettings.collectAsStateWithLifecycle()
                     val settingsOpen by container.settingsOpen.collectAsStateWithLifecycle()
                     val settings by container.voiceSettings.collectAsStateWithLifecycle()
                     val mode by container.displays.mode.collectAsStateWithLifecycle()
                     val controlsHere = this@GamepadActivity is BottomActivity || mode == ScreenMode.Single
                     val button: (Button) -> Unit = { container.handleInput(GamepadInput.Pressed(it)) }
                     val held: (Boolean) -> Unit = { container.touchTrigger(Trigger.L2, it) }
+                    val gameMenu by container.gameMenu.collectAsStateWithLifecycle()
+                    val assets = app.regie.game.ui.atlas.rememberGameAssets()
                     if (authentication.visible) {
-                        app.regie.ui.screens.AgentAuthenticationScreen(authentication, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single,
-                            container::selectAuthenticationAgent, button, container::refreshAuthentication, container::submitAuthenticationKey, { container.authenticationKeyAction = it })
+                        // Vue jeu (ticket 49) : la connexion des agents, dans le menu.
+                        app.regie.game.ui.menu.AgentsScreen(authentication, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single,
+                            gameMenu, current, assets, callbacks = app.regie.game.ui.menu.AgentsCallbacks(
+                                select = container::selectAuthenticationAgent, confirm = { button(Button.A) }, back = { button(Button.B) },
+                                refresh = container::refreshAuthentication, submitKey = container::submitAuthenticationKey,
+                                bindKeyAction = { container.authenticationKeyAction = it }))
                     } else if (setup.visible) {
-                        app.regie.ui.screens.SetupScreen(setup, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single, packageName, container.setup::press, container.setupVelocity)
-                    } else if (sessionSettings.visible && screen !is Screen.Session) {
-                        app.regie.ui.screens.SessionSettingsScreen(sessionSettings, button, container::selectSessionSetting)
+                        // Vue jeu (ticket 53) : le parcours d'accueil sur la route du hameau, mêmes étapes et mêmes gestes.
+                        app.regie.game.ui.setup.GameSetupScreen(setup, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single, packageName,
+                            assets, container.setup::press, scrollVelocity = container.setupVelocity)
                     } else if (settingsOpen && controlsHere) {
-                        VoiceSettingsScreen(settings, container::selectVoice, container::saveVoiceKey,
-                            { microphonePermission.launch(Manifest.permission.RECORD_AUDIO) }, container::closeVoiceSettings, container::saveCommandKey)
+                        app.regie.game.ui.menu.GameVoiceSettingsScreen(settings, callbacks = app.regie.game.ui.menu.VoiceSettingsCallbacks(
+                            container::selectVoice, container::saveVoiceKey, { microphonePermission.launch(Manifest.permission.RECORD_AUDIO) },
+                            container::closeVoiceSettings, container::saveCommandKey))
                     } else if (command.visible) {
-                        VoiceCommandScreen(command, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single,
-                            button, { container.touchTrigger(Trigger.R2, it) }, container::openVoiceSettings,
-                            ThreadScroll(container.commandScroll, container.commandVelocity))
+                        app.regie.game.ui.console.GameVoiceCommandScreen(command, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single, assets,
+                            scroll = app.regie.game.ui.console.CommandScroll(container.commandScroll, container.commandVelocity),
+                            callbacks = app.regie.game.ui.console.CommandCallbacks({ button(Button.A) }, { button(Button.B) },
+                                { container.touchTrigger(Trigger.R2, it) }, container::openVoiceSettings))
                     } else if (newSession.visible) {
-                        app.regie.ui.screens.NewSessionScreen(newSession, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single,
-                            button, held, container::selectNewSessionField, container::editNewInstruction, container::editNewBranch, container.newSessionVelocity, container::editNewProjectName)
+                        // Vue jeu (ticket 48) : la fiche en bas ; en haut, le coursier va au terrain et le chantier montre ses étapes.
+                        val build = app.regie.ui.game.buildCallbacks(button, held, container::selectNewSessionField,
+                            container::editNewInstruction, container::editNewBranch, container::editNewProjectName)
+                        if (this@GamepadActivity is BottomActivity || mode == ScreenMode.Single) {
+                            app.regie.ui.game.GameNewSessionBottom(newSession, build, compact = mode == ScreenMode.Single,
+                                scrollVelocity = container.newSessionVelocity)
+                        } else {
+                            val scene by container.village.scene.collectAsStateWithLifecycle()
+                            val construction by container.village.construction.collectAsStateWithLifecycle()
+                            app.regie.ui.game.GameNewSessionTop(scene, construction, container::enterHouse)
+                        }
                     } else if (dictation.visible && this@GamepadActivity is BottomActivity) {
                         // Deux écrans : la dictée et sa transcription en direct sont en bas ; le haut ne change pas.
-                        DictationBottomScreen(dictation, button, held, container::openVoiceSettings,
-                            session = current.sessions.firstOrNull { it.id == dictation.target?.sessionId }, transcript = dictationScroll)
+                        app.regie.ui.game.GameDictation(dictation, current.sessions.firstOrNull { it.id == dictation.target?.sessionId },
+                            button, held, container::openVoiceSettings, dictationScroll)
                     } else if (dictation.visible && mode == ScreenMode.Single && screen !is Screen.Session) {
                         // Un seul écran, hors session : la dictée occupe l'écran. Dans une session, le fil reste.
-                        DictationTopScreen(dictation, current.sessions.firstOrNull { it.id == dictation.target?.sessionId }, true, button, held, container::openVoiceSettings, dictationScroll)
+                        app.regie.ui.game.GameDictation(dictation, current.sessions.firstOrNull { it.id == dictation.target?.sessionId },
+                            button, held, container::openVoiceSettings, dictationScroll)
+                    } else if (gameMenu.open && screen == Screen.Overview) {
+                        // Vue jeu (ticket 49) : l'écran titre au lancement, le menu de pause avec Start.
+                        GameMenuScreen(gameMenu, current, assets, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single)
                     } else Column(Modifier.fillMaxSize()) {
-                        // Sur l'accueil seulement : la session règle la voix depuis sa dictée, le diff aussi.
-                        if (controlsHere && screen == Screen.Overview) {
-                            val console by container.consoleService.collectAsStateWithLifecycle()
-                            app.regie.ui.screens.OverviewShortcuts(setupLeft = (!console && !container.replaying) || current.androidAccessMissing,
-                                onAgents = container::openAgentAuthentication, onSetup = container::openSetup, onVoice = container::openVoiceSettings)
-                        }
+                        // Sur le hameau, les raccourcis (agents, parcours d'accueil, voix) sont dans le carnet (ticket 45).
                         Box(Modifier.weight(1f)) {
                     when (val shown = screen) {
                         is Screen.Diff -> {
                             val review by container.diffReview.collectAsStateWithLifecycle()
-                            app.regie.ui.screens.DiffScreen(review, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single,
+                            // Le tableau de liège et son carnet (ticket 47).
+                            app.regie.ui.game.GameDiff(review, current, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single,
                                 container.diffVelocity, button, container::selectDiffFile, held, container.diffSteps)
                         }
                         Screen.Approval -> approval()
@@ -222,6 +277,15 @@ abstract class GamepadActivity : ComponentActivity() {
                     }
                         }
                     }
+                    // L'oiseau messager (ticket 49) : en haut, quand une lettre arrive au courrier.
+                    if (this@GamepadActivity !is BottomActivity) {
+                        val mail by container.courier.collectAsStateWithLifecycle()
+                        Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.TopCenter) {
+                            app.regie.game.ui.courier.CourierToast(mail.latest, { kotlin.time.Clock.System.now() }, assets,
+                                action = app.regie.game.ui.kit.KeyHintSpec("R1", androidx.compose.ui.res.stringResource(R.string.banner_see))
+                                    .takeIf { screen == Screen.Overview && !gameMenu.open })
+                        }
+                    }
                 }
             }
         }
@@ -231,6 +295,60 @@ abstract class GamepadActivity : ComponentActivity() {
             isFocusableInTouchMode = true
             requestFocus()
         }
+    }
+
+    /**
+     * Le menu du jeu sur le hameau (ticket 49) : l'écran titre et son menu principal, ou le menu de
+     * pause. Sur deux écrans, le haut montre le décor et le bas les choix ; sur un seul, tout est en haut.
+     */
+    @Composable
+    private fun GameMenuScreen(
+        menu: app.regie.game.engine.menu.GameMenu,
+        overview: Overview,
+        assets: app.regie.game.ui.atlas.GameAssets,
+        bottom: Boolean,
+        single: Boolean,
+    ) {
+        val control by container.controller.state.collectAsStateWithLifecycle()
+        val mail by container.courier.collectAsStateWithLifecycle()
+        val voice by container.voiceSettings.collectAsStateWithLifecycle()
+        // « Préparer la console » signale une étape facultative restante, comme le carnet (ticket 30).
+        val optionalLeft = setupLeft(overview)
+        val quit = when (val step = control.quit) {
+            is app.regie.overview.QuitStep.Confirm -> app.regie.game.ui.menu.QuitPrompt(step.busy)
+            app.regie.overview.QuitStep.Stopping -> app.regie.game.ui.menu.QuitPrompt(0, stopping = true)
+            null -> null
+        }
+        val callbacks = app.regie.game.ui.menu.MenuCallbacks(
+            onChoose = container::chooseMenuEntry,
+            onClose = { container.pressMenu(app.regie.game.engine.menu.MenuKey.B) },
+            onConfirmQuit = container.controller::confirmQuit,
+            onCancelQuit = container.controller::cancelQuit,
+            onOpenLetter = container::openCourierLetter,
+            onMarkAllRead = { container.pressMenu(app.regie.game.engine.menu.MenuKey.X) },
+            onLeaveCourier = { container.pressMenu(app.regie.game.engine.menu.MenuKey.B) },
+        )
+        val now = kotlin.time.Clock.System.now()
+        when {
+            menu.kind == app.regie.game.engine.menu.MenuKind.TITLE && bottom ->
+                app.regie.game.ui.menu.MainMenuScreen(menu, overview, quit = quit, callbacks = callbacks)
+            menu.kind == app.regie.game.engine.menu.MenuKind.TITLE ->
+                app.regie.game.ui.menu.TitleTopScreen(menu, overview, assets, single, quit = quit, callbacks = callbacks)
+            bottom -> app.regie.game.ui.menu.PauseMenuBottom(menu, overview, mail, now, assets, quit = quit, callbacks = callbacks, setupLeft = optionalLeft)
+            else -> app.regie.game.ui.menu.PauseMenuTop(menu, overview, mail, voice, now, assets, single, quit = quit, callbacks = callbacks, setupLeft = optionalLeft)
+        }
+    }
+}
+
+/**
+ * Plein écran, comme un jeu (ticket 51) : la barre d'état et la barre de navigation sont cachées sur
+ * l'écran de la fenêtre. Un glissement depuis le bord les montre un instant, par-dessus le jeu, sans le
+ * déplacer ; elles se recachent seules. Le clavier n'est pas une barre système : il s'ouvre comme avant.
+ */
+internal fun Window.hideSystemBars() {
+    androidx.core.view.WindowCompat.getInsetsController(this, decorView).apply {
+        systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
     }
 }
 
@@ -249,6 +367,8 @@ private class GamepadWindowCallback(
     private val wrapped: Window.Callback,
     private val router: InputRouter,
     private val touchEnd: () -> Unit,
+    /** Le clavier ouvert prend B et ferme après A ; sinon il appelle le routage. */
+    private val keyboardFirst: (keyCode: Int, isDown: Boolean, route: () -> Boolean) -> Boolean,
 ) : Window.Callback by wrapped {
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
@@ -263,7 +383,10 @@ private class GamepadWindowCallback(
             KeyEvent.ACTION_UP -> false
             else -> return wrapped.dispatchKeyEvent(event)
         }
-        return router.onKey(event.keyCode, isDown, event.repeatCount) || wrapped.dispatchKeyEvent(event)
+        val fallback = (event.flags and KeyEvent.FLAG_FALLBACK) != 0
+        val repeated = event.repeatCount > 0
+        return keyboardFirst(event.keyCode, isDown && !repeated) { router.onKey(event.keyCode, isDown, event.repeatCount, fallback) } ||
+            wrapped.dispatchKeyEvent(event)
     }
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
@@ -273,6 +396,10 @@ private class GamepadWindowCallback(
                     leftTrigger = max(event.getAxisValue(MotionEvent.AXIS_LTRIGGER), event.getAxisValue(MotionEvent.AXIS_BRAKE)),
                     rightTrigger = max(event.getAxisValue(MotionEvent.AXIS_RTRIGGER), event.getAxisValue(MotionEvent.AXIS_GAS)),
                     rightStickY = event.getAxisValue(MotionEvent.AXIS_RZ),
+                    leftStickX = event.getAxisValue(MotionEvent.AXIS_X),
+                    leftStickY = event.getAxisValue(MotionEvent.AXIS_Y),
+                    hatX = event.getAxisValue(MotionEvent.AXIS_HAT_X),
+                    hatY = event.getAxisValue(MotionEvent.AXIS_HAT_Y),
                 ),
             )
         }

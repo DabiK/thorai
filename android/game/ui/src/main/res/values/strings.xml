@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Étiquettes d'état d'une maison (docs/rebrand/da-jeu.md). -->
+    <string name="game_state_working">Au travail</string>
+    <string name="game_state_waiting">Attend ta validation</string>
+    <string name="game_state_idle">Au repos</string>
+    <string name="game_state_failed">Échec</string>
+</resources>

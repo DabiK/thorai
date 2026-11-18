@@ -1,0 +1,9 @@
+WHAT TO DRAW
+A character sprite sheet in the exact same pixel art style, pixel scale, palette and outline colour as the attached village, on a perfectly flat, solid, pure magenta #FF00FF background (no shadow, no gradient, no ground, nothing else on the background).
+Top row, four characters evenly spaced with lots of magenta space between them, each about 40 art pixels tall, front-facing, full body:
+(1) the player: a young courier with a short red-orange scarf, a leather satchel, cream shirt, brown boots;
+(2) the scribe agent: round-faced, big round glasses, terracotta-orange hooded tunic, holding a quill;
+(3) the tinkerer agent: small, brass goggles on the forehead, slate grey-blue apron with tools, holding a tiny wrench;
+(4) the cartographer agent: moss-green hooded cloak, holding a rolled map and a small lantern.
+Bottom row, the same three agents (not the player) in an active "working" pose, aligned under their idle versions: the scribe writing in the air with small sparkles, the tinkerer hammering with sparks, the cartographer unrolling a map.
+Characters never touch or overlap each other. No text, labels, numbers, logos or watermark.

@@ -54,6 +54,9 @@ android {
 
     testOptions {
         unitTests.isIncludeAndroidResources = true
+        // Captures Robolectric des écrans du jeu (ticket 49) : `-PgameCaptures=<dossier>`, sinon rien n'est écrit.
+        val captures = providers.gradleProperty("gameCaptures").orNull
+        unitTests.all { test -> captures?.let { test.systemProperty("game.captures", it) } }
     }
 
     lint {
@@ -80,6 +83,8 @@ dependencies {
     implementation(libs.voice.local)
     implementation(libs.voice.elevenlabs)
     implementation(project(":gateway-bridge"))
+    // La vue jeu (ticket 41) : rendu pixel et kit, pas encore branchés sur les écrans.
+    implementation(project(":game-ui"))
     // Les enregistrements rejoués par la passerelle factice, qui n'est choisissable qu'en debug.
     debugImplementation(project(":bridge-fixtures"))
 

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Le hameau, vue d'ensemble (ticket 45, maquette 03). -->
+    <string name="hameau_title">Hameau</string>
+    <string name="hameau_state_stopped">Arrêtée</string>
+    <string name="hameau_go">Y aller</string>
+    <string name="hameau_enter">Entrer</string>
+    <string name="hameau_build">Bâtir</string>
+    <string name="hameau_console">Console</string>
+    <string name="hameau_agents">Agents</string>
+    <string name="hameau_see">Voir</string>
+    <string name="hameau_dictate">Dicter</string>
+    <string name="hameau_order">Donner un ordre</string>
+    <string name="hameau_change_house">Changer de maison</string>
+    <string name="hameau_setup">Préparer la console</string>
+    <string name="hameau_voice_settings">Régler la voix</string>
+    <string name="hameau_quit">Quitter</string>
+    <string name="hameau_empty">Aucune session. Bâtis-en une avec X.</string>
+</resources>

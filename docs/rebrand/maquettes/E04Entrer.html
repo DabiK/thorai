@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Entrer dans une maison</title>
+<link rel="stylesheet" href="../outils/thorai-pixel.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jersey+10&amp;family=Pixelify+Sans:wght@400;600;700&amp;family=VT323&amp;display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div class="thor t-aube" style="width: 1920px; height: 2200px;">
+  <div class="top">
+    <img class="px world" src="../assets/aube/hameau.png" alt="La porte de la maison de la session regie">
+    <div class="iris" style="background: radial-gradient(circle at 620px 430px, transparent 0 300px, #12201F 300px);"></div>
+    <div class="pbox" style="position: absolute; left: 620px; top: 250px; transform: translateX(-50%); padding: 10px 18px; display: flex; align-items: center; gap: 12px; font-size: 32px; z-index: 3;"><span class="k r">A</span>Entrer</div>
+    <div class="frame dialog" style="left: 900px; right: 80px; bottom: 80px; z-index: 3;">
+      <span class="nameplate" style="background: #2D5354;">Panneau</span>
+      regie — tri des sessions. Le scribe y travaille depuis 4 min.
+      <span class="next"></span>
+    </div>
+  </div>
+  <div class="hinge"></div>
+  <div class="bot">
+    <div class="screen">
+      <div class="head">
+        <h1>regie</h1>
+        <span class="tag work"><span class="dots"><i></i><i></i><i></i></span>Au travail</span>
+      </div>
+      <div class="body" style="padding-top: 8px;">
+        <div class="frame" style="margin: 10px; padding: 28px 32px; display: flex; gap: 32px;">
+          <div class="portrait" style="width: 160px; height: 200px; align-items: flex-start; background: #F1DBB3;"><img class="px" src="../assets/aube/scribe.png" alt="Le scribe, agent Claude" style="width: 192px; height: 304px;"></div>
+          <div style="flex: 1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 28px; align-content: start;">
+            <div class="setting" style="padding: 0;"><span class="l">Session</span><span class="v">tri des sessions</span></div>
+            <div class="setting" style="padding: 0;"><span class="l">Agent</span><span class="v">Claude · Opus 5.5</span></div>
+            <div class="setting" style="padding: 0;"><span class="l">Branche</span><span class="v code" style="font-size: 34px;">ticket/22-tri</span></div>
+            <div class="setting" style="padding: 0;"><span class="l">Étape</span><span class="v">3 sur 5</span></div>
+            <div class="setting" style="padding: 0;"><span class="l">Dernière action</span><span class="v">Modification · Overview.kt</span></div>
+            <div class="setting" style="padding: 0;"><span class="l">Mode</span><span class="v">Je valide chaque action</span></div>
+          </div>
+        </div>
+        <div class="pbox" style="margin: 4px; padding: 20px 26px; font-size: 30px; line-height: 1.3;"><span class="lab muted" style="display: block; font-size: 22px; margin-bottom: 6px;">Dernière réplique</span>La liste vient d'Overview. J'ajoute un tri sur updatedAt, puis un test.</div>
+      </div>
+      <div class="hints">
+        <span class="hint"><span class="k r">A</span>Entrer</span>
+        <span class="hint"><span class="k r">B</span>Rester dehors</span>
+        <span class="hint"><span class="k">L1</span><span class="k">R1</span>Autre maison</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1920,"height":2200}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

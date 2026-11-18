@@ -1,0 +1,17 @@
+Image jointe à Codex (-i) : photo de référence de la console fournie par l’utilisateur, non versée.
+Généré avec codex exec, outil image_gen. Les écrans verts reçoivent ensuite les captures du jeu (docs/images/jeu/thor-hameau.png).
+
+Use your built-in image generation tool to create ONE image, then save it as a PNG file named thor-5.png in the current working directory. Do not write any code to draw the picture (no SVG, no Python drawing, no canvas): the picture must come from the image generation tool. Do not read, create or modify anything outside the current working directory, apart from copying the generated image into it. When done, confirm the file path.
+Image size: landscape, 1536 x 1024.
+
+ATTACHED IMAGE: a reference photo of the real console, the AYN Thor. Create a realistic product photograph of a console that closely resembles it: same shapes, same proportions, same layout of the controls, same translucent purple plastic. Do not copy the reference photo itself: new setting, new light, new camera angle.
+
+The console, as in the reference:
+- Clamshell dual-screen handheld, opened. Thin lid in translucent purple plastic around a large 16:9 upper screen. A two-part hinge in translucent purple.
+- Flat, slim lower half in translucent purple plastic, wider than tall, with an almost square screen (ratio about 1.15:1) in the centre.
+- Left of the lower screen: a small analog stick near the top corner and a black D-pad below it. Right of the lower screen: the four black face buttons Y, X, B, A in a diamond near the top and a second analog stick below them. Black stick caps with soft lilac rings. A few small round black buttons (Start, Select, Home) around the lower screen.
+
+The two screens are switched on and show ONE flat, uniform, pure chroma key green (#00FF00) each, edge to edge inside the screen area: no interface, no text, no icons, no reflection, no glare, no gradient on the glass. The green must stop exactly at the screen edges, with the bezels clearly visible around it.
+
+Camera: seen from the front and above (about 40 degrees), lid opened to about 130 degrees, both screens clearly visible and nearly facing the camera. Both screens fully visible and unobstructed, the whole console in frame, centred, with some space around it.
+Setting: the console rests on a light oak wooden desk. Soft warm morning light from a window on the left, gentle shadows, shallow depth of field: the console is sharp, the background (a blurred plant, a mug, a notebook) is softly out of focus. Calm, premium, natural. No people, no hands, no text and no logo anywhere in the image.

@@ -1,0 +1,7 @@
+WHAT TO DRAW
+The inside of the hamlet's control tower, in the same game, same pixel scale, palette, outline colour and top-down oblique RPG view as the attached image. A round stone room with wooden beams, sunlight from two narrow windows.
+On the back wall, a very large framed magic mirror that glows softly with a pale turquoise light and shows only abstract rectangles and lines (like the shapes of an app screen, with no readable text).
+In front of it, a big wooden and brass control desk with levers, dials, buttons, a crank and a few cables going to the mirror. The scribe (round face, big round glasses, terracotta-orange hooded tunic) stands at the desk, pulling a lever, focused.
+Around: a spiral staircase going down in one corner, a map of the hamlet pinned on the wall, a stool, a bucket of tools, a potted plant.
+Keep all important content inside the central part of the image: about 8% on every side will be cropped.
+No text, letters, numbers, logos, UI, speech bubbles or watermark anywhere.

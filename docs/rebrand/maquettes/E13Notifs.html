@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Notifications</title>
+<link rel="stylesheet" href="../outils/thorai-pixel.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jersey+10&amp;family=Pixelify+Sans:wght@400;600;700&amp;family=VT323&amp;display=swap">
+<style>body{margin:0}.ic{width:88px;height:88px;flex:none;display:flex;align-items:center;justify-content:center;background:#F1DBB3}.nt{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}.nt b{font-size:32px;font-weight:600}.nt span{font-size:26px;color:#5E6B5F;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.new{width:16px;height:16px;flex:none;background:#C2412D}</style>
+</helmet>
+<div class="thor t-aube" style="width: 1920px; height: 2200px;">
+  <div class="top">
+    <img class="px world" src="../assets/aube/hameau.png" alt="Un oiseau messager arrive au hameau">
+    <img class="px" src="../assets/aube/oiseau1.png" alt="L'oiseau messager" style="position: absolute; left: 1120px; top: 330px; width: 200px; height: 208px; z-index: 3;">
+    <div class="frame toast" style="--line: #C98A1E; background: #FFF1D0; gap: 26px;">
+      <img class="px" src="../assets/aube/lettre.png" alt="" style="width: 160px; height: 104px;">
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 40px; font-weight: 600;">La cartographe attend ta validation</span>
+        <span class="muted" style="font-size: 28px;">api-meteo · migration</span>
+      </div>
+      <span class="hint" style="font-size: 28px;"><span class="k">R1</span>Voir</span>
+    </div>
+  </div>
+  <div class="hinge"></div>
+  <div class="bot">
+    <div class="screen">
+      <div class="head">
+        <h1>Courrier</h1>
+        <span class="muted" style="font-size: 28px;">2 non lus</span>
+      </div>
+      <div class="body" style="padding-top: 6px; gap: 16px;">
+        <div class="pbox row focus" style="margin: 4px; padding: 12px 20px;"><span class="cursor"></span><span class="new"></span>
+          <div class="ic" style="background: #F5B53D;"><img class="px" src="../assets/aube/cloche.png" alt="" style="width: 52px; height: 82px;"></div>
+          <div class="nt"><b>Validation demandée</b><span>api-meteo · npm run db:migrate</span></div>
+          <span class="muted" style="font-size: 24px;">1 min</span>
+        </div>
+        <div class="pbox row" style="margin: 4px; padding: 12px 20px;"><span class="new"></span>
+          <div class="ic"><img class="px" src="../assets/aube/lettre.png" alt="" style="width: 80px; height: 52px;"></div>
+          <div class="nt"><b>Question de Claude</b><span>« Je mets aussi les sessions en pause en bas ? »</span></div>
+          <span class="muted" style="font-size: 24px;">5 min</span>
+        </div>
+        <div class="pbox row" style="margin: 4px; padding: 12px 20px;"><span style="width: 16px; flex: none;"></span>
+          <div class="ic"><img class="px" src="../assets/aube/rouleau.png" alt="" style="width: 86px; height: 76px;"></div>
+          <div class="nt"><b>Session terminée · site-perso</b><span>« La refonte est prête, tous les tests passent. »</span></div>
+          <span class="muted" style="font-size: 24px;">2 h</span>
+        </div>
+        <div class="pbox row" style="margin: 4px; padding: 12px 20px;"><span style="width: 16px; flex: none;"></span>
+          <div class="ic" style="background: #F6D5C8;"><img class="px" src="../assets/aube/parchemin.png" alt="" style="width: 63px; height: 58px;"></div>
+          <div class="nt"><b style="color: #C2412D;">Échec · regie onboarding</b><span>La commande npm test a échoué.</span></div>
+          <span class="muted" style="font-size: 24px;">3 h</span>
+        </div>
+      </div>
+      <div class="hints">
+        <span class="hint"><span class="k r">A</span>Ouvrir</span>
+        <span class="hint"><span class="k r">X</span>Tout marquer lu</span>
+        <span class="hint"><span class="k r">B</span>Fermer</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1920,"height":2200}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

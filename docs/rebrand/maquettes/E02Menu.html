@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Menu : agents et réglages</title>
+<link rel="stylesheet" href="../outils/thorai-pixel.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jersey+10&amp;family=Pixelify+Sans:wght@400;600;700&amp;family=VT323&amp;display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div class="thor t-aube" style="width: 1920px; height: 2200px;">
+  <div class="top">
+    <img class="px world" src="../assets/aube/hameau.png" alt="">
+    <div class="scrim"></div>
+    <div class="frame menu" style="position: absolute; left: 72px; top: 72px; width: 440px; box-sizing: border-box;">
+      <span class="disp" style="font-size: 56px; padding: 0 0 12px 16px;">Menu</span>
+      <div class="opt"><span>Carnet</span></div>
+      <div class="opt on"><span>Agents</span></div>
+      <div class="opt"><span>Voix</span></div>
+      <div class="opt"><span>Manette</span></div>
+      <div class="opt"><span>Affichage</span></div>
+      <div class="opt"><span>Quitter</span></div>
+    </div>
+    <div class="frame" style="position: absolute; left: 572px; top: 72px; width: 1276px; height: 936px; box-sizing: border-box; padding: 32px 40px; display: flex; flex-direction: column; gap: 18px;">
+      <span class="disp" style="font-size: 64px;">Agents</span>
+      <div class="pbox row" style="margin: 4px; padding: 10px 20px;">
+        <div class="portrait" style="width: 96px; height: 96px; align-items: flex-start;"><img class="px" src="../assets/aube/scribe.png" alt="" style="width: 192px; height: 304px;"></div>
+        <div class="who"><span class="name">Claude</span><span class="proj">le scribe</span></div>
+        <span class="tag work">Connecté</span>
+      </div>
+      <div class="pbox row focus" style="margin: 4px; padding: 10px 20px;">
+        <span class="cursor"></span>
+        <div class="portrait" style="width: 96px; height: 96px; align-items: flex-start;"><img class="px" src="../assets/aube/bricoleur.png" alt="" style="width: 176px; height: 308px;"></div>
+        <div class="who"><span class="name">Codex</span><span class="proj">le bricoleur</span></div>
+        <span class="tag wait">Non connecté</span>
+      </div>
+      <div class="pbox row" style="margin: 4px; padding: 10px 20px;">
+        <div class="portrait" style="width: 96px; height: 96px; align-items: flex-start;"><img class="px" src="../assets/aube/cartographe.png" alt="" style="width: 212px; height: 304px;"></div>
+        <div class="who"><span class="name">opencode</span><span class="proj">la cartographe</span></div>
+        <span class="tag work">Connecté</span>
+      </div>
+      <span class="lab muted" style="font-size: 26px; margin-top: 10px;">Par défaut pour Codex</span>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px;">
+        <div class="pbox field" style="margin: 4px; flex-direction: column; align-items: flex-start; gap: 6px;"><span class="l">Modèle</span><span class="v">gpt-5.5</span></div>
+        <div class="pbox field" style="margin: 4px; flex-direction: column; align-items: flex-start; gap: 6px;"><span class="l">Réflexion</span><span class="v">Moyenne</span></div>
+        <div class="pbox field" style="margin: 4px; flex-direction: column; align-items: flex-start; gap: 6px;"><span class="l">Mode</span><span class="v">Je valide chaque action</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="hinge"></div>
+  <div class="bot">
+    <div class="screen">
+      <div class="head">
+        <h1>Connecter Codex</h1>
+      </div>
+      <div class="body" style="padding-top: 8px;">
+        <div class="frame" style="margin: 10px; padding: 36px; display: flex; gap: 44px; align-items: center;">
+          <div class="qr"><i style="left: 0; top: 0;"></i><i style="right: 0; top: 0;"></i><i style="left: 0; bottom: 0;"></i><b></b></div>
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 24px;">
+            <div style="display: flex; gap: 16px; align-items: flex-start;"><span class="stepnum">1</span><span style="font-size: 30px; line-height: 1.25;">Scanne le code ou ouvre l'adresse donnée par Codex.</span></div>
+            <div style="display: flex; gap: 16px; align-items: flex-start;"><span class="stepnum">2</span><div style="display: flex; flex-direction: column; gap: 6px;"><span style="font-size: 30px;">Saisis ce code :</span><span class="code" style="font-size: 72px; line-height: 1; letter-spacing: 4px;">WXYZ-1234</span></div></div>
+            <div style="display: flex; gap: 16px; align-items: flex-start;"><span class="stepnum">3</span><span style="font-size: 30px;">Reviens ici, tout se met à jour.</span></div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 14px; font-size: 28px; color: #5E6B5F; padding-left: 12px;"><span class="dots" style="color: #1A8657;"><i></i><i></i><i></i></span>En attente de Codex</div>
+      </div>
+      <div class="hints">
+        <span class="hint"><span class="k r">X</span>Nouveau code</span>
+        <span class="hint"><span class="k r">B</span>Revenir</span>
+        <span class="hint"><span class="k">Start</span>Fermer le menu</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1920,"height":2200}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

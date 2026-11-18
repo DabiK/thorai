@@ -1,0 +1,20 @@
+{
+ "pixel": 1,
+ "frames": {
+  "maison.atelier": {"x": 180, "y": 1, "w": 115, "h": 106, "ax": 58, "ay": 105},
+  "maison.boutique": {"x": 296, "y": 1, "w": 118, "h": 103, "ax": 59, "ay": 102},
+  "maison.cabane": {"x": 415, "y": 1, "w": 76, "h": 86, "ax": 38, "ay": 85},
+  "maison.chaumiere": {"x": 1, "y": 139, "w": 88, "h": 85, "ax": 44, "ay": 84},
+  "maison.etage": {"x": 72, "y": 1, "w": 107, "h": 136, "ax": 53, "ay": 135},
+  "maison.tour": {"x": 1, "y": 1, "w": 70, "h": 137, "ax": 35, "ay": 136}
+ },
+ "anims": {},
+ "objects": {
+  "maison.atelier": {"frame": "maison.atelier", "footprint": {"w": 7, "h": 4}, "door": {"tx": 2, "ty": 3}, "roofKeys": ["#3C78FF", "#1E50D2", "#0F2D96"], "chimney": {"x": 43, "y": 2}, "windows": [{"x": 80, "y": 67, "w": 12, "h": 11}]},
+  "maison.boutique": {"frame": "maison.boutique", "footprint": {"w": 7, "h": 4}, "door": {"tx": 5, "ty": 3}, "roofKeys": ["#3C78FF", "#1E50D2", "#0F2D96"], "chimney": {"x": 81, "y": 3}, "windows": [{"x": 76, "y": 66, "w": 10, "h": 9}, {"x": 17, "y": 63, "w": 45, "h": 20}]},
+  "maison.cabane": {"frame": "maison.cabane", "footprint": {"w": 5, "h": 4}, "door": {"tx": 2, "ty": 3}, "roofKeys": ["#3C78FF", "#1E50D2", "#0F2D96"], "chimney": {"x": 54, "y": 2}, "windows": [{"x": 29, "y": 31, "w": 14, "h": 13}, {"x": 15, "y": 57, "w": 4, "h": 9}]},
+  "maison.chaumiere": {"frame": "maison.chaumiere", "footprint": {"w": 6, "h": 4}, "door": {"tx": 3, "ty": 3}, "roofKeys": ["#3C78FF", "#1E50D2", "#0F2D96"], "chimney": {"x": 22, "y": 2}, "windows": [{"x": 18, "y": 48, "w": 11, "h": 11}, {"x": 65, "y": 48, "w": 11, "h": 11}, {"x": 44, "y": 51, "w": 8, "h": 7}]},
+  "maison.etage": {"frame": "maison.etage", "footprint": {"w": 7, "h": 5}, "door": {"tx": 3, "ty": 4}, "roofKeys": ["#3C78FF", "#1E50D2", "#0F2D96"], "chimney": {"x": 25, "y": 3}, "windows": [{"x": 23, "y": 53, "w": 15, "h": 15}, {"x": 74, "y": 53, "w": 11, "h": 13}, {"x": 49, "y": 55, "w": 12, "h": 7}, {"x": 23, "y": 94, "w": 12, "h": 14}, {"x": 74, "y": 94, "w": 12, "h": 14}, {"x": 52, "y": 93, "w": 6, "h": 4}]},
+  "maison.tour": {"frame": "maison.tour", "footprint": {"w": 5, "h": 4}, "door": {"tx": 2, "ty": 3}, "roofKeys": ["#3C78FF", "#1E50D2", "#0F2D96"], "chimney": {"x": 57, "y": 9}, "windows": [{"x": 20, "y": 62, "w": 9, "h": 12}, {"x": 45, "y": 75, "w": 8, "h": 11}]}
+ }
+}

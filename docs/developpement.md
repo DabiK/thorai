@@ -6,6 +6,7 @@ Cette page s’adresse à qui veut modifier ThorAI. Pour l’installer, voir la 
 
 ```
 android/   l’app Android (Kotlin, Jetpack Compose) : domaine, passerelle vers le pont, interface
+android/game/ la vue jeu (ADR 24) : moteur du hameau en Kotlin pur, écrans pixel en Compose
 voice/     la voix, dans un build Gradle séparé, inclus par android/ en composite build
 bridge/    le pont Node/TypeScript qui tourne dans la Debian et pilote Claude Code et Codex
 thor/      les scripts poussés sur la console : pont, accès des agents à Android
@@ -21,6 +22,7 @@ L’app suit une architecture hexagonale.
 - `android/domain`, en Kotlin pur, porte les décisions de l’app : le modèle (`Session`, `Agent`, `Approval`, `Overview`), les ports et les cas d’usage.
 - `voice/api` définit les ports de la voix : transcription en flux, synthèse, détection de parole, termes à favoriser. Les fournisseurs (local, ElevenLabs, factice) vivent dans `voice/`.
 - Les adapters traduisent le réseau et les accès Android ; un adapter n’en importe pas un autre. `android/app` est la seule racine de composition.
+- L’interface est celle du jeu (`android/game/ui`, ADR 24) : `android/app` ne fait que brancher l’état et les rappels existants sur ses écrans (`ui/game/`). Il n’y a plus d’écran classique depuis le ticket 51.
 - `bridge/src/domain` décide du cycle des sessions et des validations, derrière des ports ACP, fichiers, horloge et shell.
 
 Le [protocole du pont](protocole-pont.md) décrit le contrat WebSocket entre l’app et le pont. Les [ADR](adr/README.md) expliquent chaque choix, et le [PRD](PRD.md) fixe le produit.
@@ -74,6 +76,17 @@ scripts/thor-shot.sh artifacts/screenshots/<ticket>
 ```
 
 `thor-install.sh` construit et installe `app.thorai` seulement, puis l’ouvre. En debug, `--es setup_step VOICE` (ou une autre étape de `SetupStep`) ouvre le parcours d’accueil sur cette étape, pour la capturer sans accorder de permission à la place de l’utilisateur. `thor-shot.sh` capture les deux écrans. Après un changement du pont : `thor/bridge/install.sh`. La [fiche de la console](thor.md) donne les écrans, la manette et l’environnement Termux.
+
+## Captures des écrans du jeu
+
+Les écrans du jeu se capturent sans console, par Robolectric (graphismes natifs, vrais atlas, tailles des deux écrans de la Thor). Sans propriété, les tests n’écrivent rien ; avec `-PgameCaptures`, ils rangent leurs images dans le dossier donné :
+
+```sh
+cd android
+./gradlew :game-ui:testDebugUnitTest --tests 'app.regie.game.ui.FinalScreensTest' --rerun -PgameCaptures=$PWD/../docs/images/jeu
+```
+
+`FinalScreensTest` donne les écrans finals (`docs/images/jeu/51-*.png` : titre, hameau, maison, validation, modifications, bâtir, menu de pause, courrier, console) ; les autres captures `4N-*.png` viennent des tests de chaque lot. Les deux activités sont en plein écran : comme sur la Thor, les captures ne montrent aucune barre système.
 
 ## Façon de travailler
 

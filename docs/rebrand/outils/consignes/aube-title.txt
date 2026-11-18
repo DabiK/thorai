@@ -1,0 +1,5 @@
+WHAT TO DRAW
+The title screen illustration of the game: the same hamlet of workshops as the attached image, seen from a little further away and from the same top-down oblique RPG view, at sunrise. Same pixel scale, palette, outline colour and rendering.
+The upper 40% of the image is a wide, calm morning sky with soft stepped pixel clouds, pale yellow and turquoise, left mostly empty so a game logo can be placed there later.
+Below: the hamlet on a gentle green hill: the terracotta-roof scribe's cottage with a plume of smoke, the slate-roof tinkerer's workshop with its waterwheel, the moss-roof cartographer's cabin, the fountain square, the river with its wooden bridge, trees and flower meadows all around. A few birds in the sky. Tiny courier (short red-orange scarf, satchel) walking on the path toward the hamlet, seen from behind.
+No text, letters, numbers, logos, UI or watermark anywhere.

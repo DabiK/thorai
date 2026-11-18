@@ -10,15 +10,14 @@ import app.regie.input.Button
 import app.regie.input.Trigger
 import app.regie.overlay.OverlayContent
 import app.regie.overview.ControlState
+import app.regie.domain.usecase.ApprovalReview
 import app.regie.session.SessionControlState
-import app.regie.ui.screens.ConsoleOverlayScreen
-import app.regie.ui.screens.ControlCallbacks
-import app.regie.ui.screens.OverviewBottomScreen
-import app.regie.ui.screens.OverviewShortcuts
-import app.regie.ui.screens.SessionBottomScreen
-import app.regie.ui.screens.SessionCallbacks
-import app.regie.ui.screens.ThreadScroll
-import app.regie.ui.theme.RegieTheme
+import app.regie.ui.game.ConsoleSessionBottom
+import app.regie.ui.game.GameConsoleOverlay
+import androidx.compose.runtime.mutableStateOf
+import app.regie.ui.game.GameSessionBottom
+import app.regie.ui.game.GameOverviewBottom
+import app.regie.ui.game.carnet
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
@@ -52,40 +51,74 @@ class ConsoleModeTest {
         override fun onNoticeSeen(notice: app.regie.session.SessionNotice) {}
     }
 
-    @Test fun `another app on top puts the compact thread on the bottom, settings one gesture away`() {
+    // La session console (tickets 46 et 49) : la tour en en-tête, le carnet de la session dessous.
+    @Test @Config(qualifiers = "w538dp-h468dp-land-369dpi")
+    fun `another app on top keeps the thread on the bottom, names the session, settings one gesture away`() {
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
-            host.setup().get().setContent { RegieTheme {
-                SessionBottomScreen(LiveSession.of(session, thread), Neighbours(null, null, 1, 1), SessionControlState(), "", sessionCallbacks,
-                    console = scroll)
+            host.setup().get().setContent { run {
+                ConsoleSessionBottom(session, LiveSession.of(session, thread), false, Neighbours(null, null, 1, 1), SessionControlState(), "",
+                    SessionSettingsReview(), scroll, sessionCallbacks, ApprovalReview(), { _, _ -> }, {}, {})
             } }
-            compose.onNodeWithTag("console-thread").assertIsDisplayed()
+            compose.onNodeWithTag("console-tower").assertIsDisplayed()
+            compose.onNodeWithText("Tour de la console").assertIsDisplayed()
+            compose.onNodeWithText("Codex pilote Android").assertIsDisplayed()
+            compose.onNodeWithTag("house-thread").assertIsDisplayed()
             compose.onNodeWithText("ouvre YouTube et cherche lofi").assertIsDisplayed()
-            compose.onNodeWithText("J’ouvre YouTube.").assertIsDisplayed()
-            compose.onNodeWithTag("session-settings").assertDoesNotExist()
+            compose.onNodeWithText("J’ouvre YouTube.", useUnmergedTree = true).assertIsDisplayed()
             compose.onNodeWithText("Codex · console").assertIsDisplayed()
-            compose.onNodeWithText("Régler la session").performClick()
+            compose.onNodeWithText("→ Modifier").performClick()
             assertEquals(listOf(Button.RIGHT), buttons)
             compose.onNodeWithText("Parler").assertIsDisplayed()
         }
     }
 
-    @Test fun `with Régie on top the bottom keeps its settings table`() {
+    @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    // ADR 19 : la tour ne retire rien au carnet. Avis, brouillon et touches restent ceux de la session.
+    @Test @Config(qualifiers = "w538dp-h468dp-land-369dpi")
+    fun `the console tower keeps every notice and the draft of the session`() {
+        val notices = listOf(
+            app.regie.session.SessionNotice.NothingHeard to "Rien entendu. Aucun message envoyé.",
+            app.regie.session.SessionNotice.Delivered(Delivery.NOT_SENT) to "Le message n'est pas parti.",
+            app.regie.session.SessionNotice.Interrupted(heard = false) to "Le pont n'a pas pu l'interrompre.",
+        )
+        val control = mutableStateOf(SessionControlState())
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
-            host.setup().get().setContent { RegieTheme {
-                SessionBottomScreen(LiveSession.of(session, thread), Neighbours(null, null, 1, 1), SessionControlState(), "", sessionCallbacks)
+            val activity = host.setup().get().also { it.actionBar?.hide() }
+            activity.setContent { run {
+                ConsoleSessionBottom(session, LiveSession.of(session, thread), false, Neighbours(null, null, 1, 1), control.value, "Brouillon tapé",
+                    SessionSettingsReview(), scroll, sessionCallbacks, ApprovalReview(), { _, _ -> }, {}, {})
             } }
-            compose.onNodeWithTag("session-settings").assertIsDisplayed()
-            compose.onNodeWithTag("console-thread").assertDoesNotExist()
+            compose.onNodeWithTag("console-tower").assertIsDisplayed()
+            compose.onNodeWithText("Brouillon tapé").assertIsDisplayed()
+            notices.forEach { (notice, text) ->
+                control.value = SessionControlState(notice = notice)
+                compose.onNodeWithText(text).assertIsDisplayed()
+            }
+            GameCaptures.save(compose, activity, "tour-bas")
         }
     }
 
-    @Test fun `a message card shows the agent, its words and the keys that answer`() {
+    @Test @Config(qualifiers = "w538dp-h468dp-land-369dpi")
+    fun `with Régie on top the bottom keeps its thread and settings table, without the session name`() {
+        Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
+            host.setup().get().setContent { run {
+                GameSessionBottom(LiveSession.of(session, thread), false, Neighbours(null, null, 1, 1), SessionControlState(), "", SessionSettingsReview(),
+                    scroll, sessionCallbacks, ApprovalReview(), { _, _ -> }, {}, {})
+            } }
+            compose.onNodeWithTag("house-settings").assertIsDisplayed()
+            compose.onNodeWithTag("house-thread").assertIsDisplayed()
+            compose.onNodeWithTag("console-session").assertDoesNotExist()
+        }
+    }
+
+    @Test @Config(qualifiers = "w832dp-h468dp-land-369dpi")
+    fun `a message card shows the agent, its words and the keys that answer`() {
         val card = FloatingCard("message:s:2", session.id, Agent.CODEX, "console", FloatingKind.QUESTION, "La recherche est lancée. Je lance la vidéo ?")
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
-            host.setup().get().setContent { RegieTheme { ConsoleOverlayScreen(OverlayContent.Card(card), {}, scroll, scroll) } }
-            compose.onNodeWithText("CODEX").assertIsDisplayed()
+            host.setup().get().setContent { GameConsoleOverlay(OverlayContent.Card(card), {}, scroll, scroll) }
+            compose.onNodeWithText("Codex").assertIsDisplayed()
             compose.onNodeWithText("console").assertIsDisplayed()
-            compose.onNodeWithText("Attend ta réponse").assertIsDisplayed()
+            compose.onNodeWithText("! Attend ta réponse").assertIsDisplayed()
             compose.onNodeWithText("La recherche est lancée. Je lance la vidéo ?").assertIsDisplayed()
             compose.onNodeWithText("Répondre").assertIsDisplayed()
             compose.onNodeWithText("Fermer").assertIsDisplayed()
@@ -93,52 +126,65 @@ class ConsoleModeTest {
         }
     }
 
-    @Test fun `an approval card offers A once, B to close and L2 to refuse`() {
+    @Test @Config(qualifiers = "w832dp-h468dp-land-369dpi")
+    fun `an approval card offers A once, B to close and L2 to refuse`() {
         val request = Approval(ApprovalId("a"), session.id, ApprovalKind.COMMAND, "am start -a VIEW",
             options = listOf(ApprovalOption("yes", ApprovalOptionKind.ALLOW_ONCE, "Oui"), ApprovalOption("no", ApprovalOptionKind.REJECT_ONCE, "Non")))
         val card = FloatingCard("approval:a", session.id, Agent.CODEX, "console", FloatingKind.APPROVAL, "am start -a VIEW", request)
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
-            host.setup().get().setContent { RegieTheme { ConsoleOverlayScreen(OverlayContent.Card(card), {}, scroll, scroll) } }
-            compose.onNodeWithText("Attend ta validation").assertIsDisplayed()
+            host.setup().get().setContent { GameConsoleOverlay(OverlayContent.Card(card), {}, scroll, scroll) }
+            compose.onNodeWithText("! Attend ta validation").assertIsDisplayed()
             compose.onNodeWithText("Autoriser une fois").assertIsDisplayed()
             compose.onNodeWithText("Refuser en dictant").assertIsDisplayed()
         }
     }
 
-    @Test fun `an approval card offers only the choices the agent gives`() {
+    @Test @Config(qualifiers = "w832dp-h468dp-land-369dpi")
+    fun `an approval card offers only the choices the agent gives`() {
         val request = Approval(ApprovalId("a"), session.id, ApprovalKind.OTHER, "outil", options = emptyList())
         val card = FloatingCard("approval:a", session.id, Agent.CODEX, "console", FloatingKind.APPROVAL, "outil", request)
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
-            host.setup().get().setContent { RegieTheme { ConsoleOverlayScreen(OverlayContent.Card(card), {}, scroll, scroll) } }
+            host.setup().get().setContent { GameConsoleOverlay(OverlayContent.Card(card), {}, scroll, scroll) }
             compose.onNodeWithText("Fermer").assertIsDisplayed()
             compose.onNodeWithText("Autoriser une fois").assertDoesNotExist()
             compose.onNodeWithText("Refuser en dictant").assertDoesNotExist()
         }
     }
 
-    @Test fun `the overview offers the console session, and Configurer replaces the permanent console notice`() {
+    @Test @Config(qualifiers = "w832dp-h468dp-land-369dpi")
+    fun `a reply dictated over another app shows the game dictation and the sentence it answers`() {
+        val dictation = DictationReview(DictationTarget.Message(session.id), DictationPhase.REVIEW, "oui, lance la vidéo")
+        Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
+            host.setup().get().setContent { GameConsoleOverlay(OverlayContent.Dictation(dictation, session, replyingTo = "Je lance la vidéo ?"), {}, scroll, scroll) }
+            compose.onNodeWithTag("console-dictation").assertIsDisplayed()
+            compose.onNodeWithText("En réponse à\u00A0: Je lance la vidéo ?").assertIsDisplayed()
+            compose.onNodeWithText("oui, lance la vidéo", substring = true).assertExists()
+        }
+    }
+
+    // Le carnet du hameau (tickets 45 et 51) : Y prépare la session console, « Préparer la console » rouvre le parcours.
+    @Test @Config(qualifiers = "w538dp-h468dp-land-369dpi")
+    fun `the carnet offers the console session, and Préparer la console replaces the permanent console notice`() {
         val pressed = mutableListOf<Button>()
+        var setup = 0
         val callbacks = object : ControlCallbacks {
             override fun onButton(button: Button) { pressed += button }
             override fun onTrigger(trigger: Trigger, held: Boolean) {}
-            override fun onOpenApproval() {}
             override fun onQuit() {}
             override fun onConfirmQuit() {}
             override fun onCancelQuit() {}
-        }
-        var setup = 0
+        }.carnet(onGoTo = {}, onSetup = { setup++ }, onVoice = {})
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
-            host.setup().get().setContent { RegieTheme {
-                androidx.compose.foundation.layout.Column {
-                    OverviewShortcuts(setupLeft = true, onAgents = {}, onSetup = { setup++ }, onVoice = {})
-                    OverviewBottomScreen(Overview.EMPTY, ControlState(), callbacks)
-                }
-            } }
-            compose.onNodeWithText("Piloter la console").performClick()
+            host.setup().get().setContent {
+                GameOverviewBottom(scene = null, villageShown = false, Overview.EMPTY, ControlState(), setupLeft = true, callbacks)
+            }
+            compose.onNodeWithText("Console").performClick()
             assertEquals(listOf(Button.Y), pressed)
             compose.onNodeWithText("Mode console").assertDoesNotExist()
             compose.onNodeWithText("Maintiens R2", substring = true).assertDoesNotExist()
             compose.onNodeWithTag("setup-left", useUnmergedTree = true).assertExists()
+            compose.onNodeWithText("Préparer la console", useUnmergedTree = true).assertIsDisplayed()
+            compose.onNodeWithText("Configurer").assertDoesNotExist()
             compose.onNodeWithTag("open-setup").performClick()
             assertEquals(1, setup)
         }

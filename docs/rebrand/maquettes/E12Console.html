@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Mode console</title>
+<link rel="stylesheet" href="../outils/thorai-pixel.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jersey+10&amp;family=Pixelify+Sans:wght@400;600;700&amp;family=VT323&amp;display=swap">
+<style>body{margin:0}.and{position:absolute;inset:0;background:#F3F4F6;font-family:system-ui,sans-serif;color:#1C1C1E}.and .bar{height:150px;display:flex;align-items:center;gap:36px;padding:0 64px;font-size:56px}.and .it{display:flex;align-items:center;justify-content:space-between;padding:34px 64px;font-size:40px;border-bottom:2px solid #E2E4E8}.and .it small{display:block;font-size:30px;color:#6B7078;margin-top:6px}.ring{position:absolute;width:120px;height:120px;box-sizing:border-box;border:8px solid #C1663F;animation:pulse .6s steps(1) infinite}</style>
+</helmet>
+<div class="thor t-aube" style="width: 1920px; height: 2200px;">
+  <div class="top">
+    <div class="and">
+      <div class="bar"><span style="font-size: 60px;">←</span>Affichage</div>
+      <div class="it"><div>Luminosité<small>Adaptative</small></div><div style="width: 560px; height: 10px; background: #C9CDD3; position: relative;"><div style="width: 62%; height: 10px; background: #3B6FD8;"></div><div style="position: absolute; left: 62%; top: -15px; width: 40px; height: 40px; margin-left: -20px; background: #3B6FD8; border-radius: 50%;"></div></div></div>
+      <div class="it"><div>Thème sombre<small>Désactivé</small></div><div style="width: 110px; height: 56px; background: #C9CDD3; border-radius: 28px;"></div></div>
+      <div class="it"><div>Taille de la police<small>Par défaut</small></div></div>
+      <div class="it"><div>Mise en veille de l'écran<small>Après 1 minute</small></div></div>
+      <span class="ring" style="left: 1340px; top: 196px;"></span>
+    </div>
+    <div class="frame" style="position: absolute; right: 56px; bottom: 56px; width: 860px; box-sizing: border-box; padding: 28px 32px; display: flex; gap: 26px; z-index: 3;">
+      <div class="portrait" style="width: 128px; height: 160px; align-items: flex-start; background: #F1DBB3;"><img class="px" src="../assets/aube/scribe.png" alt="" style="width: 192px; height: 304px;"></div>
+      <div style="flex: 1; display: flex; flex-direction: column; gap: 14px;">
+        <span class="disp" style="font-size: 44px; color: #C1663F;">Claude</span>
+        <span style="font-size: 34px; line-height: 1.25;">J'ai ouvert l'affichage. Je baisse la luminosité à 40 % ?</span>
+        <div style="display: flex; gap: 28px; font-size: 26px;"><span class="hint"><span class="k">L2</span>Répondre</span><span class="hint"><span class="k r">B</span>Fermer</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="hinge"></div>
+  <div class="bot">
+    <div class="screen">
+      <div style="height: 500px; overflow: hidden; position: relative; flex: none;">
+        <img class="px" src="../assets/aube/tour.png" alt="Le scribe aux commandes de la tour, devant le miroir" style="width: 1920px; height: 1080px; margin-left: -340px; margin-top: -170px;">
+        <div class="pbox" style="position: absolute; left: 32px; top: 28px; padding: 12px 20px; display: flex; flex-direction: column; gap: 4px;"><span class="disp" style="font-size: 44px;">Tour de la console</span><span class="muted" style="font-size: 24px;">Claude pilote Android</span></div>
+        <span class="tag work" style="position: absolute; right: 32px; top: 36px;"><span class="dots"><i></i><i></i><i></i></span>Tout autoriser</span>
+      </div>
+      <div class="body" style="padding-top: 24px; gap: 12px;">
+        <div class="pbox msg me" style="margin: 4px;"><span class="who">Toi</span>Baisse un peu la luminosité de l'écran du haut.</div>
+        <div class="tool"><span class="sq"></span>Ouvre <b>Paramètres › Affichage</b></div>
+        <div class="tool"><span class="sq" style="color: #C1663F;"></span>Touche <b>Luminosité</b></div>
+      </div>
+      <div class="hints">
+        <span class="hint"><span class="k">L2</span>Parler</span>
+        <span class="hint"><span class="k r">Y</span>Session console</span>
+        <span class="hint"><span class="k">Start</span>Interrompre</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1920,"height":2200}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -7,9 +7,8 @@ import android.view.accessibility.AccessibilityEvent
 import app.regie.input.Button
 import app.regie.input.GamepadInput
 import app.regie.overlay.OverlayWindow
-import app.regie.ui.screens.ConsoleOverlayScreen
-import app.regie.ui.screens.ThreadScroll
-import app.regie.ui.theme.RegieTheme
+import app.regie.ui.game.GameConsoleOverlay
+import app.regie.ui.ThreadScroll
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -36,11 +35,10 @@ class ConsoleService : AccessibilityService() {
         container.consoleService.value = true
         val press: (Button) -> Unit = { container.handleInput(GamepadInput.Pressed(it)) }
         val window = OverlayWindow(this) { content ->
-            RegieTheme {
-                ConsoleOverlayScreen(content, press,
-                    ThreadScroll(container.dictationScroll, container.dictationVelocity),
-                    ThreadScroll(container.commandScroll, container.commandVelocity))
-            }
+            // Vue jeu (tickets 46 et 49) : dictée, ordre vocal, carte volante et bulle en pixel.
+            GameConsoleOverlay(content, press,
+                ThreadScroll(container.dictationScroll, container.dictationVelocity),
+                ThreadScroll(container.commandScroll, container.commandVelocity))
         }
         overlay = window
         following = scope.launch { container.consoleOverlay.collect { window.show(it) } }

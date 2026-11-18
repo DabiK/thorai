@@ -37,9 +37,9 @@ On prend la console et on parle. On voit d'un coup d'œil où en sont toutes ses
 | B | Retour, annuler, refuser ; sur la vue d'ensemble, connexion des agents (ticket 23) |
 | X, Y | Actions de l'écran, affichées en bas ; sur la vue d'ensemble, X crée une session et Y pilote la console (ticket 25) |
 | L1 / R1 | Session précédente / suivante. Sur la vue d'ensemble, R1 ouvre d'abord la validation en attente s'il y en a une |
-| Croix | Se déplacer (lignes de la vue d'ensemble, champs, lignes de diff) ; dans une session, Droite passe les réglages en modification |
+| Croix | Se déplacer (lignes de la vue d'ensemble, champs, lignes de diff) ; dans une session, Droite passe les réglages en modification. Version jeu : sur la vue d'ensemble, la croix et le stick gauche font marcher le coursier dans le hameau ; A entre dans la maison devant lui (ticket 45) |
 | Stick droit | Faire défiler |
-| Start | Interrompre la session affichée, ou tout mettre en pause depuis la vue d'ensemble |
+| Start | Interrompre la session affichée. Sur la vue d'ensemble (le hameau), ouvrir le menu de pause : « Tout mettre en pause » s'y trouve et se valide par A (décision de l'utilisateur, 18 novembre, ticket 49) |
 
 L'écran du bas affiche toujours les boutons utiles à cet instant.
 
@@ -47,6 +47,7 @@ L'écran du bas affiche toujours les boutons utiles à cet instant.
 
 1. **Vue d'ensemble.**
    - En haut : une liste dense, une ligne par session (agent, projet, branche, statut, étape x sur y, dernière action, ancienneté), défilable (ticket 22).
+   - **Version jeu (épopée 40)** : en haut, le hameau, avec une maison par session et une rue par projet. Le coursier s'y déplace à la croix, et chaque maison montre son état. La liste détaillée (agent, projet, branche, statut, étape, dernière action, ancienneté) passe dans le carnet du bas (ticket 45).
    - En bas : la première validation en attente, le micro, et les actions : créer une session, piloter la console, connecter les agents, configurer, Quitter.
 2. **Dictée.**
    - En haut : rien ne change, le fil (ou l'écran affiché) reste visible (ticket 22).
@@ -74,7 +75,7 @@ Chaque lot correspond à un ou plusieurs tickets.
   - mode un seul écran si celui du bas est éteint ;
   - manette lue quel que soit l'écran qui a le focus ;
   - système visuel de la maquette.
-- **Parcours d'accueil** (ticket 28, ADR 23) : au premier lancement, neuf étapes vérifiées sur la console, explication en haut, état et actions en bas : Termux et Debian, pont, voix, notifications, puis mode console, accès à Android et comptes, facultatifs, jusqu'à la première session. « Configurer », sur l'accueil, le reprend à la première étape non faite.
+- **Parcours d'accueil** (ticket 28, ADR 23) : au premier lancement, neuf étapes vérifiées sur la console, explication en haut, état et actions en bas : Termux et Debian, pont, voix, notifications, puis mode console, accès à Android et comptes, facultatifs, jusqu'à la première session. « Configurer », sur l'accueil, le reprend à la première étape non faite. Version jeu : le parcours suit la route du hameau, de panneau en panneau, et « Préparer la console » du menu de pause (Start) le reprend (ticket 53).
 - **Agents disponibles** (ticket 31) : catalogue annoncé par le pont (nom, version, connexion, options), listes construites depuis ce catalogue dans l’app ; opencode est un troisième connecteur ACP, les fournisseurs et modèles restent natifs. Le parcours d'accueil (ticket 28) l'ouvre à son étape des comptes, facultative.
 - **Pont sur la Thor** :
   - sessions Claude et Codex exposées à l'app par une connexion locale protégée ;

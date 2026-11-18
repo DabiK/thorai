@@ -1,0 +1,5 @@
+WHAT TO DRAW
+The same room as the attached image (the inside of the scribe's cottage), same camera, same pixel scale, same palette, same furniture in the same places: bookshelves, desk, cork board, stove, plant, rug, window with sunlight.
+Change only the characters: the scribe (round face, big round glasses, terracotta-orange hooded tunic) has stood up and walked in front of the desk, facing the courier, holding out with both hands a large unrolled parchment toward him. A small exclamation-mark bubble is NOT drawn (no symbols). The courier (short red-orange scarf, leather satchel) stands near the door at the bottom centre, seen from behind, facing the scribe.
+Keep all important content inside the central part of the image: about 8% on every side will be cropped.
+No text, letters, numbers, logos, UI, speech bubbles or watermark anywhere.
