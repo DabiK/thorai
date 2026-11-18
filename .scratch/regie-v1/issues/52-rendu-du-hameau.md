@@ -1,6 +1,6 @@
 # 52 — Rendu du hameau fidèle à l'artefact
 
-Statut : à fusionner
+Statut : fusionné dans ticket/40-vue-jeu
 Possède : le dessin du sol et des objets dans `:game-ui`, la densité et le placement du décor dans `:game-engine`
 Dépend de : 41, 42, 43
 
