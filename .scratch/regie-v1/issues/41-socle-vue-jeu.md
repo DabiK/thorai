@@ -1,6 +1,6 @@
 # 41 — Socle de la vue jeu
 
-Statut : à fusionner
+Statut : fusionné dans ticket/40-vue-jeu
 Possède : `android/game/` (création des modules), `android/settings.gradle.kts`, `ArchitectureTest`, ADR 21
 Dépend de : —
 
