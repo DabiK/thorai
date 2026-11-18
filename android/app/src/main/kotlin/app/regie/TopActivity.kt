@@ -118,6 +118,7 @@ class TopActivity : GamepadActivity() {
 
     override fun onStart() {
         super.onStart()
+        backToTopScreen()
         container.topStarted.value = true
         // À chaque retour au premier plan : le pont a pu s'arrêter, la console redémarrer.
         if (!relaunched && !askingPermission) container.runStartUp()
@@ -132,6 +133,12 @@ class TopActivity : GamepadActivity() {
         if (checkSelfPermission(TermuxBridgeLauncher.PERMISSION) == PackageManager.PERMISSION_GRANTED) return
         askingPermission = true
         runCommandPermission.launch(TermuxBridgeLauncher.PERMISSION)
+    }
+
+    /** Android a déplacé l'activité sur un autre écran : la taille d'écran change, sans recréation. */
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        backToTopScreen()
     }
 
     override fun onStop() {
@@ -151,6 +158,22 @@ class TopActivity : GamepadActivity() {
     override fun onDestroy() {
         if (isFinishing && !relaunched) container.topAlive.value = false
         super.onDestroy()
+    }
+
+    /**
+     * Rouverte depuis le lanceur de l'écran du bas (Cocoon Shell), alors qu'elle vivait déjà : Android
+     * déplace la tâche `singleTask` sur l'écran du bas, derrière BottomActivity, sans recréer l'activité
+     * (elle gère elle-même `density` et `screenSize`). Le haut montrait alors l'accueil d'Android, la
+     * vue d'ensemble passait en mode console : pas de hameau, Start et B ne ramenaient à rien (ticket 54).
+     * Le déplacement arrive par [onConfigurationChanged] (la taille d'écran change) : elle demande à
+     * revenir sur le display par défaut, et Android l'y ramène sans la recréer. Sans changement de
+     * configuration en retour, pas de nouvelle demande : rien ne boucle si Android refusait.
+     */
+    private fun backToTopScreen() {
+        if (relaunched) return
+        val target = container.displays.topScreenTarget(display.displayId) ?: return
+        android.util.Log.i("Regie", "écran du haut ouvert sur le display ${display.displayId} : retour sur le display $target")
+        returnTopScreenTo(target)
     }
 
     /**
@@ -200,4 +223,15 @@ class TopActivity : GamepadActivity() {
         /** En debug : `--ez fake_gateway true` au premier lancement du processus branche la passerelle factice. */
         const val EXTRA_FAKE_GATEWAY = "fake_gateway"
     }
+}
+
+/**
+ * Ramène l'écran du haut, déjà vivant, sur [displayId] : Android y déplace sa tâche `singleTask` et lui
+ * remet l'intention, sans la recréer ni la fermer (ticket 54).
+ */
+internal fun android.app.Activity.returnTopScreenTo(displayId: Int) {
+    startActivity(
+        Intent(this, TopActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        ActivityOptions.makeBasic().setLaunchDisplayId(displayId).toBundle(),
+    )
 }
