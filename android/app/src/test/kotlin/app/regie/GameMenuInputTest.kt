@@ -86,7 +86,7 @@ class GameMenuInputTest {
         val container = container()
         press(container, Button.START)
         assertEquals(MenuKind.PAUSE, container.gameMenu.value.kind)
-        press(container, Button.DOWN, Button.DOWN, Button.DOWN)
+        repeat(4) { press(container, Button.DOWN) }
         assertEquals(MenuEntry.PAUSE_ALL, container.gameMenu.value.current)
         press(container, Button.A)
         assertFalse(container.gameMenu.value.open)
@@ -127,7 +127,7 @@ class GameMenuInputTest {
     @Test fun `quitting from the menu asks for confirmation while a session works, B keeps the menu`() = runTest {
         val container = container()
         press(container, Button.START, Button.UP)
-        repeat(4) { press(container, Button.DOWN) }
+        repeat(5) { press(container, Button.DOWN) }
         assertEquals(MenuEntry.QUIT, container.gameMenu.value.current)
         press(container, Button.A)
         assertEquals(QuitStep.Confirm(1), container.controller.state.value.quit)
@@ -163,6 +163,27 @@ class GameMenuInputTest {
         press(container, Button.R1)
         assertEquals(Screen.Approval, container.screen.value)
         assertEquals(gateway.approval.id, container.approvalReview.value.request?.id)
+    }
+
+    @Test fun `Préparer la console in the pause menu reopens the setup, which takes the gamepad, then gives the hamlet back`() = runTest {
+        val container = container()
+        press(container, Button.START, Button.DOWN, Button.DOWN, Button.DOWN)
+        assertEquals(MenuEntry.SETUP, container.gameMenu.value.current)
+        press(container, Button.A)
+        assertTrue(container.setup.state.value.visible)
+        assertFalse(container.gameMenu.value.open, "le parcours mène au hameau ou à la première session : le menu se ferme")
+        // Pont joint : Termux et le pont sont faits, le parcours reprend à la première étape à faire.
+        val first = container.setup.state.value.step
+        assertTrue(first.ordinal > SetupStep.BRIDGE.ordinal, "$first")
+        // La manette va au parcours : B revient d'une étape, sans ouvrir les agents du hameau ; Start ne rouvre rien.
+        press(container, Button.B)
+        assertEquals(SetupStep.entries[first.ordinal - 1], container.setup.state.value.step)
+        assertFalse(container.agentAuthentication.value.visible)
+        press(container, Button.START)
+        assertFalse(container.gameMenu.value.open)
+        container.setup.close(); runCurrent()
+        press(container, Button.START)
+        assertEquals(MenuKind.PAUSE, container.gameMenu.value.kind)
     }
 
     @Test fun `a validation becomes a letter, and opening it shows the validation`() = runTest {
