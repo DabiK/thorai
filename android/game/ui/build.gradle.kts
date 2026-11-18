@@ -24,6 +24,9 @@ android {
 
     testOptions {
         unitTests.isIncludeAndroidResources = true
+        // Captures Robolectric des écrans (ticket 49) : `-PgameCaptures=<dossier>`, sinon rien n'est écrit.
+        val captures = providers.gradleProperty("gameCaptures").orNull
+        unitTests.all { test -> captures?.let { test.systemProperty("game.captures", it) } }
     }
 
     lint {
@@ -52,6 +55,8 @@ dependencies {
     implementation(libs.compose.ui.tooling.preview)
     // Lecture des atlas et de la palette, sans plugin de sérialisation : un arbre JSON suffit.
     implementation(libs.kotlinx.serialization.json)
+    // Le QR de connexion de Codex (ADR 18), calculé sur place : seulement l'adresse publique.
+    implementation(libs.zxing.core)
     debugImplementation(libs.compose.ui.tooling)
     // Le bac à sable du banc (src/debug).
     debugImplementation(libs.androidx.activity.compose)

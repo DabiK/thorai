@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Ticket 49 : titre, menus, agents, voix, courrier et mode console (docs/textes.md). -->
+    <string name="game_menu_title">Menu</string>
+    <string name="game_menu_continue">Continuer</string>
+    <string name="game_menu_new_session">Nouvelle session</string>
+    <string name="game_menu_new_session_detail">Bâtir une maison</string>
+    <string name="game_menu_agents">Agents</string>
+    <string name="game_menu_settings">Réglages</string>
+    <string name="game_menu_settings_detail">Voix</string>
+    <string name="game_menu_courier">Courrier</string>
+    <string name="game_menu_pause_all">Tout mettre en pause</string>
+    <string name="game_menu_quit">Quitter</string>
+    <string name="game_menu_quit_detail">Arrête le pont et les sessions</string>
+    <string name="game_menu_keep_running">Fermer le jeu laisse tourner les sessions.</string>
+    <string name="game_menu_nothing_to_pause">Aucune session ne travaille</string>
+    <string name="game_menu_no_session">Aucune session</string>
+    <plurals name="game_menu_sessions">
+        <item quantity="one">%d session</item>
+        <item quantity="many">%d sessions</item>
+        <item quantity="other">%d sessions</item>
+    </plurals>
+    <plurals name="game_menu_approvals">
+        <item quantity="one">%d validation</item>
+        <item quantity="many">%d validations</item>
+        <item quantity="other">%d validations</item>
+    </plurals>
+    <plurals name="game_menu_busy">
+        <item quantity="one">%d session travaille</item>
+        <item quantity="many">%d sessions travaillent</item>
+        <item quantity="other">%d sessions travaillent</item>
+    </plurals>
+    <plurals name="game_menu_agents_connected">
+        <item quantity="one">%1$d connecté sur %2$d</item>
+        <item quantity="many">%1$d connectés sur %2$d</item>
+        <item quantity="other">%1$d connectés sur %2$d</item>
+    </plurals>
+    <plurals name="game_menu_unread">
+        <item quantity="one">%d non lu</item>
+        <item quantity="many">%d non lus</item>
+        <item quantity="other">%d non lus</item>
+    </plurals>
+    <string name="game_bridge_ready">Pont prêt</string>
+    <string name="game_bridge_connecting">Connexion au pont…</string>
+    <string name="game_bridge_unreachable">Pont injoignable</string>
+
+    <!-- Touches. -->
+    <string name="game_hint_start">Commencer</string>
+    <string name="game_hint_choose">Choisir</string>
+    <string name="game_hint_dictate_hold">Maintenir pour dicter</string>
+    <string name="game_hint_command">Ordre vocal</string>
+    <string name="game_hint_close_menu">Fermer le menu</string>
+    <string name="game_hint_back">Revenir</string>
+    <string name="game_hint_open">Ouvrir</string>
+    <string name="game_hint_mark_read">Tout marquer lu</string>
+    <string name="game_hint_refresh">Actualiser</string>
+    <string name="game_hint_choose_agent">Choisir l’agent</string>
+    <string name="game_hint_see">Voir</string>
+    <string name="game_hint_close">Fermer</string>
+    <string name="game_hint_speak">Parler</string>
+    <string name="game_hint_interrupt">Interrompre</string>
+    <string name="game_hint_settings">Modifier</string>
+
+    <!-- Quitter (mêmes textes que la vue classique). -->
+    <plurals name="game_quit_busy">
+        <item quantity="one">%d session travaille encore. Quitter l\'arrête.</item>
+        <item quantity="many">%d sessions travaillent encore. Quitter les arrête.</item>
+        <item quantity="other">%d sessions travaillent encore. Quitter les arrête.</item>
+    </plurals>
+    <string name="game_quit_confirm">Quitter</string>
+    <string name="game_quit_cancel">Annuler</string>
+    <string name="game_quit_stopping">Arrêt des sessions et du pont…</string>
+
+    <!-- Connexion des agents (ADR 18). -->
+    <string name="game_agents_title">Agents</string>
+    <string name="game_agents_connected">Connecté</string>
+    <string name="game_agents_disconnected">Non connecté</string>
+    <string name="game_agents_pending">Connexion en cours</string>
+    <string name="game_agents_unknown">État inconnu</string>
+    <string name="game_agents_reading">Lecture des connexions…</string>
+    <string name="game_agents_open_address">Ouvre cette adresse sur ton téléphone</string>
+    <string name="game_agents_enter_code">Saisis ce code</string>
+    <string name="game_agents_wait_here">Attends la confirmation ici</string>
+    <string name="game_agents_waiting_for">En attente de %s</string>
+    <string name="game_agents_preparing">Préparation du code…</string>
+    <string name="game_agents_account_kept">Le compte reste enregistré par l’agent sur la console.</string>
+    <string name="game_agents_logout">Déconnecter</string>
+    <string name="game_agents_confirm_logout">Confirmer la déconnexion</string>
+    <string name="game_agents_keep">Garder le compte</string>
+    <string name="game_agents_cancel_close">Annuler et fermer</string>
+    <string name="game_agents_save_key">Enregistrer la clé</string>
+    <string name="game_agents_checking">Vérification…</string>
+    <string name="game_agents_qr">QR code de connexion</string>
+    <string name="game_agents_key_field">Clé de connexion</string>
+    <string name="game_role_scribe">le scribe</string>
+    <string name="game_role_bricoleur">le bricoleur</string>
+    <string name="game_role_cartographe">la cartographe</string>
+
+    <!-- Réglages de la voix (mêmes textes que la vue classique). -->
+    <string name="game_voice_title">Réglages de la voix</string>
+    <string name="game_voice_local">Voix locale · gratuite</string>
+    <string name="game_voice_cloud">ElevenLabs · en ligne</string>
+    <string name="game_voice_key_saved">Clé ElevenLabs : enregistrée</string>
+    <string name="game_voice_key_missing">Clé ElevenLabs : à saisir</string>
+    <string name="game_voice_save">Enregistrer</string>
+    <string name="game_voice_saved">Enregistrée</string>
+    <string name="game_voice_erase">Effacer la clé</string>
+    <string name="game_voice_mistral_saved">Ordres ambigus · Mistral : clé enregistrée</string>
+    <string name="game_voice_mistral_missing">Ordres ambigus · Mistral : clé à saisir</string>
+    <string name="game_voice_mistral_help">Facultatif et payant. Les ordres courants restent locaux. Mistral reçoit les phrases ambiguës. Les noms des sessions et projets sont transmis.</string>
+    <string name="game_voice_mistral_save">Enregistrer Mistral</string>
+    <string name="game_voice_mistral_erase">Effacer Mistral</string>
+    <string name="game_voice_microphone">Autoriser le microphone</string>
+    <string name="game_voice_help">Voix locale : modèle téléchargé au premier usage. ElevenLabs reçoit l’audio et les termes du projet.</string>
+    <string name="game_voice_settings_link">Régler la voix</string>
+
+    <!-- Courrier (écran 13). -->
+    <string name="game_courier_title">Courrier</string>
+    <string name="game_courier_empty">Aucun courrier pour l’instant.</string>
+    <string name="game_age_now">à l’instant</string>
+    <string name="game_age_minutes" tools:ignore="PluralsCandidate">%d min</string>
+    <string name="game_age_hours" tools:ignore="PluralsCandidate">%d h</string>
+    <string name="game_age_days" tools:ignore="PluralsCandidate">%d j</string>
+
+    <!-- Mode console (écran 12, ADR 19). -->
+    <string name="game_tower_title">Tour de la console</string>
+    <string name="game_tower_pilots">%s pilote Android</string>
+    <string name="game_thread_you">Toi</string>
+    <string name="game_thread_empty">Aucun message.</string>
+    <string name="game_thread_loading">Chargement du fil…</string>
+    <string name="game_thread_read">lu</string>
+    <string name="game_thread_reading">lit</string>
+    <string name="game_thread_edited">modifié</string>
+    <string name="game_thread_editing">modifie</string>
+    <string name="game_thread_ran">lancé</string>
+    <string name="game_thread_running">lance</string>
+    <string name="game_thread_action">action</string>
+    <string name="game_thread_failed">La réponse a échoué.</string>
+    <string name="game_thread_interrupted">Interrompue</string>
+    <string name="game_approval_session">Autoriser pour la session</string>
+    <string name="game_approval_refuse">Refuser</string>
+    <string name="game_card_awaiting_answer">Attend ta réponse</string>
+    <string name="game_card_allow_once">Autoriser une fois</string>
+    <string name="game_card_answer">Répondre</string>
+    <string name="game_card_refuse_dictating">Refuser en dictant</string>
+
+    <!-- Ordre vocal (R2). -->
+    <string name="game_command_title">Ordre vocal</string>
+    <string name="game_command_proposed">Action proposée</string>
+    <string name="game_command_release">Relâche R2 quand tu as fini</string>
+    <string name="game_command_confirm">Confirmer</string>
+    <string name="game_command_cancel">Annuler</string>
+    <string name="game_command_redo">Redire</string>
+</resources>
