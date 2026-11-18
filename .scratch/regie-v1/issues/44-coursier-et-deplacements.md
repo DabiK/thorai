@@ -1,6 +1,6 @@
 # 44 — Coursier et déplacements
 
-Statut : à fusionner
+Statut : fusionné dans ticket/40-vue-jeu
 Possède : déplacements et animations dans `:game-engine`, contrôleur de jeu, branchement de `InputRouter`
 Dépend de : 41, 43
 
