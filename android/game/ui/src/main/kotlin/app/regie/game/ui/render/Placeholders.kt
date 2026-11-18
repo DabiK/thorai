@@ -20,15 +20,15 @@ data class Fallback(val kind: FallbackKind, val footprint: Footprint, val doorCo
 /** Les formes de repli d'un hameau : chaque maison et chaque décor avec l'empreinte du moteur. */
 fun Village.fallbacks(decor: DecorCatalog = DecorCatalog.DEFAULT): Map<Placed, Fallback> {
     fun kindOf(id: String) = when (id) {
-        in decor.trees -> FallbackKind.TREE
-        in decor.bushes -> FallbackKind.BUSH
-        in decor.flowers -> FallbackKind.FLOWERS
-        in decor.rocks -> FallbackKind.ROCK
-        decor.fence -> FallbackKind.FENCE
-        decor.fountain -> FallbackKind.FOUNTAIN
-        decor.bench -> FallbackKind.BENCH
-        decor.lantern -> FallbackKind.LANTERN
-        decor.sign -> FallbackKind.SIGN
+        in decor.trees, in decor.saplings -> FallbackKind.TREE
+        in decor.bushes, in decor.floweringBushes -> FallbackKind.BUSH
+        in decor.flowers, in decor.grasses -> FallbackKind.FLOWERS
+        in decor.rocks, in decor.fieldProps -> FallbackKind.ROCK
+        decor.fence, decor.fenceStart, decor.fenceEnd, decor.fencePost -> FallbackKind.FENCE
+        decor.fountain, decor.well -> FallbackKind.FOUNTAIN
+        decor.bench, decor.gardenBench -> FallbackKind.BENCH
+        decor.lantern, decor.lowLantern -> FallbackKind.LANTERN
+        decor.sign, decor.signpost -> FallbackKind.SIGN
         else -> FallbackKind.BLOCK
     }
     fun TileRect.footprint() = Footprint(width, height)

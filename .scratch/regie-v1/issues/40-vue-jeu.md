@@ -11,7 +11,7 @@ Référence : `docs/rebrand/plan-dev-jeu.md` (architecture, contrat des assets, 
 
 ## Lots
 
-41 socle · 42 assets · 43 hameau procédural · 44 coursier et déplacements · 45 hameau, vue d'ensemble · 46 maison = session · 47 validation et modifications · 48 bâtir et agrandir · 49 titre, menu, courrier, console · 50 cohabitation sur la Thor · 51 retrait du classique.
+41 socle · 42 assets · 43 hameau procédural · 44 coursier et déplacements · 45 hameau, vue d'ensemble · 46 maison = session · 47 validation et modifications · 48 bâtir et agrandir · 49 titre, menu, courrier, console · 50 cohabitation sur la Thor · 51 retrait du classique · 52 rendu du hameau · 53 parcours d'accueil en jeu.
 
 ## Critères d'acceptation
 

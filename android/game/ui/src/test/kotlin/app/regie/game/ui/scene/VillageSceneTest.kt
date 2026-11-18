@@ -34,6 +34,7 @@ import app.regie.game.ui.render.Sprite
 import app.regie.game.ui.render.WorldProjection
 import app.regie.game.ui.render.fallbacks
 import app.regie.game.ui.theme.GameTheme
+import app.regie.game.ui.village.houseStates
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -104,6 +105,7 @@ class VillageSceneTest {
                     Modifier.fillMaxSize(),
                     sprites = listOf(Sprite(CourierLook.idOf(CourierAction.IDLE, Direction.DOWN), foot)),
                     fallbacks = village.fallbacks(),
+                    states = village.houseStates(),
                 )
             }
         }

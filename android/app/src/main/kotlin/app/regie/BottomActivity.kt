@@ -9,7 +9,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import app.regie.display.ScreenMode
 import app.regie.input.GamepadInput
 import app.regie.ui.screens.ApprovalBottomScreen
-import app.regie.ui.screens.SessionBottomScreen
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
@@ -42,11 +41,13 @@ class BottomActivity : GamepadActivity() {
                 val draft by container.sessionController.draft
                 val approval by container.inlineApproval.collectAsStateWithLifecycle()
                 val settings by container.sessionSettings.collectAsStateWithLifecycle()
-                // Mode console : une autre appli occupe le haut, le fil compact passe en bas (ticket 25).
+                // La maison (ticket 46) : le fil brut est toujours en bas. Mode console : une autre appli
+                // occupe le haut, le carnet nomme la session suivie (ticket 25).
                 val topVisible by container.topStarted.collectAsStateWithLifecycle()
-                SessionBottomScreen(live, overview.neighboursOf(shown.id), control, draft, sessionCallbacks, approval = approval,
-                    onDecision = container::answerInline, onNextApproval = container::nextInlineApproval, onDismissApproval = container::dismissInlineApproval,
-                    settings = settings, onSelectSetting = container::selectSessionSetting, console = threadScroll.takeUnless { topVisible })
+                val neighbours = overview.neighboursOf(shown.id)
+                app.regie.ui.game.GameSessionBottom(live, gone = neighbours == null, neighbours, control, draft, settings, threadScroll, sessionCallbacks,
+                    approval, container::answerInline, container::nextInlineApproval, container::dismissInlineApproval, container::selectSessionSetting,
+                    console = !topVisible)
             },
         )
 
