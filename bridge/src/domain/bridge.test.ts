@@ -1584,6 +1584,87 @@ describe('agent provided choices', () => {
 });
 
 describe('agent initiated mode changes', () => {
+  it.each(['config_option_update', 'current_mode_update'])(
+    'keeps OpenCode native agents separate from permissions on %s outside configuration',
+    async (sessionUpdate) => {
+      const opencode = new FakeAgentConnector('opencode');
+      const bridge = new Bridge({
+        connectors: [opencode],
+        events: world.events,
+        sessions: world.sessions,
+        workspace: world.workspace,
+        clock: world.clock,
+        ids: counterIds('approval'),
+        logger: world.logger,
+        shell: new WordsShellParser(),
+        shutdownGraceMs: 1,
+      });
+      bridge.start();
+      opencode.initialOptions = [
+        {
+          id: 'mode',
+          name: 'Agent',
+          category: 'mode',
+          type: 'select',
+          currentValue: 'build',
+          options: [
+            { value: 'build', name: 'Build' },
+            { value: 'plan', name: 'Plan' },
+          ],
+        },
+      ];
+      const notifyMode = (sessionId: string, currentValue: string) =>
+        opencode.send(
+          sessionId,
+          sessionUpdate === 'current_mode_update'
+            ? { sessionUpdate, currentModeId: currentValue }
+            : {
+                sessionUpdate,
+                configOptions: [{ ...opencode.initialOptions[0], currentValue }],
+              },
+        );
+      try {
+        const session = await bridge.createSession({
+          agent: 'opencode',
+          project: 'regie-demo',
+          approvalMode: 'allow-all',
+        });
+        // A user selects the native agent, then ACP repeats it after the
+        // configuration transaction has ended. It is still not a permission.
+        await bridge.configureSession(session.sessionId, { configId: 'mode', value: 'plan' });
+        notifyMode(session.sessionId, 'plan');
+        expect(bridge.listSessions()[0]).toMatchObject({
+          approvalMode: 'allow-all',
+          configOptions: [{ id: 'mode', category: 'agent', currentValue: 'plan' }],
+        });
+        const answer = opencode.ask(session.sessionId, { kind: 'edit', title: 'write' }, [
+          ALLOW_ONCE,
+          REJECT,
+        ]);
+        expect(bridge.pendingApprovals()).toEqual([]);
+        await expect(answer).resolves.toEqual({ outcome: 'selected', optionId: 'allow_once' });
+
+        await bridge.configureSession(session.sessionId, { approvalMode: 'plan' });
+        await bridge.configureSession(session.sessionId, { configId: 'mode', value: 'build' });
+        notifyMode(session.sessionId, 'build');
+        expect(bridge.listSessions()[0]).toMatchObject({
+          approvalMode: 'plan',
+          configOptions: [{ id: 'mode', category: 'agent', currentValue: 'build' }],
+        });
+        const guarded = opencode.ask(session.sessionId, { kind: 'edit', title: 'write' }, [
+          ALLOW_ONCE,
+          REJECT,
+        ]);
+        expect(bridge.pendingApprovals()).toHaveLength(1);
+        const request = bridge.pendingApprovals()[0];
+        if (!request) throw new Error('missing approval');
+        bridge.answerApproval(request.approvalId, 'cancel');
+        await expect(guarded).resolves.toEqual({ outcome: 'selected', optionId: 'cancel' });
+      } finally {
+        await bridge.shutdown();
+      }
+    },
+  );
   it('shows native permission changes and stops using the previous automatic policy', async () => {
     const s = await world.bridge.createSession({
       agent: 'claude',
@@ -1709,4 +1790,98 @@ describe('authentication changes and ACP sessions', () => {
     expect(() => world.bridge.acquireAuthentication('codex')).toThrow('Quitter');
     await world.bridge.shutdown();
   });
+});
+
+it('a native OpenCode connector uses the same approvals, options, persistence and resume', async () => {
+  const world = new World();
+  const opencode = new FakeAgentConnector('opencode');
+  const bridge = new Bridge({
+    connectors: [opencode],
+    events: world.events,
+    sessions: world.sessions,
+    workspace: world.workspace,
+    clock: world.clock,
+    ids: counterIds('approval'),
+    logger: world.logger,
+    shell: new WordsShellParser(),
+    shutdownGraceMs: 1,
+  });
+  bridge.start();
+  const model = {
+    id: 'model',
+    name: 'Model',
+    type: 'select',
+    category: 'model',
+    currentValue: 'opencode-go/test',
+    options: [{ value: 'opencode-go/test', name: 'Test Go' }],
+  };
+  opencode.initialOptions = [model];
+  const session = await bridge.createSession({
+    agent: 'opencode',
+    project: 'regie-demo',
+    approvalMode: 'ask',
+    configValues: { model: 'opencode-go/test' },
+    prompt: 'test',
+  });
+  expect(opencode.callsOf('setMode')).toEqual([[session.sessionId, 'build']]);
+  const answer = opencode.ask(
+    session.sessionId,
+    { toolCallId: 'write', kind: 'execute', rawInput: { command: 'echo test > proof.txt' } },
+    [
+      { ...ALLOW_ONCE, optionId: 'once' },
+      { ...REJECT, optionId: 'reject' },
+    ],
+  );
+  await flush();
+  expect(bridge.pendingApprovals()).toHaveLength(1);
+  const request = bridge.pendingApprovals()[0];
+  if (!request) throw new Error('missing approval');
+  bridge.answerApproval(request.approvalId, 'reject');
+  expect(await answer).toEqual({ outcome: 'selected', optionId: 'reject' });
+  opencode.endTurn(session.sessionId);
+  await flush();
+  await bridge.configureSession(session.sessionId, { approvalMode: 'allow-all' });
+  const automatic = await opencode.ask(session.sessionId, { toolCallId: 'write2', kind: 'edit' }, [
+    { ...ALLOW_ONCE, optionId: 'once' },
+  ]);
+  expect(automatic).toEqual({ outcome: 'selected', optionId: 'once' });
+  expect(bridge.pendingApprovals()).toEqual([]);
+  await bridge.shutdown();
+  await expect(bridge.resume(session.sessionId)).rejects.toMatchObject({ code: 'shutting_down' });
+  expect(opencode.callsOf('close')).toHaveLength(1);
+  const restarted = new Bridge({
+    connectors: [opencode],
+    events: world.events,
+    sessions: world.sessions,
+    workspace: world.workspace,
+    clock: world.clock,
+    ids: counterIds('next'),
+    logger: world.logger,
+    shell: new WordsShellParser(),
+    shutdownGraceMs: 1,
+  });
+  restarted.start();
+  const resumed = await restarted.resume(session.sessionId);
+  expect(resumed.active).toBe(true);
+  expect(resumed.approvalMode).toBe('allow-all');
+  expect(resumed.configOptions?.find((o) => o.id === 'model')?.currentValue).toBe(
+    'opencode-go/test',
+  );
+  expect(opencode.callsOf('loadSession')).toEqual([
+    [session.sessionId, '/home/dev/projects/regie-demo'],
+  ]);
+  await restarted.shutdown();
+});
+
+it('rejects an unregistered agent before creating any requested project', async () => {
+  const before = await world.workspace.listProjects();
+  await expect(
+    world.bridge.createSession({
+      agent: 'not-installed',
+      project: 'unexpected',
+      newProject: true,
+      approvalMode: 'ask',
+    }),
+  ).rejects.toMatchObject({ code: 'bad_request' });
+  expect(await world.workspace.listProjects()).toEqual(before);
 });

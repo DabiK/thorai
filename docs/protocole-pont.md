@@ -1,6 +1,6 @@
 # Protocole du pont
 
-Le contrat entre l'app et le pont (ticket 02). Le pont tourne dans la Debian de la Thor. Il pilote Claude Code et Codex par ACP (ADR 02) et expose leurs sessions à l'app par un WebSocket local.
+Le contrat entre l'app et le pont (ticket 02). Le pont tourne dans la Debian de la Thor. Il pilote les agents enregistrés (Claude Code, Codex et opencode) par ACP (ADR 02) et expose leurs sessions à l'app par un WebSocket local.
 
 Le pont **relaie** ce que les agents envoient. Il ne réinvente pas leur schéma : chaque événement ACP est enveloppé (numéro, session, date, type) et corrigé quand l'ADR 02 le demande.
 
@@ -26,18 +26,18 @@ aucune session ACP et n’ajoutent rien au journal. Voir l’ADR 18 pour le repl
 
 | Méthode | Paramètres | Résultat |
 | --- | --- | --- |
-| `auth.status` | `{}` | `{agents: [état Claude, état Codex]}` |
-| `auth.start` | `{agent: "claude" ou "codex"}` | `{authentication: état}` |
+| `auth.status` | `{}` | `{agents: [états des agents enregistrés]}` |
+| `auth.start` | `{agent: identifiant annoncé}` | `{authentication: état}` |
+| `auth.key` | `{agent, provider, key}` | `{authentication: état public}`, jamais la clé |
 | `auth.cancel` | mêmes paramètres | `{authentication: état}` |
 | `auth.logout` | mêmes paramètres | `{authentication: état}` |
 
 Un état contient uniquement `agent`, `connected` (booléen ou `null` si inconnu),
 `account` (e-mail public facultatif, sinon `null`), `phase`, `url`, `code`, `message`.
 Les phases sont `unknown`, `disconnected`, `starting`, `waiting`, `connected`,
-`failed`, `manual`. `url` et `code` sont renseignés seulement pendant le challenge
+`failed`, `manual`, `key`. `name` et `login` décrivent le nom et la connexion exposée. `url` et `code` sont renseignés seulement pendant le challenge
 Codex ; ils disparaissent à sa fin. L’URL est exactement
-`https://auth.openai.com/codex/device`, sans paramètres OAuth. Aucun jeton ni
-sortie brute des CLI ne transite. L’app actualise toutes les deux secondes quand
+`https://auth.openai.com/codex/device`, sans paramètres OAuth. Aucun jeton de compte existant ni sortie brute des CLI ne transite. La seule clé entrante est celle saisie explicitement par l’utilisateur pour `auth.key`. L’app actualise toutes les deux secondes quand
 l’écran de connexion est ouvert et ne renvoie jamais automatiquement un lancement.
 
 `auth.start` Codex renvoie immédiatement `starting`, puis `auth.status` fournit
@@ -145,6 +145,7 @@ Les requêtes sont traitées en parallèle : les réponses peuvent arriver dans 
 | `session.events` | `sessionId`, `since?` | `{events}` : le journal de cette session |
 | `approval.answer` | `approvalId`, `optionId` | `{}` |
 | `approvals.list` | — | `{approvals}` : validations en attente |
+| `agents.list` | — | `{agents}` : catalogue ouvert, connexion et derniers choix connus, sans processus ACP |
 | `agents.versions` | — | `{agents}` : versions installées et testées |
 | `projects.list` | — | `{projects}` : dossiers de `~/projects`, avec `name`, `branch` courante et `branches?` locales (lecture seule) |
 | `bridge.shutdown` | — | `{}`, puis le pont s'arrête (voir « Arrêt ») |
@@ -303,7 +304,7 @@ sandbox natif. La consigne PRoot n'est pas injectée (ADR 14).
 - En `auto-edit`, seules les éditions structurées sont acceptées automatiquement, jamais une écriture shell. Les choix durables ne sont pas utilisés.
 - En `ask`, Codex demande aussi une validation pour chaque lecture (`cat`, `rg`). Le pont accepte seul les commandes en lecture seule (voir « Lectures acceptées par le pont »).
 
-En `allow-all`, les agents sont configurés nativement sans approbation ; Codex utilise
+En `allow-all`, Claude et Codex sont configurés nativement sans approbation ; opencode conserve ses demandes ACP, acceptées une fois par le domaine. Codex utilise
 `never` et `danger-full-access`. Toute demande résiduelle est acceptée une fois dans
 le domaine, jamais par une règle durable. Sans choix `allow_once`, elle est annulée
 sans demander à l’utilisateur. Passer dans ce mode résout aussi les demandes déjà
@@ -531,3 +532,48 @@ Paramètres : `{ "sessionId": "…" }`. Réponse : `{ "terms": ["PassageCheck.ts
 Lecture authentifiée du projet de la session, sans lancement d'agent ni changement de branche.
 Identifiants de fichiers, déclarations de fonctions et branches locales ; extraction bornée et indicative (ADR 09).
 Une session inconnue rend `unknown_session`. Un client peut continuer sans vocabulaire si cette lecture échoue ou si le pont ne la connaît pas.
+
+## Catalogue ouvert et onboarding opencode (ticket 31, contrat du ticket 28)
+
+`agents.list` est disponible après ouverture du WebSocket authentifié ; pas de
+prompt ni de processus ACP déclenché. Chaque entrée contient :
+
+| Champ | Sens |
+| --- | --- |
+| `agent`, `name` | Identifiant stable opaque et nom à afficher ; aucune énumération côté client |
+| `available` | Le binaire répond à `--version` ; faux ne signifie pas « déconnecté » |
+| `binary`, `adapter`, `tested`, `isTested` | Versions observées et matrice testée, comme `agents.versions` |
+| `running`, `authenticated` | Processus ACP et dernier état ACP connu, indépendant du compte enregistré |
+| `authentication` | État public, avec `connected`, `phase`, `login` ; null si ce port est absent |
+| `configOptions` | Derniers sélecteurs connus, éventuellement vides ; charger `agent.options` à la demande |
+
+Pour Go, `authentication.login` vaut :
+`{method:"api_key", provider:"opencode-go", label:"Clé OpenCode Go", help:"…"}`.
+Les autres méthodes sont `device_code` et `manual`. `auth.status` retourne les
+mêmes états, sans versions ; le catalogue et les connexions se rafraîchissent
+après reconnexion au pont. Les anciens `agents.versions`/`hello.agents` restent
+compatibles. Une session peut garder une identité absente du catalogue courant.
+
+Étape **facultative** du ticket 28, sans en imposer ici les écrans :
+
+1. Lire `agents.list` puis, si nécessaire, `auth.status`. Afficher l'étape Go
+   seulement avec ses métadonnées ; « Passer » ne lance aucune requête de connexion.
+2. Pour `method:api_key`, proposer le champ masqué portant `login.label` et
+   l'aide `login.help`. `auth.start` renvoie la phase `key` et n'ouvre pas de terminal.
+3. À la confirmation explicite, envoyer `auth.key` avec l'identifiant annoncé,
+   `provider` annoncé et la clé saisie. Effacer immédiatement le champ. Ne jamais
+   utiliser un stockage de préférences, une sauvegarde d'état, un log ou un journal.
+4. Le pont vérifie agent/fournisseur/format, prend le même verrou que les autres
+   connexions, et laisse l'API native opencode stocker la clé. Réponse publique
+   après relecture native. Ni clé dans argv, ni dans une réponse même invalide.
+5. Une connexion enregistrée n'est pas une preuve de validité du quota. Échec ou
+   perte d'accusé : actualiser l'état ; aucun renvoi automatique de clé.
+6. Une découverte ACP préalable bloque le changement de compte : Quitter,
+   rouvrir, connecter avant d'ouvrir la fiche. L'étape d'accueil doit précéder les
+   découvertes d'options. Les clés du Mac ne sont jamais importées sur la Thor.
+
+Opencode 2.1.2 : `model` (`provider/model`), `effort` et `mode` sont natifs. Le pont
+classe son `mode` en catégorie `agent` (« Agent opencode »), sans changer l'id ACP,
+pour le séparer des permissions de Régie. Les réponses initiales sans options ne
+prétendent pas que l'agent ne les supporte pas. `opencode.json(c)` et les fournisseurs
+restent la responsabilité d'opencode ; aucun éditeur de configuration dans Régie.

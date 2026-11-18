@@ -71,7 +71,7 @@ fun NewSessionScreen(state: NewSessionForm, bottom: Boolean, single: Boolean, on
                     BasicText(field.label, style = sans(12.5.sp, color = Palette.textSubtle), modifier = Modifier.width(76.dp))
                     Column(Modifier.weight(1f)) {
                         when (field) {
-                            NewSessionField.AGENT -> Segments(listOf("Claude", "Codex"), state.agent?.let { if (it == Agent.CLAUDE) "Claude" else "Codex" })
+                            NewSessionField.AGENT -> Segments(state.agents.map { it.label }, state.agent?.label)
                             NewSessionField.PROJECT -> {
                                 BasicText(state.projectLabel, style = sans(14.sp, 600))
                                 state.project?.let { BasicText("~/projects/$it", style = mono(11.sp, color = Palette.textSubtle)) }

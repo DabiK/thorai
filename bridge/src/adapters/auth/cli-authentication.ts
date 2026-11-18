@@ -3,6 +3,7 @@ import { stripVTControlCharacters } from 'node:util';
 import type { AuthenticationDriver, LoginTask } from '../../domain/authentication.ts';
 import { DEVICE_URL } from '../../domain/authentication.ts';
 import type { AgentKind } from '../../domain/model.ts';
+import { OpenCodeApiCredentials, type OpenCodeCredentials } from './opencode-credentials.ts';
 
 interface CommandResult {
   readonly code: number | null;
@@ -21,19 +22,44 @@ export interface AuthenticationCommands {
 export class CliAuthentication implements AuthenticationDriver {
   private readonly binaries: Readonly<Record<AgentKind, string>>;
   private readonly commands: AuthenticationCommands;
+  private readonly opencode: OpenCodeCredentials;
   constructor(
     binaries: Readonly<Record<AgentKind, string>>,
     commands: AuthenticationCommands = new NodeAuthenticationCommands(),
+    opencode?: OpenCodeCredentials,
   ) {
     this.binaries = binaries;
     this.commands = commands;
+    this.opencode = opencode ?? new OpenCodeApiCredentials(binaries.opencode ?? 'opencode');
   }
 
   async status(agent: AgentKind) {
     const result = await this.commands.run(
-      this.binaries[agent],
-      agent === 'codex' ? ['login', 'status'] : ['auth', 'status', '--json'],
+      this.binaries[agent] ?? agent,
+      agent === 'opencode'
+        ? ['auth', 'list', '--format', 'json', '--standalone']
+        : agent === 'codex'
+          ? ['login', 'status']
+          : ['auth', 'status', '--json'],
     );
+    if (agent === 'opencode') {
+      try {
+        const integrations: unknown = JSON.parse(result.text);
+        if (result.code !== 0 || !Array.isArray(integrations))
+          return { connected: null, account: null };
+        return {
+          connected: integrations.some(
+            (item) =>
+              item?.id === 'opencode-go' &&
+              Array.isArray(item.connections) &&
+              item.connections.length > 0,
+          ),
+          account: null,
+        };
+      } catch {
+        return { connected: null, account: null };
+      }
+    }
     if (agent === 'claude') {
       try {
         const json = JSON.parse(result.text) as Record<string, unknown>;
@@ -62,7 +88,7 @@ export class CliAuthentication implements AuthenticationDriver {
     let text = '';
     let emitted = false;
     const process = this.commands.login(
-      this.binaries.codex,
+      this.binaries.codex ?? 'codex',
       ['login', '--device-auth'],
       (chunk) => {
         if (emitted) return;
@@ -83,9 +109,15 @@ export class CliAuthentication implements AuthenticationDriver {
     return { done: process.done.then((code) => code === 0), cancel: () => process.cancel() };
   }
 
+  async saveKey(agent: AgentKind, provider: string, key: string): Promise<void> {
+    if (agent !== 'opencode') throw new Error('Unsupported login');
+    await this.opencode.save(provider, key);
+  }
+
   async logout(agent: AgentKind): Promise<void> {
+    if (agent === 'opencode') return this.opencode.logout('opencode-go');
     const result = await this.commands.run(
-      this.binaries[agent],
+      this.binaries[agent] ?? agent,
       agent === 'codex' ? ['logout'] : ['auth', 'logout'],
     );
     if (result.code !== 0) throw new Error('logout not confirmed');
