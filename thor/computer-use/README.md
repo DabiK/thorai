@@ -28,6 +28,58 @@ Le serveur adb de la Debian écoute sur une socket Unix privée, `/home/dev/.tho
 
 `thor-android-mcp` lance mobile-mcp en mode mobilecli (`MOBILEMCP_LEGACY_ROBOT=0`) : arbre d'interface de l'écran haut, toucher par élément, tous les outils. Ce mode ouvre des ports `127.0.0.1` sur la console, lance un démon `mobilecli` dans la Debian et injecte un agent dans l'appli débogable au premier plan, dont le build de debug de Régie. Le mode adb seul (`input`, `uiautomator dump`, `screencap`) reste un réglage : il suffit que le fichier `~dev/.config/thor-android/adb-seul` existe. `install.sh` ne touche pas à ce fichier : le réglage survit à une réinstallation. Pour revenir au mode mobilecli : `rm ~/.config/thor-android/adb-seul`.
 
+## Navigateur visible sur la console
+
+Une demande portant sur la console, son écran, une appli ou « le navigateur »
+doit agir sur Android avec `thor_android` ou `thor-screen`. `thor_browser` est
+le Chromium **sans fenêtre** de la Debian : il sert aux tests et à l’extraction
+web, et l’agent doit annoncer que son action est invisible sur la console.
+
+mobile-mcp **1.0.17** expose directement `mobile_open_url` :
+
+1. Appeler `mobile_list_available_devices` et reprendre l’identifiant renvoyé
+   (ce n’est pas la série USB du Mac). Si la liste est vide, lancer
+   `/opt/thor-android/start.sh` dans la session Debian de l’agent, puis relire
+   la liste. Un échec de connexion se signale, sans passer au navigateur invisible.
+2. Appeler `mobile_open_url` avec `device` et `url`, par exemple
+   `{"device":"<id renvoyé>","url":"https://www.wikipedia.org"}`.
+3. Vérifier la page par capture ou arbre d’interface, puis les applis au
+   premier plan des deux écrans. Un succès de l’outil seul ne suffit pas.
+
+L’outil accepte HTTP/HTTPS ; ajouter `https://` à un simple nom de domaine.
+Il utilise le navigateur Android par défaut, sans paquet Chrome imposé.
+Si Android affiche un choix de navigateur ou une configuration initiale,
+la page n’est pas encore prouvée ouverte : suivre ce qui est affiché.
+
+Repli dans la Debian, avec la cale `adb` installée (socket privée conservée) :
+
+```sh
+adb shell 'am start --display 0 -a android.intent.action.VIEW -d "https://www.wikipedia.org"'
+```
+
+Cet intent `VIEW` sans `-n` ni `-p` utilise l’appli par défaut et vise l’écran
+haut (`0`). Les guillemets de l’URL doivent aussi parvenir au shell Android,
+notamment pour les `&` d’une requête ; ne pas concaténer une URL brute.
+mobile-mcp en mode mobilecli passe par sa commande `url` ; en mode adb seul,
+son adapter Android exécute `am start -a android.intent.action.VIEW -d …`.
+
+Sources : [outils documentés de mobile-mcp](https://github.com/mobile-next/mobile-mcp#-available-mcp-tools),
+vérifiés avec Context7 le 18 novembre 2026, et code installé de la version
+1.0.17 (`lib/server.js`, `lib/mobile-device.js`, `lib/android.js`).
+Essais réels et limites : `artifacts/screenshots/24/essai-thor.md`.
+
+Après modification des consignes, relancer `thor/computer-use/install.sh`, puis
+créer une **nouvelle session Codex depuis Régie** : les sessions déjà ouvertes
+peuvent conserver leurs anciennes consignes. Cela ne réinstalle pas `app.regie`.
+Les tests locaux ne lancent ni service, ni console, ni agent :
+
+```sh
+bash thor/computer-use/test-consignes.sh
+bash thor/computer-use/test-block.sh
+bash thor/computer-use/test-permissions.sh
+bash thor/computer-use/test-pair.sh
+```
+
 ## Installer
 
 Depuis le Mac, console branchée en USB :

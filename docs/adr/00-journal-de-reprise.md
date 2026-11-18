@@ -136,6 +136,8 @@ physiques différés restent requis même lorsqu’un ticket est marqué fait.
 
 - **14 novembre, ticket 21, correction de revue typographique (solo Codex)** : deux préfixes `Échec :` corrigés en U+00A0 dans le domaine, inventaire avant/après rectifié, rubrique POUR L’UTILISATEUR ajoutée avec lien vers les six étapes Thor. Deux régressions ajoutées et assertions de récupération actualisées, quatre échecs attendus avant correction ; Android 361 tests + lint verts. Thor absente : APK réinstallé, historique réel consulté sur émulateur/pont Mac, modifications et préparation d’explication en deux écrans, mode compact vérifié. Aucun agent relancé, cas d’erreur exacts couverts hors console. Pont/AVD arrêtés ; preuves `revision-*`, statut à fusionner.
 
+- **18 novembre, ticket 24 à fusionner (solo Codex)** : consignes visibles Android/invisible thor_browser, mobile_open_url et repli VIEW documentés ; install.sh réexécuté, blocs globaux vérifiés par empreinte. Quatre suites shell et pont 308 tests + lint/typage verts. Thor : session Codex lancée par Régie, demande exacte puis Wikipédia dans Chrome en haut ; second essai rétablit seul adb privé après liste vide. Aucun APK/Claude/reboot. Deux tours terminés et annulations ciblées ; pont/adapteur partagé et sessions idle conservés pour le ticket 22 (pas de fermeture individuelle exposée). Sélection du bas restée ancienne hors périmètre : premier message ciblé via API du pont. Preuves et rejeu : `artifacts/screenshots/24/essai-thor.md` ; relecture solo après commit consignée dans `relecture.md`.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |
