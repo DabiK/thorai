@@ -252,9 +252,10 @@ class PixelWorldTest {
             val width = village.world.map.width * GroundPainter.TILE
             val height = village.world.map.height * GroundPainter.TILE
             val states = village.houseStates()
+            val clock = mutableLongStateOf(900)
             Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
                 host.setup().get().setContent {
-                    GameTheme(clock = mutableLongStateOf(900)) {
+                    GameTheme(clock = clock) {
                         PixelWorld(village.world, assets, { ArtPoint(width / 2, height / 2) }, Modifier.fillMaxSize(), scale = 2, states = states) {
                             VillageOverlay(village, assets, it)
                         }

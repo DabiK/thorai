@@ -9,8 +9,11 @@ import kotlin.math.abs
  * et d'autre de la place.
  */
 internal data class PlotCell(val row: Int, val column: Int) {
-    /** Deux terrains qui se voient : côte à côte, de part et d'autre de la place, d'une rangée à la suivante, diagonales comprises. */
-    fun isNear(other: PlotCell): Boolean = this != other && abs(row - other.row) <= 1 && abs(column - other.column) <= 1
+    /**
+     * Deux terrains qui se voient sur un même écran : jusqu'à deux colonnes d'écart (la place comprise),
+     * sur la même rangée ou la voisine.
+     */
+    fun isNear(other: PlotCell): Boolean = this != other && abs(row - other.row) <= 1 && abs(column - other.column) <= 2
 
     /** Voisins francs : côte à côte sur la rangée (place comprise) ou l'un au-dessus de l'autre. */
     fun isBeside(other: PlotCell): Boolean = abs(row - other.row) + abs(column - other.column) == 1

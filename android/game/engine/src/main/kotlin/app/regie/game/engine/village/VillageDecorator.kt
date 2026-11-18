@@ -57,8 +57,9 @@ internal class VillageDecorator(private val decor: DecorCatalog, private val see
         layer.put(decor.fountain, VillageGeometry.FOUNTAIN.left, VillageGeometry.FOUNTAIN.bottom)
         layer.put(decor.lantern, plaza.left, plaza.top)
         layer.put(decor.lantern, plaza.right, plaza.top)
-        layer.put(decor.bench, -2, plaza.top)
-        layer.put(decor.bench, 2, plaza.top)
+        // Les bancs, un rang sous le haut arrondi de la place, face à la fontaine.
+        layer.put(decor.bench, -2, plaza.top + 1)
+        layer.put(decor.bench, 2, plaza.top + 1)
         // Une jardinière de chaque côté de la fontaine, en laissant le tour praticable.
         val planter = decor.wideProps.first()
         layer.put(planter, plaza.left, 0)

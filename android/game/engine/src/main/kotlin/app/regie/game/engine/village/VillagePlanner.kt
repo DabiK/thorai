@@ -115,7 +115,7 @@ internal class VillagePlanner(
     /**
      * Les maisons qu'on voit à côté de ([street], [plot]) : [Neighbours.adjacent] sur la même rue, aux
      * terrains voisins ; [Neighbours.beside] en face, de l'autre côté de la place, ou juste au-dessus et
-     * au-dessous ; [Neighbours.near] tout autour, diagonales comprises (voir [PlotCell]).
+     * au-dessous ; [Neighbours.near] tout ce qui se voit autour (voir [PlotCell.isNear]).
      */
     private fun neighbours(
         street: Int,
@@ -162,8 +162,8 @@ internal class VillagePlanner(
 
     /**
      * Le choix le moins répété autour : jamais celui d'une voisine de la même rue s'il en reste un autre,
-     * puis jamais celui d'une voisine franche (en face, au-dessus, au-dessous), puis le moins vu en
-     * diagonale. À égalité, l'ordre part de [start], tiré de la session : stable.
+     * puis jamais celui d'une voisine franche (en face, au-dessus, au-dessous), puis le moins vu dans
+     * le voisinage. À égalité, l'ordre part de [start], tiré de la session : stable.
      */
     private fun <T> pickAvoiding(options: List<T>, start: Int, around: Neighbours, value: (HouseLayout) -> T): T {
         val adjacent = around.adjacent.map(value)
@@ -176,7 +176,7 @@ internal class VillagePlanner(
     }
 
     private companion object {
-        /** Une voisine de la même rue pèse plus que tout le reste du voisinage réuni ; une voisine franche, plus que les diagonales. */
+        /** Une voisine de la même rue pèse plus que tout le reste du voisinage réuni ; une voisine franche, plus que le reste du voisinage. */
         const val ADJACENT_WEIGHT = 1000
         const val BESIDE_WEIGHT = 20
     }

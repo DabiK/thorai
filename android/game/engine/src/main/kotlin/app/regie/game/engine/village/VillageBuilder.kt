@@ -95,7 +95,8 @@ internal class VillageBuilder(
                 map.setGround(world, Ground.PATH)
             }
         }
-        paint(plaza, Ground.PLAZA)
+        // La place, aux coins arrondis en escalier : les rues y entrent par les coins du bas.
+        plaza.tiles().filter { it !in VillageGeometry.PLAZA_CORNERS }.forEach { map.setGround(frame.world(it), Ground.PLAZA) }
 
         // Les maisons.
         val houses = streets.flatMap { street ->
@@ -229,6 +230,16 @@ internal object VillageGeometry {
     const val BORDER = 3
 
     val PLAZA = TileRect(-PLAZA_HALF_WIDTH, -PLAZA_HALF_HEIGHT, 2 * PLAZA_HALF_WIDTH + 1, 2 * PLAZA_HALF_HEIGHT + 1)
+
+    /** Les tuiles retirées aux coins de la place pour l'arrondir ; celles du bas restent à la route. */
+    val PLAZA_CORNERS: Set<TilePos> = listOf(-1, 1).flatMap { side ->
+        listOf(
+            TilePos(side * PLAZA_HALF_WIDTH, -PLAZA_HALF_HEIGHT),
+            TilePos(side * (PLAZA_HALF_WIDTH - 1), -PLAZA_HALF_HEIGHT),
+            TilePos(side * PLAZA_HALF_WIDTH, -PLAZA_HALF_HEIGHT + 1),
+            TilePos(side * PLAZA_HALF_WIDTH, PLAZA_HALF_HEIGHT),
+        )
+    }.toSet()
 
     /** La fontaine, au centre de la place ; le coursier arrive juste devant. */
     val FOUNTAIN = TileRect(-1, -1, 3, 3)
