@@ -186,8 +186,10 @@ garder le routeur d'entrées de la manette (ADR 05) et se tester sans console.
   relâché, sans répétitions ; stick gauche, direction dominante avec hystérésis). Sur le hameau elles
   font marcher le coursier ; ailleurs rien ne change. A entre devant une porte, sinon marche jusqu'à la
   maison choisie et y entre ; L1/R1 changent de maison, R1 va d'abord à la validation ; une ligne
-  touchée du carnet y envoie le coursier. Le reste (X, Y, B, Start, L2, R2, stick droit, Quitter) suit
-  `OverviewController`, dont le focus suit la maison choisie (L2 et R2 la visent).
+  touchée du carnet et « R1 Voir » de l'oiseau messager y envoient le coursier. Le titre, le parcours
+  d'accueil, le menu de pause et les panneaux ouverts prennent la manette avant lui ; B (agents) et
+  Start (menu de pause, ticket 49) sont pris par `AppContainer`. Le reste (X, Y, L2, R2, stick droit,
+  Quitter) suit `OverviewController`, dont le focus suit la maison choisie (L2 et R2 la visent).
 - **Repli** : sans hameau, ou quand l'écran du haut n'est pas visible (mode console), la vue
   d'ensemble classique répond : un coursier qu'on ne voit pas ne marche pas.
 - **Maison choisie** : celle où va le coursier, sinon celle dont il regarde la porte, sinon la plus
