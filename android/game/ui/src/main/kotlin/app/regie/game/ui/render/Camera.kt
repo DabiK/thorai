@@ -21,21 +21,31 @@ object Camera {
     fun topLeft(focus: ArtPoint, worldWidth: Int, worldHeight: Int, viewWidth: Int, viewHeight: Int): ArtPoint =
         ArtPoint(axis(focus.x, worldWidth, viewWidth), axis(focus.y, worldHeight, viewHeight))
 
-    private fun axis(focus: Int, world: Int, view: Int): Int =
+    internal fun axis(focus: Int, world: Int, view: Int): Int =
         if (world <= view) -((view - world) / 2) else (focus - view / 2).coerceIn(0, world - view)
 }
 
 /**
- * Passage du monde à l'écran pour une vue donnée : [origin] est le coin haut gauche de la caméra,
- * [scale] le nombre de pixels physiques par pixel du dessin.
+ * Passage du monde à l'écran : [scale] pixels physiques par pixel du dessin, et le coin haut gauche
+ * de la caméra donné par [originOf]. L'origine est lue à chaque appel, au placement ou au dessin :
+ * la caméra peut suivre le coursier sans recomposer ce qui est accroché au monde.
  */
-data class WorldProjection(val origin: ArtPoint, val scale: Int) {
+class WorldProjection(val scale: Int, private val originOf: () -> ArtPoint) {
+    /** Une projection fixe. */
+    constructor(origin: ArtPoint, scale: Int) : this(scale, { origin })
+
+    /** Le coin haut gauche actuel de la caméra, en pixels du dessin. */
+    val origin: ArtPoint get() = originOf()
+
     /** La position à l'écran, en pixels physiques, d'un point du monde. */
     fun toScreenX(artX: Int): Int = (artX - origin.x) * scale
     fun toScreenY(artY: Int): Int = (artY - origin.y) * scale
 
     /** Un point du monde à l'écran, en pixels physiques. */
-    fun toScreen(point: ArtPoint): IntOffset = IntOffset(toScreenX(point.x), toScreenY(point.y))
+    fun toScreen(point: ArtPoint): IntOffset {
+        val o = origin
+        return IntOffset((point.x - o.x) * scale, (point.y - o.y) * scale)
+    }
 
     /** Le milieu du bord haut d'une tuile, là où l'on accroche un panneau ou une bulle. */
     fun tileTop(tile: TilePos): IntOffset =
