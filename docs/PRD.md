@@ -37,7 +37,7 @@ On prend la console et on parle. On voit d'un coup d'œil où en sont toutes ses
 | B | Retour, annuler, refuser ; sur la vue d'ensemble, connexion des agents (ticket 23) |
 | X, Y | Actions de l'écran, affichées en bas ; sur la vue d'ensemble, X crée une session et Y pilote la console (ticket 25) |
 | L1 / R1 | Session précédente / suivante. Sur la vue d'ensemble, R1 ouvre d'abord la validation en attente s'il y en a une |
-| Croix | Se déplacer (lignes de la vue d'ensemble, champs, lignes de diff) ; dans une session, Droite passe les réglages en modification |
+| Croix | Se déplacer (lignes de la vue d'ensemble, champs, lignes de diff) ; dans une session, Droite passe les réglages en modification. Version jeu : sur la vue d'ensemble, la croix et le stick gauche font marcher le coursier dans le hameau ; A entre dans la maison devant lui (ticket 45) |
 | Stick droit | Faire défiler |
 | Start | Interrompre la session affichée. Sur la vue d'ensemble (le hameau), ouvrir le menu de pause : « Tout mettre en pause » s'y trouve et se valide par A (décision de l'utilisateur, 18 novembre, ticket 49) |
 
@@ -47,6 +47,7 @@ L'écran du bas affiche toujours les boutons utiles à cet instant.
 
 1. **Vue d'ensemble.**
    - En haut : une liste dense, une ligne par session (agent, projet, branche, statut, étape x sur y, dernière action, ancienneté), défilable (ticket 22).
+   - **Version jeu (épopée 40)** : en haut, le hameau, avec une maison par session et une rue par projet. Le coursier s'y déplace à la croix, et chaque maison montre son état. La liste détaillée (agent, projet, branche, statut, étape, dernière action, ancienneté) passe dans le carnet du bas (ticket 45).
    - En bas : la première validation en attente, le micro, et les actions : créer une session, piloter la console, connecter les agents, configurer, Quitter.
 2. **Dictée.**
    - En haut : rien ne change, le fil (ou l'écran affiché) reste visible (ticket 22).
