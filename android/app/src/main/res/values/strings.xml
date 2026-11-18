@@ -140,5 +140,7 @@
     <string name="card_close">Fermer</string>
     <string name="card_refuse_dictating">Refuser en dictant</string>
     <string name="card_answer">Répondre</string>
-    <string name="card_answering">Ta réponse s’affiche en bas.</string>
+    <string name="card_replying_to">En réponse à</string>
+    <string name="notice_nothing_heard">Rien entendu. Aucun message envoyé.</string>
+    <string name="action_session_settings">Régler la session</string>
 </resources>

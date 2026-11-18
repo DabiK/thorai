@@ -23,7 +23,7 @@ import kotlin.math.roundToInt
  * chose à montrer.
  *
  * Le service d'accessibilité la pose en `TYPE_ACCESSIBILITY_OVERLAY` : pas besoin de la permission
- * de superposition, et Android ne la compte pas comme une fenêtre qui masque les touchers (ADR 18).
+ * de superposition, et Android ne la compte pas comme une fenêtre qui masque les touchers (ADR 19).
  */
 class OverlayWindow(
     private val context: Context,
@@ -33,16 +33,21 @@ class OverlayWindow(
     private val shown = mutableStateOf<OverlayContent?>(null)
     private var view: ComposeView? = null
     private var owner: OverlayOwner? = null
+    private var placedAsPanel = false
 
     fun show(content: OverlayContent?) {
         shown.value = content
         if (content == null) return remove()
-        val params = params(content)
+        val panel = content is OverlayContent.Dictation || content is OverlayContent.Command
         val current = view
         if (current != null) {
-            windows.updateViewLayout(current, params)
+            // The dictation level changes many times a second: move the window only when its place changes.
+            if (panel != placedAsPanel) windows.updateViewLayout(current, params(panel))
+            placedAsPanel = panel
             return
         }
+        val params = params(panel)
+        placedAsPanel = panel
         val newOwner = OverlayOwner()
         val newView = ComposeView(context).apply {
             setViewTreeLifecycleOwner(newOwner)
@@ -62,10 +67,9 @@ class OverlayWindow(
     }
 
     /** La dictée et l'ordre en bas, au centre ; la carte et la bulle en haut à droite. */
-    private fun params(content: OverlayContent): WindowManager.LayoutParams {
+    private fun params(panel: Boolean): WindowManager.LayoutParams {
         val density = context.resources.displayMetrics.density
         fun dp(value: Int) = (value * density).roundToInt()
-        val panel = content is OverlayContent.Dictation || content is OverlayContent.Command
         return WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,

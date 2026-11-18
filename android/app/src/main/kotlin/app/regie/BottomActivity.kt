@@ -23,6 +23,7 @@ class BottomActivity : GamepadActivity() {
             finish()
             return
         }
+        keepOpenOnSystemBack()
 
         setScreen(
             approval = {

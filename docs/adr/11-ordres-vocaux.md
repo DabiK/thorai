@@ -59,7 +59,9 @@ pas de cible pendant la relecture. Les résultats incertains ne sont jamais renv
 - ouvrir une session par son titre, projet ou nom d'agent quand la cible est unique ;
 - faire le point écrit d'une session ou de toutes les sessions connues, historique
   compris, selon le même `WrittenSummary` que Y ; lecture du journal uniquement,
-  aucun nouveau tour, aucune synthèse vocale. Bilan absent explicitement signalé ;
+  aucun nouveau tour, aucune synthèse vocale. Bilan absent explicitement signalé.
+  **Remplacé au ticket 25 (ADR 19)** : « où en est … » ouvre la session visée, « où en
+  sont toutes les sessions » ouvre la vue d'ensemble, sans point écrit ;
 - lancer une session parmi `projects.list`, avec agent et projet explicites, branche
   et consigne facultatives. Le mode du brouillon est **plan d'abord**, visible avant A.
   `session.create` est envoyé une fois ; identité reçue = ouverture de la session,

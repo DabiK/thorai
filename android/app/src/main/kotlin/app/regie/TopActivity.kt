@@ -132,6 +132,9 @@ class TopActivity : GamepadActivity() {
         super.onNewIntent(intent)
         applyDebugExtras(intent)
         openNotification(intent)
+        // Régie rouverte depuis le lanceur alors que son écran du bas avait disparu : il revient.
+        val mode = container.displays.mode.value
+        if (mode is ScreenMode.Dual && !container.bottomStarted.value) launchBottom(mode.bottomDisplayId)
     }
 
     override fun onDestroy() {

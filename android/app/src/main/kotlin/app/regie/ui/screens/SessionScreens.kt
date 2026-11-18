@@ -355,11 +355,13 @@ private fun ConsoleThread(live: LiveSession?, scroll: ThreadScroll, callbacks: S
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             BasicText(
-                live?.session?.let { stringResource(R.string.settings_title, agentName(it.agent)) }.orEmpty(),
+                live?.session?.let { sessionName(it) }.orEmpty(),
                 style = sans(12.sp, color = Palette.textSubtle),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
-            if (live != null) BarAction("→", stringResource(R.string.settings_edit)) { callbacks.onOptions() }
+            if (live != null) BarAction("→", stringResource(R.string.action_session_settings)) { callbacks.onOptions() }
         }
         Box(Modifier.weight(1f).fillMaxWidth().testTag("console-thread")) {
             if (live == null) StateMessage(stringResource(R.string.thread_opening))
@@ -879,6 +881,7 @@ private fun NoticeText(notice: SessionNotice, callbacks: SessionCallbacks, modif
 private fun noticeText(notice: SessionNotice): Pair<String, Color> = when (notice) {
     SessionNotice.Sending -> stringResource(R.string.notice_sending) to Palette.textMuted
     SessionNotice.Interrupting -> stringResource(R.string.notice_interrupting) to Palette.textMuted
+    SessionNotice.NothingHeard -> stringResource(R.string.notice_nothing_heard) to Palette.waiting
     is SessionNotice.Interrupted ->
         if (notice.heard) stringResource(R.string.notice_interrupted) to Palette.text else stringResource(R.string.notice_interrupt_failed) to Palette.failed
     is SessionNotice.Delivered -> when (notice.delivery) {

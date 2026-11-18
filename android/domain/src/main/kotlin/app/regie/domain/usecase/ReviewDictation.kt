@@ -14,12 +14,17 @@ import kotlinx.coroutines.launch
  * received closes the review by itself, with no screen to dismiss; [onDelivered] receives its
  * receipt. Away from its session ([shown] false), only a new turn closes: a queued or steering
  * message keeps its notice, as do uncertain results, failures and other targets, until B.
+ *
+ * Nothing heard (L2 released in silence, ticket 25): nothing is sent. A message to the shown session
+ * closes by itself and [onNothingHeard] says it in one line; elsewhere the review stays with that
+ * line until B. Text already reviewed (append, correction) is kept.
  */
 class ReviewDictation(
     private val capture: DictationCapture,
     private val deliver: suspend (DictationTarget, String) -> DictationDelivery,
     private val scope: CoroutineScope,
     private val shown: (SessionId) -> Boolean = { true },
+    private val onNothingHeard: (DictationTarget) -> Unit = {},
     private val onDelivered: (DictationTarget, Delivery) -> Unit = { _, _ -> },
 ) {
     private val mutable = MutableStateFlow(DictationReview())
@@ -59,12 +64,30 @@ class ReviewDictation(
             base.isBlank() -> event.text.trim()
             else -> "$base ${event.text.trim()}"
         }
+        val over = (event.complete || event.error != null) && !held
+        if (over && event.error == null && text.isBlank()) return nothingHeard(current)
         mutable.value = current.copy(
             text = text,
-            phase = if ((event.complete || event.error != null) && !held) DictationPhase.REVIEW else current.phase,
+            phase = if (over) DictationPhase.REVIEW else current.phase,
             level = event.level, durationMs = event.durationMs,
             notice = event.error ?: event.notice,
         )
+    }
+
+    private fun nothingHeard(current: DictationReview) {
+        val target = current.target ?: return
+        if (target is DictationTarget.Message && shown(target.sessionId)) {
+            watching?.cancel()
+            capture.cancel()
+            mutable.value = DictationReview()
+            onNothingHeard(target)
+            return
+        }
+        mutable.value = current.copy(phase = DictationPhase.REVIEW, level = 0f, notice = NOTHING_HEARD)
+    }
+
+    companion object {
+        const val NOTHING_HEARD = "Rien entendu. Aucun message envoyé."
     }
 
     fun finish() {

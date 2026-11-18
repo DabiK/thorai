@@ -121,11 +121,11 @@ abstract class GamepadActivity : ComponentActivity() {
      */
     override fun onTopResumedActivityChanged(isTopResumedActivity: Boolean) {
         super.onTopResumedActivityChanged(isTopResumedActivity)
-        container.gamepadFocus(javaClass.name, isTopResumedActivity)
+        container.gamepadFocus(this, isTopResumedActivity)
     }
 
     override fun onDestroy() {
-        container.gamepadFocus(javaClass.name, false)
+        container.gamepadFocus(this, false)
         super.onDestroy()
     }
 
@@ -258,4 +258,16 @@ private class GamepadWindowCallback(
         // La croix peut aussi arriver en axe (HAT) : on laisse Android la convertir en touches.
         return wrapped.dispatchGenericMotionEvent(event)
     }
+}
+
+/**
+ * Retour système de l'écran du bas (sa barre de navigation, souvent juste après avoir fermé le
+ * clavier) : il fermait l'écran du bas pour de bon, et Régie ne le relançait pas (ticket 25). Seul
+ * « Quitter » le ferme (PRD) ; B et les boutons de Régie gardent la navigation. Le clavier, lui,
+ * se ferme toujours d'abord : il passe avant l'activité.
+ */
+internal fun ComponentActivity.keepOpenOnSystemBack() {
+    onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() = Unit
+    })
 }

@@ -183,6 +183,8 @@ adb -s "$THOR_SERIAL" shell am start -n app.regie/.TopActivity
 
 Sur la console, accepter **RUN_COMMAND** (exécuter des commandes dans Termux) et les **notifications**. Si elles ont été refusées, les réactiver dans Infos de l’appli → Autorisations, y compris Autorisations supplémentaires pour Termux. Ouvrir **Réglages voix**, garder le fournisseur local et accorder le microphone. Le premier usage télécharge les modèles : prévoir du réseau et environ 1,5 Go libres pour téléchargement et extraction ; la transcription peut ensuite fonctionner hors ligne. Les agents, eux, utilisent leurs services en ligne.
 
+Pour le **mode console** (L2 depuis toute appli, messages de l’agent par-dessus l’écran du haut), toucher l’avis « Mode console » en bas de la régie, puis activer **Régie, mode console** dans Accessibilité (Applications téléchargées). Régie ne lit que la manette, jamais l’écran ; aucune autre permission spéciale n’est demandée.
+
 Placer un dépôt dans `~/projects` de Termux, ou choisir **Nouveau projet** dans Régie. Lancer Codex, dicter avec L2, relire puis A. Les clés ElevenLabs et Mistral restent facultatives et se saisissent uniquement dans les réglages de l’app.
 
 Pour mettre à jour, quitter Régie puis relancer les scripts de déploiement concernés et rouvrir l’app. Ne pas désinstaller computer-use pour réparer une simple association perdue. Sa désinstallation conserve la clé adb, sauf option explicite `--oublier-association`.
@@ -191,12 +193,12 @@ Pour mettre à jour, quitter Régie puis relancer les scripts de déploiement co
 
 | Entrée | Action |
 | --- | --- |
-| L2 maintenu | Dicter à la session ; dans le diff, commenter la ligne ; dans une validation, préparer un refus avec consigne |
-| R2 maintenu | Donner un ordre, relu avant A ; peut ouvrir une fiche de lancement |
+| L2 maintenu | Dicter à la session ; dans le diff, commenter la ligne ; dans une validation, préparer un refus avec consigne. Mode console : aussi depuis une autre appli, vers la session au premier plan de Régie |
+| R2 maintenu | Donner un ordre, relu avant A ; peut ouvrir une fiche de lancement ; « où en est … » ouvre la session |
 | A | Ouvrir, confirmer, envoyer ; dans une validation, autoriser une fois |
 | B | Retour ou annulation ; **dans une validation, refuser** |
 | X | Nouvelle session depuis la régie ; diff depuis la session ; correction d’un mot en relecture de dictée |
-| Y | Compléter une dictée ; dans le diff, préparer une explication |
+| Y | Depuis la régie, piloter la console (session `console`) ; compléter une dictée ; dans le diff, préparer une explication |
 | L1 / R1 | Session précédente / suivante ; R1 donne priorité aux validations, limitées à la session dans son fil |
 | Croix | Lignes de la régie, champs, lignes du diff ; Droite passe la table des réglages en modification, Gauche ferme une validation résolue ou rejoint la fin du fil |
 | Stick droit | Faire défiler |

@@ -32,6 +32,48 @@ class DictationReviewTest {
         assertEquals(listOf(target to "Dans PassageCheck.ts, ajoute un test."), sent)
         assertEquals(listOf("PassageCheck.ts"), capture.terms)
     }
+    @Test fun `L2 released in silence sends nothing, closes and says so in one line`() = runTest {
+        val capture = TestCapture()
+        var deliveries = 0
+        val heard = mutableListOf<DictationTarget>()
+        val shownId = SessionId("one")
+        val review = ReviewDictation(capture, { _, _ -> deliveries++; DictationDelivery("ok") }, backgroundScope,
+            shown = { it == shownId }, onNothingHeard = { heard += it })
+        review.start(DictationTarget.Message(shownId), emptyList())
+        capture.events.value = CaptureState(recording = true)
+        runCurrent()
+        review.finish()
+        capture.events.value = CaptureState(text = "", complete = true)
+        runCurrent()
+        assertFalse(review.state.value.visible, "the bottom goes back to the settings by itself")
+        assertEquals(listOf<DictationTarget>(DictationTarget.Message(shownId)), heard)
+        review.send(); runCurrent()
+        assertEquals(0, deliveries)
+
+        // Away from its session, the review stays with the line until B.
+        review.start(DictationTarget.Message(SessionId("other")), emptyList())
+        review.finish()
+        capture.events.value = CaptureState(text = "  ", complete = true)
+        runCurrent()
+        assertEquals(DictationPhase.REVIEW, review.state.value.phase)
+        assertEquals(ReviewDictation.NOTHING_HEARD, review.state.value.notice)
+        review.send(); runCurrent()
+        assertEquals(0, deliveries)
+        review.discard()
+
+        // A silent append keeps the text already reviewed.
+        review.start(DictationTarget.Message(shownId), emptyList())
+        capture.events.value = CaptureState(text = "Bonjour", complete = true)
+        review.finish(); runCurrent()
+        review.append(); review.record()
+        capture.events.value = CaptureState(recording = true); runCurrent()
+        review.finish()
+        capture.events.value = CaptureState(text = "", complete = true); runCurrent()
+        assertEquals("Bonjour", review.state.value.text)
+        assertEquals(DictationPhase.REVIEW, review.state.value.phase)
+        assertEquals(1, heard.size)
+    }
+
     @Test fun `early final cannot be sent while L2 is still held`() = runTest {
         val capture = TestCapture()
         var deliveries = 0

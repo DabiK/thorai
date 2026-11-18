@@ -61,7 +61,8 @@ class ConsoleModeTest {
             compose.onNodeWithText("ouvre YouTube et cherche lofi").assertIsDisplayed()
             compose.onNodeWithText("J’ouvre YouTube.").assertIsDisplayed()
             compose.onNodeWithTag("session-settings").assertDoesNotExist()
-            compose.onNodeWithText("Modifier").performClick()
+            compose.onNodeWithText("Codex · console").assertIsDisplayed()
+            compose.onNodeWithText("Régler la session").performClick()
             assertEquals(listOf(Button.RIGHT), buttons)
             compose.onNodeWithText("Parler").assertIsDisplayed()
         }
@@ -80,7 +81,7 @@ class ConsoleModeTest {
     @Test fun `a message card shows the agent, its words and the keys that answer`() {
         val card = FloatingCard("message:s:2", session.id, Agent.CODEX, "console", FloatingKind.QUESTION, "La recherche est lancée. Je lance la vidéo ?")
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
-            host.setup().get().setContent { RegieTheme { ConsoleOverlayScreen(OverlayContent.Card(card, answering = false), {}, scroll, scroll) } }
+            host.setup().get().setContent { RegieTheme { ConsoleOverlayScreen(OverlayContent.Card(card), {}, scroll, scroll) } }
             compose.onNodeWithText("CODEX").assertIsDisplayed()
             compose.onNodeWithText("console").assertIsDisplayed()
             compose.onNodeWithText("Attend ta réponse").assertIsDisplayed()
@@ -93,13 +94,24 @@ class ConsoleModeTest {
 
     @Test fun `an approval card offers A once, B to close and L2 to refuse`() {
         val request = Approval(ApprovalId("a"), session.id, ApprovalKind.COMMAND, "am start -a VIEW",
-            options = listOf(ApprovalOption("yes", ApprovalOptionKind.ALLOW_ONCE, "Oui")))
+            options = listOf(ApprovalOption("yes", ApprovalOptionKind.ALLOW_ONCE, "Oui"), ApprovalOption("no", ApprovalOptionKind.REJECT_ONCE, "Non")))
         val card = FloatingCard("approval:a", session.id, Agent.CODEX, "console", FloatingKind.APPROVAL, "am start -a VIEW", request)
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
-            host.setup().get().setContent { RegieTheme { ConsoleOverlayScreen(OverlayContent.Card(card, answering = false), {}, scroll, scroll) } }
+            host.setup().get().setContent { RegieTheme { ConsoleOverlayScreen(OverlayContent.Card(card), {}, scroll, scroll) } }
             compose.onNodeWithText("Attend ta validation").assertIsDisplayed()
             compose.onNodeWithText("Autoriser une fois").assertIsDisplayed()
             compose.onNodeWithText("Refuser en dictant").assertIsDisplayed()
+        }
+    }
+
+    @Test fun `an approval card offers only the choices the agent gives`() {
+        val request = Approval(ApprovalId("a"), session.id, ApprovalKind.OTHER, "outil", options = emptyList())
+        val card = FloatingCard("approval:a", session.id, Agent.CODEX, "console", FloatingKind.APPROVAL, "outil", request)
+        Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
+            host.setup().get().setContent { RegieTheme { ConsoleOverlayScreen(OverlayContent.Card(card), {}, scroll, scroll) } }
+            compose.onNodeWithText("Fermer").assertIsDisplayed()
+            compose.onNodeWithText("Autoriser une fois").assertDoesNotExist()
+            compose.onNodeWithText("Refuser en dictant").assertDoesNotExist()
         }
     }
 
@@ -132,11 +144,12 @@ class ConsoleModeTest {
         val idle = DictationReview()
         val noCommand = VoiceCommandReview()
         assertNull(OverlayContent.of(true, false, dictation, noCommand, card, false, live, listOf(session)))
-        assertEquals(OverlayContent.Dictation(dictation, session), OverlayContent.of(false, false, dictation, noCommand, card, true, live, listOf(session)))
-        assertEquals(OverlayContent.Card(card, answering = true), OverlayContent.of(false, true, dictation, noCommand, card, true, live, listOf(session)))
-        assertEquals(OverlayContent.Card(card, answering = false), OverlayContent.of(false, true, idle, noCommand, card, false, live, listOf(session)))
-        // The bubble: only when the bottom cannot follow the working agent.
-        assertNull(OverlayContent.of(false, true, idle, noCommand, null, false, live, listOf(session)))
+        // The bottom shows Régie: the conversation is there, no card and no bubble on top.
+        assertNull(OverlayContent.of(false, true, idle, noCommand, card, false, live, listOf(session)))
+        assertNull(OverlayContent.of(false, true, dictation, noCommand, card, true, live, listOf(session)))
+        assertEquals(OverlayContent.Dictation(dictation, session, replyingTo = "Fait."),
+            OverlayContent.of(false, false, dictation, noCommand, card, true, live, listOf(session)))
+        assertEquals(OverlayContent.Card(card, keys = false), OverlayContent.of(false, false, idle, noCommand, card, false, live, listOf(session), cardKeys = false))
         assertTrue(OverlayContent.of(false, false, idle, noCommand, null, false, live, listOf(session)) is OverlayContent.Bubble)
         val resting = LiveSession.of(session.copy(status = SessionStatus.IDLE), thread)
         assertNull(OverlayContent.of(false, false, idle, noCommand, null, false, resting, listOf(session)))

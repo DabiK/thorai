@@ -16,7 +16,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 /**
- * Mode console (ticket 25, ADR 18) : le service d'accessibilité de Régie. Activé une fois par
+ * Mode console (ticket 25, ADR 19) : le service d'accessibilité de Régie. Activé une fois par
  * l'utilisateur, il lit la manette avant l'appli qui a le focus, sur l'un ou l'autre écran, et ne
  * prend que L2, R2 et les boutons qu'un panneau de Régie attend ([AppContainer.consoleKeys]). Il pose
  * aussi la carte volante, la dictée ou la bulle par-dessus l'écran du haut.

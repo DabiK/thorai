@@ -49,6 +49,9 @@ sealed interface SessionNotice {
 
     /** [heard] : le pont a pris l'interruption. */
     data class Interrupted(val heard: Boolean) : SessionNotice
+
+    /** L2 relâché sans parole : rien n'est parti (ticket 25). */
+    data object NothingHeard : SessionNotice
 }
 
 /** État de l'écran d'une session, partagé par les deux écrans de la console. */
@@ -123,6 +126,11 @@ class SessionController(
     fun onDictated(id: SessionId, delivery: Delivery) {
         if (current() != id || delivery == Delivery.PROMPT) return
         _state.update { it.copy(notice = SessionNotice.Delivered(delivery)) }
+    }
+
+    /** Dictée vide : elle s'est refermée seule, sans rien envoyer ; l'avis le dit en une ligne. */
+    fun onNothingHeard(id: SessionId) {
+        if (current() == id) _state.update { it.copy(notice = SessionNotice.NothingHeard) }
     }
 
     fun onInterrupted(id: SessionId, heard: Boolean) {

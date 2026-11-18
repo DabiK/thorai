@@ -169,7 +169,11 @@ class AppContainer(
     // A message the agent received closes the dictation by itself; the session shows its receipt.
     val dictation = ReviewDictation(capture, { target, text ->
         deliverDictation?.invoke(target, text) ?: DictationDelivery("Pont indisponible", target)
-    }, scope, shown = { id -> _screen.value == Screen.Session(id) }) { target, delivery ->
+    }, scope, shown = { id -> _screen.value == Screen.Session(id) }, onNothingHeard = { target ->
+        // Nothing heard: nothing sent, the bottom goes back to the settings and says so in one line.
+        releaseDictationInputs()
+        sessionController.onNothingHeard(target.sessionId)
+    }) { target, delivery ->
         // Same cleanup as B: the overview noted L2 held, and its release went to the dictation.
         releaseDictationInputs()
         closedByDelivery = kotlin.time.TimeSource.Monotonic.markNow()
@@ -456,13 +460,14 @@ class AppContainer(
     /** L'écran du bas est visible : l'écran du haut ne le relance pas. */
     val bottomStarted = MutableStateFlow(false)
 
-    // --- Mode console (ticket 25, ADR 18) ---
+    // --- Mode console (ticket 25, ADR 19) ---
 
-    /** Les activités de Régie qui ont la manette : l'activité au premier plan du système. */
-    private val gamepadOwners = mutableSetOf<String>()
+    /** Les activités de Régie qui ont la manette (l'activité au premier plan du système), par instance. */
+    private val gamepadOwners = mutableSetOf<Any>()
 
-    fun gamepadFocus(owner: String, focused: Boolean) {
-        if (focused) gamepadOwners += owner else gamepadOwners -= owner
+    fun gamepadFocus(owner: Any, focused: Boolean) {
+        val changed = if (focused) gamepadOwners.add(owner) else gamepadOwners.remove(owner)
+        if (changed) Log.i(TAG, "manette : ${owner.javaClass.simpleName} ${if (focused) "a la main" else "rend la main"}")
     }
 
     /** Le service d'accessibilité de Régie tourne : L2 marche depuis toute appli. */
@@ -472,8 +477,16 @@ class AppContainer(
     private var answerApproval: AnswerApproval? = null
     val floatingCard = MutableStateFlow<app.regie.domain.model.FloatingCard?>(null)
 
-    /** La dictée en cours répond à la carte volante. */
+    /**
+     * La carte qui prend A et B : une carte toute neuve les laisse un moment à l'appli en cours, pour
+     * qu'un A destiné à Chrome n'autorise pas une validation qu'on n'a pas lue.
+     */
+    private val cardKeysFor = MutableStateFlow<String?>(null)
+
+    /** La carte à laquelle répond la dictée en cours. */
+    private var answeringKey: String? = null
     private val answeringCard = MutableStateFlow(false)
+    private var consoleSessionJob: Job? = null
 
     /**
      * La manette vue par le service d'accessibilité, quand une autre appli a le focus. Rien n'est pris
@@ -482,23 +495,29 @@ class AppContainer(
     val consoleKeys = ConsoleKeys(InputRouter(::handleConsoleInput),
         available = { gateway != null && !_closing.value && gamepadOwners.isEmpty() }, captured = ::consoleCaptured)
 
-    /** Ce que Régie pose par-dessus l'écran du haut quand une autre appli l'occupe. */
+    /**
+     * Ce que Régie pose par-dessus l'écran du haut quand une autre appli l'occupe, et que son écran
+     * du bas n'est pas visible non plus (ADR 19).
+     */
     val consoleOverlay: StateFlow<OverlayContent?> = combine(
         combine(topStarted, bottomStarted, ::Pair),
         combine(dictation.state, voiceCommand.state, ::Pair),
-        combine(floatingCard, answeringCard, ::Pair),
+        combine(floatingCard, answeringCard, cardKeysFor, ::Triple),
         live, overview,
     ) { screens, voice, card, shown, current ->
-        OverlayContent.of(screens.first, screens.second, voice.first, voice.second, card.first, card.second, shown, current.sessions)
+        OverlayContent.of(screens.first, screens.second, voice.first, voice.second, card.first, card.second, shown, current.sessions,
+            cardKeys = card.first != null && card.third == card.first?.key)
     }.stateIn(scope, SharingStarted.Eagerly, null)
 
     /** Les boutons qu'un panneau de Régie attend : le service les prend aux autres applis. */
     private fun consoleCaptured(): Set<Button> {
-        val card = floatingCard.value
+        val card = floatingCard.value?.takeIf { it.key == cardKeysFor.value }
         return when {
             dictation.state.value.visible -> DICTATION_KEYS
             voiceCommand.state.value.visible -> setOf(Button.A, Button.B, Button.UP, Button.DOWN)
-            card?.approval != null -> setOf(Button.A, Button.B)
+            // Opened by R2 « lance … » over another app: A launches, B cancels, the cross edits.
+            newSession.value.visible -> setOf(Button.A, Button.B, Button.UP, Button.DOWN, Button.LEFT, Button.RIGHT)
+            card?.approval?.optionFor(ApprovalDecision.ONCE) != null -> setOf(Button.A, Button.B)
             card != null -> setOf(Button.B)
             else -> emptySet()
         }
@@ -508,22 +527,36 @@ class AppContainer(
      * Une entrée prise à une autre appli. La carte volante d'abord : B la ferme, A autorise une fois sa
      * validation, L2 y répond (un refus avec consigne pour une validation). Sans carte, L2 dicte un
      * message à la session au premier plan de Régie, même si Régie montre un diff ou une validation :
-     * on ne la regarde pas. Le reste suit le chemin habituel.
+     * on ne la regarde pas. Un panneau passif laissé ouvert dans Régie (réglages, connexion des
+     * agents) se referme d'abord. Le reste suit le chemin habituel.
      */
     private fun handleConsoleInput(input: GamepadInput) {
-        val idle = !dictation.state.value.visible && !voiceCommand.state.value.visible && !newSession.value.visible &&
-            !settingsOpen.value && !sessionSettings.value.visible && controller.state.value.quit == null
-        val card = floatingCard.value
-        if (card != null && idle) when {
+        val busy = dictation.state.value.visible || voiceCommand.state.value.visible || newSession.value.visible ||
+            controller.state.value.quit != null
+        val card = floatingCard.value?.takeIf { !busy }
+        val l2 = input is GamepadInput.TriggerDown && input.trigger == Trigger.L2
+        if (card != null) when {
             input == GamepadInput.Pressed(Button.B) -> { floating?.dismiss(); return }
-            input == GamepadInput.Pressed(Button.A) -> { card.approval?.let(::approveFromCard); return }
-            input is GamepadInput.TriggerDown && input.trigger == Trigger.L2 -> { replyFromCard(card); return }
+            input == GamepadInput.Pressed(Button.A) -> {
+                // Same guard as inside Régie: a second A just after a dictation never authorizes.
+                if (closedByDelivery?.let { it.elapsedNow() < SECOND_A_IGNORED } != true) card.approval?.let(::approveFromCard)
+                return
+            }
+            l2 -> { closePassivePanels(); replyFromCard(card); return }
         }
-        if (idle && !topStarted.value && input is GamepadInput.TriggerDown && input.trigger == Trigger.L2) {
+        if (!busy && l2 && !topStarted.value) {
+            closePassivePanels()
             consoleTarget()?.let { beginDictation(DictationTarget.Message(it)) }
             return
         }
         handleInput(input)
+    }
+
+    /** Les panneaux sans décision en cours : ils cèdent la place à la dictée lancée hors de Régie. */
+    private fun closePassivePanels() {
+        settingsOpen.value = false
+        settingsReview?.close()
+        authenticationReview?.close()
     }
 
     /** La session au premier plan de Régie : celle affichée, sinon celle qui a le focus dans la liste. */
@@ -537,13 +570,17 @@ class AppContainer(
     private fun replyFromCard(card: app.regie.domain.model.FloatingCard) {
         val target = card.approval?.takeIf { it.optionFor(ApprovalDecision.REJECT) != null }
             ?.let { DictationTarget.Rejection(it.sessionId, it.id) } ?: DictationTarget.Message(card.sessionId)
-        floating?.pin()
+        val pinned = floating?.pin()
         beginDictation(target)
-        answeringCard.value = dictation.state.value.visible
+        if (dictation.state.value.visible) {
+            answeringKey = pinned
+            answeringCard.value = true
+        } else floating?.release(pinned)
     }
 
     private fun approveFromCard(request: app.regie.domain.model.Approval) {
         val answer = answerApproval ?: return
+        if (request.optionFor(ApprovalDecision.ONCE) == null) return
         scope.launch {
             val reply = answer(request.id, ApprovalDecision.ONCE).reply
             Log.i(TAG, "validation depuis la carte : $reply")
@@ -554,8 +591,12 @@ class AppContainer(
     /** Y sur la vue d'ensemble : la session console la plus récente, sinon sa fiche pré-remplie. */
     fun openConsoleSession() {
         val chosen = gateway ?: return
-        scope.launch {
-            val folders = try { chosen.projects() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { projects }
+        if (consoleSessionJob?.isActive == true) return
+        consoleSessionJob = scope.launch {
+            // An empty catalogue means « not reachable », not « no folder »: keep the last known list.
+            val catalog = try { chosen.projectCatalog().map { it.name } }
+                catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { emptyList() }
+            val folders = catalog.ifEmpty { projects }
             when (val choice = ConsoleSession.choose(chosen.sessions.value, folders)) {
                 is ConsoleLaunch.Resume -> openSession(choice.id)
                 is ConsoleLaunch.Create -> openNewSession(choice.draft)
@@ -612,13 +653,26 @@ class AppContainer(
         val answer = AnswerApproval(chosen)
         executeVoiceCommand = ExecuteVoiceCommand(chosen, answer, { openSession(it) }, { navigate(Screen.Overview) })
         answerApproval = answer
-        val floatingMessages = FloatingMessages(chosen, topStarted.map { !it }.stateIn(scope, SharingStarted.Eagerly, !topStarted.value), scope)
+        // A card only when the conversation is visible nowhere: neither Régie screen is shown (ADR 19).
+        val nowhere = combine(topStarted, bottomStarted) { top, bottom -> !top && !bottom }
+            .stateIn(scope, SharingStarted.Eagerly, !topStarted.value && !bottomStarted.value)
+        val floatingMessages = FloatingMessages(chosen, nowhere, scope)
         floating = floatingMessages
         scope.launch { floatingMessages.card.collect { floatingCard.value = it } }
-        // The reply dictated from a card is over (sent, erased or refused): the card leaves with it.
+        scope.launch {
+            floatingCard.map { it?.key }.distinctUntilChanged().collectLatest { key ->
+                cardKeysFor.value = null
+                if (key != null) { delay(CARD_KEYS_DELAY); cardKeysFor.value = key }
+            }
+        }
+        // The reply dictated from a card is over (sent, erased or refused): that card leaves with it.
         scope.launch {
             dictation.state.map { it.visible }.distinctUntilChanged().collect { visible ->
-                if (!visible && answeringCard.value) { answeringCard.value = false; floatingMessages.dismiss() }
+                if (!visible && answeringCard.value) {
+                    answeringCard.value = false
+                    floatingMessages.release(answeringKey)
+                    answeringKey = null
+                }
             }
         }
         scope.launch { chosen.connection.collectLatest { connection ->
@@ -772,6 +826,7 @@ class AppContainer(
         const val TOKEN_FILE = "bridge-token"
         const val CLOSE_DELAY_MS = 400L
         val SECOND_A_IGNORED = 500.milliseconds
+        val CARD_KEYS_DELAY = 1000.milliseconds
         val DICTATION_KEYS = setOf(Button.A, Button.B, Button.X, Button.Y, Button.UP, Button.DOWN, Button.LEFT, Button.RIGHT)
     }
 }

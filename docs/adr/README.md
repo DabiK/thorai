@@ -25,6 +25,7 @@ Un ajout daté ou une décision du journal prime sur le contexte historique d’
 | [16](16-configuration-native-des-agents.md) | MCP, consignes et permissions natives | 19 |
 | [17](17-session-brute-et-reglages-en-bas.md) | Fil brut, réglages et dictée en bas, accueil en liste | 22 |
 | [18](18-connexion-des-agents.md) | Code d’appareil Codex, connexion et repli Claude | 23 |
+| [19](19-mode-console.md) | L2 depuis toute appli, message volant, session console | 25 |
 
 Le [journal](00-journal-de-reprise.md) conserve les campagnes successives, leurs
 limites et les décisions produit. Le statut courant se lit dans les fichiers

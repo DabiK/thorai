@@ -90,15 +90,36 @@ class FloatingMessagesTest {
         assertNull(cards.card.value)
     }
 
-    @Test fun `a pinned card stays while the user answers and is never replaced`() = runTest {
+    @Test fun `a pinned card stays while the user answers and only an approval outranks it`() = runTest {
         val cards = start()
         add(ThreadEntry.AgentText(2, "Premier."), ThreadEntry.ToolCall(3, ToolKind.READ, "Read"))
         runCurrent()
-        cards.pin()
+        val pinned = cards.pin()
         add(ThreadEntry.AgentText(4, "Second."), ThreadEntry.ToolCall(5, ToolKind.READ, "Read"))
         advanceTimeBy(30.seconds); runCurrent()
         assertEquals("Premier.", cards.card.value?.text)
+        // The agent asks for an approval while the user is still answering: it shows anyway.
+        gateway.approvals.value = listOf(Approval(ApprovalId("a"), id, ApprovalKind.COMMAND, "am start"))
+        runCurrent()
+        assertEquals(FloatingKind.APPROVAL, cards.card.value?.kind)
+        // The answer ends: only the pinned card would leave, not the approval that replaced it.
+        cards.release(pinned)
+        assertEquals(FloatingKind.APPROVAL, cards.card.value?.kind)
         cards.dismiss()
+        assertNull(cards.card.value)
+    }
+
+    @Test fun `a second approval waits for the first card to leave`() = runTest {
+        val cards = start()
+        val first = Approval(ApprovalId("a"), id, ApprovalKind.COMMAND, "un")
+        val second = Approval(ApprovalId("b"), id, ApprovalKind.COMMAND, "deux")
+        // Two approvals in the same update: one card at a time.
+        gateway.approvals.value = listOf(first, second)
+        runCurrent()
+        assertEquals("deux", cards.card.value?.text)
+        cards.dismiss(); runCurrent()
+        assertEquals("un", cards.card.value?.text, "the waiting approval shows once the card leaves")
+        cards.dismiss(); runCurrent()
         assertNull(cards.card.value)
     }
 
