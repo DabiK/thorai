@@ -1,6 +1,6 @@
 # 24 — Les agents agissent de façon visible sur la console
 
-Statut : à fusionner
+Statut : fait
 Possède : `thor/computer-use/` (consignes, installation)
 
 ## Retour de l'utilisateur, 18 novembre
