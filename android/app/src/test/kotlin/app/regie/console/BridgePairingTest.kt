@@ -22,7 +22,7 @@ class BridgePairingTest {
     private val app = ApplicationProvider.getApplicationContext<Application>()
 
     @Test
-    fun `pairing sends only a socket name and gives the transfer the Termux UID`() {
+    fun `pairing sends only a socket name and the app package, and gives the transfer the Termux UID`() {
         shadowOf(app).grantPermissions(TermuxBridgeLauncher.PERMISSION)
         val tokenFile = File(app.filesDir, "bridge-token").also { it.delete() }
         val token = BridgeTokenFile(tokenFile).readOrCreate()
@@ -41,7 +41,8 @@ class BridgePairingTest {
         }.configure())
         val intent = shadowOf(app).nextStartedService
         assertEquals("/data/data/com.termux/files/home/bin/regie-bridge-configure", intent.getStringExtra("com.termux.RUN_COMMAND_PATH"))
-        assertEquals(listOf("regie-pair-fixture"), intent.getStringArrayExtra("com.termux.RUN_COMMAND_ARGUMENTS")?.toList())
+        // The package names the app's own token on the bridge: next to the classic app's (ADR 22).
+        assertEquals(listOf("regie-pair-fixture", app.packageName), intent.getStringArrayExtra("com.termux.RUN_COMMAND_ARGUMENTS")?.toList())
         assertNull(intent.getStringExtra("com.termux.RUN_COMMAND_STDIN"))
         assertTrue(intent.extras.toString().contains(token).not())
         tokenFile.delete()

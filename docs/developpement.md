@@ -73,7 +73,7 @@ scripts/thor-install.sh
 scripts/thor-shot.sh artifacts/screenshots/<ticket>
 ```
 
-`thor-install.sh` construit et installe `app.regie` seulement, puis l’ouvre. `thor-shot.sh` capture les deux écrans. Après un changement du pont : `thor/bridge/install.sh`. La [fiche de la console](thor.md) donne les écrans, la manette et l’environnement Termux.
+`thor-install.sh` construit et installe le seul paquet de ce dépôt (`app.regie.jeu` sur la branche du jeu, à côté de l’app classique, ADR 22), puis l’ouvre. `thor-shot.sh` capture les deux écrans. Après un changement du pont : `thor/bridge/install.sh`. La [fiche de la console](thor.md) donne les écrans, la manette et l’environnement Termux.
 
 ## Façon de travailler
 

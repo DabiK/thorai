@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import WebSocket from 'ws';
 
 /**
  * The bridge process itself (src/main.ts), without any agent: none is started until a session
@@ -28,6 +29,7 @@ function bridge(state: string, port: number, settings: Record<string, string> = 
       ...process.env,
       REGIE_BRIDGE_PORT: String(port),
       REGIE_BRIDGE_TOKEN_FILE: join(base, 'token'),
+      REGIE_BRIDGE_TOKEN_DIR: join(base, 'tokens'),
       REGIE_BRIDGE_STATE_DIR: join(base, state),
       REGIE_PROJECTS_DIR: join(base, 'projects'),
       ...settings,
@@ -128,6 +130,50 @@ describe('retention of the history', () => {
 
     expect(await started.exited).toBe(1);
     expect(started.log()).toContain('REGIE_BRIDGE_RETENTION_DAYS');
+    expect(existsSync(join(base, 'state/events.jsonl'))).toBe(false);
+  });
+});
+
+/** Opens a WebSocket with this token: resolves with the HTTP status of the refusal, or 101. */
+function connect(port: number, token: string): Promise<number> {
+  return new Promise((done) => {
+    const ws = new WebSocket(`ws://127.0.0.1:${port}`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    ws.once('open', () => {
+      ws.close();
+      done(101);
+    });
+    ws.once('unexpected-response', (_request, response) => done(response.statusCode ?? 0));
+  });
+}
+
+describe('the tokens of several apps', () => {
+  const GAME = 'c'.repeat(64);
+
+  it('starts with only the token of an app, and takes a new app without a restart', async () => {
+    rmSync(join(base, 'token'));
+    mkdirSync(join(base, 'tokens'), { mode: 0o700 });
+    writeFileSync(join(base, 'tokens/app.regie.jeu'), GAME, { mode: 0o600 });
+
+    const started = bridge('state', 0);
+    const port = await started.ready;
+    expect(await connect(port, GAME)).toBe(101);
+    expect(await connect(port, 'b'.repeat(64))).toBe(401);
+
+    writeFileSync(join(base, 'token'), 'b'.repeat(64), { mode: 0o600 });
+    expect(await connect(port, 'b'.repeat(64))).toBe(101);
+    expect(await connect(port, GAME)).toBe(101);
+    expect(started.log()).not.toContain(GAME);
+  });
+
+  it('refuses to start without any token', async () => {
+    rmSync(join(base, 'token'));
+
+    const started = bridge('state', 0);
+
+    expect(await started.exited).toBe(1);
+    expect(started.log()).toContain('no token');
     expect(existsSync(join(base, 'state/events.jsonl'))).toBe(false);
   });
 });
