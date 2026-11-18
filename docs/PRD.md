@@ -39,7 +39,7 @@ On prend la console et on parle. On voit d'un coup d'œil où en sont toutes ses
 | L1 / R1 | Session précédente / suivante. Sur la vue d'ensemble, R1 ouvre d'abord la validation en attente s'il y en a une |
 | Croix | Se déplacer (lignes de la vue d'ensemble, champs, lignes de diff) ; dans une session, Droite passe les réglages en modification |
 | Stick droit | Faire défiler |
-| Start | Interrompre la session affichée, ou tout mettre en pause depuis la vue d'ensemble |
+| Start | Interrompre la session affichée. Sur la vue d'ensemble (le hameau), ouvrir le menu de pause : « Tout mettre en pause » s'y trouve et se valide par A (décision de l'utilisateur, 18 novembre, ticket 49) |
 
 L'écran du bas affiche toujours les boutons utiles à cet instant.
 
