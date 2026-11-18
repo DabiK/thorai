@@ -87,8 +87,6 @@ class VillageGeneratorTest {
         val village = generator().generate(sample)
         assertEquals(InhabitantKind.SCRIBE, village.houseOf(SessionId("s1"))?.inhabitant)
         assertEquals(InhabitantKind.BRICOLEUR, village.houseOf(SessionId("s2"))?.inhabitant)
-        assertEquals(InhabitantKind.CARTOGRAPHE, InhabitantKind.ofAgentName("opencode"))
-        assertEquals(InhabitantKind.FALLBACK, InhabitantKind.ofAgentName("un-autre-agent"))
     }
 
     @Test

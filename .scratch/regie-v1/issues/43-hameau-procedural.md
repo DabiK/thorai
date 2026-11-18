@@ -34,7 +34,7 @@ Fait, dans `android/game/engine` (Kotlin pur, sans toucher à `World.kt`) :
   - `HouseCatalog` / `HouseModel` : données injectables (empreinte, porte, cheminée, fenêtres) ; six modèles par défaut, le premier est l'exemple du contrat (`maison.chaumiere`, 6 × 4, porte 3, 3).
   - `DecorCatalog` : les clés de l'atlas `decor` (arbres, buissons, fleurs, rochers, clôture, fontaine, banc, lanterne, panneau), remplaçables.
   - `RoofPalette.AUBE` : sept toits en trois tons, pris dans la palette Aube.
-  - `InhabitantKind` : scribe (Claude), bricoleur (Codex), cartographe (opencode), d'après `agent.name` ; un agent inconnu prend le scribe.
+  - `InhabitantKind.of(agent)` : scribe (`claude`), bricoleur (`codex`), cartographe (`opencode`), d'après `Agent.id` annoncé par le pont (modèle du ticket 31, fusionné) ; tout autre agent prend l'habitant par défaut, le scribe. Une maison par session, pas par agent.
   - Port `VillageLayoutStore` (`load`, `save`) et `InMemoryVillageLayoutStore`. La disposition (`VillageLayout`) retient l'ordre des rues, leur nombre de terrains, et pour chaque session son terrain, son modèle et son toit.
 
 Disposition retenue (la maquette n'est qu'un point de départ) :
@@ -52,7 +52,7 @@ Décisions :
 - **Coordonnées** : la carte est symétrique autour de la place et couvre au moins 30 × 17 tuiles. Quand une rue de l'ouest s'allonge au-delà des autres, la carte s'élargit et tout glisse ; `Village.relocate(pos, previous)` reporte la position du coursier.
 - `chimney` et `windows` sont en pixels natifs depuis le coin haut gauche de l'empreinte ; les valeurs par défaut attendent l'atlas du ticket 42.
 
-Tests (`./gradlew check` vert) : `FindPathTest`, `VillageGeneratorTest` (déterminisme, ordre indifférent, aucune superposition, portes et terrains libres accessibles depuis la place, voisines différentes, 30 sessions sur 6 projets), `VillageGrowthTest` (ajout, retrait, retour, réserve, allongement, rue qui ne raccourcit pas, nouveau projet, `relocate`, disposition rechargée, changement de projet), `HouseCatalogTest`.
+Tests (`./gradlew check` vert) : `FindPathTest`, `VillageGeneratorTest` (déterminisme, ordre indifférent, aucune superposition, portes et terrains libres accessibles depuis la place, voisines différentes, 30 sessions sur 6 projets), `VillageGrowthTest` (ajout, retrait, retour, réserve, allongement, rue qui ne raccourcit pas, nouveau projet, `relocate`, disposition rechargée, changement de projet), `HouseCatalogTest`, `InhabitantKindTest`.
 
 Reste, pour les lots suivants :
 

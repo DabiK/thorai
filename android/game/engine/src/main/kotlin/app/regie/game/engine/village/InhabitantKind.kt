@@ -1,11 +1,11 @@
 package app.regie.game.engine.village
 
 import app.regie.domain.model.Agent
-import java.util.Locale
 
 /**
  * L'habitant d'une maison : l'agent de la session (da-jeu.md, « Le hameau s'agrandit »).
- * Le scribe pour Claude, le bricoleur pour Codex, la cartographe pour opencode.
+ * Le scribe pour Claude, le bricoleur pour Codex, la cartographe pour opencode. Deux sessions du même
+ * agent donnent deux maisons, chacune avec son habitant.
  */
 enum class InhabitantKind {
     SCRIBE,
@@ -14,14 +14,12 @@ enum class InhabitantKind {
     ;
 
     companion object {
-        /** Un agent inconnu (un quatrième connecteur) prend l'habitant par défaut plutôt que d'échouer. */
+        /** Tout autre agent annoncé par le pont prend l'habitant par défaut. */
         val FALLBACK = SCRIBE
 
-        fun of(agent: Agent): InhabitantKind = ofAgentName(agent.name)
-
-        /** D'après le nom ou l'identifiant de l'agent, sans tenir compte de la casse. */
-        fun ofAgentName(name: String): InhabitantKind =
-            when (name.trim().lowercase(Locale.ROOT)) {
+        /** D'après l'identifiant de l'agent annoncé par le pont, jamais d'après son libellé. */
+        fun of(agent: Agent): InhabitantKind =
+            when (agent.id) {
                 "claude" -> SCRIBE
                 "codex" -> BRICOLEUR
                 "opencode" -> CARTOGRAPHE
