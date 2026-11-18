@@ -110,10 +110,11 @@ fun GameSessionTop(
             dictation = dictation,
             format = MarkdownFormat,
             approval = card,
+            // Un seul écran : le fil reste, la dictée prend le panneau du bas (ADR 17).
             single = if (!singleScreen) null else ({
-                dictationPanel?.invoke() ?: SessionCarnet(
+                SessionCarnet(
                     live, gone, neighbours, control, draft, settings, scroll, callbacks, approval, onDecision, onNextApproval,
-                    onDismissApproval, onSelectSetting, compact = true, threadApproval = card,
+                    onDismissApproval, onSelectSetting, compact = true, threadApproval = card, dictation = dictationPanel,
                 )
             }),
         )
@@ -136,9 +137,12 @@ fun GameSessionBottom(
     onNextApproval: () -> Unit,
     onDismissApproval: () -> Unit,
     onSelectSetting: (Int) -> Unit,
+    /** Mode console : une autre appli occupe le haut. */
+    console: Boolean = false,
 ) {
     GameTheme {
-        SessionCarnet(live, gone, neighbours, control, draft, settings, scroll, callbacks, approval, onDecision, onNextApproval, onDismissApproval, onSelectSetting)
+        SessionCarnet(live, gone, neighbours, control, draft, settings, scroll, callbacks, approval, onDecision, onNextApproval, onDismissApproval, onSelectSetting,
+            console = console)
     }
 }
 
@@ -159,6 +163,8 @@ private fun SessionCarnet(
     onSelectSetting: (Int) -> Unit,
     compact: Boolean = false,
     threadApproval: (@Composable () -> Unit)? = null,
+    console: Boolean = false,
+    dictation: (@Composable () -> Unit)? = null,
 ) {
     val notice = control.notice
     val house = remember(callbacks, onSelectSetting) { callbacks.house(onSelectSetting) }
@@ -178,6 +184,8 @@ private fun SessionCarnet(
         approvalQueued = approval.queue.any { it.id != approval.request?.id },
         threadApproval = threadApproval,
         compact = compact,
+        console = console,
+        dictation = dictation,
     )
 }
 

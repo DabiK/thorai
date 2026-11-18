@@ -39,10 +39,13 @@ class BottomActivity : GamepadActivity() {
                 val draft by container.sessionController.draft
                 val approval by container.inlineApproval.collectAsStateWithLifecycle()
                 val settings by container.sessionSettings.collectAsStateWithLifecycle()
-                // La maison (ticket 46) : le fil brut est toujours en bas, y compris en mode console (ticket 25).
+                // La maison (ticket 46) : le fil brut est toujours en bas. Mode console : une autre appli
+                // occupe le haut, le carnet nomme la session suivie (ticket 25).
+                val topVisible by container.topStarted.collectAsStateWithLifecycle()
                 val neighbours = overview.neighboursOf(shown.id)
                 app.regie.ui.game.GameSessionBottom(live, gone = neighbours == null, neighbours, control, draft, settings, threadScroll, sessionCallbacks,
-                    approval, container::answerInline, container::nextInlineApproval, container::dismissInlineApproval, container::selectSessionSetting)
+                    approval, container::answerInline, container::nextInlineApproval, container::dismissInlineApproval, container::selectSessionSetting,
+                    console = !topVisible)
             },
         )
 

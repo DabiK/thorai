@@ -24,6 +24,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.down
 import androidx.compose.ui.test.up
+import androidx.compose.ui.unit.dp
 import app.regie.domain.model.Agent
 import app.regie.domain.model.DictationPhase
 import app.regie.domain.model.DictationReview
@@ -267,7 +268,48 @@ class HouseScreensTest {
         compose.onNodeWithTag("house-thread").assertIsDisplayed()
         compose.onNodeWithText("Interrompre").assertIsDisplayed()
         compose.onNodeWithText("Réglages de Claude").assertIsDisplayed()
+        // Le journal de quête passe sous les pieds du coursier : il ne recouvre ni l'habitant ni le coursier.
+        val log = compose.onNode(hasTestTag("quest-log")).assertIsDisplayed().getUnclippedBoundsInRoot()
+        val bubble = compose.onNode(hasTestTag("house-activity"), useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val scene = scenes.getValue("fond.interieur.scribe")
+        // La bulle part de l'épaule, 16 pixels du dessin au-dessus des pieds de l'habitant ; ×4, à 369 dpi.
+        val courierFeet = bubble.bottom + ((16 + scene.entrance.y - scene.inhabitant.y) * 4 / (369f / 160f)).dp
+        assertTrue(log.top >= courierFeet, "journal ${log.top} sur le coursier $courierFeet")
+        val sign = compose.onNode(hasTestTag("house-sign")).getUnclippedBoundsInRoot()
+        assertTrue(bubble.left >= sign.right || bubble.top >= sign.bottom, "la bulle recouvre le panneau")
         save(activity, "46-un-ecran.png")
+    }
+
+    @Test
+    fun `on a single screen a dictation keeps the thread and takes the place of the field and the keys`() {
+        val state = DictationReview(DictationTarget.Message(SessionId("s1")), DictationPhase.REVIEW, "Garde updatedAt", durationMs = 4_000)
+        val activity = show {
+            HouseTopScreen(live(), false, assets, scenes, "4 min", state, single = {
+                HouseBottomScreen(live(), false, null, SessionSettingsReview(), null, "", null, {}, scrollInput(), RecordingCallbacks(), compact = true,
+                    threadApproval = { BasicText("Carte de validation") },
+                    dictation = { HouseDictationScreen(state, session(), emptyList(), scrollInput(), RecordingCallbacks(), compact = true) })
+            })
+        }
+        compose.onNodeWithTag("house-thread").assertIsDisplayed()
+        compose.onNodeWithText(REPLY + "▌", useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithText("Carte de validation").assertExists()
+        compose.onNodeWithText("Garde updatedAt", useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithText("Envoyer").assertIsDisplayed()
+        compose.onNodeWithText("Écrire un message").assertDoesNotExist()
+        compose.onNodeWithText("Voir les modifications").assertDoesNotExist()
+        val thread = compose.onNodeWithTag("house-thread").getUnclippedBoundsInRoot()
+        val panel = compose.onNodeWithTag("dictation-panel").getUnclippedBoundsInRoot()
+        assertTrue(thread.bottom <= panel.top, "le fil au-dessus, la dictée en bas")
+        save(activity, "46-un-ecran-dictee.png")
+    }
+
+    @Test
+    @Config(qualifiers = THOR_BOTTOM)
+    fun `in console mode the notebook names the session it follows`() {
+        show { HouseBottomScreen(live(), false, null, SessionSettingsReview(), null, "", null, {}, scrollInput(), RecordingCallbacks(), console = true) }
+        compose.onNodeWithText("Claude · regie").assertIsDisplayed()
+        compose.onNodeWithTag("house-thread").assertIsDisplayed()
+        compose.onNodeWithTag("house-settings").assertIsDisplayed()
     }
 
     /** Le contenu de la fenêtre, dessiné en logiciel ; gardé dans `build/` pour le relire. */

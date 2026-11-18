@@ -28,11 +28,11 @@ Livré, dans `:game-ui` (`app.regie.game.ui.house`), écrans sans état nourris 
 
 Branchement dans `android/app`, aux seuls points d'appel : `ui/game/HouseScreens.kt` adapte l'état et les rappels existants (`SessionCallbacks`, `SessionNotice`, `settingsHint`, `recognizedTerms`, markdown de l'ADR 07) ; `TopActivity` et `BottomActivity` (branche session) et `GamepadActivity` (branches dictée) appellent les écrans du jeu. `SessionScreens`, `ThreadLayout`, `SessionSettingsScreen` et `DictationScreens` restent dans le code pour le ticket 51 ; `InlineApproval` (ticket 47) est hébergé tel quel : avec son détail au-dessus de la pièce, ses décisions à la place des touches du bas, en fin de fil sur un seul écran.
 
-Un seul écran : l'intérieur se resserre à gauche autour de l'habitant (800 px, toujours ×4), le carnet du bas occupe la droite (fil, validation, réglages, champ, touches) ; la dictée prend la place du carnet. Mode console : le fil est toujours en bas, plus de version compacte à part.
+Un seul écran : l'intérieur se resserre à gauche autour de l'habitant (800 px, toujours ×4), le carnet du bas occupe la droite (fil, validation, réglages, champ, touches) ; pendant une dictée de la session, le fil reste et la dictée prend la place de la table, du champ et des touches (ADR 17). Mode console : le fil est toujours en bas, et le carnet nomme la session suivie (« Codex · projet »).
 
 Preuves :
 - `HouseLookTest` (habitant, animations par état, coursier, bulle, réplique verbatim, lecture des scènes, écarts du fil), `HouseScreensTest` (Robolectric, graphismes natifs, vrais atlas : haut au travail et au repos, coursier qui parle seulement pour sa session, validation hébergée, session indisponible, fil brut, ordre et rappels des touches, table en modification, validation à la place des touches, envoi écrit et avis qui s'efface, dictée et ses touches, un seul écran), `HouseWiringTest` dans `app` (markdown, rappels vers les contrôleurs, avis de l'app, validation, un seul écran avec dictée). Les tests des écrans classiques restent verts : ils visent leurs composables, qui existent encore.
-- Captures Robolectric : `docs/images/jeu/46-maison-travail.png`, `46-maison-repos.png`, `46-dictee-haut.png`, `46-fil-bas.png`, `46-reglages-bas.png`, `46-dictee-bas.png`, `46-un-ecran.png` (hauteur réduite par les barres système de Robolectric).
+- Captures Robolectric : `docs/images/jeu/46-maison-travail.png`, `46-maison-repos.png`, `46-dictee-haut.png`, `46-fil-bas.png`, `46-reglages-bas.png`, `46-dictee-bas.png`, `46-un-ecran.png`, `46-un-ecran-dictee.png` (hauteur réduite par les barres système de Robolectric).
 - `./gradlew check` vert dans `android/`.
 
 Écarts aux maquettes 04 à 07, pour rester fidèle au domaine et cohérent :
@@ -48,3 +48,12 @@ Reste :
 - Ticket 51 : retirer les écrans classiques et mettre à jour `InterfaceCopyTest`.
 - Vérifier la lisibilité sur la Thor (taille du texte du fil, cases des réglages) à l'intégration, par l'orchestrateur.
 - `scenes` est lu par `InteriorScenes` dans la maison : à rapprocher du chargeur si le ticket 52 le lit aussi.
+
+### Relecture (18 novembre)
+
+- Bloquant corrigé : sur un seul écran, la dictée d'une session ne remplace plus tout le carnet. Le fil (avec la carte de validation en fin de fil) reste, la dictée prend un panneau de 520 px à la place de la table, du champ et des touches. Tests `on a single screen a dictation keeps the thread…` (game-ui) et `HouseWiringTest`, capture `46-un-ecran-dictee.png`. La réplique de l'agent reste lisible dans le fil, à droite ; la pièce compacte n'a pas de boîte de dialogue.
+- Bloquant confié au ticket 47 : le détail d'une validation sur deux écrans (carte du haut qui ne défile qu'au doigt).
+- Mode console : le carnet nomme la session suivie (`console`, depuis `BottomActivity` quand le haut est pris par une autre appli). Les deux tests de `ConsoleModeTest` qui visaient `SessionBottomScreen` visent maintenant `GameSessionBottom`.
+- `HouseThreadTest` : la croix remonte puis 0 ramène en bas, « Revenir en bas » au toucher, le stick tenu, une nouvelle ligne suivie en bas mais pas pendant la lecture plus haut.
+- Un seul écran : le journal de quête passe en bas de la colonne et la pièce remonte d'autant (`compactLift`), la bulle d'activité part de l'épaule de l'habitant. Le test vérifie que le journal ne recouvre ni l'habitant ni le coursier, et que la bulle ne recouvre pas le panneau.
+- Branche à jour de `ticket/40-vue-jeu` (coursier du ticket 44, puis main avec les tickets 28 et 30). L'ADR de la vue jeu est désormais l'ADR 24.

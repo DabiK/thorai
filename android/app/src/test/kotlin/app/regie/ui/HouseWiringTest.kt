@@ -93,7 +93,7 @@ class HouseWiringTest {
     }
 
     @Test @Config(qualifiers = "w832dp-h468dp-land-369dpi")
-    fun `on a single screen the top keeps the house and the notebook, the dictation takes the notebook's place`() {
+    fun `on a single screen a dictation keeps the house and the thread, and takes the place of the field and keys`() {
         val recorder = Recorder()
         val live = LiveSession.of(session, SessionThread(listOf(ThreadEntry.UserMessage(1, "Lance les tests")), loaded = true))
         val dictation = DictationReview(DictationTarget.Message(session.id), DictationPhase.REVIEW, "Lance updatedAt", vocabulary = listOf("updatedAt"))
@@ -104,7 +104,9 @@ class HouseWiringTest {
                     { _, _ -> }, {}, {}, {}, dictation) { GameDictation(dictation, session, { buttons += it }, {}, {}, scroll, compact = true) }
             } }
             compose.onNode(androidx.compose.ui.test.hasTestTag("house-scene")).assertIsDisplayed()
+            compose.onNodeWithText("Lance les tests").assertIsDisplayed()
             compose.onNodeWithText("Lance updatedAt", useUnmergedTree = true).assertIsDisplayed()
+            compose.onNodeWithText("Écrire un message").assertDoesNotExist()
             compose.onNodeWithText("Envoyer").performClick()
             assertEquals(listOf(Button.A), buttons)
         }
