@@ -305,6 +305,9 @@ garder le routeur d'entrées de la manette (ADR 05) et se tester sans console.
   avant le routeur, dans le `Window.Callback`.
 - « Continuer » du titre mène à la vue d'ensemble (`openOverview`), même si un autre écran s'était
   ouvert entre-temps.
+- En mode console voulu (une autre appli sur l'écran du haut), ni Start ni « Continuer » ne ramènent
+  ThorAI en haut : l'autre appli reste. Y entre et sort du mode console (décision de l'utilisateur,
+  18 novembre, ticket 54).
 
 ## Conséquences
 

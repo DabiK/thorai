@@ -126,3 +126,16 @@ maison (`ApprovalController`), le mode console et sa carte volante (`ConsoleMode
   sans lien avec l'app.
 - Avant la correction, une fois, A devant une maison a fait marcher le coursier vers une autre ; non
   reproduit après (A rentre dans la maison quittée).
+
+### Décision de l'utilisateur (18 novembre)
+
+En mode console voulu (une autre appli sur l'écran du haut), ni Start ni « Continuer » ne ramènent
+ThorAI en haut : l'autre appli reste. Y sert à entrer et sortir du mode console. Aucun changement de
+code : c'est déjà le comportement actuel.
+
+### Vérification de l'orchestrateur, après fusion
+
+Build fusionnée réinstallée sur la Thor. Titre, puis A sur « Continuer » : hameau. Home, puis
+réouverture depuis l'écran du bas : le hameau revient en haut (journal « retour sur le display 0 »).
+Dans une maison, brouillon tapé : B ferme le clavier et garde le brouillon, le B suivant ramène au
+hameau, devant la porte.
