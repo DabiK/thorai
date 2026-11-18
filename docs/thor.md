@@ -4,7 +4,7 @@ Relevé matériel du 13 novembre 2026, conservé comme référence de la Thor.
 Les versions et l’état des permissions ci-dessous sont un instantané, pas un contrôle actuel.
 L’installation reproductible sur une console neuve est dans la [notice d’installation](installation.md).
 Les lanceurs `claude`, `codex`, `dev-start`, `dev-stop`, `dev-linux` et le navigateur sont des outils
-préexistants de cette console, pas des prérequis ni des livrables de Régie.
+préexistants de cette console, pas des prérequis ni des livrables de ThorAI.
 
 ## Matériel et système
 
@@ -40,7 +40,7 @@ préexistants de cette console, pas des prérequis ni des livrables de Régie.
 
 ## Termux et les agents
 
-- **Termux** 0.118.3, version GitHub *debug*, ce qui permet `adb shell run-as com.termux`. Termux:Widget 0.15.0 est installé. Termux:API et Termux:Boot ne le sont pas ; Régie n’en a pas besoin. Une extension doit venir des releases GitHub, signée comme Termux.
+- **Termux** 0.118.3, version GitHub *debug*, ce qui permet `adb shell run-as com.termux`. Termux:Widget 0.15.0 est installé. Termux:API et Termux:Boot ne le sont pas ; ThorAI n’en a pas besoin. Une extension doit venir des releases GitHub, signée comme Termux.
 - **Debian 13** via proot-distro, utilisateur `dev`. Rootfs : `$PREFIX/var/lib/proot-distro/containers/debian/rootfs`.
 - **Node** 24.22.3 dans la Debian (`/opt`, liens dans `/usr/local/bin`). Termux a aussi `nodejs-lts`.
 - **Claude Code** 2.1.322 : `/home/dev/.local/bin/claude`, connecté à claude.ai, identifiants dans `/home/dev/.claude/`.
@@ -58,4 +58,4 @@ préexistants de cette console, pas des prérequis ni des livrables de Régie.
   - Playwright MCP déclaré sous le nom `thor_browser` dans les deux agents (Chromium sans fenêtre, avec `--no-sandbox`), invisible sur la console : les consignes du ticket 24 réservent les demandes visibles à `thor_android` ;
   - `openssh` installé, mais aucun sshd configuré.
 - **Réglages Android** : Termux est exempté de l'économie de batterie, `settings_enable_monitor_phantom_procs=false`.
-- **RUN_COMMAND** : le service est exposé, mais `allow-external-apps=false` au relevé initial. `thor/bridge/install.sh` le passe à `true` ; Régie demande la permission RUN_COMMAND à son ouverture.
+- **RUN_COMMAND** : le service est exposé, mais `allow-external-apps=false` au relevé initial. `thor/bridge/install.sh` le passe à `true` ; ThorAI demande la permission RUN_COMMAND à son ouverture.

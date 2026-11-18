@@ -39,5 +39,5 @@ grep -q -- '-PregieVersionCode=1002004' "$tmp/log"
 bash "$tmp/repo/scripts/release.sh" 1.2.3
 grep -q 'release create v1.2.3' "$tmp/log"
 if bash "$tmp/repo/scripts/release.sh" '../bad'; then exit 1; fi
-[[ -f "$tmp/repo/android/app/build/outputs/apk/release/regie-1.2.3.apk.sha256" ]]
+[[ -f "$tmp/repo/android/app/build/outputs/apk/release/thorai-1.2.3.apk.sha256" ]]
 echo 'release packaging: OK'

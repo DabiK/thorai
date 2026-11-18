@@ -15,7 +15,7 @@ class PixelImage(val width: Int, val height: Int, val pixels: IntArray) {
 }
 
 /**
- * Le sol dessiné par le code (ADR 21), d'après le hameau de l'artefact (`docs/rebrand/assets/aube/hameau.png`) :
+ * Le sol dessiné par le code (ADR 24), d'après le hameau de l'artefact (`docs/rebrand/assets/aube/hameau.png`) :
  * - l'herbe en trois tons, par plaques douces tramées, avec des touffes, des brins clairs et de petites fleurs ;
  * - le chemin crème, caillouteux, bordé d'un liseré, l'herbe débordant un peu sur ses bords arrondis ;
  * - la place en pavés arrondis clairs, aux joints gris ;

@@ -81,7 +81,7 @@ class OverlayWindow(
             gravity = if (panel) Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL else Gravity.TOP or Gravity.END
             x = if (panel) 0 else dp(20)
             y = dp(20)
-            title = "Régie"
+            title = "ThorAI"
         }
     }
 }

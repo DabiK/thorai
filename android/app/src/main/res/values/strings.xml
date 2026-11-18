@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name">Régie</string>
+    <string name="app_name">ThorAI</string>
 
     <!-- Le compteur de l'en-tête : les sessions chargées dans un agent, pas l'historique. -->
     <plurals name="overview_session_count">
@@ -42,15 +42,12 @@
     <string name="bridge_unreachable">Pont injoignable</string>
     <string name="bridge_hint_grant_run_command">Autorise les commandes Termux dans les permissions Android.</string>
     <string name="bridge_hint_termux_missing">Termux ne répond pas. Relance l’installation du pont dans Termux.</string>
-    <string name="bridge_hint_token_missing">Clé du pont absente. Autorise les commandes Termux puis rouvre Régie.</string>
-    <string name="bridge_hint_token_refused">Clé du pont refusée. Autorise les commandes Termux puis rouvre Régie.</string>
-    <string name="bridge_hint_restarting">Régie relance le pont et se reconnecte seule.</string>
-    <string name="android_access_title">Accès des agents à Android</string>
-    <string name="android_access_hint">Autorise la reconnexion Android depuis le Mac.</string>
+    <string name="bridge_hint_token_missing">Clé du pont absente. Autorise les commandes Termux puis rouvre ThorAI.</string>
+    <string name="bridge_hint_token_refused">Clé du pont refusée. Autorise les commandes Termux puis rouvre ThorAI.</string>
+    <string name="bridge_hint_restarting">ThorAI relance le pont et se reconnecte seule.</string>
 
     <string name="mic_description">Maintenir pour dicter</string>
     <string name="mic_hold_l2">Maintiens L2 et parle</string>
-    <string name="mic_r2_examples">Maintiens R2 pour donner un ordre</string>
     <string name="mic_l2_held">L2 maintenu</string>
     <string name="mic_r2_held">R2 maintenu</string>
 
@@ -67,7 +64,7 @@
     <string name="quit_cancel">Annuler</string>
     <string name="quit_stopping">Arrêt des sessions et du pont…</string>
     <!-- Session en direct (écran 3 de la maquette). -->
-    <string name="session_breadcrumb">Régie ›</string>
+    <string name="session_breadcrumb">ThorAI ›</string>
     <string name="session_status_since">%1$s · %2$s</string>
     <string name="session_context">contexte %d %%</string>
     <string name="thread_opening">Ouverture de la session…</string>
@@ -131,10 +128,8 @@
 
     <!-- Mode console (ticket 25). -->
     <string name="action_console_session">Piloter la console</string>
-    <string name="console_notice_title">Mode console</string>
-    <string name="console_notice_hint">L2 depuis toute appli : active Régie dans Accessibilité.</string>
-    <string name="console_service_label">Régie, mode console</string>
-    <string name="console_service_description">Parle à l’agent depuis toute appli, L2 maintenu. Ses messages passent par-dessus l’écran du haut. Régie lit seulement la manette, jamais l’écran.</string>
+    <string name="console_service_label">ThorAI, mode console</string>
+    <string name="console_service_description">Parle à l’agent depuis toute appli, L2 maintenu. Ses messages passent par-dessus l’écran du haut. ThorAI lit seulement la manette, jamais l’écran.</string>
     <string name="card_awaiting_answer">Attend ta réponse</string>
     <string name="card_allow_once">Autoriser une fois</string>
     <string name="card_close">Fermer</string>

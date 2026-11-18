@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -43,7 +44,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
@@ -84,9 +84,6 @@ interface ControlCallbacks {
     fun onQuit()
     fun onConfirmQuit()
     fun onCancelQuit()
-
-    /** Ouvrir les réglages d'accessibilité, où l'utilisateur active le mode console (ticket 25). */
-    fun onEnableConsole() {}
 }
 
 /**
@@ -117,15 +114,35 @@ fun OverviewTopScreen(
 
 /** Écran du bas : la première validation en attente, le micro et les boutons utiles. */
 @Composable
-fun OverviewBottomScreen(overview: Overview, control: ControlState, callbacks: ControlCallbacks, consoleOff: Boolean = false) {
+fun OverviewBottomScreen(overview: Overview, control: ControlState, callbacks: ControlCallbacks) {
     Box(Modifier.fillMaxSize().background(Palette.background)) {
-        BottomContent(overview, control, callbacks, consoleOff)
+        BottomContent(overview, control, callbacks)
         control.quit?.let { QuitPrompt(it, callbacks) }
     }
 }
 
+/**
+ * Les raccourcis au-dessus de l'accueil, là où l'on touche : connexion des agents (B), parcours
+ * d'accueil et voix (au doigt). [setupLeft] : une étape facultative reste à faire, un point le signale
+ * au lieu d'un avis permanent (ticket 30).
+ */
 @Composable
-private fun BottomContent(overview: Overview, control: ControlState, callbacks: ControlCallbacks, consoleOff: Boolean) {
+fun OverviewShortcuts(setupLeft: Boolean, onAgents: () -> Unit, onSetup: () -> Unit, onVoice: () -> Unit, modifier: Modifier = Modifier) {
+    Row(modifier.fillMaxWidth().background(Palette.background).padding(start = 16.dp, end = 8.dp).heightIn(min = 44.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        BarAction("B", "Connexion des agents", size = 14.sp, onClick = onAgents)
+        Spacer(Modifier.weight(1f))
+        Row(Modifier.tappable(onSetup).padding(horizontal = 10.dp, vertical = 10.dp).testTag("open-setup"),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (setupLeft) Box(Modifier.size(7.dp).background(Palette.waiting, CircleShape).testTag("setup-left"))
+            BasicText("Configurer", style = sans(14.sp, color = Palette.textMuted))
+        }
+        BasicText("Régler la voix", style = sans(14.sp, color = Palette.textMuted), modifier = Modifier.tappable(onVoice).padding(horizontal = 10.dp, vertical = 10.dp))
+    }
+}
+
+@Composable
+private fun BottomContent(overview: Overview, control: ControlState, callbacks: ControlCallbacks) {
     Column(Modifier.fillMaxSize()) {
         // La première validation en attente d'abord, en haut de l'écran (PRD, parcours 1).
         overview.firstPendingApproval?.let {
@@ -135,29 +152,21 @@ private fun BottomContent(overview: Overview, control: ControlState, callbacks: 
                 modifier = Modifier.padding(start = 16.dp, top = 14.dp, end = 16.dp).fillMaxWidth(),
             )
         }
-        Notices(overview, Modifier.padding(start = 16.dp, top = 14.dp, end = 16.dp).fillMaxWidth())
-        // La permission spéciale est un geste de l'utilisateur : l'avis explique et ouvre les réglages.
-        if (consoleOff) Box(Modifier.padding(start = 16.dp, top = 8.dp, end = 16.dp).fillMaxWidth().testTag("console-notice").tappable(callbacks::onEnableConsole)) {
-            Notice(stringResource(R.string.console_notice_title), stringResource(R.string.console_notice_hint), Palette.textMuted)
-        }
+        Notices(overview, Modifier.padding(start = 16.dp, top = 12.dp, end = 16.dp).fillMaxWidth())
+        // L2 maintenu est un geste invisible : sa phrase reste. Celle de R2 a quitté l'accueil (ticket 30).
         Column(
             modifier = Modifier.weight(1f).fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterVertically),
+            verticalArrangement = Arrangement.spacedBy(18.dp, Alignment.CenterVertically),
         ) {
             MicButton(
                 active = control.heldTriggers.isNotEmpty(),
                 onPress = { callbacks.onTrigger(Trigger.L2, held = true) },
                 onRelease = { callbacks.onTrigger(Trigger.L2, held = false) },
             )
-            BasicText(micTitle(control), style = sans(18.sp, weight = 600, color = micTitleColor(control)))
-            BasicText(
-                text = stringResource(R.string.mic_r2_examples),
-                style = sans(13.sp, color = Palette.textMuted, lineHeight = 19.5.sp).copy(textAlign = TextAlign.Center),
-                modifier = Modifier.widthIn(max = 420.dp),
-            )
+            BasicText(micTitle(control), style = sans(20.sp, weight = 600, color = micTitleColor(control)))
         }
-        ButtonBar(callbacks, Modifier.fillMaxWidth().height(50.dp).topDivider().padding(horizontal = 16.dp), withQuitSpacer = true)
+        ButtonBar(callbacks, Modifier.fillMaxWidth().height(58.dp).topDivider().padding(horizontal = 16.dp), withQuitSpacer = true)
     }
 }
 
@@ -214,17 +223,14 @@ private fun agentVersions(agents: List<AgentVersion>): AnnotatedString {
     }
 }
 
-/** Ce que l'utilisateur doit savoir et peut faire : pont injoignable, accès des agents à Android. */
+/**
+ * Ce que l'utilisateur doit savoir et faire maintenant : le pont injoignable. L'accès des agents à
+ * Android et le mode console, facultatifs, passent par « Configurer » (ticket 28).
+ */
 @Composable
 private fun Notices(overview: Overview, modifier: Modifier) {
-    val bridge = overview.bridge as? BridgeStatus.Unreachable
-    if (bridge == null && !overview.androidAccessMissing) return
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        bridge?.let { Notice(stringResource(R.string.bridge_unreachable), stringResource(hintText(it.hint)), Palette.waiting) }
-        if (overview.androidAccessMissing) {
-            Notice(stringResource(R.string.android_access_title), stringResource(R.string.android_access_hint), Palette.textMuted)
-        }
-    }
+    val bridge = overview.bridge as? BridgeStatus.Unreachable ?: return
+    Box(modifier) { Notice(stringResource(R.string.bridge_unreachable), stringResource(hintText(bridge.hint)), Palette.waiting) }
 }
 
 private fun hintText(hint: BridgeHint) = when (hint) {
@@ -261,8 +267,8 @@ private fun QuitPrompt(step: QuitStep, callbacks: ControlCallbacks) {
                         style = sans(15.sp, weight = 600, lineHeight = 20.sp),
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(22.dp)) {
-                        BarAction("A", stringResource(R.string.quit_confirm), callbacks::onConfirmQuit)
-                        BarAction("B", stringResource(R.string.quit_cancel), callbacks::onCancelQuit)
+                        BarAction("A", stringResource(R.string.quit_confirm), size = 14.sp, onClick = callbacks::onConfirmQuit)
+                        BarAction("B", stringResource(R.string.quit_cancel), size = 14.sp, onClick = callbacks::onCancelQuit)
                     }
                 }
                 QuitStep.Stopping -> BasicText(stringResource(R.string.quit_stopping), style = sans(15.sp, weight = 600))
@@ -287,8 +293,13 @@ internal fun rememberNow(): State<Instant> = produceState(Clock.System.now()) {
 @Composable
 private fun SessionList(overview: Overview, control: ControlState, now: Instant, compact: Boolean, velocity: StateFlow<Float>, modifier: Modifier) {
     val sessions = overview.sessions
-    if (sessions.isEmpty() && overview.bridge == BridgeStatus.Connected) {
-        StateMessage("Aucune session. Crée une session avec X.", modifier)
+    if (sessions.isEmpty()) {
+        // Liste vide : on dit pourquoi, sans inventer de session (docs/textes.md).
+        StateMessage(when (val bridge = overview.bridge) {
+            BridgeStatus.Connected -> "Aucune session. Crée une session avec X."
+            BridgeStatus.Connecting -> stringResource(R.string.bridge_connecting)
+            is BridgeStatus.Unreachable -> "${stringResource(R.string.bridge_unreachable)}. ${stringResource(hintText(bridge.hint))}"
+        }, modifier.testTag("session-list-empty"))
         return
     }
     val focus = control.focusIn(sessions.map { it.id })
@@ -368,9 +379,9 @@ private fun ButtonBar(callbacks: ControlCallbacks, modifier: Modifier, withQuitS
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(18.dp),
     ) {
-        BarAction("A", stringResource(R.string.action_open)) { callbacks.onButton(Button.A) }
-        BarAction("X", stringResource(R.string.action_new_session)) { callbacks.onButton(Button.X) }
-        BarAction("Y", stringResource(R.string.action_console_session)) { callbacks.onButton(Button.Y) }
+        BarAction("A", stringResource(R.string.action_open), size = 14.sp) { callbacks.onButton(Button.A) }
+        BarAction("X", stringResource(R.string.action_new_session), size = 14.sp) { callbacks.onButton(Button.X) }
+        BarAction("Y", stringResource(R.string.action_console_session), size = 14.sp) { callbacks.onButton(Button.Y) }
         if (withQuitSpacer) Spacer(Modifier.weight(1f))
         QuitAction(callbacks::onQuit)
     }
@@ -381,7 +392,7 @@ private fun ButtonBar(callbacks: ControlCallbacks, modifier: Modifier, withQuitS
 private fun QuitAction(onClick: () -> Unit) {
     BasicText(
         text = stringResource(R.string.action_quit),
-        style = sans(12.5.sp, color = Palette.textMuted),
+        style = sans(14.sp, color = Palette.textMuted),
         modifier = Modifier
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick)
             .padding(vertical = 8.dp),

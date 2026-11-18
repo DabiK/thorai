@@ -101,8 +101,13 @@ class ModelStore(
         }
     }
 
+    /** Free space needed before installing [specs]: what is left to download, once installed, plus a margin. */
+    fun requiredFreeBytes(specs: List<ModelSpec>): Long = missing(specs).let { todo ->
+        if (todo.isEmpty()) 0 else remainingDownloadBytes(todo) + todo.sumOf { it.installedBytes } + SPACE_MARGIN
+    }
+
     private fun checkFreeSpace(todo: List<ModelSpec>) {
-        val needed = remainingDownloadBytes(todo) + todo.sumOf { it.installedBytes } + SPACE_MARGIN
+        val needed = requiredFreeBytes(todo)
         val free = usableSpace(root)
         if (free < needed) {
             throw VoiceException(
