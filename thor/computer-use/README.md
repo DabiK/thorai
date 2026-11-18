@@ -112,7 +112,7 @@ L'association passe par une boîte de dialogue sur l'écran de la console. Seul 
      ```sh
      thor/computer-use/pair-from-mac.sh 37145 123456
      ```
-   - ou sur la console, dans Termux, sur l'autre écran : `dev-linux`, puis `/opt/thor-android/pair.sh 37145 123456`.
+   - ou sur la console, dans Termux, sur l'autre écran : entrer dans la Debian en `dev` (`proot-distro login debian --user dev`), puis `/opt/thor-android/pair.sh 37145 123456`.
 5. Le script répond `THOR_ANDROID=ok serial=… via=sans-fil`. La Debian apparaît dans **Appareils associés**.
 
 L'association doit se faire avec le serveur adb de la Debian, jamais par un serveur relayé (par exemple un échafaudage d'essai qui renvoie la socket vers le serveur adb du Mac) : `adb pair` associerait alors la clé de l'autre machine, et l'accès ne marcherait pas sans elle. `pair.sh` refuse dans ce cas (code 3) : retirer le relais, puis recommencer.
@@ -129,7 +129,7 @@ Le pont lance `/opt/thor-android/start.sh` à son démarrage. `/opt/thor-android
 
 En cas d'erreur, l'explication en français est sur la sortie d'erreur.
 
-**Après un redémarrage de la console, ou sur un autre réseau Wi-Fi**, le débogage sans fil peut être coupé. Il faut alors le rallumer à la main : **Paramètres › Options pour les développeurs › Débogage sans fil › Utiliser le débogage sans fil**. L'association, elle, reste valable : pas besoin de refaire le code.
+**Après un redémarrage de la console, ou sur un autre réseau Wi-Fi**, le débogage sans fil peut être coupé. Si Régie a reçu `WRITE_SECURE_SETTINGS` (`pm grant`, voir la [notice d'installation](../../docs/installation.md#7-les-autres-autorisations)), elle le rallume à son ouverture puis relance la liaison. Sinon, le rallumer à la main : **Paramètres › Options pour les développeurs › Débogage sans fil › Utiliser le débogage sans fil**. Sur un autre réseau, il faut aussi l'autoriser. L'association, elle, reste valable : pas besoin de refaire le code.
 
 Le serveur adb vit dans la session Debian qui l'a lancé (proot `--kill-on-exit`). Il s'arrête donc avec le pont.
 

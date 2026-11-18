@@ -2,7 +2,25 @@
 
 ## Où on en est
 
-**État consolidé au 14 novembre : tickets 01 à 19 fusionnés ; ticket 20 à fusionner.**
+**État au 18 novembre : tickets 01 à 26 fusionnés dans `main` et poussés.**
+Régie s’installe sur une Thor neuve avec `docs/installation.md` ; le README présente
+le projet et `docs/developpement.md` décrit le travail sur le code.
+
+La version actuelle, après les tickets 22 à 26 :
+- fil brut sans point Régie, table des réglages et dictée sur l’écran du bas, accueil en liste (ADR 17) ;
+- connexion des agents depuis Régie : Codex par code d’appareil, Claude par `claude auth login` dans Termux (ADR 18) ;
+- actions visibles des agents sur Android, applis ouvertes en haut (ticket 24) ;
+- mode console : service d’accessibilité « Régie, mode console », L2 et R2 depuis toute appli, carte volante, session console en « Tout autoriser », « où en est » sans A (ADR 19) ;
+- voix locale par défaut (sherpa-onnx), ElevenLabs en option, aucune lecture à voix haute.
+
+Reste à vérifier sur la console, avec l’utilisateur :
+- activer « Régie, mode console » dans Accessibilité, puis L2 au-dessus de Chrome, carte et bulle (ticket 25) ;
+- une déconnexion puis une reconnexion de Codex depuis Régie (ticket 23) ;
+- Y puis A sans session console existante : création en « Tout autoriser » (ticket 26) ;
+- le pont installé doit dater d’après la fusion du ticket 22, sinon relancer `thor/bridge/install.sh` ;
+- essais plus anciens : redémarrage de la console (tickets 02, 03, 05), vrai micro (08), essai final de Claude (19) ;
+- la notice d’installation, jamais rejouée de bout en bout sur une Thor neuve.
+
 Les entrées datées ci-dessous sont l’historique des essais, y compris les blocages
 résolus depuis. Les fichiers des tickets portent les statuts courants. Les essais
 physiques différés restent requis même lorsqu’un ticket est marqué fait.
@@ -139,7 +157,7 @@ physiques différés restent requis même lorsqu’un ticket est marqué fait.
 - **18 novembre, ticket 24 à fusionner (solo Codex)** : consignes visibles Android/invisible thor_browser, mobile_open_url et repli VIEW documentés ; install.sh réexécuté, blocs globaux vérifiés par empreinte. Quatre suites shell et pont 308 tests + lint/typage verts. Thor : session Codex lancée par Régie, demande exacte puis Wikipédia dans Chrome en haut ; second essai rétablit seul adb privé après liste vide. Aucun APK/Claude/reboot. Deux tours terminés et annulations ciblées ; pont/adapteur partagé et sessions idle conservés pour le ticket 22 (pas de fermeture individuelle exposée). Sélection du bas restée ancienne hors périmètre : premier message ciblé via API du pont. Preuves et rejeu : `artifacts/screenshots/24/essai-thor.md` ; relecture solo après commit consignée dans `relecture.md`.
 - **18 novembre, ticket 22 à fusionner** : fil brut sans point Régie (le pont ne demande plus de bilan, le fil masque l'ancien bloc, Y et le panneau retirés), table des réglages ACP toujours en bas, dictée en bas avec retour seul après A, accueil en liste dense (ADR 17). Android check vert, pont 307 tests verts. Thor : vrai Codex, réflexion changée depuis le bas, L2 par `sendevent` et WAV rejoués, un/deux écrans. **Le pont de la console reste à réinstaller après fusion** (`thor/bridge/install.sh`). Relecture indépendante : 9 remarques corrigées avec régressions. Rejeu WAV de debug rendu à usage unique (un essai l'avait laissé actif). APK final non réinstallé, l'utilisateur se servant de la console. Questions : ordre vocal « où en est » et heure du fil, dans le ticket.
 
-- **18 novembre, ticket 23 à fusionner (solo Codex)** : auth.status/start/cancel/logout, écran dédié code/QR, entrée B accueil et proposition initiale, repli Claude dans Termux (ADR 17). Android 371 tests + lint, pont 321 + typage/lint verts. Émulateur deux écrans, pont Mac 47623 isolé : APK final vers vrai CLI Codex jusqu’au code, cycle complet simulé explicitement. Thor : nouveaux ports/adapter dans Debian, challenge réel et annulation sur profil temporaire, logout du seul profil vide ; comptes habituels connectés avant/après. Aucun APK installé sur Thor, aucun prompt Claude, sous-agent, push ou fusion. Cycle du compte habituel dans l’app physique réservé à l’utilisateur ; preuves et six étapes dans artifacts/screenshots/23/essai.md. Relecture après commit consignée séparément.
+- **18 novembre, ticket 23 à fusionner (solo Codex)** : auth.status/start/cancel/logout, écran dédié code/QR, entrée B accueil et proposition initiale, repli Claude dans Termux (ADR 18). Android 371 tests + lint, pont 321 + typage/lint verts. Émulateur deux écrans, pont Mac 47623 isolé : APK final vers vrai CLI Codex jusqu’au code, cycle complet simulé explicitement. Thor : nouveaux ports/adapter dans Debian, challenge réel et annulation sur profil temporaire, logout du seul profil vide ; comptes habituels connectés avant/après. Aucun APK installé sur Thor, aucun prompt Claude, sous-agent, push ou fusion. Cycle du compte habituel dans l’app physique réservé à l’utilisateur ; preuves et six étapes dans artifacts/screenshots/23/essai.md. Relecture après commit consignée séparément.
 
 - **18 novembre, ticket 23, relecture après b2d74c2 (solo Codex)** : diff main...HEAD relu ; test d’expiration renforcé par le marqueur ready du vrai processus Node synthétique, retour immédiat erroné détecté par mutation puis restauré. Aucun changement de production ; Android 371 tests + lint et pont 321 + typage/lint repassés verts. Traces nettoyées, app/pont Mac/AVD arrêtés, forward Thor conservé. Détail artifacts/screenshots/23/relecture.md ; statut à fusionner maintenu.
 
@@ -148,6 +166,8 @@ physiques différés restent requis même lorsqu’un ticket est marqué fait.
 - **18 novembre, ticket 26 à fusionner (solo Codex)** : défaut console Tout autoriser, navigation R2 sans relecture/A dans le domaine, formes « la session » et cible active couvertes ; mutations toujours confirmées. Android 434 tests + lint verts. Thor : APK installé, Y reprend la console personnelle en ask, WAV Thomas/local « où en est la session console » ouvre le fil sans A ; création Y/A non rejouée car la console existe déjà, défaut/création/correction prouvés par tests isolés. Aucun agent lancé ; WAV retiré, app relancée sans extra, session personnelle conservée. ADR 19/11 et PRD actualisés ; preuves et pas à pas `artifacts/screenshots/26/essai-thor.md`.
 
 - **18 novembre, ticket 26, relecture après 30d2595 (solo Codex)** : diff main...HEAD relu, création physique non revendiquée ; libellé R2 « relire » devenu trompeur remplacé par « quand tu as fini ». Mutations confirmation réintroduite et défaut ask détectées, puis sources restaurées. Android 434 tests + lint repassés verts ; APK réinstallé, WAV/local et R2 sans A rejoués (07/08), WAV retiré et relance sans extra (09). Aucun agent lancé ni session personnelle modifiée ; statut à fusionner maintenu.
+
+- **18 novembre, documentation** : README réécrit en vitrine (captures des tickets 22 à 26, commandes, schéma, limites), notice d’installation `docs/installation.md` vérifiée contre les scripts, `docs/developpement.md` créé. PRD, `CLAUDE.md`, fiche de la console et index des ADR remis en cohérence avec les tickets 22 à 26. Aucun code changé, rien installé sur la console.
 
 ## Ordre des vagues
 
@@ -198,8 +218,15 @@ Les tickets qui touchent `android/` passent **un par un**. Ils installent tous l
 
 - 18 novembre (ticket 25) : **« où en est … » ouvre la session** visée (ou active), comme L1/R1, sans point écrit ; l'heure du fil reste. **La carte volante ne s'affiche que si la conversation n'est visible nulle part** (écran du bas éteint ou occupé).
 
+- 18 novembre (ticket 23) : **les agents se connectent depuis la console**, par code d'appareil quand l'agent le propose (Codex). Claude, sans code d'appareil, passe par Termux ; l'app indique la marche.
+
+- 18 novembre (ticket 26) : **la session console se crée en « Tout autoriser »**, modifiable dans la fiche et les réglages. **La navigation vocale ouvre sans relecture ni A** ; les ordres qui agissent gardent A.
+
+- 18 novembre : **le projet doit pouvoir se partager tel quel** : README vitrine et notice d'installation pour une Thor neuve, sans secret ni donnée personnelle.
+
 ## Questions en attente
 
 - Nom définitif de l'app (« Régie » est un nom de travail).
-- Lecture à voix haute : question close par la décision du 14 novembre, points écrits uniquement.
+- Licence du dépôt : aucune n'est choisie, à trancher avant un partage public.
+- Lecture à voix haute : question close par la décision du 14 novembre ; tout se lit à l'écran, sans point écrit depuis le ticket 22.
 - Ticket 14 : question close. `uninstall.sh` conserve la clé adb ; `--oublier-association` l’efface explicitement (script et guide computer-use).

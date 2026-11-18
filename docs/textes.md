@@ -30,7 +30,7 @@ Les consignes, réponses, chemins, commandes, extraits et erreurs externes
 sont des **données**, pas des textes à réécrire. On conserve leur contenu,
 y compris leurs mots, ponctuation et longueur. Les messages de Régie qui
 les entourent suivent ce guide. Les commandes de dépannage restent dans
-le README. Une limite de données reste annoncée : écriture par commande
+la notice d’installation (`docs/installation.md`). Une limite de données reste annoncée : écriture par commande
 absente du suivi, résultat inconnu, information non communiquée.
 
 On utilise les espaces insécables U+00A0

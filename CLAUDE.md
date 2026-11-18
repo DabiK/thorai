@@ -17,8 +17,11 @@ L'app ne refait pas le travail des agents. Elle :
 | Quoi | Où |
 | --- | --- |
 | Produit : promesse, principes, parcours, fonctionnalités | `docs/PRD.md` |
-| Maquette des 6 écrans (référence visuelle) | https://example.invalid/regie-maquette, lisible avec l'outil Artifact (action `read`, `path` `project/<Écran>.dc.html` : `Main`, `Dictee`, `Session`, `Validation`, `Diff`, `Lancer`) |
+| Maquette des 6 écrans (référence visuelle) | https://example.invalid/regie-maquette, lisible avec l'outil Artifact (action `read`, `path` `project/<Écran>.dc.html` : `Main`, `Dictee`, `Session`, `Validation`, `Diff`, `Lancer`). Antérieure aux tickets 22 à 26 : accueil en liste, réglages et dictée en bas, fil brut (ADR 17) priment |
 | Fiche de la console : écrans, manette, Termux, agents installés | `docs/thor.md` |
+| Installation sur une Thor neuve | `docs/installation.md` |
+| Développement : portes, banc, captures | `docs/developpement.md` |
+| Textes de l'interface | `docs/textes.md` |
 | Tickets, avec leurs bloquants et leur statut | `.scratch/regie-v1/issues/` |
 | Décisions techniques | `docs/adr/` |
 | Avancement, questions en attente, comment reprendre | `docs/adr/00-journal-de-reprise.md` |
@@ -93,7 +96,7 @@ Documentation en français, code en anglais.
 | Validation | `Approval` |
 | Dictée | `Dictation` |
 | Ordre vocal | `VoiceCommand` |
-| Point écrit | `WrittenSummary` (bilan), `SessionSummary` (faits de session) |
+| Point écrit (retiré du produit, ADR 17) | `WrittenSummary` (détection de question), `SessionSummary` (faits de session) |
 | Pont | `Bridge` |
 
 ## Outils sur le Mac

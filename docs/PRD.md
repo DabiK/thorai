@@ -1,6 +1,6 @@
 # PRD — Régie, poste de pilotage vocal de Claude Code et Codex sur l'AYN Thor
 
-Statut : version installable, consolidée le 14 novembre 2026 après les tickets 15 à 19. Les décisions datées du journal remplacent les intentions antérieures de la maquette.
+Statut : version installable, consolidée le 18 novembre 2026 après les tickets 22 à 26. Les décisions datées du journal remplacent les intentions antérieures de la maquette. Installation : `docs/installation.md`.
 
 ## Problème
 
@@ -32,10 +32,10 @@ On prend la console et on parle. On voit d'un coup d'œil où en sont toutes ses
 | L2 maintenu | Dicter un message à la session affichée (ou un commentaire sur la ligne de diff sélectionnée). Avec le mode console, aussi depuis une autre appli (ticket 25) |
 | R2 maintenu | Donner un ordre vocal : « lance Claude sur météo », « où en est Codex ? » (ouvre la session), « approuve », « mets tout en pause » |
 | A | Valider, envoyer, ouvrir |
-| B | Retour, annuler, refuser |
-| X, Y | Actions de l'écran, affichées en bas |
+| B | Retour, annuler, refuser ; sur la vue d'ensemble, connexion des agents (ticket 23) |
+| X, Y | Actions de l'écran, affichées en bas ; sur la vue d'ensemble, X crée une session et Y pilote la console (ticket 25) |
 | L1 / R1 | Session précédente / suivante. Sur la vue d'ensemble, R1 ouvre d'abord la validation en attente s'il y en a une |
-| Croix | Se déplacer (cartes, champs, lignes de diff) |
+| Croix | Se déplacer (lignes de la vue d'ensemble, champs, lignes de diff) ; dans une session, Droite passe les réglages en modification |
 | Stick droit | Faire défiler |
 | Start | Interrompre la session affichée, ou tout mettre en pause depuis la vue d'ensemble |
 
@@ -45,16 +45,16 @@ L'écran du bas affiche toujours les boutons utiles à cet instant.
 
 1. **Vue d'ensemble.**
    - En haut : une liste dense, une ligne par session (agent, projet, branche, statut, étape x sur y, dernière action, ancienneté), défilable (ticket 22).
-   - En bas : la première validation en attente et le micro.
+   - En bas : la première validation en attente, le micro, et les actions : créer une session, piloter la console, connecter les agents, Quitter.
 2. **Dictée.**
    - En haut : rien ne change, le fil (ou l'écran affiché) reste visible (ticket 22).
    - En bas : le texte transcrit en direct, avec les noms de fichiers et de fonctions du dépôt reconnus, le niveau du micro et la durée.
    - Une fois L2 relâché : A envoie, B efface, Y complète, X corrige un mot. Un message reçu par l'agent ramène seul à l'écran précédent.
 3. **Session en direct.**
    - En haut : le fil brut de l'agent (message envoyé, réponses, actions résumées en une ligne, texte en cours), son plan et les fichiers modifiés s'il en expose. Aucun point ni bilan ajouté par Régie (ticket 22).
-   - En bas : la table des réglages exposés par l'agent (mode, modèle, réflexion, mode rapide…), modifiables sur place ; parler à l'agent sans l'arrêter, voir le diff, interrompre.
+   - En bas : la table des réglages exposés par l'agent (mode, modèle, réflexion, mode rapide…), modifiables sur place ; parler à l'agent sans l'arrêter, voir le diff, interrompre. Quand une autre appli occupe le haut, le bas suit le fil en version compacte (ticket 25).
 4. **Validation.**
-   - En haut : la commande ou le fichier, pourquoi, et ce que ça touche.
+   - En haut, dans le fil de la session (ticket 18) : la commande ou le fichier, pourquoi, et ce que ça touche.
    - En bas : autoriser une fois, toujours dans cette session, refuser ; ou refuser en dictant une consigne.
 5. **Diff.**
    - En haut : le diff du fichier, ligne par ligne à la croix.
@@ -77,10 +77,11 @@ Chaque lot correspond à un ou plusieurs tickets.
   - les sessions continuent quand l'app passe en arrière-plan ;
   - historique et reprise ;
   - démarré par l'app à son lancement, jamais au boot.
-- **Accès des agents à la console** : Claude et Codex peuvent voir et piloter tout Android, les deux écrans et Régie comprise, sans validation des gestes (décision du ticket 14).
+- **Accès des agents à la console** : Claude et Codex peuvent voir et piloter tout Android, les deux écrans et Régie comprise, sans validation des gestes (décision du ticket 14). Quand l'utilisateur parle de l'écran, d'une appli ou du navigateur, ils agissent de façon visible, applis ouvertes en haut (ticket 24).
+- **Connexion des agents** (ticket 23, ADR 18) : état, connexion et déconnexion depuis Régie. Codex par code d'appareil, avec adresse, code et QR code ; Claude, sans code d'appareil, par `claude auth login` dans Termux, marche indiquée dans l'app. Aucun jeton ne passe par Régie.
 - **Voix** :
   - **Transcription** : en français en direct, avec le vocabulaire du dépôt.
-  - **Pas de lecture à voix haute** (décision de l'utilisateur, 14 novembre) : les résumés sont écrits à l'écran.
+  - **Pas de lecture à voix haute** (décision de l'utilisateur, 14 novembre) : tout se lit à l'écran.
   - **Fournisseurs** : transcription locale et gratuite par défaut ; ElevenLabs en option. Les ports de synthèse restent dans le module voix et son laboratoire, sans lecture dans Régie.
 - **Vue d'ensemble, session en direct, validations, diff, nouvelle session** : comme décrits dans les parcours.
 - **Ordres vocaux (R2)** : règles fixes pour les ordres courants, plus un petit modèle de langage quand la phrase est ambiguë.
@@ -89,9 +90,7 @@ Chaque lot correspond à un ou plusieurs tickets.
 - **Session tout-en-un** : validations de la session dans son fil, options sur le bas, détails d’actions dépliables, dates et suivi du défilement (ticket 18).
 - **Configuration native** : MCP, consignes et permissions restent résolus par les agents, sans copie par le pont (ticket 19).
 - **Mode console** (tickets 25–26, ADR 19) : L2 et R2 marchent depuis toute appli grâce au service d'accessibilité de Régie, activé par l'utilisateur ; l'écran du bas suit la session quand une autre appli occupe le haut ; un message terminé, une question ou une validation de l'agent passe en carte volante par-dessus l'écran du haut (B la ferme, L2 y répond) ; Y ouvre la session console. À sa création, elle propose « Tout autoriser », modifiable dans la fiche et les réglages ; A la crée. Les sessions existantes gardent leur mode.
-- **Points écrits et notifications** :
-  - fin de session, validation demandée, ou point d'avancement à la demande (Y), sous forme de résumé écrit ;
-  - aucune lecture à voix haute.
+- **Notifications** : validation demandée, question, fin et échec de session. Plus de point écrit ni de résumé ajouté au fil (ticket 22, ADR 17) : une fin cite la dernière phrase de l'agent. Aucune lecture à voix haute.
 
 ## Voix
 
@@ -104,7 +103,7 @@ Chaque lot correspond à un ou plusieurs tickets.
 
 ## Hors périmètre de la v1
 
-- Distribuer l'app à d'autres personnes : il faudrait des clés d'API à la place de l'abonnement claude.ai.
+- Distribuer l'app sur un store : elle s'installe en debug, avec ses scripts, sur une console préparée. Chacun y connecte ses propres comptes (ticket 23).
 - Un mode conversation en temps réel avec un agent vocal.
 - Un mot d'éveil.
 - Faire les commits et les pushs depuis l'app.

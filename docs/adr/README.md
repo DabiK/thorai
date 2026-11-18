@@ -17,7 +17,7 @@ Un ajout daté ou une décision du journal prime sur le contexte historique d’
 | [08](08-validations.md) | Validations et notifications | 07 |
 | [09](09-dictee-dans-l-app.md) | Dictée relue, locale par défaut | 08 |
 | [10](10-points-ecrits-et-notifications.md) | Points écrits (remplacés par 17), notifications | 12 |
-| [11](11-ordres-vocaux.md) | Ordres vocaux confirmés | 09 |
+| [11](11-ordres-vocaux.md) | Ordres vocaux, confirmés par A sauf la navigation | 09, complété par 26 |
 | [12](12-relecture-du-diff.md) | Éditions et explications | 10 |
 | [13](13-fiche-nouvelle-session.md) | Fiche et nouveau projet | 11, complété par 15 |
 | [14](14-banc-emulateur.md) | Banc Mac et deux écrans | 16 |
@@ -25,7 +25,7 @@ Un ajout daté ou une décision du journal prime sur le contexte historique d’
 | [16](16-configuration-native-des-agents.md) | MCP, consignes et permissions natives | 19 |
 | [17](17-session-brute-et-reglages-en-bas.md) | Fil brut, réglages et dictée en bas, accueil en liste | 22 |
 | [18](18-connexion-des-agents.md) | Code d’appareil Codex, connexion et repli Claude | 23 |
-| [19](19-mode-console.md) | L2 depuis toute appli, message volant, session console | 25 |
+| [19](19-mode-console.md) | L2 depuis toute appli, message volant, session console | 25, complété par 26 |
 
 Le [journal](00-journal-de-reprise.md) conserve les campagnes successives, leurs
 limites et les décisions produit. Le statut courant se lit dans les fichiers
