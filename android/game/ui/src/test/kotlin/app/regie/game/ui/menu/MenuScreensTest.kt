@@ -120,7 +120,8 @@ class MenuScreensTest {
         Captures.save(compose, activity, "pause-bas")
         compose.onNodeWithText("Tout mettre en pause").performClick()
         compose.onNodeWithText("Fermer le menu").performClick()
-        assertEquals(listOf(3), chosen)
+        // « Préparer la console » (ticket 53) passe avant « Tout mettre en pause ».
+        assertEquals(listOf(4), chosen)
         assertTrue(closed)
     }
 
