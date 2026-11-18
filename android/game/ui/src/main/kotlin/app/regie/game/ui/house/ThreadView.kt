@@ -85,11 +85,18 @@ fun HouseThread(
     var viewportHeight by remember { mutableIntStateOf(0) }
     val step = STEP_PX.toFloat()
     val lastIndex = lines.size - 1 + if (approval != null) 1 else 0
-    suspend fun bottom() {
+    /** [auto] : suivi du fil (nouvelle ligne, hauteur qui change), pas un geste pour revenir en bas. */
+    suspend fun bottom(auto: Boolean = false) {
         if (lastIndex < 0) return
+        if (approval != null) {
+            // Une validation finit le fil : on la lit depuis son début, la croix descend vers la suite (ticket 47).
+            // Son début déjà en haut, ou dépassé à la croix : le suivi ne la fait pas remonter.
+            val shown = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == lastIndex }
+            if (auto && shown != null && shown.offset <= 0) return
+            listState.scrollToItem(lastIndex)
+            return
+        }
         listState.scrollToItem(lastIndex)
-        // Une validation finit le fil : on la lit depuis son début, la croix descend vers la suite (ticket 47).
-        if (approval != null) return
         listState.scrollBy(listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == lastIndex }?.size?.toFloat() ?: 0f)
     }
     LaunchedEffect(listState, lastIndex) {
@@ -118,7 +125,7 @@ fun HouseThread(
     LaunchedEffect(listState) {
         snapshotFlow { listState.isScrollInProgress }.drop(1).filter { !it }.collect { follow = !listState.canScrollForward }
     }
-    LaunchedEffect(lines, approval != null, viewportHeight) { if (follow) bottom() }
+    LaunchedEffect(lines, approval != null, viewportHeight) { if (follow) bottom(auto = true) }
     Box(modifier) {
         when {
             live.loading && approval == null -> CenteredNote(stringResource(R.string.game_thread_loading))

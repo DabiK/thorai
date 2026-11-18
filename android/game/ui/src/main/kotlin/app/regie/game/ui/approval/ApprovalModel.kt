@@ -5,6 +5,7 @@ import app.regie.domain.model.ApprovalId
 import app.regie.domain.model.ApprovalReply
 import app.regie.domain.usecase.ApprovalReview
 import app.regie.game.ui.house.PadKey
+import app.regie.game.ui.kit.TagState
 
 /** Où en est une validation, dit au-dessus du menu de choix. */
 enum class ApprovalStatus { WAITING, SENDING, ACCEPTED, ACCEPTED_NEXT, UNKNOWN, NOT_SENT, UNAVAILABLE }
@@ -37,6 +38,16 @@ object ApprovalMenuModel {
             .takeIf { review.request?.optionFor(ApprovalDecision.SESSION) != null },
         ApprovalChoice(ApprovalDecision.REJECT, "L2", review.canAnswer(ApprovalDecision.REJECT), dictate = true).takeIf { withInstruction },
     )
+
+    /**
+     * L'étiquette de la session demandeuse : en attente tant qu'une décision reste à prendre (aussi
+     * pendant l'envoi, ou après un envoi certainement manqué) ; au repos une fois la réponse partie ou
+     * la demande disparue. Rien n'est déduit de l'agent.
+     */
+    fun tag(status: ApprovalStatus): TagState = when (status) {
+        ApprovalStatus.WAITING, ApprovalStatus.SENDING, ApprovalStatus.NOT_SENT -> TagState.WAITING
+        ApprovalStatus.ACCEPTED, ApprovalStatus.ACCEPTED_NEXT, ApprovalStatus.UNKNOWN, ApprovalStatus.UNAVAILABLE -> TagState.IDLE
+    }
 
     /** Le curseur reste sur A, l'action par défaut ; aucun curseur une fois la décision prise. */
     fun cursor(choices: List<ApprovalChoice>): Int = choices.indexOfFirst { it.key == "A" && it.enabled }

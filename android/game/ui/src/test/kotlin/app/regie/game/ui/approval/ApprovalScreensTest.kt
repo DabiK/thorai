@@ -38,6 +38,7 @@ import app.regie.domain.model.DictationReview
 import app.regie.domain.model.SessionId
 import app.regie.domain.model.SessionSettingsReview
 import app.regie.domain.model.SessionStatus
+import app.regie.domain.model.ThreadLine
 import app.regie.domain.usecase.ApprovalReview
 import app.regie.game.ui.THOR_BOTTOM
 import app.regie.game.ui.THOR_TOP
@@ -171,6 +172,24 @@ class ApprovalScreensTest {
     }
 
     @Test
+    @Config(qualifiers = THOR_BOTTOM)
+    fun `once answered, the session tag is no longer amber`() {
+        val request = command()
+        val review = mutableStateOf(ApprovalReview(request, listOf(request), pending = true))
+        val callbacks = object : ApprovalCallbacks {
+            override fun onKey(key: PadKey) = Unit
+            override fun onSpeak(held: Boolean) = Unit
+            override fun onSelect(id: ApprovalId) = Unit
+        }
+        show { ApprovalNotebook(review.value, listOf(session()), callbacks) }
+        compose.onNodeWithText("! Claude · regie").assertIsDisplayed()
+        compose.runOnIdle { review.value = review.value.copy(pending = false, answer = ApprovalAnswer(ApprovalReply.ACCEPTED)) }
+        compose.onNodeWithText("Réponse reçue.").assertIsDisplayed()
+        compose.onNodeWithText("! Claude · regie").assertDoesNotExist()
+        compose.onNodeWithText("Claude · regie").assertIsDisplayed()
+    }
+
+    @Test
     fun `on a single screen the room is behind the parchment and the notebook takes the right`() {
         val request = command()
         val review = ApprovalReview(request, listOf(request), pending = true)
@@ -238,6 +257,36 @@ class ApprovalScreensTest {
         compose.onNodeWithText(FILE_AFTER).assertIsDisplayed()
         compose.onNodeWithText("Refuser").performClick()
         assertEquals(listOf(ApprovalDecision.REJECT), decisions)
+    }
+
+    @Test
+    @Config(qualifiers = THOR_BOTTOM)
+    fun `read to its end, the parchment stays put when the thread grows`() {
+        val request = command(plan = LONG_PLAN)
+        val review = ApprovalReview(request, listOf(request), pending = true)
+        val threadSteps = MutableSharedFlow<Int>(extraBufferCapacity = 16)
+        val start = live(SessionStatus.AWAITING_APPROVAL)
+        val current = mutableStateOf(start)
+        show {
+            HouseBottomScreen(
+                current.value, false, null, SessionSettingsReview(), null, "", null, {},
+                ScrollInput(threadSteps, MutableStateFlow(0f)), RecordingCallbacks(),
+                approval = { ApprovalMenu(review, standalone = false, onChoose = {}) },
+                threadApproval = { ApprovalParchment(request, session().agent, assets) },
+            )
+        }
+        // Le fil commence au début du parchemin ; la croix le lit jusqu'au bout.
+        compose.onNodeWithText("Exécuter une commande").assertIsDisplayed()
+        repeat(20) { threadSteps.tryEmit(1) }
+        compose.waitForIdle()
+        compose.onNodeWithText(FILE_AFTER).assertIsDisplayed()
+        // Une nouvelle ligne arrive pendant la lecture : on reste à la fin du parchemin, sans remonter à son début.
+        compose.runOnIdle {
+            current.value = start.copy(lines = start.lines + ThreadLine.AgentText(7, "J'attends ta réponse.", streaming = false))
+        }
+        compose.waitForIdle()
+        compose.onNodeWithText(FILE_AFTER).assertIsDisplayed()
+        compose.onNodeWithText("Exécuter une commande").assertIsNotDisplayed()
     }
 
     /**

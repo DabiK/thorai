@@ -87,14 +87,20 @@ class ValidationWiringTest {
     }
 
     @Test @Config(qualifiers = "w832dp-h468dp-land-369dpi")
-    fun `on a single screen the whole request ends the thread of the notebook`() {
+    fun `on a single screen the whole request ends the thread of the notebook and the cross reads it to the end`() {
+        val steps = MutableSharedFlow<Int>(extraBufferCapacity = 16)
         host {
             GameSessionTop(LiveSession.of(session, SessionThread(emptyList(), loaded = true)), false, null, SessionControlState(), "", SessionSettingsReview(), true,
-                ThreadScroll(MutableSharedFlow(extraBufferCapacity = 16), MutableStateFlow(0f)), Recorder(),
+                ThreadScroll(steps, MutableStateFlow(0f)), Recorder(),
                 ApprovalReview(request, listOf(request), pending = true), { _, _ -> }, {}, {}, DictationReview(), null)
         }
         compose.onNodeWithText("touch proof").assertIsDisplayed()
         compose.onNodeWithText("Autoriser une fois").assertIsDisplayed()
+        compose.onNodeWithText(lastPath).assertIsNotDisplayed()
+        // La croix, relayée au fil du carnet comme sur deux écrans : la demande se lit jusqu'au bout.
+        repeat(30) { steps.tryEmit(1) }
+        compose.waitForIdle()
+        compose.onNodeWithText(lastPath).assertIsDisplayed()
     }
 
     @Test @Config(qualifiers = "w832dp-h468dp-land-369dpi")

@@ -44,7 +44,6 @@ import app.regie.game.ui.house.ScrollInput
 import app.regie.game.ui.kit.ArrowDirection
 import app.regie.game.ui.kit.PixelArrow
 import app.regie.game.ui.kit.StateTag
-import app.regie.game.ui.kit.TagState
 import app.regie.game.ui.render.ArtPoint
 import app.regie.game.ui.render.Sprite
 import app.regie.game.ui.render.anchorBottomCenter
@@ -162,7 +161,8 @@ fun ApprovalNotebook(
         ) {
             BasicText(stringResource(R.string.game_approval_title), style = GameText.display(52))
             session?.let {
-                StateTag(TagState.WAITING, label = "${it.agent.label} · ${it.project}")
+                // Ambre et « ! » tant que la décision reste à prendre ; neutre une fois la réponse partie.
+                StateTag(ApprovalMenuModel.tag(ApprovalMenuModel.status(review)), label = "${it.agent.label} · ${it.project}")
             }
             Box(Modifier.weight(1f))
             BasicText(stringResource(R.string.game_approval_pending, review.queue.size), style = GameText.body(24, colors.muted), maxLines = 1)

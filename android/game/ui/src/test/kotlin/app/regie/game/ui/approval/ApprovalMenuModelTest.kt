@@ -11,6 +11,7 @@ import app.regie.domain.model.ApprovalReply
 import app.regie.domain.model.SessionId
 import app.regie.domain.usecase.ApprovalReview
 import app.regie.game.ui.house.PadKey
+import app.regie.game.ui.kit.TagState
 import org.junit.Test
 import kotlin.test.assertEquals
 
@@ -60,6 +61,17 @@ class ApprovalMenuModelTest {
         assertEquals(ApprovalStatus.UNKNOWN, ApprovalMenuModel.status(ApprovalReview(a, listOf(a), answer = ApprovalAnswer(ApprovalReply.UNKNOWN))))
         assertEquals(ApprovalStatus.NOT_SENT, ApprovalMenuModel.status(ApprovalReview(a, listOf(a), pending = true, answer = ApprovalAnswer(ApprovalReply.NOT_SENT))))
         assertEquals(ApprovalStatus.UNAVAILABLE, ApprovalMenuModel.status(ApprovalReview(a, emptyList())))
+    }
+
+    @Test
+    fun `the session tag waits only while a decision is still to take`() {
+        assertEquals(
+            listOf(TagState.WAITING, TagState.WAITING, TagState.WAITING, TagState.IDLE, TagState.IDLE, TagState.IDLE, TagState.IDLE),
+            listOf(
+                ApprovalStatus.WAITING, ApprovalStatus.SENDING, ApprovalStatus.NOT_SENT,
+                ApprovalStatus.ACCEPTED, ApprovalStatus.ACCEPTED_NEXT, ApprovalStatus.UNKNOWN, ApprovalStatus.UNAVAILABLE,
+            ).map { ApprovalMenuModel.tag(it) },
+        )
     }
 
     @Test
