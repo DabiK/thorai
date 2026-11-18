@@ -65,7 +65,7 @@
             android:excludeFromRecents="true"
             android:exported="false"
             android:launchMode="singleInstance"
-            android:taskAffinity="app.regie.bottom"
+            android:taskAffinity="${applicationId}.bottom"
             android:windowSoftInputMode="adjustResize" />
     </application>
 </manifest>
