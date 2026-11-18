@@ -42,7 +42,7 @@ fun ApprovalTopScreen(
     }
     Column(Modifier.fillMaxSize().background(Palette.background)) {
         Row(Modifier.fillMaxWidth().height(44.dp).padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
-            BasicText("Régie  ›  ", style = sans(13.sp, color = Palette.textMuted))
+            BasicText("ThorAI  ›  ", style = sans(13.sp, color = Palette.textMuted))
             overview.sessions.firstOrNull { it.id == review.request?.sessionId }?.let {
                 AgentTag(it.agent)
                 BasicText(it.project, style = sans(13.sp, 600), modifier = Modifier.padding(start = 10.dp))

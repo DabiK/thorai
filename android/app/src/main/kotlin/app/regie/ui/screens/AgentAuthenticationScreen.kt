@@ -57,12 +57,12 @@ fun AgentAuthenticationScreen(
         onDispose { if (controls) bindKeyAction(null) }
     }
     Column(Modifier.fillMaxSize().background(Palette.background)) {
-        BasicText("Connexion des agents", style = sans(18.sp, weight = 650), modifier = Modifier.fillMaxWidth().bottomDivider().padding(horizontal = 20.dp, vertical = 12.dp))
+        BasicText("Connexion des agents", style = sans(20.sp, weight = 650), modifier = Modifier.fillMaxWidth().bottomDivider().padding(horizontal = 20.dp, vertical = 12.dp))
         if (controls) LazyRow(Modifier.fillMaxWidth().padding(vertical = 12.dp), state = tabs, contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             itemsIndexed(review.agents, key = { _, agent -> agent.agent.id }) { index, agent ->
                 Column(Modifier.widthIn(min = 140.dp).border(1.dp, if (index == review.selected) Palette.text else Palette.divider, RoundedCornerShape(8.dp)).tappable { select(index) }.padding(12.dp)) {
                     AgentTag(agent.agent)
-                    BasicText(connectionLabel(agent), style = sans(12.sp, color = Palette.textMuted), modifier = Modifier.padding(top = 6.dp))
+                    BasicText(connectionLabel(agent), style = sans(14.sp, color = if (agent.connected == true) Palette.done else Palette.textMuted), modifier = Modifier.padding(top = 6.dp))
                 }
             }
         }
@@ -76,7 +76,7 @@ fun AgentAuthenticationScreen(
                 val url = current.url
                 val code = current.code
                 if (url != null && code != null) {
-                    if (bottom && !singleScreen) BasicText("Scanne le QR code de l’écran du haut avec ton téléphone, puis saisis le code. Régie attend la confirmation.", style = sans(16.sp, lineHeight = 23.sp))
+                    if (bottom && !singleScreen) BasicText("Scanne le QR code de l’écran du haut avec ton téléphone, puis saisis le code. ThorAI attend la confirmation.", style = sans(16.sp, lineHeight = 23.sp))
                     else Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                         val qr = remember(url) { authenticationQr(url).asImageBitmap() }
                         Image(qr, contentDescription = "QR code de connexion", modifier = Modifier.size(if (singleScreen) 132.dp else 188.dp))
@@ -102,11 +102,12 @@ fun AgentAuthenticationScreen(
             }
             if (review.notice.isNotBlank()) BasicText(review.notice, style = sans(14.sp, color = Palette.waiting, lineHeight = 20.sp))
         }
-        if (controls) Column(Modifier.fillMaxWidth().topDivider().padding(horizontal = 20.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            BasicText("← → Choisir l’agent", style = sans(11.sp, color = Palette.textSubtle))
+        if (controls) Column(Modifier.fillMaxWidth().topDivider().padding(horizontal = 20.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            BasicText("← → Choisir l’agent", style = sans(13.sp, color = Palette.textSubtle))
+            // A, B, Y sur une ligne, dans l'ordre de lecture (docs/textes.md).
             Row(horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically) {
                 val current = review.current
-                if (!review.busy && current?.login?.method == "api_key" && current.connected != true && key.isNotBlank()) BarAction("A", "Enregistrer la clé", sendKey)
+                if (!review.busy && current?.login?.method == "api_key" && current.connected != true && key.isNotBlank()) BarAction("A", "Enregistrer la clé", onClick = sendKey)
                 if (!review.busy && current != null && !current.pending && (current.login.method != "api_key" || current.connected == true)) BarAction("A", when {
                     review.confirmingLogout -> "Confirmer la déconnexion"
                     current.connected == true -> "Déconnecter"
@@ -114,8 +115,8 @@ fun AgentAuthenticationScreen(
                 }) { button(Button.A) }
                 if (review.busy) BasicText("Vérification…", style = sans(13.sp, color = Palette.textMuted))
                 if (!review.busy) BarAction("B", if (review.current?.pending == true) "Annuler et fermer" else if (review.confirmingLogout) "Garder le compte" else "Fermer") { button(Button.B) }
+                if (!review.busy) BarAction("Y", "Actualiser", onClick = refresh)
             }
-            if (!review.busy) BarAction("Y", "Actualiser", refresh)
         }
     }
 }

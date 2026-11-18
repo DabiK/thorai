@@ -1,6 +1,6 @@
 # 30 — L'app s'appelle ThorAI, et une passe de finition de l'interface
 
-Statut : prêt
+Statut : à fusionner
 Possède : `android/` (interface, nom, applicationId), docs qui citent le nom
 
 ## Décisions de l'utilisateur, 18 novembre
@@ -30,3 +30,19 @@ Possède : `android/` (interface, nom, applicationId), docs qui citent le nom
 
 - `./gradlew check` est vert.
 - Sur la Thor, l'app s'appelle ThorAI partout, et l'accueil n'a plus de texte d'aide sur R2.
+
+## Rapport
+
+STATUT: à fusionner
+RÉSUMÉ: l'app s'appelle ThorAI, paquet `app.thorai` (ADR 21), noms techniques gardés. Texte d'aide R2 retiré de l'accueil, avis permanents (mode console, accès Android) remplacés par « Configurer » et son point ambre. Passe de finition : tailles de lecture sur l'écran du bas, action principale commune, états vides, fiche, connexion, voix, diff.
+CRITÈRES:
+- [x] `./gradlew check` vert → 475 tests et lint.
+- [x] Sur la Thor, l'app s'appelle ThorAI partout et l'accueil n'a plus d'aide R2 → lanceur, titres, fil d'Ariane, service « ThorAI, mode console », messages ; `30/apres/01`.
+PORTE DE QUALITÉ: android, voix et pont verts (voir ticket 28) ; consignes et permissions des agents (`test-consignes`, `test-permissions`) verts.
+THOR: avant (`app.regie`) puis après (`app.thorai`, build debug relié au pont par son jeton historique) sur les deux écrans. Release `app.thorai` laissée installée. `app.regie` **non désinstallée** : ThorAI release n'est pas encore reliée au pont, faute du geste RUN_COMMAND de l'utilisateur ; la désinstaller ensuite (`adb uninstall app.regie`).
+REVIEW: voir ticket 28 (revue indépendante commune).
+DÉCISIONS PRISES: ADR 21. APK de release `thorai-<version>.apk`. Consignes des agents nommant ThorAI, déployées au prochain `thor/computer-use/install.sh`. Messages du pont nommant ThorAI, déployés au prochain `thor/bridge/install.sh`. Les deux apps peuvent rester reliées pendant la transition (ADR 22).
+POUR L'UTILISATEUR: suivre le parcours de ThorAI (ticket 28), vérifier les sessions, puis désinstaller Régie ; ne garder qu'un mode console actif.
+QUESTIONS: aucune.
+CAPTURES: `artifacts/screenshots/30/avant/` et `/apres/` : accueil, session, modifications, fiche, connexion, voix ; `apres/07` montre l'offre de connexion réapparue après un redémarrage du pont, corrigée depuis.
+HORS PÉRIMÈTRE: mode console (carte volante, fil compact) non recapturé : le service n'est pas activé sur ThorAI.

@@ -48,6 +48,6 @@ fun InlineApproval(review: ApprovalReview, onDecision: (ApprovalId, ApprovalDeci
 /** Options own the gamepad; the card keeps explicit touch actions. */
 @Composable
 private fun InlineApprovalAction(key: String, label: String, shortcutsEnabled: Boolean, onClick: () -> Unit) {
-    if (shortcutsEnabled) BarAction(key, label, onClick)
+    if (shortcutsEnabled) BarAction(key, label, onClick = onClick)
     else BasicText(label, style = sans(13.sp), modifier = Modifier.tappable(onClick).padding(8.dp))
 }

@@ -1,4 +1,4 @@
-# Installer Régie sur une AYN Thor
+# Installer ThorAI sur une AYN Thor
 
 Cette notice part d’une Thor neuve et va jusqu’à la première session pilotée à la voix. Chaque étape se termine par une vérification : ne passer à la suivante que si elle réussit.
 
@@ -34,24 +34,24 @@ Ce parcours remplace les étapes 1 à 5 ci-dessous. Il ne demande aucun ordinate
    ```
 
    Le dépôt doit être accessible au téléchargement (public, ou avec votre propre accès). L'installeur prépare Debian 13, Node et les deux agents aux versions éprouvées, le pont et l'accès Android. Il peut être relancé après une interruption ou une mise à jour ; projets, connexions, clé adb et consignes hors des blocs Régie sont gardés. Il ne lance aucun agent et ne démarre rien au boot.
-3. Télécharger l'APK et son fichier `.sha256` dans les [releases de Régie](https://github.com/DabiK/regie/releases). Pour vérifier le téléchargement dans Termux, autoriser une fois `termux-setup-storage`, puis lancer `cd ~/storage/downloads && sha256sum -c regie-<version>.apk.sha256`. Ouvrir l'APK depuis le gestionnaire de fichiers Android et autoriser cette source si Android le demande. **Un ancien debug doit être désinstallé si sa signature diffère** : les préférences et modèles privés de Régie seront perdus, les projets et comptes dans Termux sont conservés.
-4. Ouvrir Régie et accepter **exécuter des commandes Termux** et les notifications. L'app crée son jeton et le transmet à la commande de configuration Termux par RUN_COMMAND ; aucune copie `run-as app.regie` n'est nécessaire. Attendre l'accueil et les versions des agents.
-5. Activer **Options pour les développeurs › Débogage sans fil › Associer avec un code**. Garder la boîte de dialogue ouverte. Dans Termux, entrer dans la Debian :
+3. Télécharger l'APK et son fichier `.sha256` dans les [releases de ThorAI](https://github.com/DabiK/regie/releases). Pour vérifier le téléchargement dans Termux, autoriser une fois `termux-setup-storage`, puis lancer `cd ~/storage/downloads && sha256sum -c thorai-<version>.apk.sha256`. Ouvrir l'APK depuis le gestionnaire de fichiers Android et autoriser cette source si Android le demande. **Un ancien debug doit être désinstallé si sa signature diffère** : les préférences et modèles privés de ThorAI seront perdus, les projets et comptes dans Termux sont conservés. L'ancienne app `app.regie` (Régie) a un autre paquet : la désinstaller une fois ThorAI reliée au pont.
+4. Ouvrir ThorAI : son **parcours d'accueil** guide la suite, étape par étape, et vérifie chacune sur la console ([ADR 23](adr/23-parcours-d-accueil.md)). Il demande **exécuter des commandes Termux**, le micro et les notifications, télécharge le modèle de voix, puis propose le mode console, l'accès des agents à Android et la connexion des comptes, facultatifs. L'app crée son jeton et le transmet à la commande de configuration Termux par RUN_COMMAND, sous le nom de son paquet (ADR 22) ; aucune copie `run-as app.thorai` n'est nécessaire. **Configurer**, en haut de l'écran du bas de l'accueil, rouvre le parcours sur la première étape non faite.
+5. L'étape « Accès à Android » du parcours reprend cette marche. Activer **Options pour les développeurs › Débogage sans fil › Associer avec un code** (le parcours les ouvre sur l'écran du haut, à la croix). Garder la boîte de dialogue ouverte. Dans Termux, en bas, entrer dans la Debian (le parcours copie une variante qui demande le port et le code) :
 
    ```sh
    proot-distro login debian --user dev \
      --bind "$HOME/projects:/home/dev/projects" --bind "$HOME/.codex:/home/dev/.codex" \
      --work-dir /home/dev -- bash -l
    /opt/thor-android/pair.sh <port> <code>
-   adb shell pm grant app.regie android.permission.WRITE_SECURE_SETTINGS
+   adb shell pm grant app.thorai android.permission.WRITE_SECURE_SETTINGS
    adb shell settings put global settings_enable_monitor_phantom_procs false
    exit
    ```
 
-   `port` vient de la boîte de dialogue d'association, pas de la page principale. Le script doit annoncer `THOR_ANDROID=ok`. Ni le code ni une clé ne se saisissent dans Régie.
-6. Retirer Termux de l'optimisation de batterie. Suivre les étapes 7 (microphone et Accessibilité), 8 (comptes) et 9 (première session) ci-dessous. Si le pont a démarré avant l'association, quitter puis rouvrir Régie.
+   `port` vient de la boîte de dialogue d'association, pas de la page principale. Le script doit annoncer `THOR_ANDROID=ok`. Ni le code ni une clé ne se saisissent dans ThorAI.
+6. Retirer Termux de l'optimisation de batterie. Suivre les étapes 7 (microphone et Accessibilité), 8 (comptes) et 9 (première session) ci-dessous. Si le pont a démarré avant l'association, le parcours relie les agents à Android dès que l'étape passe au vert ; sinon, quitter puis rouvrir ThorAI.
 
-**Mise à jour locale** : quitter Régie, faire `git pull` dans le dépôt Termux, puis `bash thor/install-on-device.sh`, installer l'APK signé par la même clé et rouvrir Régie. Une nouvelle association n'est pas nécessaire.
+**Mise à jour locale** : quitter ThorAI, faire `git pull` dans le dépôt Termux, puis `bash thor/install-on-device.sh`, installer l'APK signé par la même clé et rouvrir ThorAI. Une nouvelle association n'est pas nécessaire.
 
 ## 1. Préparer le Mac
 
@@ -122,7 +122,7 @@ La commande affiche un numéro en 13. Les scripts attendent ce chemin exact ; s
 
 ## 3. Claude Code et Codex dans la Debian
 
-Les versions ci-dessous sont celles éprouvées avec Régie. D’autres peuvent fonctionner ; l’accueil de Régie les signale comme « version non testée ».
+Les versions ci-dessous sont celles éprouvées avec ThorAI. D’autres peuvent fonctionner ; l’accueil de ThorAI les signale comme « version non testée ».
 
 ### En root, Node et Codex
 
@@ -190,7 +190,7 @@ approval_policy = "on-request"
 EOF
 ```
 
-Si le fichier existait déjà avec des sections `[…]`, placer plutôt ces deux lignes avant la première section. Régie applique ensuite le mode de validation choisi pour chaque session ([ADR 02](adr/02-pilotage-des-agents.md)).
+Si le fichier existait déjà avec des sections `[…]`, placer plutôt ces deux lignes avant la première section. ThorAI applique ensuite le mode de validation choisi pour chaque session ([ADR 02](adr/02-pilotage-des-agents.md)).
 
 **Vérification**, en **dev** :
 
@@ -216,10 +216,10 @@ thor/computer-use/install.sh
 
 1. il copie le pont dans la Debian (`/home/dev/.local/share/regie/bridge`) et installe ses dépendances ;
 2. il crée un jeton aléatoire, qui protège la connexion entre l’app et le pont ;
-3. il passe `allow-external-apps=true` dans Termux, pour que Régie puisse démarrer le pont ;
+3. il passe `allow-external-apps=true` dans Termux, pour que ThorAI puisse démarrer le pont ;
 4. il pose `regie-bridge-configure`, `regie-bridge-start`, `regie-bridge-stop`, `regie-bridge-supervise` et `regie-android-access` dans le `~/bin` de Termux.
 
-À ce stade, il signale que l’app `app.regie` n’est pas installée : c’est normal, son jeton sera copié à l’étape suivante. Rien ne démarre au boot.
+À ce stade, il signale que l’app `app.thorai` n’est pas installée : c’est normal, son jeton sera copié à l’étape suivante. Rien ne démarre au boot.
 
 `thor/computer-use/install.sh` donne aux agents la main sur Android :
 
@@ -241,21 +241,21 @@ scripts/thor-install.sh
 thor/bridge/install.sh token-app
 ```
 
-`thor-install.sh` construit l’APK de debug, installe `app.regie` et l’ouvre. Il n’installe ni ne désinstalle rien d’autre. `token-app` copie ensuite le jeton du pont dans le stockage privé de l’app, sans l’afficher ni l’écrire sur le Mac.
+`thor-install.sh` construit l’APK de debug, installe `app.thorai` et l’ouvre. Il n’installe ni ne désinstalle rien d’autre. `token-app` copie ensuite le jeton du pont dans le stockage privé de l’app, sans l’afficher ni l’écrire sur le Mac.
 
-À l’ouverture, Régie demande deux autorisations sur la console. Les accepter :
+À l’ouverture, le parcours d’accueil de ThorAI demande ces autorisations, une par étape. Les accepter :
 
-- **exécuter des commandes dans Termux** (« Run commands in Termux environment ») : Régie démarre et arrête le pont ainsi ;
+- **exécuter des commandes dans Termux** (« Run commands in Termux environment ») : ThorAI démarre et arrête le pont ainsi ;
 - **les notifications** : validations demandées, questions, fins et échecs de session.
 
-Régie a démarré avant d’avoir son jeton : la relancer depuis le **Mac** :
+ThorAI a démarré avant d’avoir son jeton : la relancer depuis le **Mac** :
 
 ```sh
-adb -s "$THOR_SERIAL" shell am force-stop app.regie
-adb -s "$THOR_SERIAL" shell am start -n app.regie/.TopActivity
+adb -s "$THOR_SERIAL" shell am force-stop app.thorai
+adb -s "$THOR_SERIAL" shell am start -n app.thorai/app.regie.TopActivity
 ```
 
-**Vérification** : l’écran du haut affiche « Régie », « 0 session active » et les versions de Claude et de Codex. L’écran du bas montre le micro et « Maintiens L2 et parle ».
+**Vérification** : au premier lancement, le parcours d’accueil s’ouvre ; l’étape « Pont » passe au vert. Le parcours refermé, l’écran du haut affiche « ThorAI », « 0 session active » et les versions des agents ; l’écran du bas montre le micro et « Maintiens L2 et parle ».
 
 ## 6. Associer le débogage sans fil
 
@@ -279,29 +279,29 @@ Le port d’association n’est pas le port de connexion affiché sur l’écran
 | --- | --- | --- |
 | Commandes Termux | Démarrer et arrêter le pont | Demandée à l’ouverture ([étape 5](#5-lapplication)). |
 | Notifications | Prévenir d’une décision à prendre | Demandée à l’ouverture. |
-| `WRITE_SECURE_SETTINGS` | Rallumer le débogage sans fil à l’ouverture de Régie, coupé à chaque redémarrage | Une fois, depuis le Mac (ci-dessous). |
-| Microphone | La dictée | Dans Régie, toucher **Régler la voix**, puis **Autoriser le microphone**. |
+| `WRITE_SECURE_SETTINGS` | Rallumer le débogage sans fil à l’ouverture de ThorAI, coupé à chaque redémarrage | Une fois, depuis le Mac (ci-dessous). |
+| Microphone | La dictée | Étape « Voix » du parcours, ou **Régler la voix**, puis **Autoriser le microphone**. |
 | Accessibilité | Le mode console : L2 et R2 depuis toute appli | Dans les réglages d’accessibilité (ci-dessous). |
 
 Dans le terminal **Mac** :
 
 ```sh
-adb -s "$THOR_SERIAL" shell pm grant app.regie android.permission.WRITE_SECURE_SETTINGS
-adb -s "$THOR_SERIAL" shell am force-stop app.regie
-adb -s "$THOR_SERIAL" shell am start -n app.regie/.TopActivity
+adb -s "$THOR_SERIAL" shell pm grant app.thorai android.permission.WRITE_SECURE_SETTINGS
+adb -s "$THOR_SERIAL" shell am force-stop app.thorai
+adb -s "$THOR_SERIAL" shell am start -n app.thorai/app.regie.TopActivity
 ```
 
-Pour le **mode console**, toucher l’avis « Mode console » en bas de l’accueil : les réglages d’accessibilité s’ouvrent sur l’écran du bas. Dans **Applications téléchargées**, choisir **Régie, mode console**, l’activer et accepter. Si Android parle de paramètre restreint : **Infos sur l’appli Régie › ⋮ › Autoriser les paramètres restreints**, puis recommencer.
+Pour le **mode console**, étape « Mode console » du parcours (ou **Configurer** sur l’accueil) : **A** ouvre les réglages d’accessibilité sur l’écran du bas. Dans **Applications téléchargées**, choisir **ThorAI, mode console**, l’activer et accepter. Si Android parle de paramètre restreint : **Y**, puis **Infos sur l’appli ThorAI › ⋮ › Autoriser les paramètres restreints**, et recommencer. N’activer qu’un mode console à la fois : celui de l’ancienne app Régie lit la même manette.
 
-Le service ne lit que la manette, jamais le contenu de l’écran. Il ne prend que L2 et R2, plus les boutons qu’un panneau de Régie attend ; le reste va à l’appli au premier plan ([ADR 19](adr/19-mode-console.md)).
+Le service ne lit que la manette, jamais le contenu de l’écran. Il ne prend que L2 et R2, plus les boutons qu’un panneau de ThorAI attend ; le reste va à l’appli au premier plan ([ADR 19](adr/19-mode-console.md)).
 
 ![Accueil, écran du bas, avant l’activation du mode console](../artifacts/screenshots/vitrine/accueil-bas.png)
 
-**Vérification** : de retour dans Régie, l’avis « Mode console » a disparu. Le microphone est accordé dans **Régler la voix**.
+**Vérification** : de retour dans ThorAI, l’étape « Mode console » est au vert ; sur l’accueil, le point ambre de **Configurer** a disparu.
 
 ## 8. Connecter les agents
 
-Les connexions restent dans les fichiers des agents, dans la Debian. Aucun jeton ne passe par Régie ni par ses journaux ([ADR 18](adr/18-connexion-des-agents.md)). Au premier contact avec le pont, Régie propose une fois de connecter un agent qui ne l’est pas. Sinon, depuis l’accueil, **B** ouvre **Connexion des agents** ; Gauche et Droite choisissent l’agent.
+Les connexions restent dans les fichiers des agents, dans la Debian. Aucun jeton ne passe par ThorAI ni par ses journaux ([ADR 18](adr/18-connexion-des-agents.md)). Au premier lancement, l’étape « Comptes des agents » du parcours ouvre cet écran. Sinon, depuis l’accueil, **B** ouvre **Connexion des agents** ; Gauche et Droite choisissent l’agent.
 
 ### Codex, par code d’appareil
 
@@ -325,18 +325,18 @@ Claude Code ne propose pas de code d’appareil : sa connexion se fait dans Ter
 claude auth login
 ```
 
-Ouvrir l’adresse affichée sur le téléphone, se connecter, puis recopier dans Termux le code que le navigateur affiche. Revenir dans Régie, choisir Claude, puis **Y** pour actualiser. L’app rappelle ces étapes avec **A**, « Marche à suivre ».
+Ouvrir l’adresse affichée sur le téléphone, se connecter, puis recopier dans Termux le code que le navigateur affiche. Revenir dans ThorAI, choisir Claude, puis **Y** pour actualiser. L’app rappelle ces étapes avec **A**, « Marche à suivre ».
 
-Un changement de compte est refusé tant que l’agent tourne : choisir **Quitter**, rouvrir Régie, puis recommencer.
+Un changement de compte est refusé tant que l’agent tourne : choisir **Quitter**, rouvrir ThorAI, puis recommencer.
 
 **Vérification** : dans **Connexion des agents**, chaque agent utilisé affiche « Connecté ».
 
 ## 9. Premier lancement
 
-1. **Créer une session.** Sur l’accueil, **X**. La fiche propose l’agent, le projet, le mode de validation, le modèle, la réflexion et la consigne. Pour un premier essai, choisir **Nouveau projet…** et lui donner un nom : Régie crée un dépôt Git vide dans `~/projects` de Termux. **A** lance la session.
+1. **Créer une session.** Sur l’accueil, **X**. La fiche propose l’agent, le projet, le mode de validation, le modèle, la réflexion et la consigne. Pour un premier essai, choisir **Nouveau projet…** et lui donner un nom : ThorAI crée un dépôt Git vide dans `~/projects` de Termux. **A** lance la session.
 2. **Parler.** Maintenir **L2**, dire une consigne, relâcher. La transcription s’écrit sur l’écran du bas. **A** l’envoie, **B** l’efface. La première dictée télécharge le modèle de transcription, environ 490 Mo : il faut du réseau et 1,2 Go libres. Ensuite, la transcription fonctionne hors ligne.
 3. **Suivre et régler.** L’écran du haut montre le fil de l’agent. En bas, la table des réglages donne le mode, le modèle et la réflexion : **Droite** la passe en modification, la croix choisit et change, **A** applique. **B** revient à l’accueil.
-4. **Piloter la console.** Sur l’accueil, **Y** prépare la session « console », en mode « Tout autoriser ». **A** la crée. Demander par exemple « ouvre le navigateur sur wikipedia.org » : Chrome s’ouvre en haut, Régie reste en bas.
+4. **Piloter la console.** Sur l’accueil, **Y** prépare la session « console », en mode « Tout autoriser ». **A** la crée. Demander par exemple « ouvre le navigateur sur wikipedia.org » : Chrome s’ouvre en haut, ThorAI reste en bas.
 5. **Quitter.** Toucher **Quitter** en bas de l’accueil. Le pont et les sessions s’arrêtent. Passer à une autre appli, au contraire, laisse tourner les sessions.
 
 **Vérification** : la session apparaît sur l’accueil avec son agent, son projet et son état, et l’agent a répondu dans le fil.
@@ -345,30 +345,30 @@ Le [README](../README.md#les-commandes-de-la-manette) liste toutes les commandes
 
 ## Mettre à jour et désinstaller
 
-**Mettre à jour** : choisir **Quitter** dans Régie, faire `git pull`, puis relancer depuis le **Mac** les scripts des parties qui ont changé : `scripts/thor-install.sh` pour l’app, `thor/bridge/install.sh` pour le pont, `thor/computer-use/install.sh` pour l’accès Android. Après un changement de consignes, créer une nouvelle session : les sessions ouvertes gardent les anciennes.
+**Mettre à jour** : choisir **Quitter** dans ThorAI, faire `git pull`, puis relancer depuis le **Mac** les scripts des parties qui ont changé : `scripts/thor-install.sh` pour l’app, `thor/bridge/install.sh` pour le pont, `thor/computer-use/install.sh` pour l’accès Android. Après un changement de consignes, créer une nouvelle session : les sessions ouvertes gardent les anciennes.
 
 **Désinstaller**, depuis le **Mac** :
 
 ```sh
 thor/computer-use/uninstall.sh
-adb -s "$THOR_SERIAL" uninstall app.regie
+adb -s "$THOR_SERIAL" uninstall app.thorai
 ```
 
 Le premier retire l’accès Android, ses déclarations et ses consignes ; il garde la clé adb de la Debian, sauf avec `--oublier-association`. Le pont n’a pas de script de désinstallation : ses fichiers sont `~/bin/regie-*` dans Termux, `/home/dev/.local/share/regie/` et `/home/dev/.config/regie/` dans la Debian. Sur la console, couper aussi le débogage sans fil et retirer la Debian des **Appareils associés**.
 
 ## Dépannage
 
-### Messages de Régie
+### Messages de ThorAI
 
 | Message | Que faire |
 | --- | --- |
-| « Clé du pont absente » ou « refusée » | Vérifier les commandes Termux et relancer Régie : elle reconfigure le pont. En debug USB, `thor/bridge/install.sh token-app` reste disponible. |
-| « Termux ne répond pas » | Dans Termux : relancer `bash thor/install-on-device.sh` depuis le dépôt ; ou **Mac** : `thor/bridge/install.sh`, puis rouvrir Régie. Vérifier que Termux a été ouvert au moins une fois. |
-| « Autorise les commandes Termux » | Sur la console : **Infos sur l’appli Régie › Autorisations › Autorisations supplémentaires**, activer « Run commands in Termux environment ». |
+| « Clé du pont absente » ou « refusée » | Vérifier les commandes Termux et relancer ThorAI : elle reconfigure le pont. En debug USB, `thor/bridge/install.sh token-app` reste disponible. |
+| « Termux ne répond pas » | Dans Termux : relancer `bash thor/install-on-device.sh` depuis le dépôt ; ou **Mac** : `thor/bridge/install.sh`, puis rouvrir ThorAI. Vérifier que Termux a été ouvert au moins une fois. |
+| « Autorise les commandes Termux » | Sur la console : **Infos sur l’appli ThorAI › Autorisations › Autorisations supplémentaires**, activer « Run commands in Termux environment ». |
 | « Autorise la reconnexion Android depuis le Mac » | **Mac** : la commande `pm grant` de l’[étape 7](#7-les-autres-autorisations). |
 | « version non testée » sur l’accueil | Claude Code s’est mis à jour seul. Cela peut marcher ; pour revenir à la version éprouvée, relancer son installeur avec `2.1.322` ([mises à jour de Claude Code](https://code.claude.com/docs/en/setup#disable-auto-updates)). |
 | « Rien entendu. Aucun message envoyé. » | La dictée était vide : maintenir L2 pendant toute la phrase. |
-| « Action non confirmée… » dans Connexion des agents | Une session de cet agent tourne : **Quitter**, rouvrir Régie, recommencer. |
+| « Action non confirmée… » dans Connexion des agents | Une session de cet agent tourne : **Quitter**, rouvrir ThorAI, recommencer. |
 
 ### Autres problèmes
 
@@ -379,11 +379,11 @@ Le premier retire l’accès Android, ses déclarations et ses consignes ; il g
   grep android-access ~/.local/state/thor/regie-bridge.log | tail -n 5
   ```
 
-  `raison=non-connecte` : le débogage sans fil est coupé, ou la console est sur un autre réseau Wi-Fi. Avec `WRITE_SECURE_SETTINGS`, Régie le rallume à son ouverture ; sinon, le rallumer à la main. L’association reste valable. Si elle a été perdue, refaire l’[étape 6](#6-associer-le-débogage-sans-fil). `raison=adb-absent` ou `serveur-adb` : relancer `thor/computer-use/install.sh` depuis le Mac.
-- **Le pont ne démarre pas, ou s’arrête.** Lire la fin de `~/.local/state/thor/regie-bridge.log` dans Termux. Après cinq plantages en deux minutes, le superviseur abandonne : corriger la cause, puis rouvrir Régie.
-- **L2 ne fait rien dans une autre appli.** Vérifier le service d’accessibilité (étape 7). Le service ne prend rien tant que Régie n’est pas reliée au pont, ni pendant **Quitter**.
+  `raison=non-connecte` : le débogage sans fil est coupé, ou la console est sur un autre réseau Wi-Fi. Avec `WRITE_SECURE_SETTINGS`, ThorAI le rallume à son ouverture ; sinon, le rallumer à la main. L’association reste valable. Si elle a été perdue, refaire l’[étape 6](#6-associer-le-débogage-sans-fil). `raison=adb-absent` ou `serveur-adb` : relancer `thor/computer-use/install.sh` depuis le Mac.
+- **Le pont ne démarre pas, ou s’arrête.** Lire la fin de `~/.local/state/thor/regie-bridge.log` dans Termux. Après cinq plantages en deux minutes, le superviseur abandonne : corriger la cause, puis rouvrir ThorAI.
+- **L2 ne fait rien dans une autre appli.** Vérifier le service d’accessibilité (étape 7). Le service ne prend rien tant que ThorAI n’est pas reliée au pont, ni pendant **Quitter**.
 - **La dictée reste muette.** Vérifier le microphone dans **Régler la voix**, puis le réseau et l’espace libre pour le premier téléchargement du modèle.
-- **L’écran du bas de Régie a disparu.** Rouvrir Régie depuis le lanceur : l’écran du bas revient.
+- **L’écran du bas de ThorAI a disparu.** Rouvrir ThorAI depuis le lanceur : l’écran du bas revient.
 - **Android ferme Termux en arrière-plan.** Revoir l’exemption de batterie et le réglage des processus fantômes de l’étape 2. Une mise à jour système peut les annuler.
 - **Codex refuse la connexion par code.** Activer l’option dans les réglages de sécurité du compte ChatGPT, puis relancer avec **A**.
 
@@ -397,12 +397,12 @@ Pour installer uniquement ce binaire depuis le Mac : `thor/opencode/install.sh`.
 L'accès Android ajoute `~/.config/opencode/AGENTS.md` et le MCP global `thor_android`
 par le CLI natif. Une nouvelle session charge ces consignes.
 
-Aucun compte n'est connecté par les scripts. Dans Régie : accueil, **B**, choisir
+Aucun compte n'est connecté par les scripts. Dans ThorAI : accueil, **B**, choisir
 **opencode**, saisir sa clé **OpenCode Go** dans le champ masqué, puis **A** ou
-« Enregistrer la clé ». Régie transmet cette saisie au pont ; opencode seul la
+« Enregistrer la clé ». ThorAI transmet cette saisie au pont ; opencode seul la
 stocke. Ne jamais coller une clé dans un script, un terminal partagé ou un rapport.
 Si une découverte d'options a déjà démarré opencode, choisir Quitter puis rouvrir
-Régie avant la connexion. Go est facultatif ; les autres fournisseurs se configurent
+ThorAI avant la connexion. Go est facultatif ; les autres fournisseurs se configurent
 par `opencode auth login` dans la Debian, puis sont proposés dans les modèles ACP.
 
 Mise à jour de l'app déjà signée en release depuis le Mac :

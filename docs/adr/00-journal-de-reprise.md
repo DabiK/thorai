@@ -187,6 +187,8 @@ physiques différés restent requis même lorsqu’un ticket est marqué fait.
 
 - **18 novembre, ticket 31, relecture après 573dd25 (solo Codex)** : diff complet contre main relu sur les axes architecture/ticket ; retrait temporaire de la garde détecté par les deux tests, puis sources restaurées. Traces nettoyées, portes finales vertes (338 pont, Android 452 sans échec/résultats réutilisés), audit sans signalement. Aucun autre blocage ; statut à fusionner, clé utilisateur toujours requise pour l'essai autonome. Détail `artifacts/screenshots/31/relecture.md`.
 
+- **18 novembre, tickets 28 et 30 à fusionner** : l'app devient ThorAI (`app.thorai`, ADR 21) et gagne un parcours d'accueil en neuf étapes vérifiées sur la console (ADR 23), « Configurer » sur l'accueil, finitions des écrans. Main fusionnée (ADR 22) : jeton par app, comme sur la branche du jeu. Android 475 tests + lint, voix et pont verts. Thor : avant/après capturés, parcours mené jusqu'à une session Codex avec un build debug relié par son jeton historique ; release `app.thorai` installée à côté de `app.regie`, en attente du geste RUN_COMMAND de l'utilisateur. Pont redémarré une fois pour lire les jetons par app. `app.regie` à désinstaller après ce geste. Revue indépendante : un bloquant et un important corrigés.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

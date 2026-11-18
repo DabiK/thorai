@@ -162,7 +162,7 @@ export class Authentication {
       release();
       this.save(agent, {
         phase: 'failed',
-        message: 'Connexion impossible. Réessaie depuis Régie.',
+        message: 'Connexion impossible. Réessaie depuis ThorAI.',
       });
     }
     return this.state(agent);
@@ -250,7 +250,7 @@ export class Authentication {
     } catch {
       return this.save(agent, {
         phase: 'failed',
-        message: 'Clé non enregistrée. Réessaie depuis Régie.',
+        message: 'Clé non enregistrée. Réessaie depuis ThorAI.',
         connected: null,
       });
     } finally {
