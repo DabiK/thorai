@@ -12,7 +12,7 @@
     <string name="hameau_dictate">Dicter</string>
     <string name="hameau_order">Donner un ordre</string>
     <string name="hameau_change_house">Changer de maison</string>
-    <string name="hameau_setup">Configurer</string>
+    <string name="hameau_setup">Préparer la console</string>
     <string name="hameau_voice_settings">Régler la voix</string>
     <string name="hameau_quit">Quitter</string>
     <string name="hameau_empty">Aucune session. Bâtis-en une avec X.</string>

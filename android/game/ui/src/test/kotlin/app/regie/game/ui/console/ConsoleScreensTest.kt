@@ -18,6 +18,9 @@ import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.down
+import androidx.compose.ui.test.up
 import androidx.compose.ui.unit.dp
 import app.regie.domain.model.Agent
 import app.regie.domain.model.CommandPhase
@@ -137,6 +140,18 @@ class ConsoleScreensTest {
         compose.onNodeWithText("Confirmer").performClick()
         compose.onNodeWithText("Annuler").performClick()
         assertTrue(confirmed && cancelled)
+    }
+
+    // Repris de l'ordre vocal classique (ticket 51) : « Redire » démarre au toucher et ne s'arrête qu'au relâché.
+    @Test
+    fun `Redire starts on touch down and ends only on release`() {
+        val holds = mutableListOf<Boolean>()
+        val review = VoiceCommandReview(CommandPhase.REVIEW, text = "lance Claude sur météo", command = app.regie.domain.model.VoiceCommand.ShowOverview, notice = "Lancer Claude sur météo")
+        show { GameVoiceCommandScreen(review, bottom = true, singleScreen = false, assets = assets, callbacks = CommandCallbacks(hold = { holds += it })) }
+        compose.onNodeWithText("Redire").performTouchInput { down(center) }
+        compose.runOnIdle { kotlin.test.assertEquals(listOf(true), holds) }
+        compose.onNodeWithText("Redire").performTouchInput { up() }
+        compose.runOnIdle { kotlin.test.assertEquals(listOf(true, false), holds) }
     }
 
     @Test

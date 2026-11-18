@@ -45,7 +45,8 @@ import app.regie.game.ui.kit.TagState
 import app.regie.game.ui.render.SpriteImage
 import app.regie.game.ui.theme.Game
 import app.regie.game.ui.theme.GameText
-import app.regie.game.ui.village.CarnetHint
+import app.regie.game.ui.house.PadAction
+import app.regie.game.ui.house.PadActionHint
 
 /** Les gestes de la carte : une rue choisie (croix ou doigt), y aller (A), fermer (B). */
 interface MapCallbacks {
@@ -96,9 +97,9 @@ fun VillageMapScreen(map: VillageMap, selected: Int, assets: GameAssets, callbac
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(metrics.dp(30)),
         ) {
-            CarnetHint(listOf("Croix"), stringResource(R.string.carte_streets_key), chip = chip, ink = colors.barInk, textSizePx = 26, onTap = { callbacks.onMove(1) })
-            CarnetHint(listOf("A"), stringResource(R.string.carte_go), chip = chip, ink = colors.barInk, textSizePx = 26, onTap = { callbacks.onGoTo(selected) })
-            CarnetHint(listOf("B"), stringResource(R.string.carte_close), chip = chip, ink = colors.barInk, textSizePx = 26, onTap = callbacks::onClose)
+            PadActionHint(PadAction("Croix", stringResource(R.string.carte_streets_key)) { callbacks.onMove(1) }, chip = chip, ink = colors.barInk, textSizePx = 26)
+            PadActionHint(PadAction("A", stringResource(R.string.carte_go)) { callbacks.onGoTo(selected) }, chip = chip, ink = colors.barInk, textSizePx = 26)
+            PadActionHint(PadAction("B", stringResource(R.string.carte_close), onTap = callbacks::onClose), chip = chip, ink = colors.barInk, textSizePx = 26)
         }
     }
 }

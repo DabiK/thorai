@@ -72,4 +72,13 @@ class HouseLookTest {
         assertEquals(6, threadGapBefore(read, run))
         assertEquals(26, threadGapBefore(run, ThreadLine.AgentText(3, "x", false)))
     }
+
+    // Repris du fil classique (ticket 51) : l'écran du bas, en paysage et peu haut, garde le champ visible.
+    @Test
+    fun `the keyboard is asked never to go full screen`() {
+        val options = withoutFullscreen(android.view.inputmethod.EditorInfo.IME_ACTION_DONE)
+        assertEquals(android.view.inputmethod.EditorInfo.IME_ACTION_DONE, options and android.view.inputmethod.EditorInfo.IME_MASK_ACTION)
+        assertEquals(android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI, options and android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI)
+        assertEquals(android.view.inputmethod.EditorInfo.IME_FLAG_NO_FULLSCREEN, options and android.view.inputmethod.EditorInfo.IME_FLAG_NO_FULLSCREEN)
+    }
 }

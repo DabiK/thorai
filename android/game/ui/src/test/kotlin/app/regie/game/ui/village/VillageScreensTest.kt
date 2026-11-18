@@ -148,7 +148,7 @@ class VillageScreensTest {
         compose.onNodeWithText("étape 3 sur 5 · 6 min").assertIsDisplayed()
         compose.onNodeWithTag("carnet-row-demo-2").assert(SemanticsMatcher.expectValue(SemanticsProperties.Selected, true))
         compose.onNodeWithTag("carnet-row-demo-0").assert(SemanticsMatcher.expectValue(SemanticsProperties.Selected, false))
-        listOf("Y aller", "Agents", "Bâtir", "Console", "Menu", "Dicter", "Donner un ordre", "Changer de maison", "Configurer", "Régler la voix", "Quitter")
+        listOf("Y aller", "Agents", "Bâtir", "Console", "Menu", "Dicter", "Donner un ordre", "Changer de maison", "Préparer la console", "Régler la voix", "Quitter")
             .forEach { compose.onNodeWithText(it).assertIsDisplayed() }
         save(snapshot(), "45-carnet.png")
     }
