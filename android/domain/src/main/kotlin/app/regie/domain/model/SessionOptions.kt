@@ -21,7 +21,7 @@ fun approvalModeHelp(mode: String): String = when (mode) {
     "plan" -> "L’agent prépare un plan avant les modifications."
     else -> ""
 }
-fun editableSessionOptions(options: List<SessionOption>) = options.filter { it.id !in listOf("mode", "collaboration_mode") && it.category !in listOf("mode", "collaboration_mode") }
+fun editableSessionOptions(options: List<SessionOption>) = options.filter { (it.id !in listOf("mode", "collaboration_mode") || it.category == "agent") && it.category !in listOf("mode", "collaboration_mode") }
 enum class SettingsResult { APPLIED, REFUSED, UNKNOWN }
 data class SessionSetting(val approvalMode: String? = null, val configId: String? = null, val value: String? = null, val configValues: Map<String, String> = emptyMap())
 data class SettingsRow(val id: String, val label: String, val current: String?, val choices: List<OptionValue>)

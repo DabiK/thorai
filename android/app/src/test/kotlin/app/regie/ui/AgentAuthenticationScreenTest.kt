@@ -38,6 +38,26 @@ class AgentAuthenticationScreenTest {
             compose.onNodeWithText("Actualiser").assertIsDisplayed()
         }
     }
+    @Test fun `a future API key agent uses a masked transient field and clears it after hardware A`() {
+        val future = Agent("future", "Agent futur")
+        val review = AgentAuthenticationReview(visible = true, selected = 3, agents = listOf(AgentAuthentication(Agent.CLAUDE, true), AgentAuthentication(Agent.CODEX, true), AgentAuthentication(Agent("third", "Troisième agent"), true), AgentAuthentication(future, false, login = AgentLogin("api_key", "Clé du fournisseur", "Aide", "provider"))))
+        val sent = mutableListOf<String>()
+        var action: (() -> Unit)? = null
+        Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
+            host.setup().get().setContent { RegieTheme { AgentAuthenticationScreen(review, false, true, {}, {}, {}, { sent += it }, { action = it }) } }
+            compose.onNodeWithText("AGENT FUTUR").assertIsDisplayed()
+            kotlin.test.assertTrue(compose.onNodeWithText("AGENT FUTUR").getUnclippedBoundsInRoot().right <= compose.onRoot().getUnclippedBoundsInRoot().right)
+            compose.onNodeWithContentDescription("Clé de connexion").performTextInput("test-only-key")
+            compose.onNodeWithContentDescription("Clé de connexion").assert(SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsProperties.Password))
+            compose.runOnIdle { action!!.invoke() }
+            compose.waitForIdle()
+            assertEquals(listOf("test-only-key"), sent)
+            compose.onNodeWithContentDescription("Clé de connexion").assertTextEquals("")
+            compose.onNodeWithText("Enregistrer la clé").assertDoesNotExist()
+        }
+        assertEquals(null, action)
+    }
+
     @Test fun `QR decodes to the public URL without any code or token`() {
         val bitmap = authenticationQr("https://auth.openai.com/codex/device")
         val pixels = IntArray(bitmap.width * bitmap.height)

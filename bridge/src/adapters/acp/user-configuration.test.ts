@@ -4,7 +4,7 @@ import type { AgentKind } from '../../domain/model.ts';
 import { MemoryLogger } from '../fake/memory.ts';
 import { AcpConnector } from './acp-connector.ts';
 
-it.each<AgentKind>(['claude', 'codex'])(
+it.each<AgentKind>(['claude', 'codex', 'opencode'])(
   '%s keeps agent-owned configuration on creation and reload',
   async (kind) => {
     const requests: unknown[] = [];

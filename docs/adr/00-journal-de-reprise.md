@@ -177,6 +177,9 @@ physiques différés restent requis même lorsqu’un ticket est marqué fait.
 
 - **18 novembre, ticket 27, relecture après d99fdee (solo Codex)** : diff main...HEAD relu avec main figé sur c7a9882. Aucun autre blocage fonctionnel trouvé ; traces nettoyées et preuve de réparation release distinguée de la configuration identique, éprouvée par le test à verrou réel. Build-only de release rejoué sans publication ; APK/somme vérifiés, audit et diff propres. Aucun code de production ni test modifié après les portes vertes et l'essai Thor. Statut à fusionner maintenu.
 
+
+- **18 novembre, ticket 31 à fusionner (solo Codex)** : opencode 2.1.2 ACP natif, catalogue ouvert Android/voix/connexion, clé Go éphémère vers stockage natif, build arm64 officielle vérifiée et consignes/MCP ; ADR 02/18 et contrat facultatif du ticket 28. Pont 336 tests + typage/lint, Android 450 + lint, scripts verts. Thor release signée mise à jour sans désinstallation : création depuis l'app et réponse Go, A/B, modèle/réflexion/reprise avec pont et identifiants restés sur le Mac. Dans Debian : initialisation ACP et comptes vides, aucune clé transférée. Profil Mac isolé avec clé factice : cycle natif enregistré/retiré vérifié. Banc et ses agents arrêtés, reverse retiré, pont Debian final rétabli et 49 sessions conservées (ancien Codex idle reprenable). L'exécution Go autonome attend la clé de l'utilisateur ; sept étapes dans `artifacts/screenshots/31/essai-thor.md`. Aucun sous-agent, prompt Claude, push ou fusion. Relecture solo après commit consignée séparément.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

@@ -36,7 +36,7 @@ interface AgentGateway : AgentAuthenticationGateway {
     /** Les sessions que le pont connaît, en cours et historique, dans un ordre quelconque. */
     val sessions: StateFlow<List<Session>>
 
-    /** Versions de Claude et de Codex installées sur la console. */
+    /** Catalogue des agents annoncé par le pont (identité, nom, versions et état). */
     val agents: StateFlow<List<AgentVersion>>
 
     val connection: StateFlow<BridgeConnection>

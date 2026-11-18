@@ -7,6 +7,7 @@ import app.regie.domain.model.SessionId
 
 /** Ce que fait le raccourci de la session « console » (ticket 25). */
 sealed interface ConsoleLaunch {
+    data object Unavailable : ConsoleLaunch
     /** Une session console existe : on l'ouvre, sans rien lui envoyer. */
     data class Resume(val id: SessionId) : ConsoleLaunch
 
@@ -33,11 +34,12 @@ object ConsoleSession {
      * création. L'agent proposé est celui de la dernière session utilisée, Codex à défaut ; la fiche
      * permet d'en changer avant A.
      */
-    fun choose(sessions: List<Session>, projects: List<String>): ConsoleLaunch {
+    fun choose(sessions: List<Session>, projects: List<String>, agents: List<Agent>): ConsoleLaunch {
         sessions.filter { it.project == PROJECT }
             .maxWithOrNull(compareBy<Session> { it.active }.thenBy { it.lastActivityAt })
             ?.let { return ConsoleLaunch.Resume(it.id) }
-        val agent = sessions.maxByOrNull { it.lastActivityAt }?.agent ?: Agent.CODEX
+        val agent = sessions.filter { it.agent in agents }.maxByOrNull { it.lastActivityAt }?.agent
+            ?: agents.firstOrNull { it == Agent.CODEX } ?: agents.firstOrNull() ?: return ConsoleLaunch.Unavailable
         return ConsoleLaunch.Create(NewSessionDraft(agent, PROJECT, approvalMode = APPROVAL_MODE, newProject = PROJECT !in projects))
     }
 }

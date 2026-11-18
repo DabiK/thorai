@@ -138,6 +138,8 @@ class AppContainer(
         authenticationReview?.open()
     }
     fun selectAuthenticationAgent(index: Int) { authenticationReview?.select(index) }
+    fun submitAuthenticationKey(key: String) { authenticationReview?.submitKey(key) }
+    var authenticationKeyAction: (() -> Unit)? = null
     fun refreshAuthentication() { authenticationReview?.refresh() }
     private var settingsReview: ReviewSessionSettings? = null
     val sessionSettings = MutableStateFlow(SessionSettingsReview())
@@ -191,7 +193,7 @@ class AppContainer(
     private var executeVoiceCommand: ExecuteVoiceCommand? = null
     private var projects: List<String> = emptyList()
     val voiceCommand = ReviewVoiceCommand(capture, InterpretVoiceCommand(MistralCommandModel(voicePreferences::commandKey)),
-        { command -> executeVoiceCommand?.invoke(command) ?: "Pont indisponible" }, scope, onLaunch = { draft, text -> openNewSession(draft, text) }, loadProjects = { gateway?.projects().orEmpty() })
+        { command -> executeVoiceCommand?.invoke(command) ?: "Pont indisponible" }, scope, onLaunch = { draft, text -> openNewSession(draft, text) }, loadProjects = { gateway?.projects().orEmpty() }, loadAgents = { gateway?.agents?.value.orEmpty().filter { it.available }.map { it.agent } })
     val commandScroll = kotlinx.coroutines.flow.MutableSharedFlow<Int>(extraBufferCapacity = 16)
     val commandVelocity = MutableStateFlow(0f)
 
@@ -210,7 +212,7 @@ class AppContainer(
             is Screen.Session -> inlineApproval.value.request?.takeIf { it.sessionId == shown.id }
             is Screen.Diff -> null
         }
-        voiceCommand.start(VoiceCommandContext(overview.value.sessions.toList(), current, approval, projects))
+        voiceCommand.start(VoiceCommandContext(overview.value.sessions.toList(), current, approval, projects, gateway?.agents?.value.orEmpty().filter { it.available }.map { it.agent }))
     }
     private fun stopVoiceCommand() = voiceCommand.finish()
     fun saveCommandKey(key: String) = voicePreferences.saveCommandKey(key)
@@ -248,7 +250,7 @@ class AppContainer(
         }
         if (agentAuthentication.value.visible) {
             if (input is GamepadInput.Pressed) when (input.button) {
-                Button.A -> authenticationReview?.confirm()
+                Button.A -> if (agentAuthentication.value.current?.login?.method == "api_key" && agentAuthentication.value.current?.connected != true) authenticationKeyAction?.invoke() else authenticationReview?.confirm()
                 Button.B -> authenticationReview?.close()
                 Button.LEFT, Button.UP -> authenticationReview?.move(-1)
                 Button.RIGHT, Button.DOWN -> authenticationReview?.move(1)
@@ -597,9 +599,10 @@ class AppContainer(
             val catalog = try { chosen.projectCatalog().map { it.name } }
                 catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { emptyList() }
             val folders = catalog.ifEmpty { projects }
-            when (val choice = ConsoleSession.choose(chosen.sessions.value, folders)) {
+            when (val choice = ConsoleSession.choose(chosen.sessions.value, folders, chosen.agents.value.filter { it.available }.map { it.agent })) {
                 is ConsoleLaunch.Resume -> openSession(choice.id)
                 is ConsoleLaunch.Create -> openNewSession(choice.draft)
+                ConsoleLaunch.Unavailable -> openNewSession()
             }
         }
     }

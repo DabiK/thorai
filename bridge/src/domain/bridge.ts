@@ -238,6 +238,11 @@ export class Bridge {
         const state = this.stateOf(runtime);
         return {
           ...versions,
+          name: AGENT_LABELS[runtime.connector.agent] ?? runtime.connector.agent,
+          available: versions.binary !== null,
+          configOptions:
+            [...this.records.values()].find((r) => r.agent === runtime.connector.agent)
+              ?.configOptions ?? [],
           isTested:
             versions.adapter?.version === versions.tested.adapter &&
             isTestedBinary(runtime.connector.agent, versions.binary),
@@ -258,6 +263,7 @@ export class Bridge {
    */
   async createSession(request: CreateSessionRequest): Promise<SessionSummary> {
     this.assertRunning();
+    if (!this.runtimes.has(request.agent)) throw new BridgeError('bad_request', 'Agent inconnu.');
     const { workspace } = this.deps;
     const projectName = request.newProject ? projectFolderName(request.project) : request.project;
     const requestedBranch = request.branch ? request.branch : null;
@@ -293,7 +299,12 @@ export class Bridge {
     let failure = await this.applyMode(record, connection);
     if (failure === null) {
       try {
-        await this.applySelections(sessionId, request.configValues ?? {}, connection);
+        await this.applySelections(
+          sessionId,
+          request.configValues ?? {},
+          connection,
+          request.agent,
+        );
       } catch (error) {
         failure = new BridgeError('agent_failed', messageOf(error));
       }
@@ -343,9 +354,9 @@ export class Bridge {
     }
     const id = await probe;
     return this.serialSettings(id, async () => {
-      await this.applySelections(id, values, await this.connection(agent));
+      await this.applySelections(id, values, await this.connection(agent), agent);
       this.early.delete(id);
-      return editableOptions(this.options.get(id) ?? []);
+      return editableOptions(this.options.get(id) ?? [], agent);
     });
   }
 
@@ -365,6 +376,7 @@ export class Bridge {
     id: string,
     values: Readonly<Record<string, string>>,
     connection: AgentConnection,
+    agent?: AgentKind,
   ): Promise<void> {
     // Models may replace the effort choices; validate each against the latest acknowledgement.
     const entries = Object.entries(values).sort(([a], [b]) => {
@@ -375,7 +387,10 @@ export class Bridge {
       );
     });
     for (const [configId, value] of entries) {
-      const option = editableOptions(this.options.get(id) ?? []).find((o) => o.id === configId);
+      const option = editableOptions(
+        this.options.get(id) ?? [],
+        agent ?? this.records.get(id)?.agent,
+      ).find((o) => o.id === configId);
       if (!option?.options.some((o) => o.value === value))
         throw new BridgeError('unknown_option', `Option indisponible : ${configId} / ${value}.`);
       if (option.currentValue !== value) {
@@ -603,7 +618,7 @@ export class Bridge {
         live.inFlight -= 1;
         // The agent process is being closed: the session is stopped, not failed.
         if (this.stopping !== null) return;
-        const message = `${AGENT_LABELS[record.agent]} : ${messageOf(error)}`;
+        const message = `${AGENT_LABELS[record.agent] ?? record.agent} : ${messageOf(error)}`;
         this.emit({ sessionId, type: 'session_error', data: { message } });
         this.update(sessionId, { status: 'failed', lastError: message });
         this.readBranch(sessionId);
@@ -654,7 +669,7 @@ export class Bridge {
           sessionId,
           {
             ...Object.fromEntries(
-              editableOptions(record.configOptions ?? []).flatMap((o) =>
+              editableOptions(record.configOptions ?? [], record.agent).flatMap((o) =>
                 o.currentValue === null ? [] : [[o.id, o.currentValue]],
               ),
             ),
@@ -700,7 +715,7 @@ export class Bridge {
       }
       return null;
     } catch (error) {
-      const message = `Mode ${modeId} refusé par ${AGENT_LABELS[record.agent]} : ${messageOf(error)}`;
+      const message = `Mode ${modeId} refusé par ${AGENT_LABELS[record.agent] ?? record.agent} : ${messageOf(error)}`;
       return new BridgeError('agent_failed', message);
     }
   }
@@ -740,7 +755,7 @@ export class Bridge {
         runtime.connection = null;
         throw new BridgeError(
           'agent_failed',
-          `${AGENT_LABELS[agent]} n’a pas démarré : ${messageOf(error)}`,
+          `${AGENT_LABELS[agent] ?? agent} n’a pas démarré : ${messageOf(error)}`,
         );
       },
     );
@@ -749,7 +764,7 @@ export class Bridge {
 
   private handlersFor(runtime: AgentRuntime): AgentHandlers {
     return {
-      update: (sessionId, update) => this.onUpdate(sessionId, update),
+      update: (sessionId, update) => this.onUpdate(sessionId, update, runtime.connector.agent),
       permission: (request) => this.onPermission(request),
       authenticated: (authenticated) => {
         if (runtime.authenticated === authenticated) return;
@@ -771,7 +786,7 @@ export class Bridge {
       this.deps.logger.warn(`${agent} adapter exited: code=${exit.code} signal=${exit.signal}`);
     }
     this.emitAgent(runtime, exit);
-    const message = expected ? null : `${AGENT_LABELS[agent]} s’est arrêté.`;
+    const message = expected ? null : `${AGENT_LABELS[agent] ?? agent} s’est arrêté.`;
     for (const sessionId of [...this.live.keys()]) {
       if (this.records.get(sessionId)?.agent !== agent) continue;
       this.cancelApprovals(sessionId, 'agent_exit');
@@ -779,9 +794,12 @@ export class Bridge {
     }
   }
 
-  private onUpdate(sessionId: string, update: AcpUpdate): void {
+  private onUpdate(sessionId: string, update: AcpUpdate, agent?: AgentKind): void {
     if (update.sessionUpdate === 'config_option_update') {
-      const options = sessionOptions(update.configOptions);
+      const options = sessionOptions(
+        update.configOptions,
+        agent ?? this.records.get(sessionId)?.agent,
+      );
       this.options.set(sessionId, options);
       const record = this.records.get(sessionId);
       // Offline updates are provisional: a failed load must keep every saved selection
@@ -1137,7 +1155,10 @@ export class Bridge {
       return await call();
     } catch (error) {
       if (error instanceof BridgeError) throw error;
-      throw new BridgeError('agent_failed', `${AGENT_LABELS[agent]} : ${messageOf(error)}`);
+      throw new BridgeError(
+        'agent_failed',
+        `${AGENT_LABELS[agent] ?? agent} : ${messageOf(error)}`,
+      );
     }
   }
 

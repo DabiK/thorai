@@ -17,6 +17,7 @@ class ReviewNewSession(private val gateway: AgentGateway, private val capture: D
     private var catalogJob: Job? = null
     private var held = false
     private var optionsJob: Job? = null
+    private var agentsJob: Job? = null
 
     fun open(seed: NewSessionDraft? = null, heard: String = "") {
         if (state.value.sending) return
@@ -25,6 +26,17 @@ class ReviewNewSession(private val gateway: AgentGateway, private val capture: D
             branchChoice = if (seed?.newBranch == true) BranchChoice.NEW else if (seed?.branch != null) BranchChoice.EXISTING else BranchChoice.CURRENT,
             branch = seed?.branch.orEmpty(), base = seed?.baseBranch.orEmpty(), instruction = seed?.instruction.orEmpty(), approvalMode = seed?.approvalMode ?: "plan")
         refreshOptions()
+        agentsJob?.cancel()
+        agentsJob = scope.launch {
+            gateway.agents.collect { catalog ->
+                if (!state.value.visible || state.value.sending || state.value.uncertain) return@collect
+                val agents = catalog.filter { it.available }.map { it.agent }
+                val selected = state.value.agent?.let { old -> agents.firstOrNull { it == old } }
+                val changed = selected != state.value.agent
+                mutable.value = state.value.copy(agents = agents, agent = selected)
+                if (changed) { optionsJob?.cancel(); mutable.value = state.value.copy(configOptions = emptyList(), optionsLoading = false) }
+            }
+        }
         catalogJob = scope.launch {
             gateway.connection.collectLatest { connection ->
                 if (!state.value.visible || state.value.sending || state.value.uncertain) return@collectLatest
@@ -55,7 +67,7 @@ class ReviewNewSession(private val gateway: AgentGateway, private val capture: D
             return items[Math.floorMod(if (index < 0) { if (delta >= 0) 0 else items.lastIndex } else index + delta, items.size)]
         }
         mutable.value = when (s.field) {
-            NewSessionField.AGENT -> s.copy(agent = next(Agent.entries, s.agent))
+            NewSessionField.AGENT -> s.copy(agent = next(s.agents, s.agent))
             NewSessionField.PROJECT -> {
                 val choice = next(s.projects.map { it.name } + "", if (s.newProject) "" else s.project)
                 s.copy(project = choice?.takeIf { it.isNotEmpty() }, newProject = choice == "", projectName = "", branchChoice = BranchChoice.CURRENT, branch = "", base = "")
@@ -128,7 +140,7 @@ class ReviewNewSession(private val gateway: AgentGateway, private val capture: D
         if (s.sending) return
         if (s.capturing || s.finalizing) {
             cancelCapture(); mutable.value = s.copy(capturing = false, finalizing = false, partial = "", level = 0f, notice = "Dictée annulée.")
-        } else { job?.cancel(); catalogJob?.cancel(); optionsJob?.cancel(); cancelCapture(); mutable.value = NewSessionForm() }
+        } else { job?.cancel(); catalogJob?.cancel(); agentsJob?.cancel(); optionsJob?.cancel(); cancelCapture(); mutable.value = NewSessionForm() }
     }
     fun launch() {
         val s = state.value
@@ -140,7 +152,8 @@ class ReviewNewSession(private val gateway: AgentGateway, private val capture: D
                 mutable.value = state.value.copy(sending = false, catalogAvailable = false, notice = "Projets indisponibles. Vérifie la connexion au pont.")
                 return@launch
             }
-            val checked = s.copy(projects = catalog)
+            val available = gateway.agents.value.filter { it.available }.map { it.agent }
+            val checked = s.copy(projects = catalog, agents = available, agent = s.agent?.takeIf { it in available })
             if (checked.problem != null) {
                 mutable.value = checked.copy(sending = false, notice = "Projet ou branche indisponible. ${checked.problem}")
                 return@launch

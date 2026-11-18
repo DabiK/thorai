@@ -17,3 +17,10 @@ describe('Codex runtime configuration', () => {
     expect(spec.env.INITIAL_AGENT_MODE).toBe('read-only');
   });
 });
+
+it('runs the official OpenCode executable directly over ACP', () => {
+  const spec = adapterSpec('opencode', { ...binaries, opencode: '/test/opencode' });
+  expect(spec.binary).toBe('/test/opencode');
+  expect(spec.args).toEqual(['acp']);
+  expect(spec.packageName).toBeNull();
+});

@@ -88,7 +88,7 @@ class ReviewAgentAuthentication(private val gateway: AgentAuthenticationGateway,
         if (agent.connected == true && !review.confirmingLogout) { requestLogout(); return }
         if (agent.pending) return
         revision++
-        if (!review.confirmingLogout && agent.agent == Agent.CODEX) attemptedLogins.add(agent.agent)
+        if (!review.confirmingLogout && agent.login.method == "device_code") attemptedLogins.add(agent.agent)
         mutable.value = review.copy(busy = true, notice = "")
         scope.launch {
             try {
@@ -97,6 +97,23 @@ class ReviewAgentAuthentication(private val gateway: AgentAuthenticationGateway,
                 mutable.value = state.value.copy(agents = state.value.agents.map { if (it.agent == result.agent) result else it }, busy = false, confirmingLogout = false)
             } catch (e: CancellationException) { throw e } catch (_: Exception) {
                 mutable.value = state.value.copy(busy = false, confirmingLogout = false, notice = "Action non confirmée. Actualise. Si une session tourne, choisis Quitter puis rouvre Régie avant de changer de compte.")
+            }
+        }
+    }
+
+    fun submitKey(key: String) {
+        val review = state.value
+        val agent = review.current ?: return
+        val provider = agent.login.provider ?: return
+        if (review.busy || agent.login.method != "api_key" || key.isBlank()) return
+        revision++
+        mutable.value = review.copy(busy = true, notice = "")
+        scope.launch {
+            try {
+                val result = gateway.submitAgentKey(agent.agent, provider, key)
+                mutable.value = state.value.copy(agents = state.value.agents.map { if (it.agent == result.agent) result else it }, busy = false)
+            } catch (e: CancellationException) { throw e } catch (_: Exception) {
+                mutable.value = state.value.copy(busy = false, notice = "Clé non confirmée. Actualise avant de réessayer.")
             }
         }
     }

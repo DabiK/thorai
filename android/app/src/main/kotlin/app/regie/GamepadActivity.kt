@@ -163,7 +163,7 @@ abstract class GamepadActivity : ComponentActivity() {
                     val held: (Boolean) -> Unit = { container.touchTrigger(Trigger.L2, it) }
                     if (authentication.visible) {
                         app.regie.ui.screens.AgentAuthenticationScreen(authentication, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single,
-                            container::selectAuthenticationAgent, button, container::refreshAuthentication)
+                            container::selectAuthenticationAgent, button, container::refreshAuthentication, container::submitAuthenticationKey, { container.authenticationKeyAction = it })
                     } else if (sessionSettings.visible && screen !is Screen.Session) {
                         app.regie.ui.screens.SessionSettingsScreen(sessionSettings, button, container::selectSessionSetting)
                     } else if (settingsOpen && controlsHere) {

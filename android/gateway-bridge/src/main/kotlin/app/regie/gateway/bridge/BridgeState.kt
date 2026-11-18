@@ -93,7 +93,7 @@ internal class BridgeState {
         when (method) {
             "hello" -> return Hello.parse(result)?.let { onHello(it, params.long("since")) } ?: false
             "session.snapshot" -> result.obj("session")?.let(::updateMeta)
-            "agents.versions" -> onVersions(result)
+            "agents.versions", "agents.list" -> onVersions(result)
             "session.events" -> params.string("sessionId")?.let { id ->
                 onHistory(id, result.array("events")?.mapNotNull(Frames::parseEvent).orEmpty())
             }
@@ -104,13 +104,20 @@ internal class BridgeState {
     /** Réponse à `agents.versions`. */
     fun onVersions(result: JsonObject) {
         agents = result.array("agents")?.objects().orEmpty().mapNotNull { entry ->
-            val agent = agentOf(entry.string("agent")) ?: return@mapNotNull null
+            val agent = entry.string("agent")?.let { Agent.fromId(it, entry.string("name")) } ?: return@mapNotNull null
             AgentVersion(
                 agent = agent,
                 version = entry.string("binary")?.let(::versionNumber),
                 // Pas d'avertissement si le pont ne dit rien : on n'affirme que ce qu'il affirme.
                 isTested = entry.boolean("isTested") ?: true,
+                available = entry.boolean("available") ?: true,
+                connected = entry.obj("authentication")?.boolean("connected"),
+                running = entry.boolean("running") ?: false,
+                configOptions = decodeOptions(entry["configOptions"]),
             )
+        }
+        records.values.forEach { record ->
+            agents.firstOrNull { it.agent == record.meta.agent }?.let { record.meta = record.meta.copy(agent = it.agent) }
         }
     }
 
@@ -170,7 +177,7 @@ internal class BridgeState {
         sessions().sortedWith(Overview.order).take(count).map { it.id.value }
 
     private fun updateMeta(data: JsonObject) {
-        val meta = Meta.parse(data) ?: return
+        val meta = Meta.parse(data, agents.map { it.agent }) ?: return
         val record = records[meta.id]
         when {
             record == null -> records[meta.id] = SessionRecord(meta)
@@ -327,9 +334,9 @@ internal class BridgeState {
         val approvalMode: String, val configOptions: List<app.regie.domain.model.SessionOption>,
     ) {
         companion object {
-            fun parse(data: JsonObject): Meta? = Meta(
+            fun parse(data: JsonObject, agents: List<Agent>): Meta? = Meta(
                 id = data.string("sessionId") ?: return null,
-                agent = agentOf(data.string("agent")) ?: return null,
+                agent = data.string("agent")?.let { id -> agents.firstOrNull { it.id == id } ?: Agent.fromId(id) } ?: return null,
                 project = data.string("project") ?: return null,
                 cwd = data.string("cwd"),
                 branch = data.string("branch"),
@@ -362,11 +369,7 @@ internal class BridgeState {
         /** « 2.1.322 (Claude Code) » → « 2.1.322 » ; « codex-cli 0.167.2 » → « 0.167.2 ». */
         fun versionNumber(binary: String): String? = VERSION.find(binary)?.value
 
-        private fun agentOf(name: String?): Agent? = when (name) {
-            "claude" -> Agent.CLAUDE
-            "codex" -> Agent.CODEX
-            else -> null
-        }
+        private fun agentOf(name: String?): Agent? = name?.let { Agent.fromId(it) }
 
         private fun statusOf(status: String?): SessionStatus? = when (status) {
             "working" -> SessionStatus.WORKING

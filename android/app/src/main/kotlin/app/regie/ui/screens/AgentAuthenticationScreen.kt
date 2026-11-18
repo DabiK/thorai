@@ -9,8 +9,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
@@ -34,13 +42,25 @@ fun AgentAuthenticationScreen(
     select: (Int) -> Unit,
     button: (Button) -> Unit,
     refresh: () -> Unit,
+    submitKey: (String) -> Unit = {},
+    bindKeyAction: ((() -> Unit)?) -> Unit = {},
 ) {
     val controls = bottom || singleScreen
+    val tabs = rememberLazyListState()
+    LaunchedEffect(review.selected, review.agents.size, controls) {
+        if (controls && review.agents.isNotEmpty()) tabs.scrollToItem(review.selected.coerceIn(review.agents.indices))
+    }
+    var key by remember(review.visible, review.current?.agent) { mutableStateOf("") }
+    val sendKey = { if (key.isNotBlank() && !review.busy) { val entered = key; key = ""; submitKey(entered) } }
+    DisposableEffect(key, review.busy, review.current?.agent, controls) {
+        if (controls) bindKeyAction(sendKey)
+        onDispose { if (controls) bindKeyAction(null) }
+    }
     Column(Modifier.fillMaxSize().background(Palette.background)) {
         BasicText("Connexion des agents", style = sans(18.sp, weight = 650), modifier = Modifier.fillMaxWidth().bottomDivider().padding(horizontal = 20.dp, vertical = 12.dp))
-        if (controls) Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            review.agents.forEachIndexed { index, agent ->
-                Column(Modifier.weight(1f).border(1.dp, if (index == review.selected) Palette.text else Palette.divider, RoundedCornerShape(8.dp)).tappable { select(index) }.padding(12.dp)) {
+        if (controls) LazyRow(Modifier.fillMaxWidth().padding(vertical = 12.dp), state = tabs, contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            itemsIndexed(review.agents, key = { _, agent -> agent.agent.id }) { index, agent ->
+                Column(Modifier.widthIn(min = 140.dp).border(1.dp, if (index == review.selected) Palette.text else Palette.divider, RoundedCornerShape(8.dp)).tappable { select(index) }.padding(12.dp)) {
                     AgentTag(agent.agent)
                     BasicText(connectionLabel(agent), style = sans(12.sp, color = Palette.textMuted), modifier = Modifier.padding(top = 6.dp))
                 }
@@ -68,10 +88,16 @@ fun AgentAuthenticationScreen(
                         }
                     }
                 }
-                current.message?.let { BasicText(it, style = sans(15.sp, lineHeight = 22.sp)) }
+                current.message?.takeIf { it != current.login.help }?.let { BasicText(it, style = sans(15.sp, lineHeight = 22.sp)) }
                 if (current.phase == AuthenticationPhase.STARTING) BasicText("Préparation du code…", style = sans(15.sp, color = Palette.textMuted))
-                if (current.agent == Agent.CLAUDE && current.connected != true && current.phase != AuthenticationPhase.MANUAL) BasicText("Claude se connecte dans Termux. Choisis Marche à suivre pour les étapes.", style = sans(14.sp, color = Palette.textMuted, lineHeight = 20.sp))
-                if (current.agent == Agent.CODEX && current.phase == AuthenticationPhase.DISCONNECTED) BasicText("Connecte ton compte ChatGPT depuis ton téléphone. Si le site le demande, active la connexion par code d’appareil dans les réglages de sécurité ChatGPT.", style = sans(15.sp, lineHeight = 22.sp))
+                if (current.connected != true && current.login.help.isNotEmpty()) BasicText(current.login.help, style = sans(14.sp, color = Palette.textMuted, lineHeight = 20.sp))
+                if (controls && current.login.method == "api_key" && current.connected != true) {
+                    BasicText(current.login.label, style = sans(14.sp, weight = 600))
+                    BasicTextField(value = key, onValueChange = { if (!review.busy) key = it }, enabled = !review.busy,
+                        singleLine = true, visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        textStyle = mono(16.sp), modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).border(1.dp, Palette.divider, RoundedCornerShape(8.dp)).padding(12.dp).semantics { contentDescription = "Clé de connexion" })
+                }
                 if (current.connected == true) BasicText("Le compte reste enregistré par l’agent sur la console.", style = sans(14.sp, color = Palette.textMuted))
             }
             if (review.notice.isNotBlank()) BasicText(review.notice, style = sans(14.sp, color = Palette.waiting, lineHeight = 20.sp))
@@ -80,11 +106,11 @@ fun AgentAuthenticationScreen(
             BasicText("← → Choisir l’agent", style = sans(11.sp, color = Palette.textSubtle))
             Row(horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically) {
                 val current = review.current
-                if (!review.busy && current != null && !current.pending) BarAction("A", when {
+                if (!review.busy && current?.login?.method == "api_key" && current.connected != true && key.isNotBlank()) BarAction("A", "Enregistrer la clé", sendKey)
+                if (!review.busy && current != null && !current.pending && (current.login.method != "api_key" || current.connected == true)) BarAction("A", when {
                     review.confirmingLogout -> "Confirmer la déconnexion"
                     current.connected == true -> "Déconnecter"
-                    current.agent == Agent.CLAUDE -> "Marche à suivre"
-                    else -> "Connecter"
+                    else -> current.login.label
                 }) { button(Button.A) }
                 if (review.busy) BasicText("Vérification…", style = sans(13.sp, color = Palette.textMuted))
                 if (!review.busy) BarAction("B", if (review.current?.pending == true) "Annuler et fermer" else if (review.confirmingLogout) "Garder le compte" else "Fermer") { button(Button.B) }

@@ -13,6 +13,7 @@ class ReviewVoiceCommand(
     private val scope: CoroutineScope,
     private val onLaunch: ((NewSessionDraft, String) -> Unit)? = null,
     private val loadProjects: (suspend () -> List<String>)? = null,
+    private val loadAgents: (() -> List<Agent>)? = null,
 ) {
     private val mutable = MutableStateFlow(VoiceCommandReview())
     val state = mutable.asStateFlow()
@@ -44,7 +45,7 @@ class ReviewVoiceCommand(
                 // A first R2 can start before the startup catalogue arrives. Capture must not wait.
                 val context = if (loadProjects != null && launchPhrase(event.text) != null) {
                     val projects = try { loadProjects() } catch (e: CancellationException) { throw e } catch (_: Exception) { emptyList() }
-                    snapshot.copy(projects = projects)
+                    snapshot.copy(projects = projects, agents = loadAgents?.invoke() ?: snapshot.agents)
                 } else snapshot
                 val result = interpret(event.text, context)
                 val launch = result.command as? VoiceCommand.Launch

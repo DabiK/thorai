@@ -202,9 +202,9 @@ private fun BridgeIndicator(bridge: BridgeStatus) {
 private fun agentVersions(agents: List<AgentVersion>): AnnotatedString {
     val untested = stringResource(R.string.version_untested)
     return buildAnnotatedString {
-        agents.sortedBy { it.agent.ordinal }.forEachIndexed { index, entry ->
+        agents.forEachIndexed { index, entry ->
             if (index > 0) append(" · ")
-            val label = listOfNotNull(entry.agent.name.lowercase(Locale.ROOT), entry.version).joinToString(" ")
+            val label = listOfNotNull(entry.agent.label, entry.version).joinToString(" ")
             if (entry.isTested) {
                 append(label)
             } else {

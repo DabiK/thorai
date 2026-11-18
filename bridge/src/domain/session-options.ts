@@ -9,7 +9,7 @@ export interface SessionOption {
 function object(value: unknown): Record<string, unknown> {
   return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
 }
-export function sessionOptions(raw: unknown): readonly SessionOption[] {
+export function sessionOptions(raw: unknown, agent?: string): readonly SessionOption[] {
   if (!Array.isArray(raw)) return [];
   return raw.flatMap((entry) => {
     const o = object(entry);
@@ -23,8 +23,13 @@ export function sessionOptions(raw: unknown): readonly SessionOption[] {
     return [
       {
         id: o.id,
-        name: o.name,
-        category: typeof o.category === 'string' ? o.category : null,
+        name: agent === 'opencode' && o.id === 'mode' ? 'Agent opencode' : o.name,
+        category:
+          agent === 'opencode' && o.id === 'mode'
+            ? 'agent'
+            : typeof o.category === 'string'
+              ? o.category
+              : null,
         currentValue: typeof o.currentValue === 'string' ? o.currentValue : null,
         options: values.flatMap((value: unknown) => {
           const v = object(value);
@@ -37,7 +42,11 @@ export function sessionOptions(raw: unknown): readonly SessionOption[] {
   });
 }
 /** Permission and collaboration selectors use the product's explicit mode instead. */
-export function editableOptions(options: readonly SessionOption[]): readonly SessionOption[] {
+export function editableOptions(
+  options: readonly SessionOption[],
+  agent?: string,
+): readonly SessionOption[] {
+  if (agent === 'opencode') return options;
   return options.filter(
     (o) =>
       o.category !== 'mode' &&

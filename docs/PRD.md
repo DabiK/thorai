@@ -1,6 +1,6 @@
 # PRD — Régie, poste de pilotage vocal de Claude Code et Codex sur l'AYN Thor
 
-Statut : version installable, consolidée le 18 novembre 2026 après les tickets 22 à 26. Les décisions datées du journal remplacent les intentions antérieures de la maquette. Installation : `docs/installation.md`.
+Statut : version installable, consolidée le 18 novembre 2026 après les tickets 22 à 26, complétée par le ticket 31 (opencode). Les décisions datées du journal remplacent les intentions antérieures de la maquette. Installation : `docs/installation.md`.
 
 ## Problème
 
@@ -72,13 +72,14 @@ Chaque lot correspond à un ou plusieurs tickets.
   - mode un seul écran si celui du bas est éteint ;
   - manette lue quel que soit l'écran qui a le focus ;
   - système visuel de la maquette.
+- **Agents disponibles** (ticket 31) : catalogue annoncé par le pont (nom, version, connexion, options), listes construites depuis ce catalogue dans l’app ; opencode est un troisième connecteur ACP, les fournisseurs et modèles restent natifs. L’onboarding du ticket 28 proposera son étape Go facultative.
 - **Pont sur la Thor** :
   - sessions Claude et Codex exposées à l'app par une connexion locale protégée ;
   - les sessions continuent quand l'app passe en arrière-plan ;
   - historique et reprise ;
   - démarré par l'app à son lancement, jamais au boot.
 - **Accès des agents à la console** : Claude et Codex peuvent voir et piloter tout Android, les deux écrans et Régie comprise, sans validation des gestes (décision du ticket 14). Quand l'utilisateur parle de l'écran, d'une appli ou du navigateur, ils agissent de façon visible, applis ouvertes en haut (ticket 24).
-- **Connexion des agents** (ticket 23, ADR 18) : état, connexion et déconnexion depuis Régie. Codex par code d'appareil, avec adresse, code et QR code ; Claude, sans code d'appareil, par `claude auth login` dans Termux, marche indiquée dans l'app. Aucun jeton ne passe par Régie.
+- **Connexion des agents** (ticket 23, ADR 18) : état, connexion et déconnexion depuis Régie. Codex par code d'appareil, avec adresse, code et QR code ; Claude, sans code d'appareil, par `claude auth login` dans Termux, marche indiquée dans l'app. OpenCode Go par clé saisie par l’utilisateur dans un champ masqué, transmise au pont puis stockée nativement par opencode (ticket 31). Aucun compte existant n’est importé.
 - **Voix** :
   - **Transcription** : en français en direct, avec le vocabulaire du dépôt.
   - **Pas de lecture à voix haute** (décision de l'utilisateur, 14 novembre) : tout se lit à l'écran.

@@ -429,3 +429,92 @@ Test Compose : A utilisable depuis Reprendre et high toujours visible.
 Pas de changement d’API de bibliothèque, d’adapter ou de protocole sur le fil.
 Export local Session.dc.html relu ; aucun changement de mise en page.
 Preuves et limites du banc : `artifacts/screenshots/17/review-dependent.txt`.
+
+## Ticket 31 — opencode et catalogue ouvert (18 novembre 2026)
+
+**opencode 2.1.2 parle ACP v1 nativement** : le même `AcpConnector` lance
+`opencode acp`, sans adapter npm supplémentaire. `session/new`, `session/load`,
+flux, validations, configuration et annulation passent par les ports existants.
+Le processus possède un serveur opencode privé, s'arrête à la fermeture de stdin
+et ne crée aucun service au boot. `OPENCODE_PATH` choisit son exécutable ; défaut
+`~/.opencode/bin/opencode`. La build Debian glibc arm64 officielle est celle de
+`@opencode/cli-linux-arm64@2.1.2`, vérifiée par son SHA-512 npm épinglé. Les scripts
+Mac et Termux partagent `thor/opencode/install-binary.sh`. Aucun login à l'installation.
+
+Sources primaires vérifiées par Context7 (`library`, deux `docs`), aide du binaire
+et source du tag 2.1.2 : [ACP](https://opencode.ai/docs/cli/acp/),
+[configuration](https://opencode.ai/docs/config/),
+[permissions](https://opencode.ai/docs/permissions/),
+[source ACP versionnée](https://github.com/anomalyco/opencode/tree/v2.1.2/packages/cli/src/acp),
+[build officielle](https://github.com/anomalyco/opencode/blob/v2.1.2/packages/cli/script/build.ts).
+
+### Modes, modèles et permissions
+
+Les modes natifs opencode sont ses **agents principaux**, pas ses permissions.
+`plan` correspond au niveau Plan d'abord ; les trois autres niveaux utilisent
+`build`. Le domaine conserve le niveau de Régie et décide chaque validation :
+lecture sûre automatique, édition structurée automatique en auto-edit, tout
+accepté une fois en allow-all, sinon demande à l'app. Le processus reçoit des
+règles `shell`/`edit` en `ask` par `OPENCODE_CONFIG_CONTENT` ; les fichiers natifs
+restent chargés et intacts. Cet environnement est réservé au pont, il remplace
+un éventuel `OPENCODE_CONFIG_CONTENT` hérité. Les règles Android existantes
+(`thor_android_*`, `adb`, `thor-screen`) restent autorisées. Ce n'est pas une
+frontière de sécurité : configurations gérées, plugins et permissions natives
+peuvent également intervenir, comme pour les deux autres agents.
+
+Le domaine classe le sélecteur ACP `mode` d'opencode en catégorie `agent`, nommé
+« Agent opencode ». Il reste éditable dans la table commune, séparément du niveau
+de validation. Modèles et variantes viennent de `configOptions` ; leurs identifiants
+`provider/model` ne sont jamais traduits en catalogue local. `opencode.json(c)`,
+MCP, plugins et consignes sont résolus nativement par opencode. `workdir` est
+reconnu comme métadonnée de commande shell ; les clés inconnues et les commandes
+qui écrivent restent soumises à validation.
+
+### Catalogue et connexion Go
+
+`agents.list` annonce identifiant opaque, nom, disponibilité du binaire, version,
+processus ACP, connexion et derniers sélecteurs connus. `agent.options` charge
+les choix à la demande, sans prompt ; on ne démarre pas tous les agents pour
+remplir le catalogue. L'app construit fiche, connexion, réglages et interprétation
+vocale depuis ce catalogue. `Agent` est une identité ouverte, égale par id ; les
+constantes historiques Claude/Codex ne constituent plus une énumération.
+Une quatrième identité et un fournisseur de clé inconnus sont couverts par tests.
+
+[OpenCode Go](https://opencode.ai/docs/console/go/) est une offre facultative de
+modèles hébergés, accessible par clé API, fournisseur `opencode-go` ; ce n'est
+pas le langage Go. La connexion de ce ticket se concentre sur ce fournisseur.
+Les autres comptes restent configurables dans Termux avec `opencode auth login` ;
+leurs modèles sont utilisables dans les mêmes sélecteurs ACP.
+
+`auth.key` transmet la clé saisie dans l'app au port d'authentification. L'adapter
+lance `opencode serve --stdio --hostname 127.0.0.1 --port 0`, avec mot de passe
+éphémère, attend `/api/model/default` (barrière de disponibilité des plugins
+utilisée par le CLI), puis appelle `POST /api/integration/opencode-go/connect/key`.
+La clé est dans le corps HTTP, jamais dans argv, les erreurs, les événements ou
+les logs du pont. Opencode seul la stocke dans ses fichiers natifs (base de données
+v2 ; l'ancien `auth.json` de v1 n'est pas ouvert par Régie).
+[API officielle](https://opencode.ai/docs/api),
+[parcours CLI versionné](https://github.com/anomalyco/opencode/blob/v2.1.2/packages/cli/src/commands/handlers/auth/shared.ts).
+Les réponses de localisation sont décodées via leur enveloppe `data`.
+
+L'état est lu par `opencode auth list --format json --standalone`, qui annonce
+uniquement des métadonnées publiques. « Connecté » signifie qu'une connexion Go
+est enregistrée, sans prétendre valider le quota ou la clé auprès du fournisseur.
+La déconnexion retire uniquement les identifiants Go par l'API, puis relit l'état
+(un fournisseur en environnement peut rester connecté). Aucun export de credentials.
+Le serveur privé est fermé après chaque opération. La connexion reste exclusive
+avec un processus ACP, y compris sa découverte : Quitter et rouvrir avant de changer
+le compte. Le protocole détaille le contrat de l'étape facultative du ticket 28.
+
+### Preuves et limites
+
+Thor : APK release signé mis à jour sans désinstallation, catalogue, création par
+X/croix/A, consigne et réponse `REGIE_OPENCODE_GO_OK`, validation shell acceptée
+par A et fichier constaté, reprise après arrêt du pont et réflexion passée à Low.
+Le pont et l'agent tournaient sur le **Mac**, avec la connexion Go native existante ;
+aucune clé n'a été lue, affichée, copiée ou transférée sur la console. Dans la Debian,
+version, initialisation ACP et liste de comptes vide ont été constatées, sans prompt.
+La vraie connexion Go depuis la Thor attend la saisie de l'utilisateur.
+Un profil Mac isolé avec clé factice prouve le cycle natif absent → enregistré →
+retiré ; les tests hors ligne utilisent uniquement des doubles et processus Node
+synthétiques. Preuves et pas à pas : `artifacts/screenshots/31/essai-thor.md`. Le quatrième onglet est amené entièrement dans la vue après sélection ; régression de bounds réelle et API LazyRow/scrollToItem vérifiée par Context7.

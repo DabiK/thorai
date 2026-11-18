@@ -149,3 +149,29 @@ describe('the tool call of a permission request', () => {
     }
   });
 });
+
+it('recognizes OpenCode shell workdir metadata while retaining the strict command rule', () => {
+  const reads = new ReadOnlyCommands(new WordsShellParser());
+  expect(
+    reads.readOnlyCommandOf({
+      kind: 'execute',
+      rawInput: { command: 'cat README.md', workdir: '/project' },
+    }),
+  ).toBe('cat README.md');
+  expect(
+    reads.readOnlyCommandOf({
+      kind: 'execute',
+      rawInput: { command: 'cat README.md > copy', workdir: '/project' },
+    }),
+  ).toBeNull();
+  expect(
+    reads.readOnlyCommandOf({
+      kind: 'execute',
+      rawInput: {
+        command: 'cat README.md',
+        workdir: '/project',
+        additionalPermissions: { network: true },
+      },
+    }),
+  ).toBeNull();
+});

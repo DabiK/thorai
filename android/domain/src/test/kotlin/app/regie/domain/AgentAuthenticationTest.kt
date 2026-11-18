@@ -95,3 +95,23 @@ class AgentAuthenticationTest {
     }
 
 }
+
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+class AgentKeyTest {
+    @Test fun `key submission uses advertised provider once and stores no key in review state`() = runTest {
+        val agent = Agent("future", "Agent futur")
+        val saved = mutableListOf<String>()
+        val result = CompletableDeferred<AgentAuthentication>()
+        val gateway = object : AgentAuthenticationGateway {
+            override suspend fun authentication() = listOf(AgentAuthentication(agent, false, login = AgentLogin("api_key", "Clé", "Aide", "future-provider")))
+            override suspend fun submitAgentKey(agent: Agent, provider: String, key: String): AgentAuthentication { saved += "$provider:$key"; return result.await() }
+        }
+        val review = ReviewAgentAuthentication(gateway, backgroundScope)
+        review.open(); runCurrent()
+        review.submitKey("test-only-key"); review.submitKey("test-only-key"); runCurrent()
+        assertEquals(listOf("future-provider:test-only-key"), saved)
+        assertFalse(review.state.value.toString().contains("test-only-key"))
+        result.complete(AgentAuthentication(agent, true)); runCurrent()
+        assertTrue(review.state.value.current!!.connected == true)
+    }
+}
