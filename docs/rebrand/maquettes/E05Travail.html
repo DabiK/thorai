@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>L'agent au travail</title>
+<link rel="stylesheet" href="../outils/thorai-pixel.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jersey+10&amp;family=Pixelify+Sans:wght@400;600;700&amp;family=VT323&amp;display=swap">
+<style>body{margin:0}.st{display:flex;align-items:center;gap:14px;font-size:28px}.st i{width:20px;height:20px;flex:none;display:block}.cur{display:inline-block;width:16px;height:30px;background:#22343A;vertical-align:-4px;animation:pulse .8s steps(1) infinite}</style>
+</helmet>
+<div class="thor t-aube" style="width: 1920px; height: 2200px;">
+  <div class="top">
+    <img class="px world" src="../assets/aube/maison-scribe.png" alt="Le scribe écrit à son bureau">
+    <div class="pbox" style="position: absolute; left: 44px; top: 40px; padding: 14px 22px; display: flex; flex-direction: column; gap: 4px;">
+      <span class="disp" style="font-size: 44px;">regie</span>
+      <span class="muted" style="font-size: 24px;">tri des sessions · Claude</span>
+    </div>
+    <div class="frame bubble" style="left: 700px; top: 120px; font-size: 30px; display: flex; align-items: center; gap: 14px;">
+      <span class="dots" style="color: #1A8657;"><i></i><i></i><i></i></span>Modification · <span class="code" style="font-size: 34px;">Overview.kt</span>
+      <span class="tail" style="left: 50%; bottom: -26px; margin-left: -14px;"></span>
+    </div>
+    <div class="frame" style="position: absolute; right: 52px; top: 48px; width: 520px; box-sizing: border-box; padding: 24px 28px; display: flex; flex-direction: column; gap: 14px;">
+      <span class="lab muted" style="font-size: 24px;">Plan de l'agent</span>
+      <div class="st"><i style="background: #1A8657;"></i>Lire la liste</div>
+      <div class="st"><i style="background: #1A8657;"></i>Trouver où trier</div>
+      <div class="st" style="font-weight: 600;"><i style="background: #F5B53D; animation: pulse .8s steps(1) infinite;"></i>Ajouter le tri par date</div>
+      <div class="st muted"><i style="box-shadow: inset 0 0 0 4px #A19E5C;"></i>Écrire le test</div>
+      <div class="st muted"><i style="box-shadow: inset 0 0 0 4px #A19E5C;"></i>Lancer les tests</div>
+    </div>
+  </div>
+  <div class="hinge"></div>
+  <div class="bot">
+    <div class="screen">
+      <div class="head">
+        <h1>Fil</h1>
+        <span class="tag work"><span class="dots"><i></i><i></i><i></i></span>Étape 3 sur 5 · 4 min</span>
+      </div>
+      <div class="body" style="gap: 14px; padding-bottom: 0; justify-content: flex-end;">
+        <div class="tool"><span class="sq"></span>Lecture <b class="code" style="font-size: 30px;">android/domain/…/Overview.kt</b></div>
+        <div class="tool"><span class="sq"></span>Recherche <b class="code" style="font-size: 30px;">sortedBy</b></div>
+        <div class="pbox msg" style="margin: 4px;"><span class="who">Claude</span>La liste vient d'Overview. J'ajoute un tri sur updatedAt, puis un test.</div>
+        <div class="tool"><span class="sq" style="color: #1A8657;"></span>Modification <b class="code" style="font-size: 30px;">Overview.kt</b> +12 −3</div>
+        <div class="pbox msg" style="margin: 4px;"><span class="who">Claude</span>Le tri est en place. J'écris maintenant le test qui<span class="cur"></span></div>
+      </div>
+      <div style="padding: 18px 44px 120px;">
+        <div class="settings">
+          <div class="pbox setting"><span class="l">Modèle</span><span class="v">Opus 5.5</span></div>
+          <div class="pbox setting"><span class="l">Réflexion</span><span class="v">Moyenne</span></div>
+          <div class="pbox setting"><span class="l">Mode</span><span class="v">Je valide</span></div>
+          <div class="pbox setting"><span class="l">Mode rapide</span><span class="v">Non</span></div>
+        </div>
+      </div>
+      <div class="hints">
+        <span class="hint"><span class="k">L2</span>Lui parler</span>
+        <span class="hint"><span class="k r">X</span>Modifications</span>
+        <span class="hint"><span class="k r">Y</span>Réglages</span>
+        <span class="hint"><span class="k">Start</span>Interrompre</span>
+        <span class="hint"><span class="k r">B</span>Sortir</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1920,"height":2200}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

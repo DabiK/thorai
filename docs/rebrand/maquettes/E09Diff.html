@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Relecture des modifications</title>
+<link rel="stylesheet" href="../outils/thorai-pixel.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jersey+10&amp;family=Pixelify+Sans:wght@400;600;700&amp;family=VT323&amp;display=swap">
+<style>body{margin:0}.cork{background:#B07A4A radial-gradient(#8E5E36 2px,transparent 3px) 0 0/16px 16px}.pin{position:absolute;width:24px;height:24px;background:#C2412D;box-shadow:inset -6px -6px 0 #8A2A1E}.dl{font-size:44px}.dl .n{width:64px}</style>
+</helmet>
+<div class="thor t-aube" style="width: 1920px; height: 2200px;">
+  <div class="top">
+    <img class="px world" src="../assets/aube/maison-scribe.png" alt="">
+    <div class="scrim"></div>
+    <div class="frame cork" style="--line: #6E4A3F; --hi: #C99466; --lo: #7A5030; position: absolute; left: 80px; right: 80px; top: 48px; bottom: 48px;">
+      <div class="pbox" style="position: absolute; left: 44px; top: 34px; padding: 10px 20px; font-size: 30px; transform: rotate(-1deg);"><span class="code" style="font-size: 36px;">Overview.kt</span> <span style="color: #1A8657;">+12</span> <span style="color: #C2412D;">−3</span></div>
+      <div style="position: absolute; left: 60px; right: 60px; top: 120px; bottom: 40px; background: #FFF8E6; box-shadow: 8px 8px 0 #6E4A3F; padding: 36px 0; display: flex; flex-direction: column;">
+        <span class="pin" style="left: 50%; top: -10px;"></span>
+        <div class="dl"><span class="n">40</span><span class="s"> </span>class Overview(private val store: SessionStore) {</div>
+        <div class="dl"><span class="n">41</span><span class="s"> </span></div>
+        <div class="dl del"><span class="n">42</span><span class="s">−</span>    fun sessions() = store.all()</div>
+        <div class="dl add"><span class="n">42</span><span class="s">+</span>    fun sessions() = store.all()</div>
+        <div class="dl add on"><span class="n">43</span><span class="s">+</span>        .sortedByDescending { it.updatedAt }</div>
+        <div class="dl add"><span class="n">44</span><span class="s">+</span>        .sortedBy { it.isPaused }</div>
+        <div class="dl"><span class="n">45</span><span class="s"> </span></div>
+        <div class="dl"><span class="n">46</span><span class="s"> </span>    fun pending() = store.approvals()</div>
+        <div class="dl"><span class="n">47</span><span class="s"> </span>}</div>
+      </div>
+    </div>
+  </div>
+  <div class="hinge"></div>
+  <div class="bot">
+    <div class="screen">
+      <div class="head">
+        <h1>Modifications</h1>
+        <span class="muted" style="font-size: 28px;">3 fichiers · <span style="color: #1A8657;">+31</span> <span style="color: #C2412D;">−4</span></span>
+      </div>
+      <div class="body" style="padding-top: 8px; gap: 14px;">
+        <div class="pbox row focus" style="margin: 4px; padding: 14px 22px;"><span class="cursor"></span><span class="code" style="flex: 1; font-size: 38px;">domain/…/Overview.kt</span><span style="font-size: 28px;"><span style="color: #1A8657;">+12</span> <span style="color: #C2412D;">−3</span></span></div>
+        <div class="pbox row" style="margin: 4px; padding: 14px 22px;"><span class="code" style="flex: 1; font-size: 38px;">domain/…/OverviewTest.kt</span><span style="font-size: 28px;"><span style="color: #1A8657;">+18</span> <span style="color: #C2412D;">−0</span></span></div>
+        <div class="pbox row" style="margin: 4px; padding: 14px 22px;"><span class="code" style="flex: 1; font-size: 38px;">app/…/SessionList.kt</span><span style="font-size: 28px;"><span style="color: #1A8657;">+1</span> <span style="color: #C2412D;">−1</span></span></div>
+        <div class="frame" style="margin: 14px 10px 0; padding: 24px 28px; display: flex; flex-direction: column; gap: 18px;">
+          <span style="font-size: 30px;">Ligne 43 choisie</span>
+          <div style="display: flex; gap: 36px; flex-wrap: wrap; font-size: 30px;">
+            <span class="hint"><span class="k">L2</span>Commenter à la voix</span>
+            <span class="hint"><span class="k r">Y</span>Demander pourquoi</span>
+          </div>
+        </div>
+      </div>
+      <div class="hints">
+        <span class="hint"><span class="k">Croix</span>Lignes</span>
+        <span class="hint"><span class="k">L1</span><span class="k">R1</span>Fichier</span>
+        <span class="hint"><span class="k r">B</span>Revenir</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1920,"height":2200}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
