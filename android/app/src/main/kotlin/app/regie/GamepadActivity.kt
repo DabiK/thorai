@@ -227,7 +227,8 @@ abstract class GamepadActivity : ComponentActivity() {
                     when (val shown = screen) {
                         is Screen.Diff -> {
                             val review by container.diffReview.collectAsStateWithLifecycle()
-                            app.regie.ui.screens.DiffScreen(review, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single,
+                            // Le tableau de liège et son carnet (ticket 47).
+                            app.regie.ui.game.GameDiff(review, current, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single,
                                 container.diffVelocity, button, container::selectDiffFile, held, container.diffSteps)
                         }
                         Screen.Approval -> approval()
@@ -329,7 +330,8 @@ private class GamepadWindowCallback(
             KeyEvent.ACTION_UP -> false
             else -> return wrapped.dispatchKeyEvent(event)
         }
-        return router.onKey(event.keyCode, isDown, event.repeatCount) || wrapped.dispatchKeyEvent(event)
+        val fallback = (event.flags and KeyEvent.FLAG_FALLBACK) != 0
+        return router.onKey(event.keyCode, isDown, event.repeatCount, fallback) || wrapped.dispatchKeyEvent(event)
     }
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
@@ -341,6 +343,8 @@ private class GamepadWindowCallback(
                     rightStickY = event.getAxisValue(MotionEvent.AXIS_RZ),
                     leftStickX = event.getAxisValue(MotionEvent.AXIS_X),
                     leftStickY = event.getAxisValue(MotionEvent.AXIS_Y),
+                    hatX = event.getAxisValue(MotionEvent.AXIS_HAT_X),
+                    hatY = event.getAxisValue(MotionEvent.AXIS_HAT_Y),
                 ),
             )
         }

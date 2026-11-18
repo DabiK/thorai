@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -100,9 +101,9 @@ fun CarnetBottomScreen(
 }
 
 /**
- * Le carnet en bande, sous le hameau, en mode un seul écran : la validation en attente ou la maison
- * choisie sur une ligne, le micro et les actions. La confirmation de « Quitter » est à poser par-dessus
- * tout l'écran ([CarnetQuitPrompt]).
+ * Le carnet en bande, sous le hameau, en mode un seul écran : la validation en attente en tête, puis
+ * la liste des sessions en lignes courtes (la maison choisie suivie, le reste au stick droit), le micro
+ * et les actions. La confirmation de « Quitter » est à poser par-dessus tout l'écran ([CarnetQuitPrompt]).
  */
 @Composable
 fun CompactCarnet(
@@ -112,21 +113,24 @@ fun CompactCarnet(
     assets: GameAssets,
     callbacks: CarnetCallbacks,
     modifier: Modifier = Modifier,
+    scrollVelocity: StateFlow<Float> = MutableStateFlow(0f),
 ) {
     val metrics = Game.metrics
     Column(modifier.fillMaxWidth().background(Game.colors.paper)) {
         Column(
-            Modifier.padding(horizontal = metrics.dp(24), vertical = metrics.dp(12)),
+            Modifier.padding(horizontal = metrics.dp(24)).padding(top = metrics.dp(12)),
             verticalArrangement = Arrangement.spacedBy(metrics.dp(10)),
         ) {
             carnet.notices.forEach { NoticeCard(it) }
-            val approval = carnet.approval
-            val row = carnet.rows.firstOrNull { it.session == focused }
-            when {
-                approval != null -> ApprovalCard(approval, assets, callbacks, compact = true)
-                row != null -> SessionRowView(row, focused = true, assets, compact = true) { callbacks.onGoTo(row.session) }
-                carnet.empty != null -> EmptyText(carnet.empty, Modifier.fillMaxWidth())
-            }
+            carnet.approval?.let { ApprovalCard(it, assets, callbacks, compact = true) }
+        }
+        // Deux lignes et demie au plus : le hameau garde l'essentiel de l'écran.
+        SessionRows(
+            carnet, focused, assets, callbacks, scrollVelocity,
+            Modifier.fillMaxWidth().heightIn(max = metrics.dp(COMPACT_LIST_PX)),
+            compact = true,
+        )
+        Column(Modifier.padding(horizontal = metrics.dp(24)).padding(bottom = metrics.dp(10))) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(metrics.dp(28))) {
                 MicHints(carnet, callbacks, textSizePx = 24)
                 Spacer(Modifier.weight(1f))
@@ -236,11 +240,14 @@ private fun SessionRows(
     callbacks: CarnetCallbacks,
     velocity: StateFlow<Float>,
     modifier: Modifier,
+    compact: Boolean = false,
 ) {
     val metrics = Game.metrics
     val rows = carnet.rows
     if (rows.isEmpty()) {
-        Box(modifier, contentAlignment = Alignment.Center) { carnet.empty?.let { EmptyText(it, Modifier.padding(metrics.dp(40))) } }
+        Box(modifier, contentAlignment = Alignment.Center) {
+            carnet.empty?.let { EmptyText(it, Modifier.padding(metrics.dp(if (compact) 16 else 40))) }
+        }
         return
     }
     val list = rememberLazyListState()
@@ -267,14 +274,17 @@ private fun SessionRows(
     LazyColumn(
         state = list,
         modifier = modifier.testTag("carnet-sessions"),
-        contentPadding = PaddingValues(horizontal = metrics.dp(28), vertical = metrics.dp(12)),
-        verticalArrangement = Arrangement.spacedBy(metrics.dp(10)),
+        contentPadding = PaddingValues(horizontal = metrics.dp(if (compact) 24 else 28), vertical = metrics.dp(if (compact) 8 else 12)),
+        verticalArrangement = Arrangement.spacedBy(metrics.dp(if (compact) 6 else 10)),
     ) {
         items(rows, key = { it.session.value }) { row ->
-            SessionRowView(row, row.session == focused, assets) { callbacks.onGoTo(row.session) }
+            SessionRowView(row, row.session == focused, assets, compact) { callbacks.onGoTo(row.session) }
         }
     }
 }
+
+/** La hauteur de la liste du carnet compact, en pixels de l'écran. */
+private const val COMPACT_LIST_PX = 230
 
 /** Le stick droit fait défiler de 220 pixels du dessin par seconde à fond. */
 private const val STICK_PIXELS_PER_SECOND = 220f
@@ -293,12 +303,12 @@ private fun SessionRowView(row: CarnetRow, focused: Boolean, assets: GameAssets,
             Box(Modifier.width(metrics.art(3))) {
                 if (focused) PixelArrow(ArrowDirection.RIGHT, color = colors.focus, blink = true)
             }
-            Portrait(row.inhabitant, row.state, row.stopped, assets, colors.paperDeep, if (compact) 72 else 88)
+            Portrait(row.inhabitant, row.state, row.stopped, assets, colors.paperDeep, if (compact) 60 else 88)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(metrics.dp(2))) {
                 Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(metrics.dp(14))) {
                     BasicText(
                         row.project,
-                        style = GameText.display(46, colors.ink),
+                        style = GameText.display(if (compact) 38 else 46, colors.ink),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),

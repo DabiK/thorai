@@ -81,6 +81,7 @@ fun GameOverviewTop(
     setupLeft: Boolean,
     callbacks: CarnetCallbacks,
     onEnterHouse: (SessionId) -> Unit,
+    scrollVelocity: StateFlow<Float> = MutableStateFlow(0f),
 ) {
     GameTheme {
         val assets = rememberGameAssets()
@@ -90,7 +91,7 @@ fun GameOverviewTop(
             scene,
             assets,
             onEnterHouse,
-            carnet = if (!singleScreen) null else ({ CompactCarnet(carnet, focused.house, focused.atDoor, assets, callbacks) }),
+            carnet = if (!singleScreen) null else ({ CompactCarnet(carnet, focused.house, focused.atDoor, assets, callbacks, scrollVelocity = scrollVelocity) }),
             prompt = if (!singleScreen) null else carnet.quit?.let { quit -> { CarnetQuitPrompt(quit, callbacks) } },
         )
     }

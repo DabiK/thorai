@@ -13,6 +13,9 @@ import app.regie.game.ui.village.focusedHouse
 import app.regie.game.ui.village.walkingByHand
 import app.regie.input.Button
 import app.regie.input.GamepadInput
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,7 +27,9 @@ import kotlinx.coroutines.flow.asStateFlow
  * - Croix et stick gauche, tenus : le coursier marche ([onDirection]) ; les appuis répétés sont ignorés.
  * - A : entrer dans la maison dont il regarde la porte ; sinon, marcher jusqu'à la maison choisie
  *   ([focusedHouse]) et y entrer, comme A ouvrait la ligne qui avait le focus.
- * - L1, R1 : maison précédente ou suivante ; R1 va d'abord à la validation en attente, et y entre.
+ * - L1, R1 : maison précédente ou suivante. S'il y a une validation en attente, R1 va d'abord à la
+ *   maison de la première ([Overview.firstPendingApproval], comme la vue d'ensemble), et y entre ; devant
+ *   sa porte (au retour de la maison, par exemple), il y rentre.
  * - Une ligne du carnet touchée ([goTo]) : il y marche et y entre.
  * - Le reste (X, Y, L2, R2, le stick droit, « Quitter ») suit la vue d'ensemble classique, qui vise
  *   la maison choisie. B (agents), Start (menu de pause) et « R1 Voir » de l'oiseau sont pris avant,
@@ -34,11 +39,13 @@ import kotlinx.coroutines.flow.asStateFlow
  * [classic] : un coursier qu'on ne voit pas ne marche pas pour rien.
  */
 class VillageController(
+    private val overview: StateFlow<Overview>,
     private val classic: OverviewController,
     private val store: VillageLayoutStore,
     private val catalog: () -> HouseCatalog,
     private val shown: () -> Boolean,
     private val open: (SessionId) -> Unit,
+    private val worker: CoroutineDispatcher = Dispatchers.Default.limitedParallelism(1),
 ) {
     private var generator: VillageGenerator? = null
     private var lastKey: List<HouseKey>? = null
@@ -64,13 +71,18 @@ class VillageController(
     /**
      * À chaque vue d'ensemble : le hameau est régénéré dès qu'une maison peut avoir changé (session
      * ajoutée ou retirée, projet, agent, titre, état), avec la disposition enregistrée ; le coursier y
-     * garde sa place ([VillageSceneState.updateVillage]).
+     * garde sa place ([VillageSceneState.updateVillage]). La génération tourne sur [worker], un seul
+     * fil à la fois, hors du fil principal ; le coursier est mis à jour par l'appelant, sur le sien.
      */
-    fun update(overview: Overview) {
+    suspend fun update(overview: Overview) {
+        // Le hameau ne dépend pas de l'ordre de la vue d'ensemble : une session qui passe devant ne le refait pas.
         val key = overview.sessions.map { HouseKey(it.id, it.project, it.agent.id, it.title, it.status, it.pendingApproval != null) }
+            .sortedBy { it.id.value }
         if (key == lastKey) return
+        val village = withContext(worker) {
+            (generator ?: VillageGenerator(store, catalog()).also { generator = it }).generate(overview)
+        }
         lastKey = key
-        val village = (generator ?: VillageGenerator(store, catalog()).also { generator = it }).generate(overview)
         val current = _scene.value
         if (current == null) _scene.value = VillageSceneState(village) else current.updateVillage(village)
     }
@@ -98,8 +110,23 @@ class VillageController(
                     scene.focusedHouse()?.let { scene.send(CourierCommand.GoTo(it)) }
                 }
             Button.L1 -> scene.send(CourierCommand.Previous)
-            Button.R1 -> scene.send(CourierCommand.Next)
+            Button.R1 -> nextOrPending(scene)
             else -> classic.handle(input)
+        }
+    }
+
+    /**
+     * R1 : la première validation en attente d'abord, celle de la vue d'ensemble et du bandeau du
+     * carnet. Devant sa porte, le coursier y entre ; ailleurs, il y marche. Si sa maison n'est pas
+     * encore bâtie (hameau en cours de régénération), la validation s'ouvre directement. Sans
+     * validation, la maison suivante.
+     */
+    private fun nextOrPending(scene: VillageSceneState) {
+        val pending = overview.value.firstPendingApproval?.session?.id ?: return scene.send(CourierCommand.Next)
+        when {
+            scene.village.houseOf(pending) == null -> classic.openPendingApproval()
+            scene.facingDoor == pending -> scene.send(CourierCommand.Interact)
+            else -> scene.send(CourierCommand.GoTo(pending))
         }
     }
 
@@ -132,7 +159,7 @@ class VillageController(
     fun walkTo(id: SessionId): Boolean {
         val scene = _scene.value
         if (scene == null || !shown() || scene.village.houseOf(id) == null) return false
-        scene.send(CourierCommand.GoTo(id))
+        scene.send(if (scene.facingDoor == id) CourierCommand.Interact else CourierCommand.GoTo(id))
         return true
     }
 

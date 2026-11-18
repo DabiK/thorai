@@ -46,6 +46,7 @@ import app.regie.domain.model.PlanStepStatus
 import app.regie.domain.model.ThreadLine
 import app.regie.game.engine.village.InhabitantKind
 import app.regie.game.ui.R
+import app.regie.game.ui.approval.WaitingMarker
 import app.regie.game.ui.atlas.GameAssets
 import app.regie.game.ui.kit.Blink
 import app.regie.game.ui.kit.Bubble
@@ -159,6 +160,9 @@ private fun Interior(
                     )
                 }
             }
+            if (pose == Pose.WAITING) {
+                WaitingMarker(Modifier.anchorBottomCenter { projection.toScreen(ArtPoint(scene.inhabitant.x, scene.inhabitant.y - HEAD_ART)) })
+            }
             if (speaking) {
                 CourierBubble(dictation, assets, Modifier.anchorBottomStart { projection.toScreen(ArtPoint(scene.entrance.x + 8, scene.entrance.y - 14)) })
             }
@@ -180,10 +184,8 @@ private fun Interior(
             )
         }
         if (approval != null) {
-            Box(
-                Modifier.padding(start = metrics.dp(44), top = metrics.dp(300)).width(metrics.dp(900)).heightIn(max = metrics.dp(440))
-                    .verticalScroll(rememberScrollState()),
-            ) { approval() }
+            // Le parchemin tendu par l'habitant borne sa hauteur et dit où lire la suite (ticket 47).
+            Box(Modifier.padding(start = metrics.dp(44), top = metrics.dp(290)).width(metrics.dp(900)).heightIn(max = metrics.dp(460))) { approval() }
         }
         reply?.let {
             Reply(
