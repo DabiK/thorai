@@ -1,6 +1,6 @@
 # 22 — Session brute comme une app de bureau, écran du bas en table de réglages, accueil en liste
 
-Statut : à fusionner
+Statut : fait
 Possède : `android/` (interface) ; `bridge/` touché pour retirer la demande de bilan (ADR 17)
 
 ## Retours de l'utilisateur, 18 novembre (ses mots, résumés)
