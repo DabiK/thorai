@@ -68,6 +68,12 @@ abstract class GamepadActivity : ComponentActivity() {
         override fun onConfirmQuit() = container.controller.confirmQuit()
 
         override fun onCancelQuit() = container.controller.cancelQuit()
+
+        // Accessibilité s'ouvre sur l'écran qui l'a demandée : celui du bas est tactile.
+        override fun onEnableConsole() = startActivity(
+            android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+            android.app.ActivityOptions.makeBasic().setLaunchDisplayId(display.displayId).toBundle(),
+        )
     }
 
     protected val sessionCallbacks = object : SessionCallbacks {
@@ -107,6 +113,20 @@ abstract class GamepadActivity : ComponentActivity() {
                 container.closing.collect { if (it) finishAndRemoveTask() }
             }
         }
+    }
+
+    /**
+     * L'activité au premier plan du système reçoit la manette. Tant qu'une des nôtres l'est, sa
+     * fenêtre lit la manette ; sinon, le service d'accessibilité prend L2 et R2 (ticket 25).
+     */
+    override fun onTopResumedActivityChanged(isTopResumedActivity: Boolean) {
+        super.onTopResumedActivityChanged(isTopResumedActivity)
+        container.gamepadFocus(javaClass.name, isTopResumedActivity)
+    }
+
+    override fun onDestroy() {
+        container.gamepadFocus(javaClass.name, false)
+        super.onDestroy()
     }
 
     override fun onStop() {

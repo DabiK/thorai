@@ -14,6 +14,9 @@ sealed interface OverviewAction {
     data object NewSession : OverviewAction
     data object PauseAll : OverviewAction
 
+    /** Reprendre ou préparer la session « console » (ticket 25). */
+    data object ConsoleSession : OverviewAction
+
     /** Arrêter les sessions et le pont, puis fermer Régie. */
     data object Quit : OverviewAction
 }
