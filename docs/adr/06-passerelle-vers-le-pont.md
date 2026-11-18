@@ -90,7 +90,10 @@ Le rapport d'un lancement dit ce qui s'est passé cette fois-ci : pont déjà l�
 - `<queries>` déclare `com.termux` (visibilité des paquets, Android 11 et plus).
 - Rien au boot.
 
-Marche à suivre affichée selon la cause : permission RUN_COMMAND, Termux absent, jeton absent ou refusé (`thor/bridge/install.sh token-app`), sinon « Régie relance le pont et se reconnecte seule. »
+Marche à suivre affichée selon la cause : permission RUN_COMMAND, Termux absent,
+jeton absent ou refusé (autoriser les commandes Termux puis rouvrir Régie), sinon
+« Régie relance le pont et se reconnecte seule. ». Le chemin debug
+`thor/bridge/install.sh token-app` reste disponible.
 
 ### Accès des agents à Android après un redémarrage
 
@@ -100,7 +103,7 @@ Marche à suivre affichée selon la cause : permission RUN_COMMAND, Termux absen
 - À accorder une fois, depuis le Mac, l'app installée :
 
   ```
-  adb -s THOR0000000001 shell pm grant app.regie android.permission.WRITE_SECURE_SETTINGS
+  adb -s $THOR_SERIAL shell pm grant app.regie android.permission.WRITE_SECURE_SETTINGS
   ```
 
 ### « Quitter »
@@ -125,3 +128,42 @@ Rien ne part vers Termux : ni permission demandée, ni démarrage, ni débogage 
 - `CLAUDE.md` ne cite plus `SessionEvent` dans le modèle du domaine.
 - Tant que les agents n'envoient pas de plan ACP (aucun dans les enregistrements), les cartes disent « Plan non communiqué par l'agent ».
 - Les sessions de l'historique (`stopped`) restent dans la vue d'ensemble, après les actives : avec plus de 4 sessions, la grille n'en montre que 4.
+
+## Révision du 18 novembre — APK de release (ticket 27)
+
+L'app crée 32 octets aléatoires et conserve le secret privé ; le debug peut encore
+recevoir le secret par `install.sh token-app`. `StartUp` utilise le port
+`BridgePairing` tant que le WebSocket n'est pas authentifié, même si `/health`
+répond. `KeepBridgeUp` reprend aussi les erreurs de jeton, au premier plan et à
+l'échéance de 30 s. Un lancement refusé pour permission manquante reste réessayable.
+
+Le nouvel adapter configure Termux par RUN_COMMAND, avec seulement le nom d'une
+socket Unix abstraite éphémère. Le serveur Android ne livre le secret qu'à l'UID
+Termux, contrôlé par les credentials du noyau ; son attente expire après 30 s.
+Le script lit la socket par Python dans la Debian (même UID Android), valide le
+format, arrête le pont si le secret change, écrit atomiquement le fichier 0600
+dans la Debian puis redémarre. Un secret identique ne coupe aucune session.
+Le protocole décrit les extras exacts.
+
+Le verrou de configuration reste détenu jusqu'au retour du démarrage. Les deux
+processus détachés (superviseur et accès Android) ferment les descripteurs du
+verrou de configuration (8) et du verrou démarrage/arrêt (9) : ils ne doivent pas
+empêcher une configuration suivante de remplacer le jeton. Une régression
+hors console exécute les vrais scripts configure/start avec un verrou noyau et
+des processus factices persistants, y compris avec un secret inchangé.
+
+Le premier essai par URI privée a été retiré : même avec une permission de lecture
+accordée à Termux, Android refuse `content read` avec
+`requires android.permission.ACCESS_CONTENT_PROVIDERS_EXTERNALLY`. Aucun provider
+n'est livré dans l'app. Les APIs Android LocalServerSocket/peerCredentials et
+Os.setsockoptTimeval ont été vérifiées par Context7 avant le correctif.
+
+La transmission directe en arguments **ou en stdin** a été écartée : Termux peut
+les recopier dans ses traces détaillées. Aucun secret n'est dans l'intent, ni
+journalisé par Régie ou la commande de configuration. Sources vérifiées par
+Context7 puis lecture du [RUN_COMMAND](https://github.com/termux/termux-app/wiki/RUN_COMMAND-Intent)
+et du [service Termux](https://github.com/termux/termux-app/blob/master/app/src/main/java/com/termux/app/RunCommandService.java).
+
+La commande nécessite Termux et RUN_COMMAND comme avant, mais aucun accès debug
+au stockage de Régie. Après désinstallation/réinstallation, le nouveau secret de
+l'app remplace celui du pont ; les projets et connexions Termux restent présents.

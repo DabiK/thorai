@@ -2,9 +2,18 @@
 # Helpers for the scripts run from the Mac (install.sh, demo.sh, contract-test.sh).
 # Sourced, not run. Every command goes through adb, as the Termux user (run-as, debug build).
 
-SERIAL="${THOR_SERIAL:-THOR0000000001}"
-TPREFIX=/data/data/com.termux/files/usr
-THOME=/data/data/com.termux/files/home
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../scripts/device.sh"
+if [[ "${REGIE_ON_DEVICE:-0}" == 1 ]]; then
+  SERIAL=
+else
+  SERIAL="$(select_adb_device)"
+fi
+TPREFIX=${PREFIX:-/data/data/com.termux/files/usr}
+THOME=${HOME:-/data/data/com.termux/files/home}
+if [[ "${REGIE_ON_DEVICE:-0}" != 1 ]]; then
+  TPREFIX=/data/data/com.termux/files/usr
+  THOME=/data/data/com.termux/files/home
+fi
 ROOTFS="$TPREFIX/var/lib/proot-distro/containers/debian/rootfs"
 # Debian side (user dev).
 DEB_APP=/home/dev/.local/share/regie/bridge
@@ -16,6 +25,10 @@ APP_TOKEN=files/bridge-token
 
 # termux_sh '<bash script>': runs the script in Termux. Stdin is forwarded.
 termux_sh() {
+  if [[ "${REGIE_ON_DEVICE:-0}" == 1 ]]; then
+    bash -c "$1"
+    return
+  fi
   local b64
   b64=$(printf '%s' "$1" | base64 | tr -d '\n')
   adb -s "$SERIAL" shell "run-as com.termux $TPREFIX/bin/env HOME=$THOME PREFIX=$TPREFIX \
@@ -41,6 +54,7 @@ deploy_sources() {
 }
 
 need_device() {
+  [[ "${REGIE_ON_DEVICE:-0}" == 1 ]] && return 0
   if ! adb -s "$SERIAL" get-state >/dev/null 2>&1; then
     echo "Console $SERIAL introuvable par adb." >&2
     exit 1

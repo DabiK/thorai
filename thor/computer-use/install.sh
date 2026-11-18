@@ -2,7 +2,7 @@
 # Installe l'accès des agents à Android (serveur MCP thor_android) sur la console.
 # Lancé depuis le Mac, console branchée en USB. Idempotent.
 #
-#   thor/computer-use/install.sh            (THOR_SERIAL=THOR0000000001 par défaut)
+#   thor/computer-use/install.sh            (appareil adb unique, sinon THOR_SERIAL)
 #
 # Pose sur la console :
 #   Debian  : paquets adb et procps ; /opt/thor-android (mobile-mcp épinglé, start.sh,
@@ -116,10 +116,10 @@ if jq -e --argjson want "$want" '.mcpServers.thor_android == $want' ~/.claude.js
   echo "    déjà déclaré"
 else
   if jq -e '.mcpServers.thor_android' ~/.claude.json >/dev/null 2>&1; then
-    claude mcp remove --scope user thor_android </dev/null >/dev/null
+    /home/dev/.local/bin/claude mcp remove --scope user thor_android </dev/null >/dev/null
     echo "    ancienne déclaration retirée"
   fi
-  claude mcp add-json --scope user thor_android "$want" </dev/null
+  /home/dev/.local/bin/claude mcp add-json --scope user thor_android "$want" </dev/null
 fi
 result=$(claude_allow_put ~/.claude/settings.json)
 echo "    autorisations (~/.claude/settings.json) : $result"

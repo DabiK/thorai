@@ -44,9 +44,11 @@ officielles et aide des binaires **Codex 0.167.2 / Claude Code 2.1.322** sur la 
   déjà délivré par le fournisseur.
 - Claude : état et déconnexion exposés ; démarrer la connexion retourne le
   parcours manuel, sans lancer de processus interactif abandonné. L’app indique :
-  ouvrir Termux sur la console, lancer `claude auth login`, ouvrir son URL sur
-  le téléphone, recopier le code dans Termux, revenir puis Actualiser.
-  Le lanceur Termux existant transmet bien les arguments à la Debian.
+  ouvrir Termux, entrer dans Debian avec `proot-distro login debian --user dev`
+  et les montages projects/.codex du pont, puis lancer `claude auth login`,
+  ouvrir son URL sur le téléphone, recopier le code dans Termux, revenir puis
+  Actualiser. La commande complète est donnée dans l'app (ticket 27) : aucun
+  lanceur `claude` dans Termux n'est supposé.
 - Métadonnée de compte facultative : seul l’e-mail public de `auth status` de
   Claude est retenu, s’il est fourni. Exception limitée à `auth.*.account` à la
   règle historique de l’ADR 02 ; les mises à jour ACP restent filtrées. Aucun

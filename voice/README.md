@@ -22,9 +22,9 @@ Porte de qualité : `./gradlew check` (tests, lint Android). Le SDK Android est 
 
 ```bash
 cd voice && ./gradlew :demo:assembleDebug
-adb -s THOR0000000001 install -r demo/build/outputs/apk/debug/demo-debug.apk
-adb -s THOR0000000001 shell pm grant app.regie.voicelab android.permission.RECORD_AUDIO
-adb -s THOR0000000001 shell am start --display 0 -n app.regie.voicelab/.MainActivity
+adb -s $THOR_SERIAL install -r demo/build/outputs/apk/debug/demo-debug.apk
+adb -s $THOR_SERIAL shell pm grant app.regie.voicelab android.permission.RECORD_AUDIO
+adb -s $THOR_SERIAL shell am start --display 0 -n app.regie.voicelab/.MainActivity
 ```
 
 - Maintenir **L2** pour dicter ; **L2** ou **R2** coupe la voix ; en lecture guidée, **B** fait relire la phrase.
@@ -33,7 +33,7 @@ adb -s THOR0000000001 shell am start --display 0 -n app.regie.voicelab/.MainActi
 
 ## Commandes adb, sans toucher l'écran
 
-Toutes passent par `adb -s THOR0000000001 shell am start --display 0 -n app.regie.voicelab/.Adb …`. On peut en combiner plusieurs : les réglages s'appliquent avant les actions.
+Toutes passent par `adb -s $THOR_SERIAL shell am start --display 0 -n app.regie.voicelab/.Adb …`. On peut en combiner plusieurs : les réglages s'appliquent avant les actions.
 
 `.Adb` est un alias de l'activité réservé aux appelants qui détiennent `android.permission.DUMP`, c'est-à-dire le shell adb : aucune autre appli de la console ne peut lancer un banc ElevenLabs (des crédits) ni un téléchargement de 616 Mo. Les extras envoyés à `.MainActivity` sont ignorés.
 
@@ -60,7 +60,7 @@ Pendant un banc ou une lecture guidée, toute nouvelle commande est refusée, r�
 
    ```bash
    scripts/voice-corpus.sh                    # ou les WAV lus par l'utilisateur
-   adb -s THOR0000000001 push voice/build/corpus/*.wav voice/corpus/consignes.txt \
+   adb -s $THOR_SERIAL push voice/build/corpus/*.wav voice/corpus/consignes.txt \
      /sdcard/Android/data/app.regie.voicelab/files/corpus/
    ```
 
@@ -71,7 +71,7 @@ Pendant un banc ou une lecture guidée, toute nouvelle commande est refusée, r�
 3. Récupérer les rapports :
 
    ```bash
-   adb -s THOR0000000001 pull /sdcard/Android/data/app.regie.voicelab/files/ bench/
+   adb -s $THOR_SERIAL pull /sdcard/Android/data/app.regie.voicelab/files/ bench/
    ```
 
    Chaque banc écrit `bench-<fournisseur>-<horodatage>.json` et `.csv`. On y trouve, par consigne :
@@ -91,8 +91,8 @@ L'appli affiche les consignes de `consignes.txt` une par une ; on maintient L2 e
 1. Lancer, l'appli sur l'écran du haut. Si elle est ouverte sur l'écran du bas (saisie de la clé), la fermer d'abord :
 
    ```bash
-   adb -s THOR0000000001 shell am force-stop app.regie.voicelab
-   adb -s THOR0000000001 shell am start --display 0 -n app.regie.voicelab/.Adb --es guided elevenlabs
+   adb -s $THOR_SERIAL shell am force-stop app.regie.voicelab
+   adb -s $THOR_SERIAL shell am start --display 0 -n app.regie.voicelab/.Adb --es guided elevenlabs
    ```
 
    Ou `--es guided local`, ou les boutons « Lecture guidée du corpus » de l'écran.
@@ -109,10 +109,10 @@ L'appli affiche les consignes de `consignes.txt` une par une ; on maintient L2 e
 4. Rejouer exactement les mêmes enregistrements dans l'autre fournisseur, puis comparer les deux rapports :
 
    ```bash
-   adb -s THOR0000000001 shell am start --display 0 -n app.regie.voicelab/.Adb --es guided stop
-   adb -s THOR0000000001 shell am start --display 0 -n app.regie.voicelab/.Adb --ez hotwords true --es bench local --es corpus user
+   adb -s $THOR_SERIAL shell am start --display 0 -n app.regie.voicelab/.Adb --es guided stop
+   adb -s $THOR_SERIAL shell am start --display 0 -n app.regie.voicelab/.Adb --ez hotwords true --es bench local --es corpus user
    # attendre « fini : bench-… » à l'écran
-   adb -s THOR0000000001 pull /sdcard/Android/data/app.regie.voicelab/files/ bench/
+   adb -s $THOR_SERIAL pull /sdcard/Android/data/app.regie.voicelab/files/ bench/
    ```
 
    Le banc écrit alors `bench-<fournisseur>-user-<horodatage>.json` et `.csv`. Il prend `consignes.txt` et `termes.txt` dans `files/corpus/user/`, sinon dans `files/corpus/`, sinon dans l'APK.

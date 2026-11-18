@@ -1,7 +1,6 @@
 package app.regie.domain.usecase
 
 import app.regie.domain.model.BridgeConnection
-import app.regie.domain.model.UnreachableReason
 import app.regie.domain.port.AgentGateway
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -24,7 +23,7 @@ class KeepBridgeUp(
 ) {
     suspend fun run() {
         gateway.connection.collectLatest { connection ->
-            if (connection != BridgeConnection.Unreachable(UnreachableReason.NOT_RESPONDING)) return@collectLatest
+            if (connection !is BridgeConnection.Unreachable) return@collectLatest
             while (true) {
                 val wait = if (canStart()) {
                     val report = startUp()

@@ -95,7 +95,7 @@ repassé au vert. Preuves : `artifacts/screenshots/19/`.
 
 ## Vérification physique au retour de l'utilisateur
 
-1. Rebrancher la Thor, vérifier `adb devices` : série `THOR0000000001`.
+1. Rebrancher la Thor, vérifier `adb devices` : série `$THOR_SERIAL`.
 2. Après fusion, quitter Régie, installer le pont par `thor/bridge/install.sh`
    et l'app par `scripts/thor-install.sh`, puis ouvrir Régie.
 3. Si l'accès Android indique une absence de connexion, rallumer le débogage

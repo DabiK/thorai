@@ -1,6 +1,6 @@
 # 27 — Préparer le partage : rien de propre à l'utilisateur, APK de release, installation sans Mac
 
-Statut : prêt
+Statut : à fusionner
 Possède : `scripts/`, `thor/`, `bridge/`, `android/` (build, jeton), `LICENSE`
 
 ## Contexte
@@ -27,5 +27,31 @@ L'utilisateur veut publier Régie : un APK disponible en release GitHub, un proj
 
 ## Critères d'acceptation
 
-- `./gradlew check` et `npm run check` sont verts. `./gradlew :app:assembleRelease` produit un APK signé (vérifié avec `apksigner verify`).
-- Sur la Thor : l'APK de release s'installe à la place du build debug, après désinstallation si les signatures diffèrent (préviens-le dans le rapport). Le jeton s'établit par RUN_COMMAND, et Régie affiche les sessions.
+- [x] `./gradlew check` et `npm run check` sont verts. `./gradlew :app:assembleRelease` produit un APK signé (vérifié avec `apksigner verify`).
+- [x] Sur la Thor (captures 04 puis 09 après correction) : l'APK de release s'installe à la place du build debug, après désinstallation si les signatures diffèrent (préviens-le dans le rapport). Le jeton s'établit par RUN_COMMAND, et Régie affiche les sessions.
+- [x] Deux configurations successives, jeton différent ou identique, ne restent pas bloquées par les processus détachés → test avec verrou noyau sur Mac et Debian, mutations des deux lancements détectées, essai release Thor.
+
+
+## Rapport
+
+STATUT: done
+RÉSUMÉ: Distribution MIT, installeur Termux et APK signé préparés ; aucune publication exécutée.
+Le verrou hérité est corrigé : la release Thor reconfigure son jeton et affiche les 49 sessions après plusieurs ouvertures.
+CRITÈRES:
+- [x] Appareil adb unique ou THOR_SERIAL → scripts/tests/device-test.sh et installation debug Thor.
+- [x] Connexion Claude avec entrée Debian et shell de connexion → test authentication, commandes complètes dans l'app.
+- [x] Projets neutres, MIT au nom de l'auteur des commits → diff, LICENSE, audit rg sans secret.
+- [x] Jeton release sans run-as, 0600, sans journalisation ; debug conservé → tests et essai RUN_COMMAND Thor, captures 04/09.
+- [x] Configuration répétable avec pont actif → configure-lock-test.py rouge puis vert, vrais verrous Mac/Debian ; deux mutations détectées.
+- [x] Installeur local idempotent → tests hors console et trois exécutions Termux sur la console préparée.
+- [x] APK signé, SHA-256 et publication préparée → release.sh --build-only, apksigner verify ; GitHub remplacé par un faux dans les tests.
+- [x] Dernier APK signé réinstallé physiquement → adb install -r réussi, jeton différent réparé par l'app, réouvertures successives, capture 09.
+- [ ] Parcours complet sur Thor vierge → aucun effacement de Termux ; association et comptes à éprouver avec l'utilisateur.
+PORTE DE QUALITÉ: Android ./gradlew check + assembleRelease, voix ./gradlew check, pont npm run check (320 tests) verts ; signature v2 vérifiée ; check-sharing et 13 tests émulateur verts ; audit rg 0 signalement.
+THOR: dernier APK release installé sans désinstallation, données conservées. Le debug est refusé (INSTALL_FAILED_UPDATE_INCOMPATIBLE) ; aucun contournement destructif. Ancien superviseur au repos arrêté pour libérer son verrou ; jeton différent réparé par RUN_COMMAND, réouvertures sans blocage, 0600, 49 sessions conservées, pont joignable. Aucun agent lancé ni redémarrage console. La désinstallation debug→release du passage précédent avait réinitialisé préférences/modèles.
+REVIEW: blocage reproduit ; fd 8 fermé pour le superviseur et l'accès Android. Régression avec verrou noyau, dont exec à jeton identique ; nettoyage du banc synchronisé après essai Debian. Après d99fdee : espaces des traces nettoyés et preuve release distinguée du test à jeton identique ; aucun autre blocage. Détail dans revision-lock.md.
+DÉCISIONS PRISES: aucun choix produit nouveau ; ADR 06 et protocole précisent la durée du verrou et sa fermeture dans les processus détachés ; ADR 18/20 conservés.
+POUR L'UTILISATEUR: 1. Réactiver Mode console dans Accessibilité. 2. Reconfigurer la voix et télécharger son modèle. 3. Suivre les étapes 3 à 6 de artifacts/screenshots/27/essai-thor.md sur une Thor vierge. 4. Sauvegarder la clé externe avant publication.
+QUESTIONS: aucune décision produit en attente.
+CAPTURES: artifacts/screenshots/27/09-lock-repaired-{haut,bas}.png ; preuves et relecture dans revision-lock.md ; campagnes précédentes dans essai-thor.md et relecture.md.
+HORS PÉRIMÈTRE: deux avertissements Biome préexistants dans bridge.test.ts ; aucun problème fonctionnel hors périmètre traité.

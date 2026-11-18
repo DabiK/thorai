@@ -23,7 +23,7 @@ running() {
 # The agents' access to Android (ticket 03), linked again at every call, even when the bridge
 # already runs: after a restart of the console, wireless debugging comes back on a new port.
 if [[ -x "$HOME/bin/regie-android-access" ]]; then
-  setsid nohup "$HOME/bin/regie-android-access" > /dev/null 2>&1 < /dev/null 9>&- &
+  setsid nohup "$HOME/bin/regie-android-access" > /dev/null 2>&1 < /dev/null 8>&- 9>&- &
 fi
 
 if running; then
@@ -36,7 +36,9 @@ rm -f "$state/regie-bridge.stop"
 if [[ -f "$log" ]] && (( $(stat -c %s "$log") > 5 * 1024 * 1024 )); then
   mv -f "$log" "$log.1"
 fi
-setsid nohup "$HOME/bin/regie-bridge-supervise" >> "$log" 2>&1 < /dev/null 9>&- &
+# Detached processes must inherit neither the start/stop lock (9) nor the
+# configure lock (8), held by regie-bridge-configure until this start returns.
+setsid nohup "$HOME/bin/regie-bridge-supervise" >> "$log" 2>&1 < /dev/null 8>&- 9>&- &
 
 for ((i = 0; i < 30; i++)); do
   if curl -fsS "http://127.0.0.1:$port/health" > /dev/null 2>&1; then

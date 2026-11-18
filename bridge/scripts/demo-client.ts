@@ -1,7 +1,7 @@
 /**
  * Demo client of the bridge, run from the Mac (thor/bridge/demo.sh sets it up):
  *
- *   adb -s THOR0000000001 forward tcp:47600 tcp:47600
+ *   adb -s $THOR_SERIAL forward tcp:47600 tcp:47600
  *   REGIE_BRIDGE_TOKEN=… node scripts/demo-client.ts
  *
  * It starts a Claude session and a Codex session on ~/projects/regie-demo, answers « allow once »

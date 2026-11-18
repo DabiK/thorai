@@ -2,7 +2,10 @@
 # Fonctions communes aux scripts de thor/computer-use lancés depuis le Mac.
 # À sourcer, pas à exécuter.
 
-THOR_SERIAL=${THOR_SERIAL:-THOR0000000001}
+if [[ "${REGIE_ON_DEVICE:-0}" != 1 ]]; then
+  source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../scripts/device.sh"
+fi
+THOR_SERIAL=${THOR_SERIAL:-}
 TERMUX_PREFIX=/data/data/com.termux/files/usr
 TERMUX_HOME=/data/data/com.termux/files/home
 
@@ -28,6 +31,10 @@ _whole_script() {
 
 # Exécute dans Termux le script bash lu sur l'entrée standard.
 termux_sh() {
+  if [[ "${REGIE_ON_DEVICE:-0}" == 1 ]]; then
+    _whole_script | bash -s
+    return
+  fi
   _whole_script | adb -s "$THOR_SERIAL" shell -T run-as com.termux \
     "$TERMUX_PREFIX/bin/env" HOME="$TERMUX_HOME" PREFIX="$TERMUX_PREFIX" \
     TMPDIR="$TERMUX_PREFIX/tmp" PATH="$TERMUX_PREFIX/bin:/system/bin" \
@@ -38,6 +45,12 @@ termux_sh() {
 # Exécute dans la Debian, sous l'utilisateur $1 (dev ou root), le script bash
 # lu sur l'entrée standard. Mêmes montages que le lanceur dev-linux de Termux.
 debian_sh() {
+  if [[ "${REGIE_ON_DEVICE:-0}" == 1 ]]; then
+    _whole_script | proot-distro login debian --user "$1" \
+      --bind "$HOME/projects:/home/dev/projects" --bind "$HOME/.codex:/home/dev/.codex" \
+      -- /bin/bash -s
+    return
+  fi
   _whole_script | adb -s "$THOR_SERIAL" shell -T run-as com.termux \
     "$TERMUX_PREFIX/bin/env" HOME="$TERMUX_HOME" PREFIX="$TERMUX_PREFIX" \
     TMPDIR="$TERMUX_PREFIX/tmp" PATH="$TERMUX_PREFIX/bin:/system/bin" \
@@ -60,6 +73,8 @@ emit_file() {
 }
 
 require_console() {
+  [[ "${REGIE_ON_DEVICE:-0}" == 1 ]] && return 0
+  THOR_SERIAL=$(select_adb_device) || exit 1
   if ! adb -s "$THOR_SERIAL" get-state >/dev/null 2>&1; then
     echo "La console $THOR_SERIAL n'est pas visible par adb depuis le Mac." >&2
     exit 1

@@ -85,3 +85,27 @@ scripts/thor-shot.sh artifacts/screenshots/<ticket>
 ## Avant de partager
 
 `python3 scripts/repo-audit.py` cherche avec `rg`, dans le texte versionné et les nouveaux fichiers, les clés usuelles, jetons littéraux, IP privées, adresses e-mail et chemins de comptes. Ses exceptions sont explicites et testées. Il ne parcourt ni l’historique Git ni les images : les captures publiées sont relues à l’œil.
+
+## Préparer une release
+
+Après les portes de qualité et la relecture :
+
+```sh
+scripts/check-sharing.sh
+scripts/release.sh 0.1.0 --build-only
+```
+
+Le premier build crée si nécessaire la clé dans `~/.config/regie/`, avec
+`release.properties` et un keystore en 0600. Sauvegarder les deux hors du dépôt.
+L'APK signé et `regie-<version>.apk.sha256` sont dans
+`android/app/build/outputs/apk/release/` (ignoré par Git).
+`./gradlew :app:assembleRelease` utilise ensuite cette même configuration.
+Un checkout sans configuration conserve ses tests/debug utilisables ; le build
+release exige la clé et ne produit pas une fausse release signée en debug.
+
+Après fusion et autorisation de publication, l'orchestrateur lance
+`scripts/release.sh <version>` : tag `v<version>` sur le commit courant, APK et
+somme joints à GitHub, notes prises dans le README. Ce mode publie réellement.
+Les versions sont `major.minor.patch`, composantes 0 à 999 (ADR 20).
+Une installation debug avec une autre signature doit être désinstallée avant
+la release : préférences et modèles de l'app perdus, Termux conservé.

@@ -119,9 +119,9 @@ class NewSessionTest {
     }
     @Test fun `reference mockup phrase preserves unnamed new branch and negative instruction`() = runTest {
         val interpret = InterpretVoiceCommand(VoiceCommandModel { _, _ -> null })
-        val context = VoiceCommandContext(emptyList(), null, null, listOf("atelier-meubles"))
-        val command = interpret("Lance Claude sur atelier-meubles, nouvelle branche depuis main, et demande-lui de ne pas modifier les tests", context)
-        assertEquals(VoiceCommand.Launch(NewSessionDraft(Agent.CLAUDE, "atelier-meubles", instruction = "ne pas modifier les tests", newBranch = true, baseBranch = "main")), command.command)
+        val context = VoiceCommandContext(emptyList(), null, null, listOf("notes"))
+        val command = interpret("Lance Claude sur notes, nouvelle branche depuis main, et demande-lui de ne pas modifier les tests", context)
+        assertEquals(VoiceCommand.Launch(NewSessionDraft(Agent.CLAUDE, "notes", instruction = "ne pas modifier les tests", newBranch = true, baseBranch = "main")), command.command)
     }
 
     @Test fun `local transcription punctuation and homophones still describe the chosen validation`() = runTest {

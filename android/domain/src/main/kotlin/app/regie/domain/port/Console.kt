@@ -17,3 +17,8 @@ interface BridgeLauncher {
     /** `regie-bridge-stop` : arrête les sessions, puis le pont. */
     fun stop(): LaunchResult
 }
+
+/** Installe le secret partagé et lance le pont, sans exposer le jeton à l'interface. */
+fun interface BridgePairing {
+    fun configure(): LaunchResult
+}

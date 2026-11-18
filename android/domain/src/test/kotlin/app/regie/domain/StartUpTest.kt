@@ -19,6 +19,41 @@ class StartUpTest {
     private val startUp = StartUp(gateway, access, launcher, restartInterval = 30.seconds, timeSource = time)
 
     @Test
+    fun `an unpaired app configures a running bridge and retries until authenticated`() = runTest {
+        var calls = 0
+        val pairing = app.regie.domain.port.BridgePairing {
+            calls++
+            LaunchResult.SENT
+        }
+        val pairedStart = StartUp(gateway, access, launcher, timeSource = time, pairing = pairing)
+        pairedStart()
+        assertEquals(1, calls)
+        time += 10.seconds
+        pairedStart()
+        assertEquals(1, calls)
+        time += 21.seconds
+        pairedStart()
+        assertEquals(2, calls)
+        gateway.connection.value = app.regie.domain.model.BridgeConnection.Connected
+        time += 31.seconds
+        pairedStart()
+        assertEquals(2, calls)
+        assertEquals(emptyList(), launcher.sent)
+    }
+
+    @Test
+    fun `pairing permission refusal is retried without waiting thirty seconds`() = runTest {
+        var calls = 0
+        val pairedStart = StartUp(gateway, access, launcher, pairing = app.regie.domain.port.BridgePairing {
+            calls++
+            LaunchResult.PERMISSION_MISSING
+        })
+        assertEquals(LaunchResult.PERMISSION_MISSING, pairedStart().launch)
+        pairedStart()
+        assertEquals(2, calls)
+    }
+
+    @Test
     fun `a bridge already up with wireless debugging on is left alone`() = runTest {
         val report = startUp()
 

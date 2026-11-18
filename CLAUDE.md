@@ -58,7 +58,7 @@ artifacts/ captures d'écran des écrans livrés, rangées par ticket
 ## La console
 
 Tout ce qu'il faut est dans `docs/thor.md`. En résumé :
-- adb, numéro de série `THOR0000000001` ;
+- adb : appareil autorisé unique, sinon `THOR_SERIAL` explicite ;
 - écran haut : `displayId` 0 ; écran bas : `displayId` 4 sur la Thor, découvert dynamiquement sur le banc ;
 - Claude Code et Codex tournent dans une Debian (proot-distro, utilisateur `dev`).
 

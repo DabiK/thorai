@@ -18,7 +18,7 @@ D'autres tickets tournent en même temps que toi, chacun dans son worktree, **su
    - Si sa réponse contient un `❓`, vois si le PRD ou les ADR y répondent. Si oui, relance-le avec la réponse. Si non, et que la décision est difficile à défaire, passe à l'étape 7 avec `STATUT: blocked`.
 4. **Vérifier.**
    - Lance toi-même la porte de qualité de la partie touchée : `./gradlew check` dans `android/` ou `voice/`, `npm run check` dans `bridge/`. En cas d'échec, renvoie la sortie à `dev`. Ne passe pas à la suite tant que ce n'est pas vert.
-   - **Teste ensuite sur la Thor** (adb, série `THOR0000000001`). Range les captures des deux écrans dans `artifacts/screenshots/<NN>/`.
+   - **Teste ensuite sur la Thor** (adb, série `$THOR_SERIAL`). Range les captures des deux écrans dans `artifacts/screenshots/<NN>/`.
 5. **Commiter.** Conventional Commits, fichiers ajoutés par leur chemin, pas de `--no-verify`. Coche dans le fichier du ticket les critères tenus, et commite-le avec le reste.
 6. **Faire relire.** Lance l'agent `reviewer` avec le texte du ticket et la consigne de relire `git diff main...HEAD`. Ne lui transmets ni le résumé de `dev` ni ton avis.
    - `APPROUVÉ` : passe à l'étape 7.

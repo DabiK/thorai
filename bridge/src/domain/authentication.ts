@@ -30,7 +30,7 @@ export interface AuthenticationState {
 }
 
 export const CLAUDE_MANUAL =
-  'Claude ne propose pas de code d’appareil. Sur la console, ouvre Termux et lance claude auth login. Ouvre l’URL affichée sur ton téléphone et recopie le code du navigateur dans Termux. Reviens ici puis choisis Actualiser.';
+  'Claude ne propose pas de code d’appareil. Sur la console, ouvre Termux. Entre dans la Debian :\nproot-distro login debian --user dev --bind "$HOME/projects:/home/dev/projects" --bind "$HOME/.codex:/home/dev/.codex" --work-dir /home/dev -- bash -l\nPuis lance :\nclaude auth login\nOuvre l’URL affichée sur ton téléphone et recopie le code du navigateur dans Termux. Reviens ici puis choisis Actualiser.';
 export const DEVICE_URL = 'https://auth.openai.com/codex/device';
 
 /** Ephemeral state: challenges never enter the durable session journal. */

@@ -96,7 +96,7 @@ Les événements suivent ainsi le même chemin que la vraie manette, gâchettes 
 - Le mode un seul écran n'a été essayé que forcé. Relevé le 13 novembre, en lecture seule : le display 4 (« Screen-2 ») est `state ON, committedState ON`. Aucune clé de `settings` système, sécurisée ou globale ne l'éteint (`dual_screen_display_mode` n'y figure pas). L'extinction passe par l'assistant d'Odin, `com.odin.dualscreen.assistant` 1.3 (`ScreenUtil.closeSecondaryScreen`, mode « Only bottom screen »). Son code ne dit pas si l'écran passe à `OFF`, est retiré ou garde `ON` avec une luminosité nulle. Ce dernier cas échapperait à `DisplayPolicy`.
 - Test réel, à faire par l'utilisateur :
   1. Régie ouverte, éteindre l'écran du bas par l'assistant d'écran double d'Odin.
-  2. Relever `adb -s THOR0000000001 shell dumpsys display | grep -E 'Screen-2.*state'` et `adb -s THOR0000000001 logcat -d -s Regie`, qui doit montrer `mode d'écran : Single`.
+  2. Relever `adb -s $THOR_SERIAL shell dumpsys display | grep -E 'Screen-2.*state'` et `adb -s $THOR_SERIAL logcat -d -s Regie`, qui doit montrer `mode d'écran : Single`.
   3. Vérifier que le panneau apparaît en bas de l'écran haut.
   4. Rallumer l'écran du bas et vérifier que l'écran du bas de Régie revient.
 

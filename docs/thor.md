@@ -10,7 +10,7 @@ préexistants de cette console, pas des prérequis ni des livrables de Régie.
 
 - QCS8550 (Snapdragon 8 Gen 2), 8 cœurs, 15,6 Go de RAM.
 - Android 13 (SDK 33), build Thor_V1.0.0.377, correctif de sécurité de janvier 2024, langue fr-FR.
-- adb : numéro de série `THOR0000000001`, en USB.
+- adb : appareil USB autorisé, sélectionné automatiquement s’il est unique ; sinon exporter `THOR_SERIAL` avec la série donnée par `adb devices`.
 
 ## Écrans
 

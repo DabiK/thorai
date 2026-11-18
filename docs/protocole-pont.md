@@ -59,11 +59,31 @@ Un refus ou un résultat inconnu demande une vérification, jamais un renvoi cac
 ## Le jeton
 
 - 32 octets aléatoires, écrits en hexadécimal (64 caractères).
-- Créé une seule fois par `thor/bridge/install.sh`, puis gardé.
-- Côté pont : `/home/dev/.config/regie/bridge-token` dans la Debian, en `600`. Le pont refuse de démarrer si le fichier manque ou si d'autres peuvent le lire.
-- Côté app : `files/bridge-token` dans le stockage privé de `app.regie` (`context.filesDir`), en `600`. L'installation l'y copie par `adb shell run-as app.regie`.
-- Le jeton ne passe jamais dans le dépôt, les journaux ou un stockage partagé (`/sdcard`, `/data/local/tmp`).
-- Si l'app n'était pas installée lors de l'installation : `thor/bridge/install.sh token-app` copie seulement le jeton.
+- L'app crée le secret dans `files/bridge-token` (stockage privé, 0600) avec
+  `SecureRandom`, puis le garde. Un jeton déjà copié en debug est conservé.
+- Pour configurer le pont, RUN_COMMAND lance `~/bin/regie-bridge-configure` avec
+  `com.termux.RUN_COMMAND_ARGUMENTS` (String[]) contenant seulement le nom d'une
+  socket Unix abstraite éphémère `regie-pair-<UUID>`. Le serveur Android vérifie
+  les credentials du pair fournis par le noyau (`LocalSocket.peerCredentials.uid`)
+  et n'envoie le secret qu'à l'UID du paquet Termux installé. Il ferme la socket
+  après la première connexion ; sans client, l'attente expire après 30 s.
+  Le script lit la socket avec Python dans la Debian (même UID Android que Termux).
+  Ni arguments, ni stdin de l'intent ne contiennent le jeton : la trace détaillée
+  de Termux ne peut le recopier. Aucun port TCP ni fichier partagé n'est créé.
+- Côté pont : `/home/dev/.config/regie/bridge-token` dans la Debian, en `600`.
+  Configuration sérialisée : si le secret diffère, arrêt du pont, écriture
+  atomique puis démarrage. S'il est identique, aucune session n'est interrompue.
+  Le verrou de configuration est libéré au retour de la commande : ni le
+  superviseur détaché ni l'accès Android ne l'héritent.
+  Le pont refuse toujours un fichier absent ou lisible par d'autres.
+- Tant que le WebSocket n'est pas authentifié, l'app peut redemander cette
+  configuration au premier plan, au plus une fois toutes les 30 secondes.
+  Un simple `/health` réussi ne prouve pas que les secrets correspondent.
+- Le jeton ne passe jamais dans le dépôt, les journaux ou un stockage partagé
+  (`/sdcard`, `/data/local/tmp`). Il n'est pas affiché par la commande.
+- En debug USB, `thor/bridge/install.sh token-app` peut toujours copier le jeton
+  du pont via `run-as app.regie`. En release, cette copie est ignorée ; l'app
+  configure le pont à sa prochaine ouverture.
 
 ## Trames
 
@@ -439,8 +459,9 @@ am startservice --user 0 -n com.termux/com.termux.app.RunCommandService \
 
 - Démarrer : `/data/data/com.termux/files/home/bin/regie-bridge-start`.
 - Arrêter : `/data/data/com.termux/files/home/bin/regie-bridge-stop`.
+- Configurer : `/data/data/com.termux/files/home/bin/regie-bridge-configure`, avec le nom de socket décrit ci-dessus.
 - Depuis l'app : un `Intent` avec l'action `com.termux.RUN_COMMAND`, le composant `com.termux/com.termux.app.RunCommandService`, les extras `com.termux.RUN_COMMAND_PATH` (texte) et `com.termux.RUN_COMMAND_BACKGROUND` (`true`), envoyé par `startService` (ou `startForegroundService`).
-- RUN_COMMAND coupe la sortie vers 100 Ko et ne sert qu'à démarrer et arrêter. Le suivi passe par le WebSocket.
+- RUN_COMMAND configure, démarre et arrête le pont ; sa sortie est limitée vers 100 Ko. Le suivi passe par le WebSocket.
 
 ### Ce qu'il faut accorder
 

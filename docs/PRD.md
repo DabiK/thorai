@@ -103,7 +103,7 @@ Chaque lot correspond à un ou plusieurs tickets.
 
 ## Hors périmètre de la v1
 
-- Distribuer l'app sur un store : elle s'installe en debug, avec ses scripts, sur une console préparée. Chacun y connecte ses propres comptes (ticket 23).
+- Distribuer l'app sur un store : l'APK signé est distribué par release GitHub, la console se prépare depuis Termux ou par USB (ticket 27). Chacun y connecte ses propres comptes (ticket 23).
 - Un mode conversation en temps réel avec un agent vocal.
 - Un mot d'éveil.
 - Faire les commits et les pushs depuis l'app.
