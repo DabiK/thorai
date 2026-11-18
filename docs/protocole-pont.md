@@ -73,6 +73,8 @@ Un refus ou un résultat inconnu demande une vérification, jamais un renvoi cac
 - Côté pont : `/home/dev/.config/regie/bridge-token` dans la Debian, en `600`.
   Configuration sérialisée : si le secret diffère, arrêt du pont, écriture
   atomique puis démarrage. S'il est identique, aucune session n'est interrompue.
+  Le verrou de configuration est libéré au retour de la commande : ni le
+  superviseur détaché ni l'accès Android ne l'héritent.
   Le pont refuse toujours un fichier absent ou lisible par d'autres.
 - Tant que le WebSocket n'est pas authentifié, l'app peut redemander cette
   configuration au premier plan, au plus une fois toutes les 30 secondes.

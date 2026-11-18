@@ -28,28 +28,30 @@ L'utilisateur veut publier Régie : un APK disponible en release GitHub, un proj
 ## Critères d'acceptation
 
 - [x] `./gradlew check` et `npm run check` sont verts. `./gradlew :app:assembleRelease` produit un APK signé (vérifié avec `apksigner verify`).
-- [x] Sur la Thor (release éprouvée avant disparition USB, captures 04) : l'APK de release s'installe à la place du build debug, après désinstallation si les signatures diffèrent (préviens-le dans le rapport). Le jeton s'établit par RUN_COMMAND, et Régie affiche les sessions.
+- [x] Sur la Thor (captures 04 puis 09 après correction) : l'APK de release s'installe à la place du build debug, après désinstallation si les signatures diffèrent (préviens-le dans le rapport). Le jeton s'établit par RUN_COMMAND, et Régie affiche les sessions.
+- [x] Deux configurations successives, jeton différent ou identique, ne restent pas bloquées par les processus détachés → test avec verrou noyau sur Mac et Debian, mutations des deux lancements détectées, essai release Thor.
 
 
 ## Rapport
 
 STATUT: done
-RÉSUMÉ: Distribution MIT, installeur local Termux et APK signé préparés ; aucune publication exécutée.
-La release éprouvée sur Thor établit son jeton par RUN_COMMAND et affiche les sessions réelles.
+RÉSUMÉ: Distribution MIT, installeur Termux et APK signé préparés ; aucune publication exécutée.
+Le verrou hérité est corrigé : la release Thor reconfigure son jeton et affiche les 49 sessions après plusieurs ouvertures.
 CRITÈRES:
 - [x] Appareil adb unique ou THOR_SERIAL → scripts/tests/device-test.sh et installation debug Thor.
 - [x] Connexion Claude avec entrée Debian et shell de connexion → test authentication, commandes complètes dans l'app.
 - [x] Projets neutres, MIT au nom de l'auteur des commits → diff, LICENSE, audit rg sans secret.
-- [x] Jeton release sans run-as, 0600, sans journalisation ; debug conservé → tests de domaine/adapters/scripts, preuve Thor et capture 04.
+- [x] Jeton release sans run-as, 0600, sans journalisation ; debug conservé → tests et essai RUN_COMMAND Thor, captures 04/09.
+- [x] Configuration répétable avec pont actif → configure-lock-test.py rouge puis vert, vrais verrous Mac/Debian ; deux mutations détectées.
 - [x] Installeur local idempotent → tests hors console et trois exécutions Termux sur la console préparée.
 - [x] APK signé, SHA-256 et publication préparée → release.sh --build-only, apksigner verify ; GitHub remplacé par un faux dans les tests.
-- [ ] Dernier APK physiquement réinstallé après extraction du contrôle d'UID → Thor disparue d'adb ; la release précédente éprouvée reste installée.
+- [x] Dernier APK signé réinstallé physiquement → adb install -r réussi, jeton différent réparé par l'app, réouvertures successives, capture 09.
 - [ ] Parcours complet sur Thor vierge → aucun effacement de Termux ; association et comptes à éprouver avec l'utilisateur.
-PORTE DE QUALITÉ: Android 441 tests + lint, voix 127 + lint, pont 320 + typage/lint ; check-sharing et 13 tests scripts émulateur verts.
-THOR: debug puis release signée ; désinstallation app.regie nécessaire et effectuée, préférences/modèles réinitialisés, permissions antérieures restituées ; jeton changé, 0600, 49 sessions retrouvées, aucun agent lancé. Après disparition USB, dernier code debug installé sur émulateur deux écrans avec pont Mac, connecté sans démo.
-REVIEW: diff main...HEAD relu après 9500704 ; sélection adb avec second appareil non autorisé corrigée, erreur adb propagée ; transfert par provider retiré après refus Android, contrôle UID testé par mutation ; chemin Claude rendu indépendant du PATH préexistant.
-DÉCISIONS PRISES: socket Unix éphémère et contrôle UID pour éviter les logs de Termux ; scripts partagés entre Mac et local ; versionCode déterministe, clé externe sauvegardable ; ADR 06/18/20.
-POUR L'UTILISATEUR: 1. Réactiver Mode console dans Accessibilité. 2. Reconfigurer la voix et télécharger le modèle local. 3. Réinstaller le dernier APK à reconnexion USB. 4. Suivre le pas à pas Thor vierge dans artifacts/screenshots/27/essai-thor.md. 5. Sauvegarder la clé externe avant publication.
+PORTE DE QUALITÉ: Android ./gradlew check + assembleRelease, voix ./gradlew check, pont npm run check (320 tests) verts ; signature v2 vérifiée ; check-sharing et 13 tests émulateur verts ; audit rg 0 signalement.
+THOR: dernier APK release installé sans désinstallation, données conservées. Le debug est refusé (INSTALL_FAILED_UPDATE_INCOMPATIBLE) ; aucun contournement destructif. Ancien superviseur au repos arrêté pour libérer son verrou ; jeton différent puis identique éprouvés, 0600, 49 sessions conservées, pont joignable. Aucun agent lancé ni redémarrage console. La désinstallation debug→release du passage précédent avait réinitialisé préférences/modèles.
+REVIEW: blocage reproduit ; fd 8 fermé pour le superviseur et l'accès Android. Test de configurations successives avec verrou noyau, y compris exec à jeton identique ; nettoyage des processus factices synchronisé après essai Debian. Relecture finale consignée dans revision-lock.md.
+DÉCISIONS PRISES: aucun choix produit nouveau ; ADR 06 et protocole précisent la durée du verrou et sa fermeture dans les processus détachés ; ADR 18/20 conservés.
+POUR L'UTILISATEUR: 1. Réactiver Mode console dans Accessibilité. 2. Reconfigurer la voix et télécharger son modèle. 3. Suivre les étapes 3 à 6 de artifacts/screenshots/27/essai-thor.md sur une Thor vierge. 4. Sauvegarder la clé externe avant publication.
 QUESTIONS: aucune décision produit en attente.
-CAPTURES: artifacts/screenshots/27/04-release-visible-{haut,bas}.png (Thor), 07-emulator-ready-{haut,bas}.png ; preuves dans essai-thor.md, relecture dans relecture.md.
+CAPTURES: artifacts/screenshots/27/09-lock-repaired-{haut,bas}.png ; preuves et relecture dans revision-lock.md ; campagnes précédentes dans essai-thor.md et relecture.md.
 HORS PÉRIMÈTRE: deux avertissements Biome préexistants dans bridge.test.ts ; aucun problème fonctionnel hors périmètre traité.

@@ -145,6 +145,13 @@ format, arrête le pont si le secret change, écrit atomiquement le fichier 0600
 dans la Debian puis redémarre. Un secret identique ne coupe aucune session.
 Le protocole décrit les extras exacts.
 
+Le verrou de configuration reste détenu jusqu'au retour du démarrage. Les deux
+processus détachés (superviseur et accès Android) ferment les descripteurs du
+verrou de configuration (8) et du verrou démarrage/arrêt (9) : ils ne doivent pas
+empêcher une configuration suivante de remplacer le jeton. Une régression
+hors console exécute les vrais scripts configure/start avec un verrou noyau et
+des processus factices persistants, y compris avec un secret inchangé.
+
 Le premier essai par URI privée a été retiré : même avec une permission de lecture
 accordée à Termux, Android refuse `content read` avec
 `requires android.permission.ACCESS_CONTENT_PROVIDERS_EXTERNALLY`. Aucun provider

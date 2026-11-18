@@ -173,6 +173,8 @@ physiques différés restent requis même lorsqu’un ticket est marqué fait.
 
 - **18 novembre, ticket 27, relecture après 9500704 (solo Codex)** : sélection adb corrigée pour exiger THOR_SERIAL aussi avec un second appareil non autorisé ; erreur adb non masquée, tests rouges puis verts. Protection de stdin de l'installeur, test de droits portable, assertion sans rapport et espaces des traces nettoyés. Android 441 + lint, pont 320 + typage/lint et scripts repassés verts ; dernier code debug réinstallé sur le banc deux écrans, sans agent. Release Thor éprouvée laissée intacte après disparition USB ; dernier APK physique et installation vierge restent à vérifier. Statut à fusionner maintenu ; détail `artifacts/screenshots/27/relecture.md`.
 
+- **18 novembre, ticket 27, correction du verrou après revue (solo Codex)** : descripteur 8 fermé dans les deux lancements détachés de start.sh. Régression rouge puis verte avec vrais verrous noyau sur Mac et Debian ; mutations superviseur/accès Android détectées. Trois portes de qualité, APK signé v2, check-sharing, 13 tests émulateur et audit rg verts. Dernière release installée sur Thor sans désinstallation ; ancien superviseur au repos arrêté pour libérer son verrou hérité, jeton différent puis identique reconfigurés par RUN_COMMAND, 49 sessions conservées, pont laissé joignable. Aucun agent lancé, aucune publication. ADR 06/protocole précisés ; installation vierge et gestes utilisateur restent à éprouver. Statut à fusionner, preuves `artifacts/screenshots/27/revision-lock.md`, captures 09.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |
