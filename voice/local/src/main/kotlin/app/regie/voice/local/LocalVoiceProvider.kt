@@ -7,6 +7,8 @@ import app.regie.voice.api.VoiceProvider
 import app.regie.voice.api.VoiceProviderId
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import okhttp3.OkHttpClient
@@ -45,6 +47,33 @@ class LocalVoiceProvider internal constructor(
 
     /** Bytes left to download before the provider can be used. */
     val remainingDownloadBytes: Long get() = store.remainingDownloadBytes(LocalModels.ALL)
+
+    /** Whether the transcription models (VAD and Parakeet) are installed: all a dictation needs. */
+    val speechToTextInstalled: Boolean get() = store.missing(LocalModels.SPEECH_TO_TEXT).isEmpty()
+
+    /** Bytes left to download before a dictation can start, without the synthesis model. */
+    val speechToTextDownloadBytes: Long get() = store.remainingDownloadBytes(LocalModels.SPEECH_TO_TEXT)
+
+    /** Free space the transcription models need to be downloaded and installed. */
+    val speechToTextFreeBytes: Long get() = store.requiredFreeBytes(LocalModels.SPEECH_TO_TEXT)
+
+    /**
+     * Downloads the transcription models only, then loads them, so that the first dictation starts at
+     * once (first launch of the app, ticket 28). Synthesis stays for [prepare].
+     */
+    fun prepareSpeechToText(): Flow<ProviderStatus> = channelFlow {
+        try {
+            val engines = runtime.recognition { progress -> trySend(ProviderStatus.Downloading(progress)) }
+            withContext(NonCancellable + runtime.engineDispatcher) { engines.close() }
+            send(ProviderStatus.Ready)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: VoiceException) {
+            send(ProviderStatus.Unavailable(e.error))
+        } catch (e: Exception) {
+            send(ProviderStatus.Unavailable(VoiceError.Provider("local", e.message)))
+        }
+    }
 
     /** Downloads the missing models (reporting [ProviderStatus.Downloading]), then loads them. */
     override fun prepare(): Flow<ProviderStatus> = channelFlow {
