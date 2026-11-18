@@ -1,6 +1,6 @@
 # 46 — Maison = session
 
-Statut : à fusionner
+Statut : fusionné dans ticket/40-vue-jeu
 Possède : les écrans de session, de fil, de réglages et de dictée dans `:game-ui`, et leur branchement
 Dépend de : 41
 
