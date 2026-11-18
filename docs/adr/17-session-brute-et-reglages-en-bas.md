@@ -28,7 +28,9 @@ décision (validation, fin, échec) restent, sans ajouter de résumé au fil.
   est supprimé. Le pont installé sur la Thor doit être réinstallé après fusion
   (`thor/bridge/install.sh`) ; avant cela, les agents ajoutent encore le bloc.
 - **Domaine Android** : `RegieReport.strip` masque ce bloc dans le fil, entier ou
-  inachevé pendant le flux. C'est une demande de Régie, pas une réponse de l'agent :
+  inachevé pendant le flux. Seule la forme exacte est masquée : marqueur seul sur sa
+  ligne, lignes Fait / Tests / Suite / Question, marqueur de fin seul sur sa ligne ou
+  fin du texte. Un marqueur cité ou discuté par l'agent reste. C'est une demande de Régie, pas une réponse de l'agent :
   le masquer n'est pas réécrire ses données (`docs/textes.md`). Un texte sans le
   marqueur est rendu à l'identique, octet pour octet ; une ligne faite seulement du
   bloc disparaît. L'historique d'avant le ticket est donc propre lui aussi.
@@ -38,7 +40,8 @@ décision (validation, fin, échec) restent, sans ajouter de résumé au fil.
   l'agent expose un plan ou des éditions, sans texte de remplacement. L'heure HH:mm
   de l'ADR 15 reste, mais une seule fois par minute.
 - **Notifications** : elles restent (ADR 08 et 10). Une fin de session cite la
-  dernière phrase de l'agent, sinon « Consulte le fil. », jamais un bilan.
+  dernière phrase de l'agent dans le dernier tour, sinon « Consulte le fil. », jamais
+  un bilan.
   La détection de question garde son repli sur la dernière phrase en « ? ».
 - **Gardé hors du fil** : l'ordre vocal R2 « où en est … » (ADR 11) affiche
   toujours `WrittenSummary` dans l'écran des ordres. Sans bloc, il retombe sur
@@ -75,8 +78,17 @@ décision (validation, fin, échec) restent, sans ajouter de résumé au fil.
 - Règle du domaine (`ReviewDictation`) : un **message** que l'agent a reçu (nouveau
   tour, consigne en cours de tour ou mise en attente) ferme seul la relecture et
   transmet son reçu. Un nouveau tour n'a pas d'avis, le fil le montre ; une consigne
-  en cours ou en attente le dit brièvement en bas. Un envoi incertain, un échec, un
-  refus avec consigne ou un commentaire de modifications gardent leur avis jusqu'à B.
+  en cours ou en attente le dit brièvement en bas. Hors de sa session (dictée depuis
+  l'accueil), seul un nouveau tour ferme : une consigne en cours ou en attente garde
+  son avis jusqu'à B. Un envoi incertain, un échec, un refus avec consigne ou un
+  commentaire de modifications gardent aussi leur avis jusqu'à B.
+- La fermeture seule fait le même ménage que B (gâchettes tenues, défilement de la
+  transcription). Un second A dans les 500 ms qui suivent est ignoré : il ne doit pas
+  autoriser une validation arrivée pendant la relecture. Les réglages ne s'ouvrent pas
+  pendant une dictée ou un ordre ; la carte de validation du fil garde ses touchers
+  sans puces A/X/B pendant la dictée (même règle que pour les options, ADR 15).
+- Le rejeu WAV de debug (`--es voice_wav`) ne sert qu'à la capture suivante : un
+  essai laissé actif renvoyait sa phrase à chaque dictée de l'utilisateur.
 
 ### Accueil en liste
 
@@ -98,6 +110,10 @@ décision (validation, fin, échec) restent, sans ajouter de résumé au fil.
   reçu transmis. Tests Compose mis à jour : fil brut, table générique, touches B X L2
   Start, dictée en bas, liste et défilement au focus. Pont : consigne transmise telle
   quelle.
+- Relecture indépendante après commit : neuf remarques, toutes corrigées avec
+  régression (L2 resté tenu sur l'accueil, réglages invisibles sous la dictée, puces de
+  la carte, avis perdu hors session, marqueur cité masqué, notification du tour
+  précédent, destinataire en un écran, second A, défilement pendant « Quitter »).
 - Thor, vrai Codex : bloc présent dans le journal du pont encore ancien, absent du
   fil ; réflexion changée et confirmée depuis le bas ; L2 au contrôleur (`sendevent`)
   avec un WAV rejoué : haut inchangé, transcription en bas, A puis retour seul à la
