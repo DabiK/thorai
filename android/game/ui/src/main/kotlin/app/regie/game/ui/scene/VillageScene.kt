@@ -21,6 +21,7 @@ import app.regie.game.ui.render.WorldProjection
 import app.regie.game.ui.render.fallbacks
 import app.regie.game.ui.theme.Game
 import app.regie.game.ui.theme.GameScale
+import app.regie.game.ui.village.houseStates
 
 /**
  * La scène du hameau : le monde ([PixelWorld]), le coursier qui glisse d'une tuile à l'autre, la
@@ -46,15 +47,17 @@ fun VillageScene(
 ) {
     val village = state.village
     val fallbacks = remember(village) { village.fallbacks() }
+    // Fenêtres, fumée et lumière des portes selon l'état de chaque session (ticket 52).
+    val states = remember(village) { village.houseStates() }
     val look = remember(assets) { CourierLook(assets) }
-    val occluders = remember(village.world.objects, assets, fallbacks) { occludersOf(village.world.objects, assets, fallbacks) }
+    val occluders = remember(village.world.objects, assets, fallbacks, states) { occludersOf(village.world.objects, assets, fallbacks, states) }
     val enter by rememberUpdatedState(onEnterHouse)
     LaunchedEffect(state) { state.runFrames() }
 
     val focus = remember(state) { { state.cameraFocus } }
     val outline = Color(assets.palette.outline)
     val fallbackColor = Game.colors.focus
-    PixelWorld(village.world, assets, focus, modifier.fillMaxSize(), fallbacks = fallbacks, scale = scale, clock = clock) { projection ->
+    PixelWorld(village.world, assets, focus, modifier.fillMaxSize(), fallbacks = fallbacks, scale = scale, clock = clock, states = states) { projection ->
         Canvas(Modifier.fillMaxSize()) {
             // La même caméra que PixelWorld, calculée sans allouer.
             val viewWidth = (size.width.toInt() + scale - 1) / scale

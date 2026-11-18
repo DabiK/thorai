@@ -17,8 +17,10 @@ import app.regie.game.ui.atlas.AtlasAnim
 import app.regie.game.ui.atlas.Footprint
 import app.regie.game.ui.atlas.GameAssets
 import app.regie.game.ui.atlas.ResolvedSprite
+import app.regie.game.ui.kit.TagState
 import app.regie.game.ui.render.Fallback
 import app.regie.game.ui.render.FallbackKind
+import app.regie.game.ui.render.HouseEffects
 import app.regie.game.ui.render.PlaceholderPainter
 import app.regie.game.ui.render.PlaceholderSprite
 import app.regie.game.ui.render.WorldLayout
@@ -83,9 +85,16 @@ internal class Occluder(
     val still: ResolvedSprite?,
     val placeholder: ImageBitmap?,
     val placeholderSprite: PlaceholderSprite?,
+    /** Une maison telle que [app.regie.game.ui.render.PixelWorld] la peint selon son état (fenêtres), ou `null`. */
+    val house: ImageBitmap? = null,
 )
 
-internal fun occludersOf(objects: List<Placed>, assets: GameAssets, fallbacks: Map<Placed, Fallback>): List<Occluder> =
+internal fun occludersOf(
+    objects: List<Placed>,
+    assets: GameAssets,
+    fallbacks: Map<Placed, Fallback>,
+    states: Map<Placed, TagState> = emptyMap(),
+): List<Occluder> =
     WorldLayout.drawOrder(objects, emptyList()) { placed ->
         assets.objectSpec(placed.objectId)?.footprint ?: fallbacks[placed]?.footprint ?: Footprint(1, 1)
     }.map { item ->
@@ -104,9 +113,13 @@ internal fun occludersOf(objects: List<Placed>, assets: GameAssets, fallbacks: M
             val left = item.foot.x - f.ax / pixel
             val top = item.foot.y - f.ay / pixel
             val animated = assets.isAnimated(item.id)
+            val house = item.placed?.takeIf { it in states }?.let { placed ->
+                val windows = assets.objectSpec(item.id)?.windows.orEmpty()
+                resolved.atlas.house(resolved.frameId, resolved.roofKeys, item.roof, windows, HouseEffects.light(states[placed]))
+            }
             Occluder(
                 item.foot.x, item.foot.y, left, top, left + f.w / pixel, top + f.h / pixel,
-                item.id, item.roof, if (animated) null else resolved, null, null,
+                item.id, item.roof, if (animated) null else resolved, null, null, house,
             )
         }
     }
@@ -189,7 +202,9 @@ private fun DrawScope.drawOccluder(o: Occluder, assets: GameAssets, originX: Int
     val f = sprite.frame
     val dstOffset = IntOffset((o.footX - f.ax / pixel - originX) * scale, (o.footY - f.ay / pixel - originY) * scale)
     val dstSize = IntSize(f.w * scale / pixel, f.h * scale / pixel)
-    if (o.roof != null && sprite.roofKeys.isNotEmpty()) {
+    if (o.house != null) {
+        drawImage(o.house, dstOffset = dstOffset, dstSize = dstSize, filterQuality = FilterQuality.None)
+    } else if (o.roof != null && sprite.roofKeys.isNotEmpty()) {
         drawImage(sprite.atlas.recoloured(sprite.frameId, sprite.roofKeys, o.roof), dstOffset = dstOffset, dstSize = dstSize, filterQuality = FilterQuality.None)
     } else {
         drawImage(

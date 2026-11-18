@@ -10,6 +10,8 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import app.regie.game.engine.village.HouseCatalog
 import app.regie.game.engine.village.HouseModel
+import app.regie.game.engine.village.PixelPoint
+import app.regie.game.engine.village.PixelRect
 import app.regie.game.engine.world.RoofColors
 import app.regie.game.ui.render.GroundPalette
 import kotlinx.coroutines.Dispatchers
@@ -20,10 +22,14 @@ import java.util.concurrent.ConcurrentHashMap
 import java.io.IOException
 import java.io.InputStream
 
-/** Un atlas chargé : sa description et son image. Les toits recolorés sont gardés en cache. */
+/** Un atlas chargé : sa description et son image. Les images recolorées sont gardées en cache. */
 class Atlas(val name: String, val spec: AtlasSpec, private val bitmap: Bitmap) {
     val image: ImageBitmap = bitmap.asImageBitmap()
     private val recoloured = HashMap<Pair<String, RoofColors>, ImageBitmap>()
+    private val houses = HashMap<HouseKey, ImageBitmap>()
+    private val mapped = HashMap<Pair<String, Map<Int, Int>>, ImageBitmap>()
+
+    private data class HouseKey(val frameId: String, val roof: RoofColors?, val light: WindowLight)
 
     init {
         spec.frames.forEach { (id, f) ->
@@ -34,13 +40,52 @@ class Atlas(val name: String, val spec: AtlasSpec, private val bitmap: Bitmap) {
     }
 
     /** L'image [frameId] seule, toit repeint aux couleurs [roof]. Calculée une fois par couple. */
-    fun recoloured(frameId: String, keys: List<Int>, roof: RoofColors): ImageBitmap =
+    fun recoloured(frameId: String, keys: List<Int>, roof: RoofColors): ImageBitmap = synchronized(recoloured) {
         recoloured.getOrPut(frameId to roof) {
             val f = spec.frames.getValue(frameId)
-            val pixels = IntArray(f.w * f.h)
-            bitmap.getPixels(pixels, 0, f.w, f.x, f.y, f.w, f.h)
-            Bitmap.createBitmap(Recolor.roof(pixels, keys, roof), f.w, f.h, Bitmap.Config.ARGB_8888).asImageBitmap()
+            Bitmap.createBitmap(Recolor.roof(pixels(f), keys, roof), f.w, f.h, Bitmap.Config.ARGB_8888).asImageBitmap()
         }
+    }
+
+    /**
+     * L'image [frameId] d'une maison : toit aux couleurs [roof] (si l'objet a des [keys]) et vitres de
+     * [windows] selon [light]. Calculée une fois par triplet (image, toit, lumière).
+     */
+    fun house(frameId: String, keys: List<Int>, roof: RoofColors?, windows: List<PixelRect>, light: WindowLight): ImageBitmap {
+        if (light == WindowLight.LIT || windows.isEmpty()) {
+            return if (roof != null && keys.isNotEmpty()) recoloured(frameId, keys, roof) else mapped(frameId, emptyMap())
+        }
+        return synchronized(houses) {
+            houses.getOrPut(HouseKey(frameId, roof, light)) {
+                val f = spec.frames.getValue(frameId)
+                val pixels = pixels(f)
+                val painted = if (roof != null && keys.isNotEmpty()) Recolor.roof(pixels, keys, roof) else pixels
+                Recolor.windows(painted, f.w, windows, light)
+                Bitmap.createBitmap(painted, f.w, f.h, Bitmap.Config.ARGB_8888).asImageBitmap()
+            }
+        }
+    }
+
+    /** L'image [frameId] seule, couleurs remplacées selon [mapping] (une bulle d'état ambre…). */
+    fun mapped(frameId: String, mapping: Map<Int, Int>): ImageBitmap = synchronized(mapped) {
+        mapped.getOrPut(frameId to mapping) {
+            val f = spec.frames.getValue(frameId)
+            Bitmap.createBitmap(Recolor.colours(pixels(f), mapping), f.w, f.h, Bitmap.Config.ARGB_8888).asImageBitmap()
+        }
+    }
+
+    /** La première rangée opaque de la colonne [column] de l'image [frameId] (le haut du toit), ou `null`. */
+    fun columnTop(frameId: String, column: Int): Int? {
+        val f = spec.frames[frameId] ?: return null
+        if (column !in 0 until f.w) return null
+        return (0 until f.h).firstOrNull { y -> (bitmap.getPixel(f.x + column, f.y + y) ushr 24) != 0 }
+    }
+
+    private fun pixels(f: AtlasFrame): IntArray {
+        val pixels = IntArray(f.w * f.h)
+        bitmap.getPixels(pixels, 0, f.w, f.x, f.y, f.w, f.h)
+        return pixels
+    }
 
     /** Nombre de toits recolorés en cache (pour les tests). */
     internal val cacheSize: Int get() = recoloured.size
@@ -54,6 +99,17 @@ class ResolvedSprite(
     val footprint: Footprint,
     val roofKeys: List<Int>,
 )
+
+/** Les images d'une animation, chacune [ms] millisecondes, en boucle. */
+class ResolvedAnimation(val frames: List<ResolvedSprite>, val ms: Int) {
+    init {
+        require(frames.isNotEmpty() && ms > 0)
+    }
+
+    /** L'image au temps [timeMillis], décalé de [phase] ; sans allocation. */
+    fun at(timeMillis: Long, phase: Long = 0): ResolvedSprite =
+        if (frames.size == 1) frames[0] else frames[(Math.floorMod(timeMillis + phase, ms.toLong() * frames.size) / ms).toInt()]
+}
 
 /**
  * Les assets du jeu : la palette du sol et les atlas présents. Un atlas absent ou invalide est
@@ -76,6 +132,24 @@ class GameAssets(
             val frameId = spec.anims[ref]?.frameAt(timeMillis) ?: ref
             val frame = spec.frames[frameId] ?: continue
             return ResolvedSprite(atlas, frameId, frame, obj?.footprint ?: Footprint(1, 1), obj?.roofKeys.orEmpty())
+        }
+        return null
+    }
+
+    /**
+     * Toutes les images de [id] résolues d'avance, pour dessiner une animation sans rien allouer à
+     * chaque image ; une image fixe donne une animation d'une seule image. `null` si [id] est inconnu.
+     */
+    fun animation(id: String): ResolvedAnimation? {
+        for (atlas in atlases) {
+            val spec = atlas.spec
+            val obj = spec.objects[id]
+            val ref = obj?.frame ?: id
+            val names = spec.anims[ref]?.frames ?: listOf(ref)
+            if (names.any { it !in spec.frames }) continue
+            val footprint = obj?.footprint ?: Footprint(1, 1)
+            val frames = names.map { ResolvedSprite(atlas, it, spec.frames.getValue(it), footprint, obj?.roofKeys.orEmpty()) }
+            return ResolvedAnimation(frames, spec.anims[ref]?.ms ?: Int.MAX_VALUE)
         }
         return null
     }
@@ -170,15 +244,24 @@ fun rememberGameAssets(directory: String = GameAssetLoader.DIRECTORY): GameAsset
 
 /**
  * Les modèles de maison de l'atlas `maisons` (objets `maison.*`), pour le générateur du hameau :
- * empreinte et porte viennent de l'atlas. `null` si l'atlas n'en donne aucun de valide.
- * La cheminée et les fenêtres (en pixels de l'image dans l'atlas) restent au ticket 52.
+ * empreinte, porte, cheminée et fenêtres viennent de l'atlas. `null` si l'atlas n'en donne aucun de valide.
+ * La cheminée et les fenêtres, données dans l'atlas depuis le coin de l'image, passent au repère de
+ * [HouseModel] : le coin haut gauche de l'empreinte.
  */
 fun GameAssets.houseCatalog(): HouseCatalog? {
     val models = atlases.flatMap { atlas ->
         atlas.spec.objects.filterKeys { it.startsWith("maison.") }.mapNotNull { (id, house) ->
             val door = house.door ?: return@mapNotNull null
+            val frame = atlas.spec.frames[house.frame] ?: return@mapNotNull null
+            // Le coin de l'image, depuis le coin haut gauche de l'empreinte (ancre au milieu de la dernière rangée).
+            val dx = house.footprint.w * HOUSE_TILE / 2 - frame.ax
+            val dy = house.footprint.h * HOUSE_TILE - 1 - frame.ay
             try {
-                HouseModel(id, house.footprint.w, house.footprint.h, door.x, door.y)
+                HouseModel(
+                    id, house.footprint.w, house.footprint.h, door.x, door.y,
+                    chimney = house.chimney?.let { PixelPoint(it.x + dx, it.y + dy) },
+                    windows = house.windows.map { PixelRect(it.x + dx, it.y + dy, it.width, it.height) },
+                )
             } catch (_: IllegalArgumentException) {
                 null
             }
@@ -186,3 +269,5 @@ fun GameAssets.houseCatalog(): HouseCatalog? {
     }.distinctBy { it.id }
     return if (models.isEmpty()) null else HouseCatalog(models)
 }
+
+private const val HOUSE_TILE = 16
