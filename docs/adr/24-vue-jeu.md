@@ -199,6 +199,36 @@ garder le routeur d'entrées de la manette (ADR 05) et se tester sans console.
   proche (`Village.nearestHouse`, sans limite). C'est la ligne choisie du carnet et le `selected` de
   `VillageOverlay`. Retour sur la vue d'ensemble : `leaveHouse`, le coursier ressort devant la porte.
 
+### Le parcours d'accueil (ticket 53)
+
+- **Même parcours, autre décor.** Les étapes, les vérifications, les actions de A, B, X et Y et leur
+  routage restent ceux de l'ADR 23 (`SetupReview.keys`, `ReviewSetup.press`, `AppContainer`). Seul le
+  point de branchement de `GamepadActivity` change : `GameSetupScreen` (`:game-ui`, `setup/`) à la
+  place de `SetupScreen`, gardé pour le ticket 51. Une permission n'est jamais accordée par l'écran :
+  il ne fait que transmettre l'action, et c'est Android qui demande.
+- **La route du hameau** (`ArrivalRoad`, moteur, Kotlin pur) : une route qui part du bord gauche,
+  un panneau par étape, puis la place et deux maisons. Le coursier entre par la gauche, marche au pas
+  du hameau (`CourierController.STEP_MILLIS` par tuile) jusqu'au panneau de l'étape et le lit ; sa
+  position est lue au dessin, avec `CourierLook` et `drawCourier` du ticket 44. Une case au-dessus
+  de chaque autre panneau dit où on en est, comme le journal de quête : verte, prête ; ambre qui
+  clignote, l'étape affichée ; vide, à faire. Le panneau de l'étape porte son nom, « Étape n sur 9 »
+  et son état (« ! À faire » en ambre qui sautille, ou « Prête »). Les habitants des agents annoncés
+  par le pont attendent près du panneau des comptes, contents s'ils sont connectés.
+- **En haut**, l'explication tient dans un grand cadre posé sur la scène (commandes à droite quand
+  l'étape en a) ; la caméra cadre le panneau et le coursier dans ce que le cadre laisse voir
+  (`clearPx`), et la carte est assez haute pour que la caméra ne bute pas sur son bord. Le stick droit
+  fait défiler l'explication, comme avant. **En bas**, le carnet : avancement (compteur et une case
+  par étape), état vérifié, l'action de A dans un grand cadre, puis B, X et Y dans la barre des
+  touches ; « Reprendre plus tard » se touche dans l'en-tête. **Un seul écran** : la route en bandeau,
+  l'explication à gauche, l'état et A à droite, la barre en bas.
+- **« Préparer la console »** devient une entrée du menu de pause (`MenuEntry.SETUP`) : il rouvre le
+  parcours à la première étape non faite et ferme le menu. Son détail signale une étape facultative
+  restante, comme le point ambre de « Configurer » sur l'accueil classique.
+- **Textes** : ceux du parcours classique (`strings_setup.xml`). Deux renvois changent : Y sur la fin
+  dit « Terminer » (on arrive au titre ou au hameau, plus à l'accueil), et la note de fin renvoie à
+  « Start › Préparer la console ».
+
+
 ## Conséquences
 
 - Les lots suivants dessinent avec `PixelWorld` et le kit, sans nouvelle dépendance.

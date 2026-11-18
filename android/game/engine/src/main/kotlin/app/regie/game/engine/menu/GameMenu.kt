@@ -20,6 +20,9 @@ enum class MenuEntry {
     /** Les réglages de la voix. */
     SETTINGS,
 
+    /** Le parcours d'accueil (ticket 28), rouvert à la première étape qui n'est pas faite. */
+    SETUP,
+
     /** Mettre toutes les sessions en pause (PRD, Start sur la vue d'ensemble). */
     PAUSE_ALL,
 
@@ -33,7 +36,7 @@ enum class MenuKind(val entries: List<MenuEntry>) {
     TITLE(listOf(MenuEntry.CONTINUE, MenuEntry.NEW_SESSION, MenuEntry.AGENTS, MenuEntry.SETTINGS, MenuEntry.QUIT)),
 
     /** Le menu de pause, ouvert par Start sur le hameau. */
-    PAUSE(listOf(MenuEntry.COURIER, MenuEntry.AGENTS, MenuEntry.SETTINGS, MenuEntry.PAUSE_ALL, MenuEntry.QUIT)),
+    PAUSE(listOf(MenuEntry.COURIER, MenuEntry.AGENTS, MenuEntry.SETTINGS, MenuEntry.SETUP, MenuEntry.PAUSE_ALL, MenuEntry.QUIT)),
 }
 
 /** Ce que l'app doit faire après une touche. */
@@ -83,7 +86,8 @@ data class GameMenu(
     }
 
     private fun choose(entry: MenuEntry): MenuStep = when (entry) {
-        MenuEntry.CONTINUE, MenuEntry.NEW_SESSION, MenuEntry.PAUSE_ALL -> MenuStep(CLOSED, MenuOutcome.Choose(entry))
+        // Le parcours d'accueil mène au hameau ou à la première session : le menu ne l'attend pas.
+        MenuEntry.CONTINUE, MenuEntry.NEW_SESSION, MenuEntry.PAUSE_ALL, MenuEntry.SETUP -> MenuStep(CLOSED, MenuOutcome.Choose(entry))
         MenuEntry.COURIER -> MenuStep(copy(courierOpen = true, letter = 0), MenuOutcome.Choose(entry))
         MenuEntry.AGENTS, MenuEntry.SETTINGS, MenuEntry.QUIT -> MenuStep(this, MenuOutcome.Choose(entry))
     }

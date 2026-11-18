@@ -19,9 +19,9 @@ class GameMenuTest {
     }
 
     @Test
-    fun `the pause menu keeps pausing everything, the courier, the agents and quitting`() {
+    fun `the pause menu keeps pausing everything, the courier, the agents, the setup and quitting`() {
         assertEquals(
-            listOf(MenuEntry.COURIER, MenuEntry.AGENTS, MenuEntry.SETTINGS, MenuEntry.PAUSE_ALL, MenuEntry.QUIT),
+            listOf(MenuEntry.COURIER, MenuEntry.AGENTS, MenuEntry.SETTINGS, MenuEntry.SETUP, MenuEntry.PAUSE_ALL, MenuEntry.QUIT),
             GameMenu.pause().entries,
         )
     }
@@ -73,9 +73,17 @@ class GameMenuTest {
 
     @Test
     fun `pausing everything is chosen with A and closes the menu`() {
-        val step = GameMenu.pause().pressAll(MenuKey.DOWN, MenuKey.DOWN, MenuKey.DOWN, MenuKey.A)
+        val step = GameMenu.pause().pressAll(*Array(4) { MenuKey.DOWN }, MenuKey.A)
         assertFalse(step.menu.open)
         assertEquals(MenuOutcome.Choose(MenuEntry.PAUSE_ALL), step.outcome)
+    }
+
+    @Test
+    fun `Préparer la console in the pause menu reopens the setup and closes the menu`() {
+        val step = GameMenu.pause().pressAll(*Array(3) { MenuKey.DOWN }, MenuKey.A)
+        assertFalse(step.menu.open)
+        assertEquals(MenuOutcome.Choose(MenuEntry.SETUP), step.outcome)
+        assertFalse(MenuEntry.SETUP in GameMenu.title().entries, "le titre reste court ; le parcours s'ouvre seul au premier lancement")
     }
 
     @Test

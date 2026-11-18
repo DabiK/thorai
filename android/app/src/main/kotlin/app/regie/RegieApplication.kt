@@ -198,6 +198,8 @@ class AppContainer(
                 MenuEntry.NEW_SESSION -> openNewSession()
                 MenuEntry.AGENTS -> openAgentAuthentication()
                 MenuEntry.SETTINGS -> openVoiceSettings()
+                // « Préparer la console » (ticket 53) : l'ancien « Configurer » de l'accueil.
+                MenuEntry.SETUP -> openSetup()
                 MenuEntry.PAUSE_ALL -> dispatch(OverviewAction.PauseAll)
                 MenuEntry.QUIT -> controller.requestQuit()
             }

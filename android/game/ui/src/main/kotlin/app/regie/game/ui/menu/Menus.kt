@@ -65,14 +65,18 @@ internal fun entryLabel(entry: MenuEntry): String = stringResource(
         MenuEntry.COURIER -> R.string.game_menu_courier
         MenuEntry.AGENTS -> R.string.game_menu_agents
         MenuEntry.SETTINGS -> R.string.game_menu_settings
+        MenuEntry.SETUP -> R.string.game_menu_setup
         MenuEntry.PAUSE_ALL -> R.string.game_menu_pause_all
         MenuEntry.QUIT -> R.string.game_menu_quit
     },
 )
 
-/** Le détail d'une entrée, tiré de ce que le domaine expose : sessions, validations, agents. */
+/**
+ * Le détail d'une entrée, tiré de ce que le domaine expose : sessions, validations, agents.
+ * [setupLeft] : une étape facultative du parcours d'accueil reste à faire (le point ambre de l'accueil).
+ */
 @Composable
-private fun entryDetail(entry: MenuEntry, overview: Overview, unread: Int): String? = when (entry) {
+private fun entryDetail(entry: MenuEntry, overview: Overview, unread: Int, setupLeft: Boolean = false): String? = when (entry) {
     MenuEntry.CONTINUE -> {
         val sessions = overview.sessions.size
         val approvals = overview.sessions.count { it.pendingApproval != null }
@@ -90,6 +94,7 @@ private fun entryDetail(entry: MenuEntry, overview: Overview, unread: Int): Stri
         pluralStringResource(R.plurals.game_menu_agents_connected, connected, connected, agents.size)
     }
     MenuEntry.SETTINGS -> stringResource(R.string.game_menu_settings_detail)
+    MenuEntry.SETUP -> if (setupLeft) stringResource(R.string.game_menu_setup_left) else null
     MenuEntry.PAUSE_ALL -> overview.busyCount.let { busy ->
         if (busy == 0) stringResource(R.string.game_menu_nothing_to_pause) else pluralStringResource(R.plurals.game_menu_busy, busy, busy)
     }
@@ -97,8 +102,8 @@ private fun entryDetail(entry: MenuEntry, overview: Overview, unread: Int): Stri
 }
 
 @Composable
-private fun choices(menu: GameMenu, overview: Overview, unread: Int, details: Boolean = true): List<Choice> =
-    menu.entries.map { Choice(entryLabel(it), detail = if (details) entryDetail(it, overview, unread) else null) }
+private fun choices(menu: GameMenu, overview: Overview, unread: Int, details: Boolean = true, setupLeft: Boolean = false): List<Choice> =
+    menu.entries.map { Choice(entryLabel(it), detail = if (details) entryDetail(it, overview, unread, setupLeft) else null) }
 
 /** L'état du pont, en une pastille. */
 @Composable
@@ -216,6 +221,7 @@ fun PauseMenuTop(
     modifier: Modifier = Modifier,
     quit: QuitPrompt? = null,
     callbacks: MenuCallbacks = MenuCallbacks(),
+    setupLeft: Boolean = false,
 ) {
     val metrics = Game.metrics
     Box(modifier.fillMaxSize().testTag("game-pause-menu")) {
@@ -238,7 +244,7 @@ fun PauseMenuTop(
                     contentPadding = PaddingValues(horizontal = metrics.dp(40), vertical = metrics.dp(32)),
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(metrics.dp(18))) {
-                        PausePage(menu, overview, courier, voice, now, assets)
+                        PausePage(menu, overview, courier, voice, now, assets, setupLeft)
                     }
                 }
             }
@@ -250,7 +256,7 @@ fun PauseMenuTop(
 
 /** Ce que montre l'entrée choisie, dans le grand cadre du menu de pause. */
 @Composable
-private fun PausePage(menu: GameMenu, overview: Overview, courier: Courier, voice: VoiceSettings, now: Instant, assets: GameAssets) {
+private fun PausePage(menu: GameMenu, overview: Overview, courier: Courier, voice: VoiceSettings, now: Instant, assets: GameAssets, setupLeft: Boolean) {
     val entry = if (menu.courierOpen) MenuEntry.COURIER else menu.current ?: return
     val colors = Game.colors
     BasicText(entryLabel(entry), style = GameText.display(64))
@@ -265,6 +271,10 @@ private fun PausePage(menu: GameMenu, overview: Overview, courier: Courier, voic
             BasicText(stringResource(if (voice.provider == DictationProvider.LOCAL) R.string.game_voice_local else R.string.game_voice_cloud), style = GameText.body(34, weight = 600))
             BasicText(stringResource(if (voice.keyConfigured) R.string.game_voice_key_saved else R.string.game_voice_key_missing), style = GameText.body(28, colors.muted))
             BasicText(stringResource(if (voice.commandKeyConfigured) R.string.game_voice_mistral_saved else R.string.game_voice_mistral_missing), style = GameText.body(28, colors.muted))
+        }
+        MenuEntry.SETUP -> {
+            BasicText(stringResource(R.string.game_menu_setup_page), style = GameText.body(30))
+            if (setupLeft) BasicText(stringResource(R.string.game_menu_setup_page_left), style = GameText.body(28, colors.alertLine))
         }
         MenuEntry.PAUSE_ALL -> {
             BasicText(entryDetail(entry, overview, 0).orEmpty(), style = GameText.body(30, colors.muted))
@@ -305,6 +315,7 @@ fun PauseMenuBottom(
     modifier: Modifier = Modifier,
     quit: QuitPrompt? = null,
     callbacks: MenuCallbacks = MenuCallbacks(),
+    setupLeft: Boolean = false,
 ) {
     val metrics = Game.metrics
     Box(modifier.fillMaxSize()) {
@@ -312,7 +323,7 @@ fun PauseMenuBottom(
             CourierScreen(courier, menu.letter, now, assets, pauseHints(menu, callbacks), onTap = callbacks.onOpenLetter)
         } else {
             PaperScreen(stringResource(R.string.game_menu_title), pauseHints(menu, callbacks), Modifier.testTag("game-pause-bottom"), headEnd = { BridgePill(overview.bridge) }) {
-                MenuList(choices(menu, overview, courier.unread), menu.selected, Modifier.fillMaxWidth(), onTap = callbacks.onChoose)
+                MenuList(choices(menu, overview, courier.unread, setupLeft = setupLeft), menu.selected, Modifier.fillMaxWidth(), onTap = callbacks.onChoose)
             }
         }
         quit?.let { QuitDialog(it, callbacks, Modifier.align(Alignment.BottomCenter).padding(bottom = metrics.dp(120))) }
