@@ -54,9 +54,14 @@ data class DecorCatalog(
     /** Le poteau indicateur du carrefour sous la place. */
     val signpost: String = "panneau.fleches",
     val lowLantern: String = "lanterne.basse",
+    /** Le chantier en quatre étapes (ticket 48) : terrain piqueté, fondations, charpente, maison finie. */
+    val sites: List<String> = listOf("chantier.0", "chantier.1", "chantier.2", "chantier.3"),
+    /** La clôture de piquets d'un terrain libre (ticket 48). */
+    val plotFence: PlotFence = PlotFence(),
     val sizes: Map<String, DecorSize> = DEFAULT_SIZES,
 ) {
     init {
+        require(sites.size == ConstructionStage.entries.size) { "Un chantier a ${ConstructionStage.entries.size} étapes" }
         require(trees.isNotEmpty() && bushes.isNotEmpty() && flowers.isNotEmpty() && rocks.isNotEmpty())
         require(saplings.isNotEmpty() && floweringBushes.isNotEmpty() && grasses.isNotEmpty())
         require(props.isNotEmpty() && wideProps.isNotEmpty() && fieldProps.isNotEmpty())
@@ -72,7 +77,8 @@ data class DecorCatalog(
     val all: List<String>
         get() = (
             trees + bushes + flowers + rocks + saplings + floweringBushes + grasses + props + wideProps + fieldProps +
-                listOf(fence, fountain, bench, lantern, sign, fenceStart, fenceEnd, fencePost, gardenBench, well, signpost, lowLantern)
+                listOf(fence, fountain, bench, lantern, sign, fenceStart, fenceEnd, fencePost, gardenBench, well, signpost, lowLantern) +
+                sites + plotFence.all
             ).distinct()
 
     companion object {
@@ -87,8 +93,30 @@ data class DecorCatalog(
             "souche" to DecorSize(2, 1),
             "rondin" to DecorSize(2, 1),
             "rocher.gros" to DecorSize(2, 1),
+            "chantier.0" to DecorSize(6, 4),
+            "chantier.1" to DecorSize(6, 4),
+            "chantier.2" to DecorSize(6, 4),
+            "chantier.3" to DecorSize(6, 4),
         )
 
         val DEFAULT = DecorCatalog()
     }
+}
+
+/**
+ * Les morceaux de clôture qui piquettent un terrain libre, nommés comme dans l'atlas par leurs voisines
+ * (`n`, `e`, `s`, `o`) : quatre coins, les côtés, et les deux bouts qui laissent l'entrée ouverte au sud.
+ */
+data class PlotFence(
+    val topLeft: String = "cloture.es",
+    val topRight: String = "cloture.so",
+    val bottomLeft: String = "cloture.ne",
+    val bottomRight: String = "cloture.no",
+    val horizontal: String = "cloture.eo",
+    val vertical: String = "cloture.ns",
+    /** À gauche de l'entrée (une voisine à l'ouest), à droite (une voisine à l'est). */
+    val gateLeft: String = "cloture.o",
+    val gateRight: String = "cloture.e",
+) {
+    val all: List<String> get() = listOf(topLeft, topRight, bottomLeft, bottomRight, horizontal, vertical, gateLeft, gateRight)
 }

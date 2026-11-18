@@ -17,6 +17,7 @@ import app.regie.game.engine.world.World
  * - [spawn] : la tuile d'arrivée du coursier, devant la fontaine.
  * - [houses] : rangées par rue puis par terrain.
  * - [decorations] : tout objet posé hors maisons, avec son empreinte ; aussi présents dans `world.objects`.
+ * - [site] : le chantier d'une nouvelle session (ticket 48), s'il y en a un.
  */
 data class Village(
     val world: World,
@@ -26,9 +27,14 @@ data class Village(
     val streets: List<Street>,
     val houses: List<House>,
     val decorations: List<Decoration>,
+    val site: Site? = null,
 ) {
-    /** Les terrains sans maison, rue par rue. */
-    val freePlots: List<Plot> get() = streets.flatMap { street -> street.plots.filter { it.sessionId == null } }
+    /** Les terrains sans maison ni chantier, rue par rue. */
+    val freePlots: List<Plot> get() = streets.flatMap { street -> street.plots.filter { it.sessionId == null && !it.reserved } }
+
+    /** La maison est encore un chantier : on la dessine en travaux, sans bulle ni jardin. */
+    fun isUnderConstruction(house: House): Boolean =
+        site != null && site.session == house.session.id && site.stage != null && site.stage != ConstructionStage.FINISHED
 
     fun houseOf(id: SessionId): House? = houses.firstOrNull { it.session.id == id }
 
@@ -103,7 +109,8 @@ data class Street(
 
 /**
  * Un terrain : [area] couvre la maison et son jardin, [entry] est la tuile devant, au bord de la route.
- * [sessionId] est `null` pour un terrain libre.
+ * [sessionId] est `null` pour un terrain libre ; [reserved] : le terrain est retenu pour un chantier
+ * dont la session n'est pas encore placée.
  */
 data class Plot(
     val street: Int,
@@ -111,6 +118,30 @@ data class Plot(
     val area: TileRect,
     val entry: TilePos,
     val sessionId: SessionId?,
+    val reserved: Boolean = false,
+)
+
+/**
+ * Le chantier d'une nouvelle session, sur le terrain [plot] de la rue [street] (celle de [project]).
+ *
+ * - [stage] : `null` pendant la fiche, quand le terrain n'est que visé ; sinon l'étape à dessiner.
+ * - [footprint] : la place du chantier, au milieu du terrain ; [entry] : la tuile devant, au bord de la route.
+ * - [session] : la session, dès que le pont l'a créée ; sa maison est alors dans [Village.houses].
+ * - [opensStreet] : un nouveau projet, dont la rue s'ouvre avec ce chantier.
+ * - [placed] : l'objet dessiné (atlas `decor`, `chantier.*`), `null` sans travaux ou une fois la maison finie.
+ */
+data class Site(
+    val project: String,
+    val street: Int,
+    val plot: Int,
+    val area: TileRect,
+    val footprint: TileRect,
+    val entry: TilePos,
+    val stage: ConstructionStage?,
+    val session: SessionId?,
+    val opensStreet: Boolean,
+    val failed: Boolean,
+    val placed: Placed?,
 )
 
 /**

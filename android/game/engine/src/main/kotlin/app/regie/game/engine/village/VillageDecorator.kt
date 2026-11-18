@@ -16,6 +16,8 @@ internal class DecorPlan(
     val avenue: TileRect?,
     val trail: TileRect?,
     val water: IntRange,
+    /** Les terrains libres, piquetés (ticket 48). */
+    val freePlots: List<TileRect> = emptyList(),
 )
 
 /**
@@ -39,6 +41,7 @@ internal class VillageDecorator(private val decor: DecorCatalog, private val see
         val layer = Layer(plan.map, plan.frame, reserved)
         plaza(layer, plan)
         plan.houses.forEach { house -> garden(layer, house, plan.streets[house.street].plots[house.plot].area) }
+        plan.freePlots.forEach { stakes(layer, it) }
         plan.streets.forEach { verge(layer, it) }
         plan.avenue?.let { avenue(layer, it) }
         riverbanks(layer, plan)
@@ -116,6 +119,41 @@ internal class VillageDecorator(private val decor: DecorCatalog, private val see
         // Les côtés : ce que l'habitant range contre ses pignons.
         side(layer, house, area, (area.left until house.footprint.left).reversed().toList(), "ouest")
         side(layer, house, area, (house.footprint.right + 1..area.right).toList(), "est")
+    }
+
+    /**
+     * Un terrain libre se lit comme un terrain : une clôture de piquets à la place de la maison
+     * ([PLOT_FENCE_WIDTH] × [PLOT_FENCE_HEIGHT] tuiles, au fond du terrain), ouverte au sud face à l'entrée.
+     * L'intérieur reste de l'herbe libre ; l'entrée, au bord de la route, reste praticable.
+     */
+    private fun stakes(layer: Layer, area: TileRect) {
+        val fence = decor.plotFence
+        val left = area.left + (area.width - PLOT_FENCE_WIDTH) / 2
+        val right = left + PLOT_FENCE_WIDTH - 1
+        val bottom = area.bottom - VillageGeometry.YARD
+        val top = bottom - PLOT_FENCE_HEIGHT + 1
+        val gate = area.left + area.width / 2
+        for (x in left..right) {
+            val north = when (x) {
+                left -> fence.topLeft
+                right -> fence.topRight
+                else -> fence.horizontal
+            }
+            layer.putInGarden(north, x, top, area)
+            val south = when (x) {
+                left -> fence.bottomLeft
+                right -> fence.bottomRight
+                gate -> null
+                gate - 1 -> fence.gateLeft
+                gate + 1 -> fence.gateRight
+                else -> fence.horizontal
+            }
+            south?.let { layer.putInGarden(it, x, bottom, area) }
+        }
+        for (y in top + 1 until bottom) {
+            layer.putInGarden(fence.vertical, left, y, area)
+            layer.putInGarden(fence.vertical, right, y, area)
+        }
     }
 
     /** [columns] : du mur vers le bord du terrain. */
@@ -324,6 +362,10 @@ internal class VillageDecorator(private val decor: DecorCatalog, private val see
 
     private companion object {
         const val PERCENT = 100
+
+        /** La clôture d'un terrain libre : la place d'une maison de taille moyenne. */
+        const val PLOT_FENCE_WIDTH = 7
+        const val PLOT_FENCE_HEIGHT = 4
 
         /** Sur dix maisons : six clôtures, deux haies, deux massifs de fleurs. */
         const val FRONT_STYLES = 10

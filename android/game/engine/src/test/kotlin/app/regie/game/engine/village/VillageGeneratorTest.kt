@@ -129,8 +129,9 @@ class VillageGeneratorTest {
                 assertEquals(decoration.blocking, map.isBlocked(tile))
             }
         }
-        // Rien ne bloque un terrain libre ni une route.
-        village.freePlots.forEach { plot -> assertTrue(plot.area.tiles().none { map.isBlocked(it) }, "terrain $plot") }
+        // Un terrain libre n'est bloqué que par sa clôture de piquets (ticket 48) ; rien ne bloque une route.
+        val stakes = village.decorations.filter { it.placed.objectId in DecorCatalog.DEFAULT.plotFence.all }.flatMapTo(HashSet()) { it.footprint.tiles() }
+        village.freePlots.forEach { plot -> assertTrue(plot.area.tiles().none { map.isBlocked(it) && it !in stakes }, "terrain $plot") }
         village.streets.forEach { street -> assertTrue(street.road.tiles().none { map.isBlocked(it) }, street.project) }
         // Les terrains ne se chevauchent pas.
         val plots = village.streets.flatMap { it.plots }
