@@ -19,7 +19,7 @@ need_device
 
 copy_token_to_app() {
   if [[ "${REGIE_ON_DEVICE:-0}" == 1 ]]; then
-    echo "Régie établira son jeton à l'ouverture, par RUN_COMMAND."
+    echo "ThorAI établira son jeton à l'ouverture, par RUN_COMMAND."
     return 0
   fi
   if ! adb -s "$SERIAL" shell "run-as $APP_ID true" > /dev/null 2>&1; then
@@ -100,7 +100,7 @@ Installé. Démarrer et arrêter le pont par RUN_COMMAND, comme le fera l'app :
 L'intent part avec l'uid de Termux (son am) : « adb shell am startservice … » est refusé,
 l'utilisateur shell n'a pas la permission com.termux.permission.RUN_COMMAND.
 
-Pour que Régie rallume le débogage sans fil après un redémarrage (accès des agents à Android),
+Pour que ThorAI rallume le débogage sans fil après un redémarrage (accès des agents à Android),
 une seule fois, l'app installée :
   adb -s $SERIAL shell pm grant $APP_ID android.permission.WRITE_SECURE_SETTINGS
 EOF

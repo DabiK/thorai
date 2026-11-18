@@ -22,4 +22,4 @@ tar -xzf "$work/opencode.tgz" -C "$work" package/bin/opencode
 mkdir -p "$(dirname "$binary")"
 install -m 755 "$work/package/bin/opencode" "$binary.tmp"
 mv -f "$binary.tmp" "$binary"
-echo 'opencode 2.1.2 installé ; connexion Go à faire dans Régie.'
+echo 'opencode 2.1.2 installé ; connexion Go à faire dans ThorAI.'

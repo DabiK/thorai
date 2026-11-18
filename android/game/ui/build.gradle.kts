@@ -1,4 +1,4 @@
-// La vue jeu côté Android (ADR 21) : rendu pixel sur un Canvas Compose, atlas, kit pixel et polices.
+// La vue jeu côté Android (ADR 24) : rendu pixel sur un Canvas Compose, atlas, kit pixel et polices.
 // Il ne voit que le domaine et le moteur du jeu ; `android/app` reste la seule racine de composition.
 plugins {
     alias(libs.plugins.android.library)

@@ -1,6 +1,8 @@
 package app.regie.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -187,31 +189,55 @@ fun VoiceSettingsScreen(settings: VoiceSettings, select: (DictationProvider) -> 
     var commandKey by remember { mutableStateOf("") }
     var key by remember { mutableStateOf("") }
     var saved by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxSize().background(Palette.background).imePadding().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        BasicText("Régler la voix", style = sans(22.sp, 600))
-        DictationProvider.entries.forEach { provider ->
-            BasicText("${if (settings.provider == provider) "●" else "○"}  ${if (provider == DictationProvider.LOCAL) "Voix locale · gratuite" else "ElevenLabs · en ligne"}", style = sans(16.sp), modifier = Modifier.tappable { select(provider) })
+    Column(Modifier.fillMaxSize().background(Palette.background).imePadding()) {
+        // Titre et retour toujours visibles : le reste défile sous eux.
+        Row(Modifier.fillMaxWidth().bottomDivider().padding(start = 20.dp, end = 12.dp, top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            BasicText("Régler la voix", style = sans(20.sp, 650), modifier = Modifier.weight(1f))
+            BarAction("B", "Revenir", size = 14.sp) { close() }
         }
-        BasicText("Clé ElevenLabs : ${if (settings.keyConfigured) "enregistrée" else "à saisir"}", style = sans(13.sp, color = Palette.textMuted))
-        BasicTextField(key, { key = it; saved = false }, textStyle = sans(16.sp), singleLine = true,
-            visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            cursorBrush = SolidColor(Palette.text), modifier = Modifier.fillMaxWidth().background(Palette.surface).padding(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-            BasicText(if (saved) "Enregistrée" else "Enregistrer", style = sans(14.sp), modifier = Modifier.tappable { if (key.isNotBlank()) { saveKey(key); key = ""; saved = true } })
-            BasicText("Effacer la clé", style = sans(14.sp, color = Palette.textMuted), modifier = Modifier.tappable { saveKey(""); key = "" })
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            VoiceSection("Transcription")
+            DictationProvider.entries.forEach { provider ->
+                val chosen = settings.provider == provider
+                Row(Modifier.fillMaxWidth().heightIn(min = 44.dp).background(if (chosen) Palette.surface else Palette.background, RoundedCornerShape(10.dp))
+                    .tappable { select(provider) }.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Box(Modifier.size(18.dp).border(2.dp, if (chosen) Palette.text else Palette.keyBorder, CircleShape), contentAlignment = Alignment.Center) {
+                        if (chosen) Box(Modifier.size(8.dp).background(Palette.text, CircleShape))
+                    }
+                    BasicText(if (provider == DictationProvider.LOCAL) "Voix locale · gratuite" else "ElevenLabs · en ligne", style = sans(16.sp, if (chosen) 600 else 400))
+                }
+            }
+            BasicText("Voix locale : modèle téléchargé au premier usage. ElevenLabs reçoit l’audio et les termes du projet.", style = sans(13.sp, color = Palette.textMuted, lineHeight = 19.sp))
+            BasicText("Autoriser le microphone", style = sans(15.sp, 500, Palette.running), modifier = Modifier.tappable(permission).padding(vertical = 6.dp))
+            VoiceSection("Clé ElevenLabs : ${if (settings.keyConfigured) "enregistrée" else "à saisir"}")
+            SecretField(key) { key = it; saved = false }
+            Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                BasicText(if (saved) "Enregistrée" else "Enregistrer", style = sans(15.sp), modifier = Modifier.tappable { if (key.isNotBlank()) { saveKey(key); key = ""; saved = true } }.padding(vertical = 6.dp))
+                BasicText("Effacer la clé", style = sans(15.sp, color = Palette.textMuted), modifier = Modifier.tappable { saveKey(""); key = "" }.padding(vertical = 6.dp))
+            }
+            VoiceSection("Ordres ambigus · Mistral : ${if (settings.commandKeyConfigured) "clé enregistrée" else "clé à saisir"}")
+            BasicText("Facultatif et payant. Les ordres courants restent locaux. Mistral reçoit les phrases ambiguës. Les noms des sessions et projets sont transmis.", style = sans(13.sp, color = Palette.textMuted, lineHeight = 19.sp))
+            SecretField(commandKey) { commandKey = it }
+            Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                BasicText("Enregistrer Mistral", style = sans(15.sp), modifier = Modifier.tappable { if (commandKey.isNotBlank()) { saveCommandKey(commandKey); commandKey = "" } }.padding(vertical = 6.dp))
+                BasicText("Effacer Mistral", style = sans(15.sp, color = Palette.textMuted), modifier = Modifier.tappable { saveCommandKey(""); commandKey = "" }.padding(vertical = 6.dp))
+            }
         }
-        BasicText("Ordres ambigus · Mistral : ${if (settings.commandKeyConfigured) "clé enregistrée" else "clé à saisir"}", style = sans(13.sp, color = Palette.textMuted))
-        BasicText("Facultatif et payant. Les ordres courants restent locaux. Mistral reçoit les phrases ambiguës. Les noms des sessions et projets sont transmis.", style = sans(12.sp, color = Palette.textMuted, lineHeight = 17.sp))
-        BasicTextField(commandKey, { commandKey = it }, textStyle = sans(16.sp), singleLine = true,
-            visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), modifier = Modifier.fillMaxWidth().background(Palette.surface).padding(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-            BasicText("Enregistrer Mistral", style = sans(14.sp), modifier = Modifier.tappable { if (commandKey.isNotBlank()) { saveCommandKey(commandKey); commandKey = "" } })
-            BasicText("Effacer Mistral", style = sans(14.sp, color = Palette.textMuted), modifier = Modifier.tappable { saveCommandKey(""); commandKey = "" })
-        }
-        BasicText("Autoriser le microphone", style = sans(15.sp, color = Palette.running), modifier = Modifier.tappable(permission))
-        BasicText("Voix locale : modèle téléchargé au premier usage. ElevenLabs reçoit l’audio et les termes du projet.", style = sans(12.sp, color = Palette.textMuted, lineHeight = 17.sp))
-        BarAction("B", "Revenir") { close() }
     }
+}
+
+@Composable
+private fun VoiceSection(title: String) {
+    BasicText(title, style = sans(13.sp, 600, Palette.textSubtle), modifier = Modifier.padding(top = 6.dp))
+}
+
+/** Une clé saisie par l'utilisateur, masquée, jamais affichée en clair. */
+@Composable
+private fun SecretField(value: String, onChange: (String) -> Unit) {
+    BasicTextField(value, onChange, textStyle = mono(16.sp), singleLine = true,
+        visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+        cursorBrush = SolidColor(Palette.text),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).background(Palette.surface, RoundedCornerShape(10.dp)).border(1.dp, Palette.divider, RoundedCornerShape(10.dp)).padding(horizontal = 14.dp, vertical = 13.dp))
 }
 
 private fun duration(ms: Long) = "${ms / 60_000}:${(ms / 1000 % 60).toString().padStart(2, '0')}"

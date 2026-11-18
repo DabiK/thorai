@@ -1,7 +1,7 @@
 # 41 — Socle de la vue jeu
 
 Statut : fusionné dans ticket/40-vue-jeu
-Possède : `android/game/` (création des modules), `android/settings.gradle.kts`, `ArchitectureTest`, ADR 21
+Possède : `android/game/` (création des modules), `android/settings.gradle.kts`, `ArchitectureTest`, ADR 24
 Dépend de : —
 
 ## Objectif
@@ -19,7 +19,7 @@ Référence : `docs/rebrand/plan-dev-jeu.md` (architecture, contrat des assets, 
 - Le kit pixel : cadre, cadre épais, touche, étiquette d'état, panneau, bulle, boîte de dialogue, menu de choix, bandeau, lignes de diff, niveau du micro.
 - Les polices Jersey 10, Pixelify Sans et VT323 (OFL).
 - `ArchitectureTest` étendu à `android/game/`.
-- L'ADR 21 « Vue jeu ».
+- L'ADR 24 « Vue jeu ».
 
 ## Critères d'acceptation
 
@@ -37,14 +37,14 @@ Livré :
 - Atlas : `GameAssetLoader` lit `assets/game/<atlas>.png|json` et `palette.json` ; `GameAssets.resolve` (objet, animation, image) ; atlas absent ou invalide signalé dans `problems` et remplacé par des formes. `rememberGameAssets()` charge hors du fil principal.
 - Kit (Aube) : `GameTheme`, `Game.colors|fonts|metrics|clock`, `GameText`, `PixelFrame`/`pixelFrame`, `PixelShape`, `PixelArrow`, `KeyChip`, `KeyHint`, `KeyHintBar`, `KeyOrder`, `StateTag`/`TagState`, `SignPanel`, `Bubble`, `DialogBox`, `ChoiceMenu`, `Toast`/`ToastHost`, `PixelDiffLine`, `MicMeter`, `Blink`.
 - Polices Jersey 10, Pixelify Sans (variable) et VT323 dans `res/font`, licences OFL dans `assets/licences/`, sources dans `docs/rebrand/da-jeu.md`.
-- `ArchitectureTest` : deux règles, vue jeu et moteur du jeu. ADR 21.
+- `ArchitectureTest` : deux règles, vue jeu et moteur du jeu. ADR 24.
 
 Preuves :
 - 44 tests dans `:game-ui` (sol, bords, caméra, contrat JSON, recoloration, chargement des vrais atlas, repli sans atlas, cache du sol, rendu ×4 net pixel par pixel, kit) ; `./gradlew check` vert dans `android/`.
 - Banc : `GameSandboxActivity` (debug, `app.regie.jeu`). Première démo : `docs/images/jeu/41-avant-haut.png` et `41-avant-bas.png`. Hameau généré avec les vrais atlas : `41-apres-haut.png` (3 sessions) et `41-apres-bas.png` (8 sessions) ; sur l'écran du haut, 6 250 pixels du dessin vérifiés, tous des carrés 4 × 4 uniformes.
 
 Écarts et ajouts au plan :
-- `palette.json` n'avait pas de format : `{"colors": [...], "roles": {"grass.light": ...}}`, 16 rôles (`<sol>.light|base|dark` et `outline`), décrit dans l'ADR 21. Le lot 42 doit le suivre ou le faire évoluer.
+- `palette.json` n'avait pas de format : `{"colors": [...], "roles": {"grass.light": ...}}`, 16 rôles (`<sol>.light|base|dark` et `outline`), décrit dans l'ADR 24. Le lot 42 doit le suivre ou le faire évoluer.
 - La cheminée et les fenêtres des maisons n'ont pas de champ dans le contrat : non lues, à fixer avec le lot 42.
 - `Placed.anchor` est lu comme la tuile en bas à gauche de l'empreinte ; `door` comme relatif au coin haut gauche de l'empreinte.
 - Maquettes adaptées pour la cohérence : touche vert profond sur le papier (papier sur papier dans la maquette), touches triées dans l'ordre de `docs/textes.md`, session arrêtée « au repos », couleur neutre pour un agent inconnu du thème.
@@ -57,7 +57,7 @@ Preuves :
 - Non bloquants :
   - le point suivi par la caméra est passé en `focus: () -> ArtPoint`, lu au dessin et au placement ;
   - la démo garde le monde en mémoire et utilise `VillageGenerator` avec `InMemoryVillageLayoutStore`, sur 3 et 8 sessions ;
-  - l'ADR 21 note que l'échelle de police du système est ignorée ;
+  - l'ADR 24 note que l'échelle de police du système est ignorée ;
   - `SharedGameAssets` décode les atlas une fois par processus.
 - Retour de l'utilisateur, en trois tours au banc comparés à `hameau.png` :
   1. herbe en plaques ;

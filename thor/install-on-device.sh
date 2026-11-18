@@ -65,15 +65,14 @@ bash "$here/bridge/install.sh"
 bash "$here/computer-use/install.sh"
 cat <<'EOF'
 Installation terminée. Rien ne démarre au boot.
-1. Installer l'APK Régie signé depuis la release GitHub, puis ouvrir Régie.
-2. Autoriser les commandes Termux et les notifications demandées par Android.
-3. Dans Paramètres Android > Options pour les développeurs > Débogage sans fil,
-   activer le débogage puis « Associer l'appareil avec un code d'association ».
-4. Dans Termux, entrer dans la Debian :
+1. Installer l'APK ThorAI signé depuis la release GitHub, puis l'ouvrir.
+2. Son parcours d'accueil guide la suite : commandes Termux, voix,
+   notifications, mode console, accès des agents à Android, comptes.
+3. Accès à Android : Options pour les développeurs > Débogage sans fil >
+   « Associer l'appareil avec un code d'association », puis dans Termux :
    proot-distro login debian --user dev --bind "$HOME/projects:/home/dev/projects" --bind "$HOME/.codex:/home/dev/.codex" --work-dir /home/dev -- bash -l
-5. Exécuter /opt/thor-android/pair.sh <port> <code>, puis :
-   adb shell pm grant app.regie android.permission.WRITE_SECURE_SETTINGS
+   /opt/thor-android/pair.sh <port> <code>
+   adb shell pm grant app.thorai android.permission.WRITE_SECURE_SETTINGS
    adb shell settings put global settings_enable_monitor_phantom_procs false
-6. Revenir dans Régie et connecter ses comptes (B). Retirer Termux de
-   l'optimisation de batterie et activer le mode console dans Accessibilité.
+4. Retirer Termux de l'optimisation de batterie.
 EOF
