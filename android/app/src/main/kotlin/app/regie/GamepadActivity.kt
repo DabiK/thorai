@@ -12,8 +12,6 @@ import androidx.compose.ui.unit.sp
 import app.regie.display.ScreenMode
 import app.regie.ui.components.tappable
 import app.regie.ui.screens.VoiceCommandScreen
-import app.regie.ui.screens.DictationTopScreen
-import app.regie.ui.screens.DictationBottomScreen
 import app.regie.ui.screens.VoiceSettingsScreen
 import app.regie.ui.theme.Palette
 import app.regie.ui.theme.sans
@@ -178,11 +176,12 @@ abstract class GamepadActivity : ComponentActivity() {
                             button, held, container::selectNewSessionField, container::editNewInstruction, container::editNewBranch, container.newSessionVelocity, container::editNewProjectName)
                     } else if (dictation.visible && this@GamepadActivity is BottomActivity) {
                         // Deux écrans : la dictée et sa transcription en direct sont en bas ; le haut ne change pas.
-                        DictationBottomScreen(dictation, button, held, container::openVoiceSettings,
-                            session = current.sessions.firstOrNull { it.id == dictation.target?.sessionId }, transcript = dictationScroll)
+                        app.regie.ui.game.GameDictation(dictation, current.sessions.firstOrNull { it.id == dictation.target?.sessionId },
+                            button, held, container::openVoiceSettings, dictationScroll)
                     } else if (dictation.visible && mode == ScreenMode.Single && screen !is Screen.Session) {
                         // Un seul écran, hors session : la dictée occupe l'écran. Dans une session, le fil reste.
-                        DictationTopScreen(dictation, current.sessions.firstOrNull { it.id == dictation.target?.sessionId }, true, button, held, container::openVoiceSettings, dictationScroll)
+                        app.regie.ui.game.GameDictation(dictation, current.sessions.firstOrNull { it.id == dictation.target?.sessionId },
+                            button, held, container::openVoiceSettings, dictationScroll)
                     } else Column(Modifier.fillMaxSize()) {
                         // Dans une session, la table du bas règle la session et la dictée règle la voix.
                         if (controlsHere && screen !is Screen.Session) Row(Modifier.fillMaxWidth().background(Palette.background).padding(horizontal = 16.dp, vertical = 4.dp)) {

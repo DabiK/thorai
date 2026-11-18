@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- La maison d'une session : fil, réglages, dictée (ticket 46, docs/textes.md). -->
+    <string name="game_thread_opening">Ouverture de la session…</string>
+    <string name="game_session_gone">Session indisponible.</string>
+    <string name="game_thread_loading">Chargement du fil…</string>
+    <string name="game_thread_empty">Aucun message.</string>
+    <string name="game_thread_read">lu</string>
+    <string name="game_thread_reading">lit</string>
+    <string name="game_thread_edited">modifié</string>
+    <string name="game_thread_editing">modifie</string>
+    <string name="game_thread_ran">lancé</string>
+    <string name="game_thread_running">lance</string>
+    <string name="game_thread_action">action</string>
+    <plurals name="game_thread_files">
+        <item quantity="one">%d fichier</item>
+        <item quantity="many">%d fichiers</item>
+        <item quantity="other">%d fichiers</item>
+    </plurals>
+    <string name="game_run_pending">en attente</string>
+    <string name="game_run_in_progress">en cours</string>
+    <string name="game_run_succeeded">réussi</string>
+    <string name="game_run_failed">échoué</string>
+    <string name="game_run_interrupted">interrompu</string>
+    <string name="game_thread_turn_failed">La réponse a échoué.</string>
+    <string name="game_thread_turn_failed_with">La réponse a échoué : %s</string>
+    <string name="game_thread_interrupted">Interrompue</string>
+    <string name="game_thread_awaiting">attend ta validation : %s</string>
+    <string name="game_thread_awaiting_no_subject">attend ta validation</string>
+    <string name="game_thread_no_detail">Détail non communiqué.</string>
+    <string name="game_thread_follow">Revenir en bas</string>
+    <string name="game_plan_title">Plan</string>
+    <string name="game_files_title">Fichiers modifiés</string>
+    <string name="game_session_context">contexte %d %%</string>
+
+    <string name="game_settings_title">Réglages de %s</string>
+    <string name="game_settings_edit">Modifier</string>
+    <string name="game_settings_resume">A pour reprendre</string>
+    <string name="game_settings_unknown">Non communiqué</string>
+    <string name="game_settings_apply">Appliquer</string>
+    <string name="game_settings_applying">Application…</string>
+    <string name="game_settings_close">Fermer</string>
+    <string name="game_settings_choose">Choisir</string>
+    <string name="game_settings_change">Changer</string>
+
+    <string name="game_action_back">Revenir</string>
+    <string name="game_action_see_diff">Voir les modifications</string>
+    <string name="game_action_speak">Parler</string>
+    <string name="game_action_interrupt">Interrompre</string>
+    <string name="game_next_approval">Voir la suivante</string>
+    <string name="game_message_placeholder">Écrire un message</string>
+    <string name="game_message_send">Envoyer</string>
+
+    <string name="game_dictation_message">Message pour</string>
+    <string name="game_dictation_rejection">Refuser avec consigne</string>
+    <string name="game_dictation_comment">Commentaire</string>
+    <string name="game_dictation_send">Envoyer</string>
+    <string name="game_dictation_erase">Effacer</string>
+    <string name="game_dictation_back">Revenir</string>
+    <string name="game_dictation_correct">Corriger un mot</string>
+    <string name="game_dictation_complete">Compléter</string>
+    <string name="game_dictation_before">Choisir avant</string>
+    <string name="game_dictation_after">Choisir après</string>
+    <string name="game_dictation_recording">Relâche L2 pour relire</string>
+    <string name="game_dictation_finalizing">Transcription…</string>
+    <string name="game_dictation_sending">Envoi…</string>
+    <string name="game_dictation_review">Relis avant d’envoyer</string>
+    <string name="game_dictation_voice">Régler la voix</string>
+    <string name="game_dictation_level">Niveau du micro</string>
+</resources>

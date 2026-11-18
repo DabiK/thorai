@@ -187,6 +187,8 @@ physiques différés restent requis même lorsqu’un ticket est marqué fait.
 
 - **18 novembre, ticket 31, relecture après 573dd25 (solo Codex)** : diff complet contre main relu sur les axes architecture/ticket ; retrait temporaire de la garde détecté par les deux tests, puis sources restaurées. Traces nettoyées, portes finales vertes (338 pont, Android 452 sans échec/résultats réutilisés), audit sans signalement. Aucun autre blocage ; statut à fusionner, clé utilisateur toujours requise pour l'essai autonome. Détail `artifacts/screenshots/31/relecture.md`.
 
+- **18 novembre, ticket 46 à fusionner dans `ticket/40-vue-jeu` (vue jeu)** : la maison d'une session (intérieur selon l'habitant, animations selon l'état, coursier, bulle d'activité, plan en journal de quête, dernière réplique telle quelle), le fil brut et la table des réglages en bas, la dictée L2 en bas avec le coursier qui parle en haut ; un seul écran gardé. Branchés à la place des écrans classiques de session et de dictée, qui restent pour le ticket 51. `./gradlew check` vert, captures Robolectric `docs/images/jeu/46-*.png`, sans Thor ni banc. Détail et écarts dans le rapport du ticket.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |
