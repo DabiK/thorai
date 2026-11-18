@@ -30,7 +30,7 @@ fun VoiceCommandScreen(state: VoiceCommandReview, bottom: Boolean, single: Boole
     LaunchedEffect(state.phase) { scroll.scrollTo(0) }
     Column(Modifier.fillMaxSize().background(Palette.background)) {
         Row(Modifier.fillMaxWidth().bottomDivider().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            BasicText("Régie › Ordre vocal · R2", style = sans(13.sp, 600, Palette.mic))
+            BasicText("ThorAI › Ordre vocal · R2", style = sans(13.sp, 600, Palette.mic))
             if (bottom || single) BasicText("Régler la voix", style = sans(12.sp, color = Palette.textMuted), modifier = Modifier.tappable(onSettings))
         }
         if (!bottom) Column(Modifier.weight(1f).verticalScroll(scroll).padding(horizontal = 28.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {

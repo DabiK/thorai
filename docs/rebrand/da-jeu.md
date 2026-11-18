@@ -159,7 +159,7 @@ Les images retenues sont dans `assets/aube/`.
 
 ## Atlas du jeu (ticket 42)
 
-Les atlas de la vue jeu sont dans `android/game/ui/src/main/assets/game/`. `GameAssetLoader` les lit (ADR 21). Planche d'aperçu : `assets/planches/atlas-apercu.png`.
+Les atlas de la vue jeu sont dans `android/game/ui/src/main/assets/game/`. `GameAssetLoader` les lit (ADR 24). Planche d'aperçu : `assets/planches/atlas-apercu.png`.
 
 | Fichier | Contenu |
 | --- | --- |
