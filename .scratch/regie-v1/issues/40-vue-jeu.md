@@ -1,11 +1,11 @@
 # 40 — Vue jeu : épopée
 
-Statut : en cours
+Statut : fusionné dans main (18 novembre, à la demande de l'utilisateur)
 Possède : la branche `ticket/40-vue-jeu`, `docs/rebrand/`
 
 ## Objectif
 
-Demande de l'utilisateur, 18 novembre : remplacer toute l'interface de ThorAI par un jeu d'exploration en pixel art, vu de dessus (direction Aube). Chaque maison est une session, et chaque rue un projet. Le moteur (pont, agents, domaine) ne change pas : seule la vue change. La branche `ticket/40-vue-jeu` part de main et va jusqu'au bout sans jamais être fusionnée dans main.
+Demande de l'utilisateur, 18 novembre : remplacer toute l'interface de ThorAI par un jeu d'exploration en pixel art, vu de dessus (direction Aube). Chaque maison est une session, et chaque rue un projet. Le moteur (pont, agents, domaine) ne change pas : seule la vue change. La branche `ticket/40-vue-jeu` part de main et va jusqu'au bout. Elle ne devait pas être fusionnée dans main, mais l'utilisateur l'a demandé le soir du 18 novembre : le jeu devient ThorAI (`app.thorai`, suffixe `.jeu` retiré).
 
 Référence : `docs/rebrand/plan-dev-jeu.md` (architecture, contrat des assets, règles de lot), `docs/rebrand/da-jeu.md`, et les écrans du canvas https://claude.ai/artifact/M6dsMX8171h3WhpyDvq6Zh (page 3).
 

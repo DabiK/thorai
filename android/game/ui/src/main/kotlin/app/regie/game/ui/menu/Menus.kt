@@ -134,7 +134,7 @@ fun TitleLogo(name: String, modifier: Modifier = Modifier, sizePx: Int = 300) {
 
 /**
  * L'écran titre, en haut : le hameau au lever du soleil et le logo « ThorAI », le nom du produit
- * (jamais le libellé de l'app, qui change selon la build, par exemple « ThorAI jeu »). Sur deux écrans, le menu est en
+ * (jamais le libellé de l'app, qui peut changer selon la build). Sur deux écrans, le menu est en
  * bas et le haut invite à commencer ; sur un seul écran, le menu s'affiche ici.
  */
 @Composable

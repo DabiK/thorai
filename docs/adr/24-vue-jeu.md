@@ -311,6 +311,9 @@ garder le routeur d'entrées de la manette (ADR 05) et se tester sans console.
 
 ## Conséquences
 
+- Fusion dans main le 18 novembre, à la demande de l'utilisateur : le jeu devient ThorAI. Le suffixe
+  `.jeu` et les libellés « ThorAI jeu » du ticket 50 sont retirés, et l'app s'installe par-dessus
+  l'app classique, sous `app.thorai` (ADR 22, mise à jour).
 - Les lots suivants dessinent avec `PixelWorld` et le kit, sans nouvelle dépendance.
 - Une carte modifiée doit arriver dans un nouveau `World` (ou une nouvelle `TileMap`) : le sol est
   repeint si son contenu a changé, jamais sur le fil principal.
