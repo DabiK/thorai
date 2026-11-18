@@ -98,6 +98,20 @@ class CourierController(
         }
     }
 
+    /**
+     * Le coursier s'arrête et regarde vers [facing], en oubliant les directions tenues, la réserve et
+     * la marche automatique : au retour d'une maison, les relâchements ont pu se perdre. Un pas
+     * commencé se termine.
+     */
+    fun rest(facing: Direction) {
+        held.clear()
+        buffered = null
+        pendingInteract = false
+        cancelAutoWalk()
+        if (!moving) this.facing = facing
+        refreshAction()
+    }
+
     /** Fait passer [deltaMillis] millisecondes : un long intervalle fait plusieurs pas. */
     fun advance(deltaMillis: Long) {
         require(deltaMillis >= 0) { "Le temps ne recule pas : $deltaMillis" }

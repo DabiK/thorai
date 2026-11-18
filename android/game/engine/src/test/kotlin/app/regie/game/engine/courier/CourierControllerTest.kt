@@ -349,6 +349,20 @@ class CourierControllerTest {
         assertTrue(events.isEmpty())
     }
 
+    @Test
+    fun `rest forgets held directions and the auto walk`() {
+        val courier = courier()
+        courier.handle(Move(Direction.RIGHT, pressed = true))
+        courier.handle(GoTo(small.b.id))
+        courier.rest(Direction.DOWN)
+        assertNull(courier.destination)
+        courier.walkToEnd()
+        assertEquals(TilePos(7, 4), courier.tile, "le pas commencé se termine, sans la suite")
+        courier.rest(Direction.DOWN)
+        assertEquals(Direction.DOWN, courier.facing)
+        assertTrue(events.isEmpty())
+    }
+
     // Animation
 
     @Test
