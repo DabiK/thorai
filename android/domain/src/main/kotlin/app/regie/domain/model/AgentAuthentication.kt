@@ -1,6 +1,8 @@
 package app.regie.domain.model
 
-enum class AuthenticationPhase { UNKNOWN, DISCONNECTED, STARTING, WAITING, CONNECTED, FAILED, MANUAL }
+enum class AuthenticationPhase { UNKNOWN, DISCONNECTED, STARTING, WAITING, CONNECTED, FAILED, MANUAL, KEY }
+
+data class AgentLogin(val method: String = "device_code", val label: String = "Connecter", val help: String = "", val provider: String? = null)
 
 data class AgentAuthentication(
     val agent: Agent,
@@ -10,6 +12,7 @@ data class AgentAuthentication(
     val url: String? = null,
     val code: String? = null,
     val message: String? = null,
+    val login: AgentLogin = AgentLogin(),
 ) {
     val pending: Boolean get() = phase == AuthenticationPhase.STARTING || phase == AuthenticationPhase.WAITING
 }

@@ -185,19 +185,25 @@ class BridgeAgentGateway(
             ?: throw java.io.IOException("État de connexion non compris")
     }
 
+    override suspend fun submitAgentKey(agent: Agent, provider: String, key: String): AgentAuthentication {
+        val result = call("auth.key", buildJsonObject { put("agent", agent.id); put("provider", provider); put("key", key) }, timeout = 75.seconds)
+        if (result !is CallResult.Accepted) throw java.io.IOException("Clé non confirmée")
+        return decodeAuthentication(result.value.obj("authentication")) ?: throw java.io.IOException("Résultat de connexion non compris")
+    }
+
     override suspend fun startAuthentication(agent: Agent) = authenticationAction("auth.start", agent)
     override suspend fun cancelAuthentication(agent: Agent) = authenticationAction("auth.cancel", agent)
     override suspend fun logoutAgent(agent: Agent) = authenticationAction("auth.logout", agent)
 
     private suspend fun authenticationAction(method: String, agent: Agent): AgentAuthentication {
-        val result = call(method, buildJsonObject { put("agent", agent.name.lowercase(java.util.Locale.ROOT)) }, timeout = 20.seconds)
+        val result = call(method, buildJsonObject { put("agent", agent.id) }, timeout = 20.seconds)
         if (result !is CallResult.Accepted) throw java.io.IOException("Action de connexion non confirmée")
         return decodeAuthentication(result.value.obj("authentication")) ?: throw java.io.IOException("Résultat de connexion non compris")
     }
 
     override suspend fun agentOptions(agent: Agent, values: Map<String, String>): List<SessionOption> {
         val result = call("agent.options", buildJsonObject {
-            put("agent", agent.name.lowercase(java.util.Locale.ROOT))
+            put("agent", agent.id)
             put("configValues", buildJsonObject { values.forEach { (id, value) -> put(id, value) } })
         })
         if (result !is CallResult.Accepted) throw java.io.IOException("Options de l’agent indisponibles")
@@ -238,7 +244,7 @@ class BridgeAgentGateway(
 
     override suspend fun createSession(draft: app.regie.domain.model.NewSessionDraft): app.regie.domain.model.SessionCreation {
         val result = call("session.create", buildJsonObject {
-            put("agent", draft.agent.name.lowercase(java.util.Locale.ROOT))
+            put("agent", draft.agent.id)
             put("project", draft.project)
             if (draft.newProject) put("newProject", true)
             put("approvalMode", draft.approvalMode)
@@ -449,7 +455,7 @@ class BridgeAgentGateway(
                                     }
                                 }
                                 _connection.value = BridgeConnection.Connected
-                                send("agents.versions")
+                                send("agents.list")
                             }
                             publish()
                             loadHistories()

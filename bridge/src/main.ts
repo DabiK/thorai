@@ -11,7 +11,7 @@
  * - REGIE_BRIDGE_RETENTION_DAYS (30): days the events of a session are kept after its last
  *   activity; then only its summary stays. A value that is not a positive number stops the
  *   bridge at start;
- * - CLAUDE_CODE_EXECUTABLE (~/.local/bin/claude), CODEX_PATH (/usr/local/bin/codex).
+ * - CLAUDE_CODE_EXECUTABLE (~/.local/bin/claude), CODEX_PATH (/usr/local/bin/codex), OPENCODE_PATH (~/.opencode/bin/opencode).
  */
 
 import { randomUUID } from 'node:crypto';
@@ -43,6 +43,7 @@ const retentionSetting = env.REGIE_BRIDGE_RETENTION_DAYS ?? String(DEFAULT_RETEN
 const binaries = {
   claude: env.CLAUDE_CODE_EXECUTABLE ?? join(home, '.local/bin/claude'),
   codex: env.CODEX_PATH ?? '/usr/local/bin/codex',
+  opencode: env.OPENCODE_PATH ?? join(home, '.opencode/bin/opencode'),
 };
 const version = (
   JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as {
@@ -102,8 +103,10 @@ async function main(): Promise<void> {
     retentionDays,
   });
   bridge.start();
-  const authentication = new Authentication(new CliAuthentication(binaries), (agent) =>
-    bridge.acquireAuthentication(agent),
+  const authentication = new Authentication(
+    new CliAuthentication(binaries),
+    (agent) => bridge.acquireAuthentication(agent),
+    AGENT_KINDS,
   );
   // The old events are purged at start, then once a day.
   runNowThenDaily('purge', () => bridge.purge(), logger);

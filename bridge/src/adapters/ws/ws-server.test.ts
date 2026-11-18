@@ -384,6 +384,7 @@ it('exposes login status, start, cancel and logout through authenticated request
     agents: [
       { agent: 'claude', connected: false },
       { agent: 'codex', connected: false },
+      { agent: 'opencode', connected: false },
     ],
   });
   expect((await client.call('auth.start', { agent: 'claude' })).result).toMatchObject({
@@ -398,5 +399,45 @@ it('exposes login status, start, cancel and logout through authenticated request
   expect((await client.call('auth.logout', { agent: 'other' })).error).toMatchObject({
     code: 'bad_request',
   });
+  await client.close();
+});
+
+it('catalogue announces opaque ids and authentication metadata without starting an ACP process', async () => {
+  const client = new Client();
+  const result = await client.call('agents.list');
+  expect(result.result).toMatchObject({
+    agents: [
+      {
+        agent: 'claude',
+        name: 'Claude',
+        available: true,
+        configOptions: [],
+        authentication: { login: { method: 'manual' } },
+      },
+      {
+        agent: 'codex',
+        name: 'Codex',
+        available: true,
+        configOptions: [],
+        authentication: { login: { method: 'device_code' } },
+      },
+    ],
+  });
+  expect(codex.connections).toBe(0);
+  await client.close();
+});
+
+it('credential validation errors never echo payload values or enter the event journal', async () => {
+  const client = new Client();
+  const before = bridge.lastSeq;
+  for (const params of [
+    { agent: 'opencode', provider: 'opencode-go', key: { value: 'test-only-key' } },
+    { agent: 'codex', provider: 'opencode-go', key: 'test-only-key' },
+  ]) {
+    const response = await client.call('auth.key', params);
+    expect(response.error).toMatchObject({ code: 'bad_request' });
+    expect(JSON.stringify(response)).not.toContain('test-only-key');
+  }
+  expect(bridge.lastSeq).toBe(before);
   await client.close();
 });

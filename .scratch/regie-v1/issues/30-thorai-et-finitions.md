@@ -1,6 +1,6 @@
 # 30 — L'app s'appelle ThorAI, et une passe de finition de l'interface
 
-Statut : en attente (après 31 ; à faire avec le 28 par le même agent)
+Statut : prêt
 Possède : `android/` (interface, nom, applicationId), docs qui citent le nom
 
 ## Décisions de l'utilisateur, 18 novembre

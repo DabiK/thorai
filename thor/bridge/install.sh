@@ -43,6 +43,8 @@ if [[ "${1:-}" == "token-app" ]]; then
   exit 0
 fi
 
+bash "$here/../opencode/install.sh"
+
 echo "1/4 Pont : copie dans la Debian et dépendances"
 deploy_sources "$bridge" "$DEB_APP"
 # npm ci only when the lock file changed. No dev dependency, no optional one: the agent binaries

@@ -12,7 +12,7 @@ import kotlin.test.*
 class NewSessionTest {
     @Test fun `console default reaches creation only on A and remains editable in the form`() = runTest {
         val gateway = FormGateway()
-        val seed = assertIs<ConsoleLaunch.Create>(ConsoleSession.choose(emptyList(), listOf("demo"))).draft
+        val seed = assertIs<ConsoleLaunch.Create>(ConsoleSession.choose(emptyList(), listOf("demo"), listOf(Agent.CLAUDE, Agent.CODEX))).draft
         val form = ReviewNewSession(gateway, FormCapture(), backgroundScope) {}
         form.open(seed); runCurrent()
         assertEquals("allow-all", form.state.value.approvalMode)
@@ -75,7 +75,7 @@ class NewSessionTest {
 
     @Test fun `R2 names a new project without requiring it in the catalog`() = runTest {
         val interpret = InterpretVoiceCommand(VoiceCommandModel { _, _ -> error("fixed rule expected") })
-        val result = interpret("lance Codex sur un nouveau projet qui s'appelle météo pour lire le dossier", VoiceCommandContext(emptyList(), null, null, emptyList()))
+        val result = interpret("lance Codex sur un nouveau projet qui s'appelle météo pour lire le dossier", VoiceCommandContext(emptyList(), null, null, emptyList(), agents = listOf(Agent.CLAUDE, Agent.CODEX)))
         val draft = assertIs<VoiceCommand.Launch>(result.command).draft
         assertEquals("meteo", draft.project)
         assertEquals("lire le dossier", draft.instruction)
@@ -109,7 +109,7 @@ class NewSessionTest {
 
     @Test fun `three launch phrases preserve branch base mode and instruction without a model`() = runTest {
         val interpret = InterpretVoiceCommand(VoiceCommandModel { _, _ -> null })
-        val context = VoiceCommandContext(emptyList(), null, null, listOf("demo"))
+        val context = VoiceCommandContext(emptyList(), null, null, listOf("demo"), agents = listOf(Agent.CLAUDE, Agent.CODEX))
         val cases = listOf(
             "Lance Codex sur demo pour lire les notes" to NewSessionDraft(Agent.CODEX, "demo", instruction = "lire les notes"),
             "Lance Codex sur demo, branche main, tout valider, pour lire les notes" to NewSessionDraft(Agent.CODEX, "demo", branch = "main", instruction = "lire les notes", approvalMode = "ask"),
@@ -119,14 +119,14 @@ class NewSessionTest {
     }
     @Test fun `reference mockup phrase preserves unnamed new branch and negative instruction`() = runTest {
         val interpret = InterpretVoiceCommand(VoiceCommandModel { _, _ -> null })
-        val context = VoiceCommandContext(emptyList(), null, null, listOf("notes"))
+        val context = VoiceCommandContext(emptyList(), null, null, listOf("notes"), agents = listOf(Agent.CLAUDE, Agent.CODEX))
         val command = interpret("Lance Claude sur notes, nouvelle branche depuis main, et demande-lui de ne pas modifier les tests", context)
         assertEquals(VoiceCommand.Launch(NewSessionDraft(Agent.CLAUDE, "notes", instruction = "ne pas modifier les tests", newBranch = true, baseBranch = "main")), command.command)
     }
 
     @Test fun `local transcription punctuation and homophones still describe the chosen validation`() = runTest {
         val interpret = InterpretVoiceCommand(VoiceCommandModel { _, _ -> null })
-        val result = interpret("Lance Codex sur test Branche Lecture Tout validé. Pour afficher la branche courante.", VoiceCommandContext(emptyList(), null, null, listOf("test")))
+        val result = interpret("Lance Codex sur test Branche Lecture Tout validé. Pour afficher la branche courante.", VoiceCommandContext(emptyList(), null, null, listOf("test"), agents = listOf(Agent.CLAUDE, Agent.CODEX)))
         assertEquals(VoiceCommand.Launch(NewSessionDraft(Agent.CODEX, "test", "Lecture", "afficher la branche courante", "ask")), result.command)
     }
 
@@ -147,7 +147,7 @@ class NewSessionTest {
         val capture = FormCapture(); val drafts = mutableListOf<Pair<NewSessionDraft, String>>()
         val voice = ReviewVoiceCommand(capture, InterpretVoiceCommand(VoiceCommandModel { _, _ -> null }),
             { error("launch must go to form") }, backgroundScope, onLaunch = { draft, text -> drafts += draft to text })
-        voice.start(VoiceCommandContext(emptyList(), null, null, listOf("demo")))
+        voice.start(VoiceCommandContext(emptyList(), null, null, listOf("demo"), agents = listOf(Agent.CLAUDE, Agent.CODEX)))
         capture.events.value = CaptureState(text = "Lance Codex sur demo pour lire", complete = true); runCurrent()
         assertTrue(drafts.isEmpty())
         voice.finish(); runCurrent()
@@ -159,7 +159,7 @@ class NewSessionTest {
         val capture = FormCapture(); val catalog = CompletableDeferred<List<String>>(); val drafts = mutableListOf<NewSessionDraft>()
         val voice = ReviewVoiceCommand(capture, InterpretVoiceCommand(VoiceCommandModel { _, _ -> null }),
             { error("no execution") }, backgroundScope, onLaunch = { draft, _ -> drafts += draft }, loadProjects = { catalog.await() })
-        voice.start(VoiceCommandContext(emptyList(), null, null, emptyList()))
+        voice.start(VoiceCommandContext(emptyList(), null, null, emptyList(), agents = listOf(Agent.CLAUDE, Agent.CODEX)))
         assertTrue(capture.state.value.recording)
         capture.events.value = CaptureState(text = "Lance Codex sur demo pour lire", complete = true)
         voice.finish(); runCurrent()

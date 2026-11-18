@@ -8,7 +8,7 @@ CONTENT=${1:-$HERE/consignes.md}
 W=$(mktemp -d)
 trap 'rm -rf "$W"' EXIT
 
-for profile in .claude/CLAUDE.md .codex/AGENTS.md; do
+for profile in .claude/CLAUDE.md .codex/AGENTS.md .config/opencode/AGENTS.md; do
   target=$W/$profile
   mkdir -p "$(dirname "$target")"
   printf '# Consignes personnelles\n\n%s\nAncien accès Android\n%s\n\nFin personnelle\n' \

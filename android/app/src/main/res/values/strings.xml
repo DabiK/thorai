@@ -9,8 +9,6 @@
         <item quantity="other">%d sessions actives</item>
     </plurals>
 
-    <string name="agent_claude">Claude</string>
-    <string name="agent_codex">Codex</string>
 
     <!-- Statuts du pont (docs/protocole-pont.md, « Statuts »). -->
     <string name="status_working">En cours</string>

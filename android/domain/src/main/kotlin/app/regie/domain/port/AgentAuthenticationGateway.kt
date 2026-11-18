@@ -4,6 +4,7 @@ import app.regie.domain.model.Agent
 import app.regie.domain.model.AgentAuthentication
 
 interface AgentAuthenticationGateway {
+    suspend fun submitAgentKey(agent: Agent, provider: String, key: String): AgentAuthentication = throw UnsupportedOperationException()
     suspend fun authentication(): List<AgentAuthentication> = emptyList()
     suspend fun startAuthentication(agent: Agent): AgentAuthentication = throw UnsupportedOperationException()
     suspend fun logoutAgent(agent: Agent): AgentAuthentication = throw UnsupportedOperationException()
