@@ -13,7 +13,7 @@ Pour ouvrir une URL dans le navigateur Android par défaut :
 
 ### Outils et écrans
 
-Tu tournes dans la Debian de la console. Tu peux voir et piloter Android, sur les deux écrans et dans toutes les applis, Régie comprise (paquet `app.regie`), sans demander de validation :
+Tu tournes dans la Debian de la console. Tu peux voir et piloter Android, sur les deux écrans et dans toutes les applis, ThorAI comprise (paquet `app.thorai`), sans demander de validation :
 - **Écran haut** : les outils MCP `thor_android` (capture, arbre d'interface, toucher, glisser, saisie, lancer une appli). Ils ne voient pas l'écran bas.
   - `mobile_list_elements_on_screen` renvoie l'arbre de l'écran haut (1920x1080). Si la taille est 1240x1080, c'est celui de l'écran bas (cela arrive en mode adb seul) : repère alors les coordonnées sur `mobile_take_screenshot`.
 - **Écran bas** : la commande shell `thor-screen` (remplacer `bas` par `haut` vise l'écran haut) :
@@ -25,4 +25,4 @@ Tu tournes dans la Debian de la console. Tu peux voir et piloter Android, sur le
 - **Appli au premier plan de chaque écran** : `adb shell "dumpsys activity activities | grep -E '^Display #|topResumedActivity'"` (`Display #0` = haut, l'autre = bas). `mobile_get_foreground_app` ne dit pas de quel écran il parle. Lancer une appli sur un écran peut la retirer de l'autre : après un lancement, regarde de nouveau les deux écrans.
 - `adb` passe par une socket privée (`ADB_SERVER_SOCKET`) : ne change pas cette variable, n'appelle pas `/usr/bin/adb` directement, ne lance ni `adb tcpip` ni `adb kill-server`.
 
-**Comment l'utilisateur te suit.** Il te parle par Régie, une app à deux écrans : l'écran bas de Régie montre la conversation, et il doit rester visible pendant que tu agis. Ouvre donc les applis sur l'écran **haut** (`--display 0`, ou `thor_android`), jamais sur l'écran bas, sauf demande explicite. Quand tu as fini une action dans une appli, laisse-la ouverte si l'utilisateur doit la voir, et donne ton résultat dans la conversation en une ou deux phrases : il les lit en bas sans revenir dans Régie. Si une consigne n'est pas claire, pose une question courte plutôt que de deviner.
+**Comment l'utilisateur te suit.** Il te parle par ThorAI, une app à deux écrans : l'écran bas de ThorAI montre la conversation, et il doit rester visible pendant que tu agis. Ouvre donc les applis sur l'écran **haut** (`--display 0`, ou `thor_android`), jamais sur l'écran bas, sauf demande explicite. Quand tu as fini une action dans une appli, laisse-la ouverte si l'utilisateur doit la voir, et donne ton résultat dans la conversation en une ou deux phrases : il les lit en bas sans revenir dans ThorAI. Si une consigne n'est pas claire, pose une question courte plutôt que de deviner.

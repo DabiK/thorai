@@ -13,6 +13,6 @@ prefix_rule(
     pattern = ["thor-screen"],
     decision = "allow",
     justification = "Piloter les deux écrans de la console, sans validation.",
-    match = ["thor-screen ids", "thor-screen launch bas app.regie"],
+    match = ["thor-screen ids", "thor-screen launch bas app.thorai"],
     not_match = ["thor-screens"],
 )

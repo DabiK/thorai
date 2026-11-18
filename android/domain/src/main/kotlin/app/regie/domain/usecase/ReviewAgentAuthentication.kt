@@ -101,7 +101,7 @@ class ReviewAgentAuthentication(private val gateway: AgentAuthenticationGateway,
                 if (!result.pending) attemptedLogins.remove(result.agent)
                 mutable.value = state.value.copy(agents = state.value.agents.map { if (it.agent == result.agent) result else it }, busy = false, confirmingLogout = false)
             } catch (e: CancellationException) { throw e } catch (_: Exception) {
-                mutable.value = state.value.copy(busy = false, confirmingLogout = false, notice = "Action non confirmée. Actualise. Si une session tourne, choisis Quitter puis rouvre Régie avant de changer de compte.")
+                mutable.value = state.value.copy(busy = false, confirmingLogout = false, notice = "Action non confirmée. Actualise. Si une session tourne, choisis Quitter puis rouvre ThorAI avant de changer de compte.")
             }
         }
     }
