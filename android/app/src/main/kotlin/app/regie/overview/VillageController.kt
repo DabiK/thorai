@@ -5,9 +5,16 @@ import app.regie.domain.model.SessionId
 import app.regie.domain.model.SessionStatus
 import app.regie.game.engine.courier.CourierCommand
 import app.regie.game.engine.courier.Direction
+import app.regie.domain.model.Session
+import app.regie.domain.model.SessionThread
+import app.regie.game.engine.village.Construction
+import app.regie.game.engine.village.ConstructionStage
 import app.regie.game.engine.village.HouseCatalog
+import app.regie.game.engine.village.MapLot
 import app.regie.game.engine.village.VillageGenerator
 import app.regie.game.engine.village.VillageLayoutStore
+import app.regie.game.engine.village.map
+import app.regie.game.ui.village.courierTile
 import app.regie.game.ui.scene.VillageSceneState
 import app.regie.game.ui.village.focusedHouse
 import app.regie.game.ui.village.walkingByHand
@@ -37,6 +44,12 @@ import kotlinx.coroutines.flow.asStateFlow
  *
  * Sans hameau, ou quand l'écran du haut n'est pas visible (mode console), tout revient à
  * [classic] : un coursier qu'on ne voit pas ne marche pas pour rien.
+ *
+ * Bâtir (ticket 48) : pendant la fiche de nouvelle session, le coursier marche jusqu'au terrain visé
+ * ([planning]) ; A réserve ce terrain avant la création ([launch]), la session créée le prend
+ * ([created]), un échec le libère ([failed]). Le chantier ([construction]) suit ensuite la session
+ * ([observe]) ; à la première réponse, le coursier entre dans la maison finie s'il est resté devant.
+ * Pendant le chantier, l'écran du bas montre la carte du hameau ([mapOpen]).
  */
 class VillageController(
     private val overview: StateFlow<Overview>,
@@ -48,7 +61,36 @@ class VillageController(
     private val worker: CoroutineDispatcher = Dispatchers.Default.limitedParallelism(1),
 ) {
     private var generator: VillageGenerator? = null
-    private var lastKey: List<HouseKey>? = null
+    private var lastKey: Any? = null
+
+    private val _construction = MutableStateFlow<Construction?>(null)
+
+    /** Le chantier de la nouvelle session, `null` sans fiche ni chantier. Il fait partie de ce qui régénère le hameau. */
+    val construction: StateFlow<Construction?> = _construction.asStateFlow()
+
+    /** La disposition a changé hors de la vue d'ensemble (réservation, session liée, terrain libéré). */
+    private val layoutVersion = MutableStateFlow(0)
+
+    private val changesFlow = MutableStateFlow<Any>(Unit)
+
+    /** Ce qui fait régénérer le hameau, en plus de la vue d'ensemble : le chantier et la disposition. */
+    val changes: StateFlow<Any> = changesFlow.asStateFlow()
+
+    /** Le coursier doit marcher jusqu'au chantier dès que le hameau le montre. */
+    private var walkToSite = false
+
+    /** La maison finie où entrer dès que le hameau la montre. */
+    private var enterWhenBuilt: SessionId? = null
+
+    private val _mapOpen = MutableStateFlow(false)
+
+    /** La carte du hameau est à l'écran du bas : la croix choisit une rue, A y va, B la ferme. */
+    val mapOpen: StateFlow<Boolean> = _mapOpen.asStateFlow()
+
+    private val _mapStreet = MutableStateFlow(0)
+
+    /** La rue choisie sur la carte. */
+    val mapStreet: StateFlow<Int> = _mapStreet.asStateFlow()
 
     private val _scene = MutableStateFlow<VillageSceneState?>(null)
 
@@ -76,15 +118,145 @@ class VillageController(
      */
     suspend fun update(overview: Overview) {
         // Le hameau ne dépend pas de l'ordre de la vue d'ensemble : une session qui passe devant ne le refait pas.
-        val key = overview.sessions.map { HouseKey(it.id, it.project, it.agent.id, it.title, it.status, it.pendingApproval != null) }
+        val houses = overview.sessions.map { HouseKey(it.id, it.project, it.agent.id, it.title, it.status, it.pendingApproval != null) }
             .sortedBy { it.id.value }
+        val construction = _construction.value
+        val key = Triple(houses, construction, layoutVersion.value)
         if (key == lastKey) return
-        val village = withContext(worker) {
-            (generator ?: VillageGenerator(store, catalog()).also { generator = it }).generate(overview)
-        }
+        val village = withContext(worker) { generator().generate(overview, construction) }
         lastKey = key
         val current = _scene.value
-        if (current == null) _scene.value = VillageSceneState(village) else current.updateVillage(village)
+        val scene = if (current == null) VillageSceneState(village).also { _scene.value = it } else current.also { it.updateVillage(village) }
+        if (walkToSite && village.site != null && shown()) {
+            walkToSite = false
+            scene.send(CourierCommand.GoToSite)
+        }
+        enterWhenBuilt?.let { id ->
+            if (village.houseOf(id) == null || village.site?.stage != ConstructionStage.FINISHED) return@let
+            enterWhenBuilt = null
+            // Resté devant son chantier : il entre dans la maison finie. Parti ailleurs : on le laisse.
+            val site = village.site
+            val tile = scene.courierTile
+            if (shown() && site != null && !scene.walkingByHand && scene.destination == null &&
+                kotlin.math.abs(tile.x - site.entry.x) + kotlin.math.abs(tile.y - site.entry.y) <= NEAR_SITE
+            ) {
+                scene.send(CourierCommand.GoTo(id, enter = true))
+            }
+        }
+    }
+
+    /** Une seule génération à la fois, sur [worker] ; la réservation d'un lancement précédent tombe. */
+    private fun generator(): VillageGenerator =
+        generator ?: VillageGenerator(store, catalog()).also {
+            it.forgetUnboundReservation()
+            generator = it
+        }
+
+    private fun changed() {
+        changesFlow.value = Triple(_construction.value, layoutVersion.value, _mapOpen.value)
+    }
+
+    /**
+     * La fiche est ouverte ou modifiée : [project] est le dossier choisi (`null` sans projet, ou pour un
+     * nouveau projet encore sans nom valide). Le coursier marche jusqu'au terrain visé ; un nouveau
+     * projet montre la rue qu'il ouvrirait. Rien n'est réservé. Ignoré pendant un lancement en cours.
+     */
+    fun planning(project: String?, newProject: Boolean) {
+        val current = _construction.value
+        val next = if (project == null && !newProject) null else Construction(project.orEmpty(), newProject)
+        val same = current != null && next != null && current.project == next.project && current.newProject == next.newProject
+        // Un lancement en cours ne bouge pas ; un échec reste lu tant que la fiche vise le même projet.
+        if (current?.stage != null && (!current.failed || same)) return
+        if (same || next == null && current == null) return
+        _construction.value = next
+        _mapOpen.value = false
+        walkToSite = next != null
+        changed()
+    }
+
+    /**
+     * A sur la fiche : le terrain de [project] est réservé et enregistré avant la création. [prompted] :
+     * une consigne part avec la session.
+     */
+    suspend fun launch(overview: Overview, project: String, newProject: Boolean, prompted: Boolean) {
+        withContext(worker) { generator().reserve(overview, project) }
+        _construction.value = Construction(project, newProject).launched(prompted)
+        layoutVersion.value++
+        walkToSite = true
+        changed()
+    }
+
+    /** Le pont a créé la session : sa maison prendra le terrain réservé. La carte du hameau s'ouvre en bas. */
+    suspend fun created(id: SessionId) {
+        withContext(worker) { generator().bind(id) }
+        _construction.value = _construction.value?.created(id)
+        layoutVersion.value++
+        _mapOpen.value = shown()
+        _mapStreet.value = 0
+        changed()
+    }
+
+    /** La création a échoué ou reste incertaine : l'étape s'arrête, le message reste lisible, le terrain se libère. */
+    suspend fun failed(message: String) {
+        withContext(worker) { generator().release() }
+        _construction.value = _construction.value?.failedWith(message)
+        layoutVersion.value++
+        changed()
+    }
+
+    /** La fiche est fermée sans lancement (B) : rien n'est réservé, le chantier disparaît. */
+    suspend fun cancel() {
+        val current = _construction.value ?: return
+        if (current.session != null && !current.failed) return
+        withContext(worker) { generator().release() }
+        _construction.value = null
+        walkToSite = false
+        layoutVersion.value++
+        changed()
+    }
+
+    /** Ce que la vue d'ensemble et le fil disent de la session du chantier. */
+    fun observe(session: Session?, thread: SessionThread?) {
+        val current = _construction.value ?: return
+        val next = current.observed(session, thread)
+        if (next == current) return
+        _construction.value = next
+        if (next.finished && !current.finished) enterWhenBuilt = next.session
+        changed()
+    }
+
+    /** Le coursier est entré dans une maison : un chantier fini ou arrêté s'efface, la carte se ferme. */
+    fun settle() {
+        val current = _construction.value
+        if (current != null && (current.finished || current.failed)) {
+            _construction.value = null
+            enterWhenBuilt = null
+        }
+        _mapOpen.value = false
+        changed()
+    }
+
+    /** B sur la carte : le carnet revient ; un chantier en cours continue en haut, un chantier fini ou arrêté s'efface. */
+    fun closeMap() = settle()
+
+    /** Croix sur la carte : la rue précédente ou suivante. */
+    fun moveOnMap(delta: Int) {
+        val streets = _scene.value?.village?.streets?.size ?: return
+        if (streets == 0) return
+        _mapStreet.value = (_mapStreet.value + delta).coerceIn(0, streets - 1)
+    }
+
+    /** A sur la carte, ou une rue touchée : le coursier va au chantier de cette rue, sinon à sa première maison. */
+    fun goToStreet(index: Int) {
+        val scene = _scene.value ?: return
+        _mapStreet.value = index
+        if (!shown()) return
+        val street = scene.village.map().streets.getOrNull(index) ?: return
+        when {
+            street.lots.any { it is MapLot.Building } -> scene.send(CourierCommand.GoToSite)
+            else -> street.lots.firstNotNullOfOrNull { (it as? MapLot.Built)?.house?.session?.id }
+                ?.let { scene.send(CourierCommand.GoTo(it, enter = false)) }
+        }
     }
 
     /** La maison choisie, quand le hameau est à l'écran. */
@@ -171,5 +343,10 @@ class VillageController(
     /** Retour sur la vue d'ensemble : sorti d'une maison, le coursier se tient devant sa porte. */
     fun leaveHouse() {
         _scene.value?.leaveHouse()
+    }
+
+    private companion object {
+        /** À une ou deux tuiles du devant du chantier, le coursier y est resté. */
+        const val NEAR_SITE = 2
     }
 }

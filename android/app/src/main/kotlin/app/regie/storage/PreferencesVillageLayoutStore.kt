@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import androidx.core.content.edit
 import app.regie.domain.model.SessionId
 import app.regie.game.engine.village.HouseLayout
+import app.regie.game.engine.village.PlotReservation
 import app.regie.game.engine.village.StreetLayout
 import app.regie.game.engine.village.VillageLayout
 import app.regie.game.engine.village.VillageLayoutStore
@@ -58,6 +59,16 @@ class PreferencesVillageLayoutStore(private val preferences: SharedPreferences) 
                     }
                 },
             )
+            .also { json ->
+                // Le terrain réservé avant la création d'une session (ticket 48) ; absent sinon.
+                layout.reservation?.let { r ->
+                    json.put(
+                        "reservation",
+                        JSONObject().put("project", r.project).put("plot", r.plot).put("opensStreet", r.opensStreet)
+                            .also { o -> r.session?.let { o.put("session", it.value) } },
+                    )
+                }
+            }
 
         internal fun decode(json: JSONObject): VillageLayout {
             if (json.optInt("version") != VERSION) return VillageLayout.EMPTY
@@ -78,7 +89,15 @@ class PreferencesVillageLayoutStore(private val preferences: SharedPreferences) 
                     )
                 }
             }
-            return VillageLayout(streets, houses)
+            val reservation = json.optJSONObject("reservation")?.let {
+                PlotReservation(
+                    project = it.getString("project"),
+                    plot = it.getInt("plot"),
+                    session = if (it.has("session")) SessionId(it.getString("session")) else null,
+                    opensStreet = it.optBoolean("opensStreet"),
+                )
+            }
+            return VillageLayout(streets, houses, reservation)
         }
     }
 }

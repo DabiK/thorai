@@ -37,6 +37,9 @@ import app.regie.game.ui.village.CarnetTrigger
 import app.regie.game.ui.village.CarnetVersion
 import app.regie.game.ui.village.CompactCarnet
 import app.regie.game.ui.village.VillageTopScreen
+import app.regie.game.ui.village.DefaultVillageLayer
+import app.regie.game.ui.chantier.constructionLayer
+import app.regie.game.engine.village.Construction
 import app.regie.game.ui.village.focusedHouse
 import app.regie.input.Button
 import app.regie.input.Trigger
@@ -82,6 +85,7 @@ fun GameOverviewTop(
     callbacks: CarnetCallbacks,
     onEnterHouse: (SessionId) -> Unit,
     scrollVelocity: StateFlow<Float> = MutableStateFlow(0f),
+    construction: Construction? = null,
 ) {
     GameTheme {
         val assets = rememberGameAssets()
@@ -91,6 +95,8 @@ fun GameOverviewTop(
             scene,
             assets,
             onEnterHouse,
+            // Un chantier en cours (ticket 48) : son panneau, ses étapes et la nouvelle rue, par-dessus le hameau.
+            layer = if (construction == null) DefaultVillageLayer else remember(construction) { constructionLayer(construction, panel = true) },
             carnet = if (!singleScreen) null else ({ CompactCarnet(carnet, focused.house, focused.atDoor, assets, callbacks, scrollVelocity = scrollVelocity) }),
             prompt = if (!singleScreen) null else carnet.quit?.let { quit -> { CarnetQuitPrompt(quit, callbacks) } },
         )

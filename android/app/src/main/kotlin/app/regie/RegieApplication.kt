@@ -3,6 +3,7 @@ package app.regie
 import app.regie.domain.model.*
 import app.regie.commandmodel.MistralCommandModel
 import app.regie.domain.usecase.ReviewVoiceCommand
+import app.regie.domain.usecase.projectFolderName
 import app.regie.domain.usecase.InterpretVoiceCommand
 import app.regie.domain.usecase.ExecuteVoiceCommand
 import app.regie.domain.usecase.AnswerApproval
@@ -88,6 +89,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import app.regie.courier.CourierNotifications
@@ -594,6 +596,16 @@ class AppContainer(
         }
         if (input == GamepadInput.Pressed(Button.A) && closedByDelivery?.let { it.elapsedNow() < SECOND_A_IGNORED } == true) return
         if (handleGameMenu(input)) return
+        // La carte du hameau, en bas pendant un chantier (ticket 48) : la croix choisit une rue, A y va, B la ferme.
+        if (_screen.value == Screen.Overview && village.mapOpen.value && controller.state.value.quit == null && input is GamepadInput.Pressed) {
+            when (input.button) {
+                Button.B -> { village.closeMap(); return }
+                Button.UP -> { village.moveOnMap(-1); return }
+                Button.DOWN -> { village.moveOnMap(1); return }
+                Button.A -> { village.goToStreet(village.mapStreet.value); return }
+                else -> Unit
+            }
+        }
         // « R1 Voir » de l'oiseau messager : la validation de cette lettre-là, pas la première en attente.
         if (_screen.value == Screen.Overview && controller.state.value.quit == null && input == GamepadInput.Pressed(Button.R1) && openArrivingLetter()) return
         // Start sur le hameau : le menu de pause, qui garde « Tout mettre en pause » (ticket 49).
@@ -701,12 +713,58 @@ class AppContainer(
     val newSessionVelocity = MutableStateFlow(0f)
     fun openNewSession(draft: NewSessionDraft? = null, text: String = "") {
         newSessionVelocity.value = 0f
+        // Vue jeu (ticket 48) : on bâtit depuis le hameau. Ouverte dans une maison (ordre R2), la fiche
+        // en fait sortir le coursier, qui marche ensuite jusqu'au terrain.
+        if (reviewNewSession != null && village.active && _screen.value != Screen.Overview) navigate(Screen.Overview)
         reviewNewSession?.open(draft, text)
+    }
+
+    /**
+     * A sur la fiche : le terrain est réservé dans la disposition du hameau, puis la session est créée
+     * (ticket 48). Une fiche incomplète reste au cas d'usage, qui explique ce qui manque.
+     */
+    private fun launchNewSession(review: ReviewNewSession) {
+        val form = review.state.value
+        val project = form.streetProject
+        if (!form.canLaunch || project == null) { review.launch(); return }
+        val prompted = form.instruction.isNotBlank() || form.branchChoice != BranchChoice.CURRENT
+        scope.launch {
+            village.launch(overview.value, project, form.newProject, prompted)
+            review.launch()
+            if (!review.state.value.sending && review.state.value.visible) village.failed(review.state.value.feedback)
+        }
+    }
+
+    /** Le pont a créé la session : sa maison prend le terrain réservé. Sans hameau à l'écran, la session s'ouvre, comme avant. */
+    private fun onSessionCreated(id: SessionId) {
+        val watched = village.active && _screen.value == Screen.Overview
+        scope.launch { village.created(id) }
+        if (!watched) openSession(id)
+    }
+
+    /**
+     * La fiche, vue par le hameau : le coursier va au terrain du projet choisi ; un lancement qui échoue
+     * (refus, création incertaine) libère le terrain ; une fiche fermée sans lancement aussi.
+     */
+    private suspend fun followNewSession(review: ReviewNewSession) {
+        var previous = NewSessionForm()
+        review.state.collect { form ->
+            when {
+                form.visible && previous.sending && !form.sending -> village.failed(form.feedback)
+                form.visible && !form.sending -> village.planning(form.streetProject, form.newProject)
+                !form.visible && previous.visible && !previous.sending -> village.cancel()
+            }
+            previous = form
+        }
     }
     fun selectNewSessionField(field: NewSessionField) { reviewNewSession?.select(field) }
     fun editNewInstruction(text: String) { reviewNewSession?.editInstruction(text) }
     fun editNewProjectName(text: String) { reviewNewSession?.editProjectName(text) }
     fun editNewBranch(text: String) { reviewNewSession?.editBranch(text) }
+
+    /** Le dossier que la session aura, celui de sa rue : le nom normalisé d'un nouveau projet, comme le pont le crée. */
+    private val NewSessionForm.streetProject: String?
+        get() = if (newProject) project?.let { projectFolderName(it) } else project
 
     private fun handleNewSession(input: GamepadInput) {
         if (input is GamepadInput.Scroll) { newSessionVelocity.value = input.velocity; return }
@@ -718,7 +776,7 @@ class AppContainer(
             }
             is GamepadInput.TriggerUp -> if (input.trigger == Trigger.L2) review.finish()
             is GamepadInput.Pressed -> when (input.button) {
-                Button.A -> { newSessionVelocity.value = 0f; review.launch() }
+                Button.A -> { newSessionVelocity.value = 0f; launchNewSession(review) }
                 Button.B -> { newSessionVelocity.value = 0f; review.back() }
                 Button.UP -> review.move(-1)
                 Button.DOWN -> review.move(1)
@@ -748,7 +806,10 @@ class AppContainer(
 
     /** L'iris s'est fermé sur une porte du hameau : la session s'ouvre, comme A ouvrait sa ligne. */
     fun enterHouse(id: SessionId) {
-        if (_screen.value == Screen.Overview) execute(OverviewAction.OpenSession(id))
+        if (_screen.value == Screen.Overview) {
+            village.settle()
+            execute(OverviewAction.OpenSession(id))
+        }
     }
 
     /** Une ligne du carnet touchée : le coursier y va, puis y entre. */
@@ -758,7 +819,7 @@ class AppContainer(
     private fun handleDirection(button: Button, held: Boolean) {
         val free = _screen.value == Screen.Overview && !gameMenu.value.open && !agentAuthentication.value.visible && !setup.state.value.visible &&
             !sessionSettings.value.visible && !settingsOpen.value && !voiceCommand.state.value.visible &&
-            !newSession.value.visible && !dictation.state.value.visible
+            !newSession.value.visible && !dictation.state.value.visible && !village.mapOpen.value
         village.onDirection(button, held, free)
     }
     val sessionController = SessionController(live, overview, current = { _screen.value.sessionId }, ::execute)
@@ -967,8 +1028,19 @@ class AppContainer(
             scope.launch { chosen.connection.collect { if (it == BridgeConnection.Connected && !setup.state.value.visible) review.offerOnLaunch() } }
         }
         settingsReview = ReviewSessionSettings(chosen, scope).also { review -> scope.launch { review.state.collect { sessionSettings.value = it } } }
-        reviewNewSession = ReviewNewSession(chosen, capture, scope) { openSession(it) }.also { review ->
+        reviewNewSession = ReviewNewSession(chosen, capture, scope) { onSessionCreated(it) }.also { review ->
             scope.launch { review.state.collect { newSession.value = it } }
+            scope.launch { followNewSession(review) }
+        }
+        // Le chantier suit la session créée : la vue d'ensemble et son fil (ticket 48).
+        scope.launch {
+            village.construction.map { it?.session?.takeIf { _ -> !it.failed && !it.finished } }.distinctUntilChanged().collectLatest { id ->
+                if (id == null) return@collectLatest
+                val thread = chosen.thread(id).map<app.regie.domain.model.SessionThread, app.regie.domain.model.SessionThread?> { it }
+                    .onStart { emit(null) }
+                combine(_overview.map { all -> all.sessions.firstOrNull { it.id == id } }, thread, ::Pair)
+                    .collect { (session, current) -> village.observe(session, current) }
+            }
         }
         reviewDiff = ReviewDiff(chosen, scope).also { review -> scope.launch { review.state.collect { diffReview.value = it } } }
         val answer = AnswerApproval(chosen)
@@ -1033,7 +1105,7 @@ class AppContainer(
             }
         }
         // Le hameau suit la vue d'ensemble ; il se génère hors du fil principal (ticket 45).
-        scope.launch { _overview.collectLatest { village.update(it) } }
+        scope.launch { combine(_overview, village.changes) { overview, _ -> overview }.collectLatest { village.update(it) } }
         // L2 sur le hameau : le coursier parle tant que la dictée est ouverte.
         scope.launch {
             dictation.state.map { it.visible }.distinctUntilChanged().collect { visible ->
