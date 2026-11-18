@@ -169,8 +169,8 @@ data class SetupReview(
  */
 object SetupCommands {
     const val INSTALL = "pkg update && pkg install git\n" +
-        "git clone https://github.com/DabiK/regie.git\n" +
-        "cd regie && bash thor/install-on-device.sh"
+        "git clone https://github.com/DabiK/thorai.git\n" +
+        "cd thorai && bash thor/install-on-device.sh"
 
     /**
      * Entre dans la Debian, demande le port et le code de la fenêtre d'association, associe, puis

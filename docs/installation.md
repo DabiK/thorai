@@ -35,14 +35,14 @@ Les commandes se tapent dans trois terminaux. Chaque bloc indique le sien :
 
    ```sh
    pkg update && pkg install git
-   git clone https://github.com/DabiK/regie.git
-   cd regie && bash thor/install-on-device.sh
+   git clone https://github.com/DabiK/thorai.git
+   cd thorai && bash thor/install-on-device.sh
    ```
 
    Le dépôt doit être accessible au téléchargement (public, ou avec votre propre accès). L’installeur prépare Debian 13, Node, Claude Code, Codex et opencode aux versions éprouvées, le pont et l’accès des agents à Android. Il ne lance aucun agent et ne démarre rien au boot. On peut le relancer après une interruption ou une mise à jour : projets, connexions, clé adb et consignes hors des blocs Régie sont gardés.
 
    Le parcours d’accueil de ThorAI donne les mêmes commandes : à l’étape « Termux et Debian », **Y** les copie et ouvre Termux sur l’écran du bas.
-3. Télécharger l’APK et son fichier `.sha256` dans les [releases de ThorAI](https://github.com/DabiK/regie/releases). Pour vérifier le téléchargement, autoriser une fois `termux-setup-storage` dans Termux, puis :
+3. Télécharger l’APK et son fichier `.sha256` dans les [releases de ThorAI](https://github.com/DabiK/thorai/releases). Pour vérifier le téléchargement, autoriser une fois `termux-setup-storage` dans Termux, puis :
 
    ```sh
    cd ~/storage/downloads && sha256sum -c thorai-<version>.apk.sha256
@@ -139,8 +139,8 @@ Installer git, un JDK 21 ou 25, et le SDK Android en ligne de commande avec `pla
 Dans le terminal **Mac** :
 
 ```sh
-git clone https://github.com/DabiK/regie.git
-cd regie
+git clone https://github.com/DabiK/thorai.git
+cd thorai
 export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools  # adapter à l’emplacement du SDK
 printf 'sdk.dir=%s\n' "$ANDROID_HOME" > android/local.properties
 printf 'sdk.dir=%s\n' "$ANDROID_HOME" > voice/local.properties
@@ -403,7 +403,7 @@ Le [README](../README.md#les-commandes-de-la-manette) liste toutes les commandes
 
 1. **Start › Quitter** dans ThorAI.
 2. Mettre à jour la console :
-   - sans Mac, dans **Termux** : `cd regie && git pull && bash thor/install-on-device.sh` ;
+   - sans Mac, dans **Termux** : `cd thorai && git pull && bash thor/install-on-device.sh` (le dossier s’appelle `regie` sur une console installée avant que le dépôt prenne le nom de ThorAI) ;
    - depuis le **Mac** : `git pull`, puis les scripts des parties qui ont changé : `thor/bridge/install.sh` pour le pont et opencode, `thor/computer-use/install.sh` pour l’accès Android.
 3. Installer la nouvelle app par-dessus l’ancienne, signée par la même clé : APK de la release, ou `scripts/thor-install.sh` (avec `--release` si l’app en place est une release).
 4. Rouvrir ThorAI.

@@ -197,11 +197,11 @@ En bref, sur la console :
 
    ```sh
    pkg update && pkg install git
-   git clone https://github.com/DabiK/regie.git
-   cd regie && bash thor/install-on-device.sh
+   git clone https://github.com/DabiK/thorai.git
+   cd thorai && bash thor/install-on-device.sh
    ```
 
-3. Installer l’APK signé des [releases de ThorAI](https://github.com/DabiK/regie/releases).
+3. Installer l’APK signé des [releases de ThorAI](https://github.com/DabiK/thorai/releases).
 4. Ouvrir ThorAI : la route « Préparer la console » guide la suite.
 
 La [notice d’installation](docs/installation.md) détaille chaque étape, le parcours depuis un Mac par USB, le dépannage et la [mise à jour depuis l’ancienne ThorAI](docs/installation.md#mettre-à-jour-depuis-lancienne-thorai).
