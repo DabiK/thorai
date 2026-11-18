@@ -79,9 +79,12 @@ fun DialogText(text: String, modifier: Modifier = Modifier) {
 @Immutable
 data class Choice(val label: String, val key: String? = null, val detail: String? = null, val enabled: Boolean = true)
 
-/** Menu de choix : un curseur-flèche clignote devant l'option choisie, chaque option porte sa touche. */
+/**
+ * Menu de choix : un curseur-flèche clignote devant l'option choisie, chaque option porte sa touche.
+ * [itemModifier] ajoute à une option ce qu'un doigt y fait (l'écran du bas est tactile).
+ */
 @Composable
-fun ChoiceMenu(choices: List<Choice>, selected: Int, modifier: Modifier = Modifier) {
+fun ChoiceMenu(choices: List<Choice>, selected: Int, modifier: Modifier = Modifier, itemModifier: (Int) -> Modifier = { Modifier }) {
     val metrics = Game.metrics
     val colors = Game.colors
     PixelFrame(
@@ -94,6 +97,7 @@ fun ChoiceMenu(choices: List<Choice>, selected: Int, modifier: Modifier = Modifi
                 val on = index == selected
                 Box(
                     Modifier.fillMaxWidth()
+                        .then(itemModifier(index))
                         .semantics { this.selected = on }
                         .then(if (on) Modifier.background(colors.paperDeep) else Modifier),
                 ) {

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Validation et modifications : le parchemin, le menu de choix, le tableau de liège (ticket 47, docs/textes.md). -->
+    <string name="game_approval_title">Validation</string>
+    <string name="game_approval_command">Exécuter une commande</string>
+    <string name="game_approval_file">Modifier un fichier</string>
+    <string name="game_approval_other">Autoriser une action</string>
+    <string name="game_approval_no_subject">Action non précisée</string>
+    <string name="game_approval_in">dans %s</string>
+    <string name="game_approval_why">Pourquoi</string>
+    <string name="game_approval_no_reason">Justification non communiquée.</string>
+    <string name="game_approval_paths">Fichiers concernés</string>
+    <string name="game_approval_no_paths">Fichiers non précisés.</string>
+    <string name="game_approval_plan">Plan proposé</string>
+    <string name="game_approval_before">Avant</string>
+    <string name="game_approval_after">Après</string>
+    <string name="game_approval_more">La suite se lit dans le fil.</string>
+    <string name="game_approval_once">Autoriser une fois</string>
+    <string name="game_approval_session">Autoriser pour la session</string>
+    <string name="game_approval_reject">Refuser</string>
+    <string name="game_approval_reject_instruction">Refuser et dicter une consigne</string>
+    <string name="game_approval_hold">Maintiens L2 pour dicter.</string>
+    <string name="game_approval_no_session">Autorisation pour la session indisponible.</string>
+    <string name="game_approval_sending">Réponse en cours…</string>
+    <string name="game_approval_accepted">Réponse reçue.</string>
+    <string name="game_approval_accepted_next">Réponse reçue. R1 ouvre la validation suivante.</string>
+    <string name="game_approval_unknown">Réponse non confirmée. Vérifie le fil avant de poursuivre.</string>
+    <string name="game_approval_not_sent">Réponse non envoyée. Tu peux réessayer.</string>
+    <string name="game_approval_unavailable">Validation indisponible.</string>
+    <string name="game_approval_done">Validation terminée.</string>
+    <string name="game_approval_others">Autres validations</string>
+    <string name="game_approval_no_others">Aucune autre validation</string>
+    <string name="game_approval_pending">%d en attente</string>
+    <string name="game_approval_back">Revenir</string>
+    <string name="game_approval_next">Voir la suivante</string>
+    <string name="game_approval_close">Fermer la validation</string>
+    <string name="game_approval_scroll">Défiler</string>
+
+    <string name="game_diff_title">Modifications</string>
+    <plurals name="game_diff_files">
+        <item quantity="one">%d fichier · modifications suivies</item>
+        <item quantity="many">%d fichiers · modifications suivies</item>
+        <item quantity="other">%d fichiers · modifications suivies</item>
+    </plurals>
+    <string name="game_diff_loading">Chargement des modifications…</string>
+    <string name="game_diff_not_shared">Modifications non communiquées pour ce fichier.</string>
+    <string name="game_diff_none">Aucune modification suivie. Les écritures par commande peuvent manquer.</string>
+    <string name="game_diff_edit">Édition %d</string>
+    <string name="game_diff_excerpt">Édition %d · extrait · position dans le fichier non communiquée</string>
+    <string name="game_diff_line">Ligne %d</string>
+    <string name="game_diff_removed">supprimée</string>
+    <string name="game_diff_from_excerpt">extrait</string>
+    <string name="game_diff_no_line">Aucune ligne à commenter</string>
+    <string name="game_diff_comment">Commenter à la voix</string>
+    <string name="game_diff_explain">Expliquer le bloc</string>
+    <string name="game_diff_lines">Ligne</string>
+    <string name="game_diff_file">Fichier</string>
+    <string name="game_diff_navigate">Naviguer</string>
+    <string name="game_diff_back">Revenir</string>
+    <string name="game_diff_ask">Demander</string>
+    <string name="game_diff_back_to_diff">Revenir aux modifications</string>
+    <string name="game_diff_unknown_changes">+/− ?</string>
+    <string name="game_explain_sending">Demande en cours…</string>
+    <string name="game_explain_review">Relis le bloc, puis demande une explication.</string>
+    <string name="game_explain_retry">Demande non livrée. A pour réessayer.</string>
+    <string name="game_explain_unknown">Envoi non confirmé. Vérifie le fil avant de renvoyer.</string>
+    <string name="game_explain_none">Aucune explication reçue. Consulte le fil.</string>
+    <string name="game_explain_reply">Réponse de l’agent</string>
+    <string name="game_explain_queued">En attente de la réponse en cours.</string>
+    <string name="game_explain_waiting">L’agent prépare son explication…</string>
+</resources>

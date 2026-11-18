@@ -66,7 +66,8 @@ import kotlin.time.Instant
  * Le fil brut de la session, dans le carnet du bas : messages, réponses de l'agent, actions sur une
  * ligne (un toucher déplie leur détail), texte en cours. Rien n'y est ajouté par Régie (ADR 17).
  * La fin reste visible tant qu'on ne remonte pas ; la croix et le stick droit font défiler.
- * [approval] s'ajoute en fin de fil (mode un seul écran).
+ * [approval], le parchemin entier de la validation en attente, finit le fil sur un ou deux écrans :
+ * l'écran du haut n'est pas tactile, c'est ici que la manette le lit jusqu'au bout.
  */
 @Composable
 fun HouseThread(
@@ -84,8 +85,17 @@ fun HouseThread(
     var viewportHeight by remember { mutableIntStateOf(0) }
     val step = STEP_PX.toFloat()
     val lastIndex = lines.size - 1 + if (approval != null) 1 else 0
-    suspend fun bottom() {
+    /** [auto] : suivi du fil (nouvelle ligne, hauteur qui change), pas un geste pour revenir en bas. */
+    suspend fun bottom(auto: Boolean = false) {
         if (lastIndex < 0) return
+        if (approval != null) {
+            // Une validation finit le fil : on la lit depuis son début, la croix descend vers la suite (ticket 47).
+            // Son début déjà en haut, ou dépassé à la croix : le suivi ne la fait pas remonter.
+            val shown = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == lastIndex }
+            if (auto && shown != null && shown.offset <= 0) return
+            listState.scrollToItem(lastIndex)
+            return
+        }
         listState.scrollToItem(lastIndex)
         listState.scrollBy(listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == lastIndex }?.size?.toFloat() ?: 0f)
     }
@@ -115,7 +125,7 @@ fun HouseThread(
     LaunchedEffect(listState) {
         snapshotFlow { listState.isScrollInProgress }.drop(1).filter { !it }.collect { follow = !listState.canScrollForward }
     }
-    LaunchedEffect(lines, approval != null, viewportHeight) { if (follow) bottom() }
+    LaunchedEffect(lines, approval != null, viewportHeight) { if (follow) bottom(auto = true) }
     Box(modifier) {
         when {
             live.loading && approval == null -> CenteredNote(stringResource(R.string.game_thread_loading))

@@ -227,7 +227,8 @@ abstract class GamepadActivity : ComponentActivity() {
                     when (val shown = screen) {
                         is Screen.Diff -> {
                             val review by container.diffReview.collectAsStateWithLifecycle()
-                            app.regie.ui.screens.DiffScreen(review, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single,
+                            // Le tableau de liège et son carnet (ticket 47).
+                            app.regie.ui.game.GameDiff(review, current, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single,
                                 container.diffVelocity, button, container::selectDiffFile, held, container.diffSteps)
                         }
                         Screen.Approval -> approval()

@@ -61,7 +61,7 @@ class ConsoleModeTest {
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
             host.setup().get().setContent { RegieTheme {
                 ConsoleSessionBottom(session, LiveSession.of(session, thread), false, Neighbours(null, null, 1, 1), SessionControlState(), "",
-                    SessionSettingsReview(), scroll, sessionCallbacks, ApprovalReview(), { _, _ -> }, {}, {}, {})
+                    SessionSettingsReview(), scroll, sessionCallbacks, ApprovalReview(), { _, _ -> }, {}, {})
             } }
             compose.onNodeWithTag("console-tower").assertIsDisplayed()
             compose.onNodeWithText("Tour de la console").assertIsDisplayed()
@@ -90,7 +90,7 @@ class ConsoleModeTest {
             val activity = host.setup().get().also { it.actionBar?.hide() }
             activity.setContent { RegieTheme {
                 ConsoleSessionBottom(session, LiveSession.of(session, thread), false, Neighbours(null, null, 1, 1), control.value, "Brouillon tapé",
-                    SessionSettingsReview(), scroll, sessionCallbacks, ApprovalReview(), { _, _ -> }, {}, {}, {})
+                    SessionSettingsReview(), scroll, sessionCallbacks, ApprovalReview(), { _, _ -> }, {}, {})
             } }
             compose.onNodeWithTag("console-tower").assertIsDisplayed()
             compose.onNodeWithText("Brouillon tapé").assertIsDisplayed()
@@ -107,7 +107,7 @@ class ConsoleModeTest {
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
             host.setup().get().setContent { RegieTheme {
                 GameSessionBottom(LiveSession.of(session, thread), false, Neighbours(null, null, 1, 1), SessionControlState(), "", SessionSettingsReview(),
-                    scroll, sessionCallbacks, ApprovalReview(), { _, _ -> }, {}, {}, {})
+                    scroll, sessionCallbacks, ApprovalReview(), { _, _ -> }, {}, {})
             } }
             compose.onNodeWithTag("house-settings").assertIsDisplayed()
             compose.onNodeWithTag("house-thread").assertIsDisplayed()
