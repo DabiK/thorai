@@ -97,6 +97,29 @@ class ArchitectureTest {
     }
 
     @Test
+    fun `the game view only talks to the domain and the game engine`() {
+        val gameUi = File("../game/ui/src/main/kotlin").kotlinFiles()
+        assertTrue(gameUi.isNotEmpty(), "sources de la vue jeu introuvables")
+        val found = violations(gameUi) {
+            isAdapter(it) || it.startsWith("app.regie.domain.port.") ||
+                it == "app.regie.AppContainer" || it == "app.regie.RegieApplication" ||
+                (it.startsWith("app.regie.") && !it.startsWith("app.regie.domain.") && !it.startsWith("app.regie.game."))
+        }
+        assertEquals(emptyList(), found)
+    }
+
+    @Test
+    fun `the game engine is pure Kotlin, without Android nor the game view`() {
+        val engine = File("../game/engine/src/main/kotlin").kotlinFiles()
+        assertTrue(engine.isNotEmpty(), "sources du moteur du jeu introuvables")
+        val found = violations(engine) {
+            it.startsWith("android.") || it.startsWith("androidx.") ||
+                (it.startsWith("app.regie.") && !it.startsWith("app.regie.domain.") && !it.startsWith("app.regie.game.engine."))
+        }
+        assertEquals(emptyList(), found)
+    }
+
+    @Test
     fun `the composition root is the only place that picks the gateway`() {
         val users = appSources.kotlinFiles()
             .filter { file -> file.imports().any { it.startsWith("app.regie.gateway.") } }

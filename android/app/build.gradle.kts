@@ -89,6 +89,8 @@ dependencies {
     implementation(libs.voice.local)
     implementation(libs.voice.elevenlabs)
     implementation(project(":gateway-bridge"))
+    // La vue jeu (ticket 41) : rendu pixel et kit, pas encore branchés sur les écrans.
+    implementation(project(":game-ui"))
     // Les enregistrements rejoués par la passerelle factice, qui n'est choisissable qu'en debug.
     debugImplementation(project(":bridge-fixtures"))
 
