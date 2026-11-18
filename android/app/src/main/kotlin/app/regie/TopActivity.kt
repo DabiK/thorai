@@ -14,7 +14,6 @@ import app.regie.console.TermuxBridgeLauncher
 import app.regie.display.ScreenMode
 import app.regie.input.GamepadInput
 import app.regie.ui.screens.ApprovalTopScreen
-import app.regie.ui.screens.OverviewTopScreen
 import app.regie.ui.screens.SessionTopScreen
 import kotlinx.coroutines.launch
 
@@ -75,8 +74,10 @@ class TopActivity : GamepadActivity() {
             },
             overview = { overview, control ->
                 val mode by container.displays.mode.collectAsStateWithLifecycle()
-                OverviewTopScreen(overview, control, singleScreen = mode == ScreenMode.Single, callbacks = callbacks,
-                    scrollVelocity = container.controller.scrollVelocity)
+                val scene by container.village.scene.collectAsStateWithLifecycle()
+                // Le hameau (ticket 45) : le coursier entre dans une maison, l'iris fermé ouvre la session.
+                app.regie.ui.game.GameOverviewTop(scene, overview, control, singleScreen = mode == ScreenMode.Single,
+                    setupLeft = setupLeft(overview), callbacks = carnetCallbacks, onEnterHouse = container::enterHouse)
             },
             session = { shown, overview ->
                 val mode by container.displays.mode.collectAsStateWithLifecycle()

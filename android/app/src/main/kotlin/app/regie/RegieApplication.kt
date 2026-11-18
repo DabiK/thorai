@@ -63,6 +63,11 @@ import app.regie.gateway.bridge.ReplayAgentGateway
 import app.regie.input.InputRouter
 import app.regie.overview.OverviewAction
 import app.regie.overview.OverviewController
+import app.regie.overview.VillageController
+import app.regie.storage.PreferencesVillageLayoutStore
+import app.regie.game.engine.village.HouseCatalog
+import app.regie.game.ui.atlas.GameAssetLoader
+import app.regie.game.ui.atlas.houseCatalog
 import app.regie.overview.OverviewList
 import app.regie.session.Screen
 import app.regie.domain.usecase.ReviewAgentAuthentication
@@ -355,6 +360,7 @@ class AppContainer(
     private fun startVoiceCommand() {
         if (dictation.state.value.visible || settingsOpen.value || controller.state.value.quit != null) return
         val shown = _screen.value
+        if (shown == Screen.Overview) village.syncFocus()
         val current = when (shown) {
             is Screen.Session -> shown.id
             is Screen.Diff -> shown.id
@@ -489,7 +495,7 @@ class AppContainer(
             when (val screen = _screen.value) {
                 is Screen.Session -> startDictation(screen.id)
                 is Screen.Diff -> if (diffReview.value.explanation == null) reviewDiff?.commentTarget()?.let(::beginDictation)
-                Screen.Overview -> controller.handle(input)
+                Screen.Overview -> village.handle(input)
                 Screen.Approval -> approvalReview.value.takeIf { it.canAnswer(ApprovalDecision.REJECT) }?.request?.let {
                     beginDictation(DictationTarget.Rejection(it.sessionId, it.id))
                 }
@@ -497,7 +503,7 @@ class AppContainer(
             return
         }
         when (_screen.value) {
-            Screen.Overview -> controller.handle(input)
+            Screen.Overview -> village.handle(input)
             Screen.Approval -> approvalController.handle(input)
             is Screen.Session -> {
                 val review = inlineApproval.value
@@ -615,10 +621,38 @@ class AppContainer(
     }
 
     val controller = OverviewController(overview, ::execute)
+
+    /**
+     * La vue d'ensemble en hameau (ticket 45) : régénéré à chaque vue d'ensemble, disposition gardée
+     * dans les préférences ; la manette y pilote le coursier tant que l'écran du haut est visible.
+     */
+    val village = VillageController(
+        controller,
+        PreferencesVillageLayoutStore(app),
+        catalog = { GameAssetLoader.houseCatalog(app.assets) ?: HouseCatalog.DEFAULT },
+        shown = { topStarted.value },
+        open = { execute(OverviewAction.OpenSession(it)) },
+    )
+
+    /** L'iris s'est fermé sur une porte du hameau : la session s'ouvre, comme A ouvrait sa ligne. */
+    fun enterHouse(id: SessionId) {
+        if (_screen.value == Screen.Overview) execute(OverviewAction.OpenSession(id))
+    }
+
+    /** Une ligne du carnet touchée : le coursier y va, puis y entre. */
+    fun goToHouse(id: SessionId) = village.goTo(id)
+
+    /** Une direction tenue ou relâchée (croix, stick gauche) : le coursier, si la vue d'ensemble a la manette. */
+    private fun handleDirection(button: Button, held: Boolean) {
+        val free = _screen.value == Screen.Overview && !agentAuthentication.value.visible && !setup.state.value.visible &&
+            !sessionSettings.value.visible && !settingsOpen.value && !voiceCommand.state.value.visible &&
+            !newSession.value.visible && !dictation.state.value.visible
+        village.onDirection(button, held, free)
+    }
     val sessionController = SessionController(live, overview, current = { _screen.value.sessionId }, ::execute)
 
     /** La manette va à l'écran affiché. */
-    val inputRouter = InputRouter(::handleInput)
+    val inputRouter = InputRouter(::handleInput, ::handleDirection)
     val displays = DisplayMonitor(displayManager)
 
     /** L'écran du haut existe : l'écran du bas se ferme quand il disparaît. */
@@ -737,7 +771,7 @@ class AppContainer(
         is Screen.Session -> shown.id
         is Screen.Diff -> shown.id
         Screen.Approval -> approvalReview.value.request?.sessionId
-        Screen.Overview -> controller.state.value.focusedId
+        Screen.Overview -> village.syncFocus().let { controller.state.value.focusedId }
     }
 
     private fun replyFromCard(card: app.regie.domain.model.FloatingCard) {
@@ -875,6 +909,13 @@ class AppContainer(
                 _overview.value = it
                 // Dans la même passe : jamais une image où le focus pointe une autre session.
                 controller.syncFocus()
+                village.update(it)
+            }
+        }
+        // L2 sur le hameau : le coursier parle tant que la dictée est ouverte.
+        scope.launch {
+            dictation.state.map { it.visible }.distinctUntilChanged().collect { visible ->
+                village.talk(visible && _screen.value == Screen.Overview)
             }
         }
         // La session affichée : son fil est chargé à l'ouverture, puis suivi en direct.
@@ -966,6 +1007,8 @@ class AppContainer(
         reviewDiff?.close()
         if (to is Screen.Diff) reviewDiff?.open(to.id)
         _screen.value = to
+        // Sorti d'une maison : le coursier se tient devant sa porte, l'iris se rouvre.
+        if (to == Screen.Overview) village.leaveHouse()
     }
 
     private fun dispatch(action: OverviewAction) = when (action) {

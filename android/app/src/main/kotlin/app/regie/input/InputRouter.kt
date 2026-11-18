@@ -18,8 +18,10 @@ import kotlin.math.abs
  */
 class InputRouter(
     private val sink: (GamepadInput) -> Unit,
-    private val held: (Button, Boolean) -> Unit = { _, _ -> },
+    private val held: (Button, Boolean) -> Unit,
 ) {
+    /** Sans coursier à faire marcher : seules les [GamepadInput] comptent. */
+    constructor(sink: (GamepadInput) -> Unit) : this(sink, { _, _ -> })
 
     private class TriggerState {
         var keyHeld = false

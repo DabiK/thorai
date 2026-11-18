@@ -38,6 +38,7 @@ import app.regie.input.Trigger
 import app.regie.input.TriggerAxes
 import app.regie.overview.ControlState
 import app.regie.domain.model.Overview
+import app.regie.ui.game.carnet
 import app.regie.domain.model.SetupPermission
 import app.regie.session.Screen
 import app.regie.session.SessionNotice
@@ -84,6 +85,18 @@ abstract class GamepadActivity : ComponentActivity() {
         override fun onSend() = container.sessionController.send()
 
         override fun onNoticeSeen(notice: SessionNotice) = container.sessionController.dismissNotice(notice)
+    }
+
+    /** Les rappels du carnet du hameau (ticket 45) : une ligne touchée y envoie le coursier. */
+    protected val carnetCallbacks by lazy {
+        callbacks.carnet(container::goToHouse, container::openSetup, container::openVoiceSettings)
+    }
+
+    /** Une étape facultative du parcours d'accueil reste à faire : un point la signale (ticket 30). */
+    @Composable
+    protected fun setupLeft(overview: Overview): Boolean {
+        val console by container.consoleService.collectAsStateWithLifecycle()
+        return (!console && !container.replaying) || overview.androidAccessMissing
     }
 
     protected val threadScroll by lazy {
@@ -200,12 +213,7 @@ abstract class GamepadActivity : ComponentActivity() {
                         // Un seul écran, hors session : la dictée occupe l'écran. Dans une session, le fil reste.
                         DictationTopScreen(dictation, current.sessions.firstOrNull { it.id == dictation.target?.sessionId }, true, button, held, container::openVoiceSettings, dictationScroll)
                     } else Column(Modifier.fillMaxSize()) {
-                        // Sur l'accueil seulement : la session règle la voix depuis sa dictée, le diff aussi.
-                        if (controlsHere && screen == Screen.Overview) {
-                            val console by container.consoleService.collectAsStateWithLifecycle()
-                            app.regie.ui.screens.OverviewShortcuts(setupLeft = (!console && !container.replaying) || current.androidAccessMissing,
-                                onAgents = container::openAgentAuthentication, onSetup = container::openSetup, onVoice = container::openVoiceSettings)
-                        }
+                        // Sur le hameau, les raccourcis (agents, parcours d'accueil, voix) sont dans le carnet (ticket 45).
                         Box(Modifier.weight(1f)) {
                     when (val shown = screen) {
                         is Screen.Diff -> {
