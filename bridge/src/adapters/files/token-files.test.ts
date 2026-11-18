@@ -76,6 +76,31 @@ describe('the tokens the bridge accepts', () => {
     expect(logger.lines.join('\n')).not.toContain(GAME);
   });
 
+  it('reports a refused file once per state, not at every connection', () => {
+    legacy(CLASSIC);
+    client('app.regie.jeu', GAME, 0o644);
+
+    for (let connection = 0; connection < 5; connection += 1) files.read();
+    expect(warnings()).toHaveLength(1);
+    expect(warnings()[0]).toContain('readable by others');
+
+    // Another reason for the same file is a new state: reported once more.
+    client('app.regie.jeu', 'short');
+    files.read();
+    files.read();
+    expect(warnings()).toHaveLength(2);
+    expect(warnings()[1]).toContain('too short');
+
+    // Repaired, then broken again: the problem is back, so it is reported again.
+    client('app.regie.jeu', GAME);
+    expect(files.read().sort()).toEqual([CLASSIC, GAME]);
+    client('app.regie.jeu', GAME, 0o644);
+    files.read();
+    files.read();
+    expect(warnings()).toHaveLength(3);
+    expect(logger.lines.join('\n')).not.toContain(GAME);
+  });
+
   it('refuses a token too short', () => {
     client('app.regie.jeu', 'short');
 
