@@ -38,8 +38,22 @@ class InputRouter(
     /** La direction tenue au stick gauche, ou null au centre. */
     private var stickDirection: Button? = null
 
-    /** Retourne `true` si la touche est consommée : elle n'ira ni au système de focus ni aux raccourcis système. */
-    fun onKey(keyCode: Int, isDown: Boolean, repeatCount: Int): Boolean {
+    /** La croix en axe (HAT), lue avec les autres axes, et les touches qu'Android en a tirées. */
+    private var hatX = 0f
+    private var hatY = 0f
+    private val hatKeys = mutableSetOf<Button>()
+
+    /**
+     * Retourne `true` si la touche est consommée : elle n'ira ni au système de focus ni aux raccourcis système.
+     *
+     * [fallback] : une touche de la croix fabriquée par Android à partir d'un mouvement de manette que
+     * personne n'a consommé (`ViewRootImpl.SyntheticJoystickHandler`, `KeyEvent.FLAG_FALLBACK`), depuis la
+     * croix en axe (HAT) comme depuis le stick gauche. Celles du stick gauche sont avalées : le stick
+     * passe déjà par [onAxes], et ses deux axes donneraient deux directions en diagonale. Celles d'une
+     * croix en axe sont gardées, répétitions comprises, jusqu'à leur relâché.
+     */
+    fun onKey(keyCode: Int, isDown: Boolean, repeatCount: Int, fallback: Boolean = false): Boolean {
+        if (fallback && dropStickKey(keyCode, isDown, repeatCount)) return true
         TRIGGER_KEYS[keyCode]?.let { trigger ->
             if (repeatCount == 0) update(trigger) { keyHeld = isDown }
             return true
@@ -54,7 +68,24 @@ class InputRouter(
         return keyCode in SWALLOWED_KEYS
     }
 
+    /** Vrai si cette touche fabriquée vient du stick gauche, et non d'une croix en axe. */
+    private fun dropStickKey(keyCode: Int, isDown: Boolean, repeatCount: Int): Boolean {
+        val button = BUTTON_KEYS[keyCode]?.takeIf { it in DIRECTIONS } ?: return false
+        if (!isDown) return !hatKeys.remove(button)
+        if (repeatCount == 0 && hatPointsTo(button)) hatKeys.add(button)
+        return button !in hatKeys
+    }
+
+    private fun hatPointsTo(button: Button): Boolean = when (button) {
+        Button.LEFT -> hatX <= -HAT_PRESS
+        Button.RIGHT -> hatX >= HAT_PRESS
+        Button.UP -> hatY <= -HAT_PRESS
+        else -> hatY >= HAT_PRESS
+    }
+
     fun onAxes(axes: TriggerAxes) {
+        hatX = axes.hatX
+        hatY = axes.hatY
         updateAxis(Trigger.L2, axes.leftTrigger)
         updateAxis(Trigger.R2, axes.rightTrigger)
 
@@ -113,6 +144,7 @@ class InputRouter(
             sink(GamepadInput.Scroll(0f))
         }
         heldKeys.toList().forEach { holdKey(it, isDown = false) }
+        hatKeys.clear()
         stickDirection?.let {
             stickDirection = null
             held(it, false)
@@ -149,6 +181,9 @@ class InputRouter(
         /** Seuils du stick gauche : il fait marcher au-delà du premier et s'arrête sous le second. */
         const val LEFT_STICK_PRESS = 0.5f
         const val LEFT_STICK_RELEASE = 0.3f
+
+        /** Une croix en axe vaut -1, 0 ou 1 ; Android la lit enfoncée au-delà de la moitié. */
+        const val HAT_PRESS = 0.5f
 
         private val TRIGGER_KEYS = mapOf(
             KeyEvent.KEYCODE_BUTTON_L2 to Trigger.L2,

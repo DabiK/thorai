@@ -16,7 +16,9 @@ import app.regie.game.ui.village.courierTile
 import app.regie.input.Button
 import app.regie.input.GamepadInput
 import app.regie.input.Trigger
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -60,7 +62,7 @@ class VillageControllerTest {
     private val store = InMemoryVillageLayoutStore()
     private var shown = true
     private val opened = mutableListOf<SessionId>()
-    private val village = VillageController(classic, store, { HouseCatalog.DEFAULT }, { shown }, { opened += it })
+    private val village = VillageController(overview, classic, store, { HouseCatalog.DEFAULT }, { shown }, { opened += it }, Dispatchers.Unconfined)
 
     private var time = 0L
 
@@ -69,7 +71,7 @@ class VillageControllerTest {
     private fun publish(next: Overview) {
         overview.value = next
         classic.syncFocus()
-        village.update(next)
+        runBlocking { village.update(next) }
     }
 
     private fun press(button: Button) = village.handle(GamepadInput.Pressed(button))
@@ -120,8 +122,8 @@ class VillageControllerTest {
     fun `a reloaded layout puts every house back in its place`() {
         publish(overview.value)
         val doors = scene.village.houses.associate { it.session.id to it.door }
-        val again = VillageController(OverviewController(overview) {}, store, { HouseCatalog.DEFAULT }, { true }, {})
-        again.update(Overview.of(sessions.reversed(), emptyList()))
+        val again = VillageController(overview, OverviewController(overview) {}, store, { HouseCatalog.DEFAULT }, { true }, {}, Dispatchers.Unconfined)
+        runBlocking { again.update(Overview.of(sessions.reversed(), emptyList())) }
 
         assertEquals(doors, again.scene.value!!.village.houses.associate { it.session.id to it.door })
     }
@@ -174,6 +176,37 @@ class VillageControllerTest {
         assertEquals(SessionId("notes"), scene.entering)
         assertEquals(scene.village.houseOf(SessionId("notes"))!!.entry, scene.courierTile)
         assertEquals(emptyList(), actions, "la session s'ouvre après l'iris, par l'écran")
+    }
+
+    @Test
+    fun `back from the waiting house without answering, R1 goes back in instead of moving on`() {
+        publish(overview.value)
+        press(Button.R1)
+        runUntil { scene.entering != null }
+        assertEquals(SessionId("notes"), scene.entering)
+
+        village.leaveHouse()
+        assertEquals(scene.village.houseOf(SessionId("notes"))!!.entry, scene.courierTile, "ressorti devant la porte")
+        press(Button.R1)
+
+        assertEquals(SessionId("notes"), scene.entering, "la validation attend toujours : R1 y rentre")
+    }
+
+    @Test
+    fun `with two pending approvals, R1 takes the overview's first one, even when the village is older`() {
+        val other = Approval(ApprovalId("approval-montage"), SessionId("montage"), ApprovalKind.FILE_CHANGE, "README.md")
+        val two = sessions.map { if (it.id == SessionId("montage")) it.copy(status = SessionStatus.AWAITING_APPROVAL, pendingApproval = other) else it }
+        publish(Overview.of(two, emptyList()))
+        assertEquals(SessionId("notes"), overview.value.firstPendingApproval?.session?.id)
+        // Montage change plus tard : elle passe devant, sans rien changer aux maisons.
+        val village = scene.village
+        publish(Overview.of(two.map { if (it.id == SessionId("montage")) it.copy(updatedAt = t0) else it }, emptyList()))
+        assertSame(village, scene.village)
+        assertEquals(SessionId("montage"), overview.value.firstPendingApproval?.session?.id)
+
+        press(Button.R1)
+
+        assertEquals(SessionId("montage"), scene.destination, "la même validation que le bandeau du carnet")
     }
 
     @Test

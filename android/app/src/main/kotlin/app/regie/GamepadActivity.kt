@@ -329,7 +329,8 @@ private class GamepadWindowCallback(
             KeyEvent.ACTION_UP -> false
             else -> return wrapped.dispatchKeyEvent(event)
         }
-        return router.onKey(event.keyCode, isDown, event.repeatCount) || wrapped.dispatchKeyEvent(event)
+        val fallback = (event.flags and KeyEvent.FLAG_FALLBACK) != 0
+        return router.onKey(event.keyCode, isDown, event.repeatCount, fallback) || wrapped.dispatchKeyEvent(event)
     }
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
@@ -341,6 +342,8 @@ private class GamepadWindowCallback(
                     rightStickY = event.getAxisValue(MotionEvent.AXIS_RZ),
                     leftStickX = event.getAxisValue(MotionEvent.AXIS_X),
                     leftStickY = event.getAxisValue(MotionEvent.AXIS_Y),
+                    hatX = event.getAxisValue(MotionEvent.AXIS_HAT_X),
+                    hatY = event.getAxisValue(MotionEvent.AXIS_HAT_Y),
                 ),
             )
         }

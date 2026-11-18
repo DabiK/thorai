@@ -122,6 +122,8 @@ class AppContainer(
     displayManager: DisplayManager,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
     captureOverride: DictationCapture? = null,
+    /** Le fil où se génère le hameau (ticket 45) : un seul à la fois, hors du fil principal. */
+    villageWorker: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.Default.limitedParallelism(1),
     private val gatewayFactory: (() -> AgentGateway)? = null,
 ) {
 
@@ -735,11 +737,13 @@ class AppContainer(
      * dans les préférences ; la manette y pilote le coursier tant que l'écran du haut est visible.
      */
     val village = VillageController(
+        overview,
         controller,
         PreferencesVillageLayoutStore(app),
         catalog = { GameAssetLoader.houseCatalog(app.assets) ?: HouseCatalog.DEFAULT },
         shown = { topStarted.value },
         open = { execute(OverviewAction.OpenSession(it)) },
+        worker = villageWorker,
     )
 
     /** L'iris s'est fermé sur une porte du hameau : la session s'ouvre, comme A ouvrait sa ligne. */
@@ -1026,9 +1030,10 @@ class AppContainer(
                 _overview.value = it
                 // Dans la même passe : jamais une image où le focus pointe une autre session.
                 controller.syncFocus()
-                village.update(it)
             }
         }
+        // Le hameau suit la vue d'ensemble ; il se génère hors du fil principal (ticket 45).
+        scope.launch { _overview.collectLatest { village.update(it) } }
         // L2 sur le hameau : le coursier parle tant que la dictée est ouverte.
         scope.launch {
             dictation.state.map { it.visible }.distinctUntilChanged().collect { visible ->

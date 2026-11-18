@@ -79,7 +79,8 @@ class TopActivity : GamepadActivity() {
                 val scene by container.village.scene.collectAsStateWithLifecycle()
                 // Le hameau (ticket 45) : le coursier entre dans une maison, l'iris fermé ouvre la session.
                 app.regie.ui.game.GameOverviewTop(scene, overview, control, singleScreen = mode == ScreenMode.Single,
-                    setupLeft = setupLeft(overview), callbacks = carnetCallbacks, onEnterHouse = container::enterHouse)
+                    setupLeft = setupLeft(overview), callbacks = carnetCallbacks, onEnterHouse = container::enterHouse,
+                    scrollVelocity = container.controller.scrollVelocity)
             },
             session = { shown, overview ->
                 val mode by container.displays.mode.collectAsStateWithLifecycle()

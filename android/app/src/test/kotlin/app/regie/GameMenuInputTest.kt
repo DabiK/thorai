@@ -36,7 +36,7 @@ class GameMenuInputTest {
 
     private fun TestScope.container(): AppContainer {
         val app = ApplicationProvider.getApplicationContext<Application>()
-        return AppContainer(app, app.getSystemService(DisplayManager::class.java), backgroundScope, MenuCapture()) { gateway }.also {
+        return AppContainer(app, app.getSystemService(DisplayManager::class.java), backgroundScope, MenuCapture(), villageWorker = kotlinx.coroutines.Dispatchers.Unconfined) { gateway }.also {
             it.start(replay = true); runCurrent()
         }
     }

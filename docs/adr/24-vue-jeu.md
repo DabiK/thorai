@@ -176,16 +176,19 @@ garder le routeur d'entrées de la manette (ADR 05) et se tester sans console.
 ### La vue d'ensemble en hameau (ticket 45)
 
 - **Branchement** : `VillageController` (`android/app`, paquet `overview`) régénère le hameau à
-  chaque vue d'ensemble qui change une maison (session, projet, agent, titre, état, validation), et
-  porte l'unique `VillageSceneState` du processus : le coursier garde sa place d'un écran à l'autre.
+  chaque vue d'ensemble qui change une maison (session, projet, agent, titre, état, validation ;
+  l'ordre n'y compte pas), sur un fil à part (un seul à la fois), et porte l'unique `VillageSceneState` du processus : le coursier garde sa place d'un écran à l'autre.
   La disposition passe par `PreferencesVillageLayoutStore` (paquet `storage`, un adapter : l'interface
   ne l'importe pas), en JSON versionné ; une valeur illisible donne un hameau neuf. Les modèles de
   maison sont lus dans `maisons.json` seul, sans décoder d'image, pour générer dès la première vue
   d'ensemble.
 - **Manette** : `InputRouter` publie en plus, à part, les directions tenues (croix de l'appui au
   relâché, sans répétitions ; stick gauche, direction dominante avec hystérésis). Sur le hameau elles
-  font marcher le coursier ; ailleurs rien ne change. A entre devant une porte, sinon marche jusqu'à la
-  maison choisie et y entre ; L1/R1 changent de maison, R1 va d'abord à la validation ; une ligne
+  font marcher le coursier ; ailleurs rien ne change. Les touches de croix qu'Android tire d'un
+  mouvement non consommé (`FLAG_FALLBACK`) sont avalées quand elles viennent du stick gauche, gardées
+  quand elles viennent d'une croix en axe (HAT). A entre devant une porte, sinon marche jusqu'à la
+  maison choisie et y entre ; L1/R1 changent de maison ; avec une validation en attente, R1 va à celle
+  de `firstPendingApproval` (devant sa porte, il y rentre) ; une ligne
   touchée du carnet et « R1 Voir » de l'oiseau messager y envoient le coursier. Le titre, le parcours
   d'accueil, le menu de pause et les panneaux ouverts prennent la manette avant lui ; B (agents) et
   Start (menu de pause, ticket 49) sont pris par `AppContainer`. Le reste (X, Y, L2, R2, stick droit,

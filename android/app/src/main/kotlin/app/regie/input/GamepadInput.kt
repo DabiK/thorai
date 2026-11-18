@@ -26,4 +26,6 @@ data class TriggerAxes(
     val rightStickY: Float,
     val leftStickX: Float = 0f,
     val leftStickY: Float = 0f,
+    val hatX: Float = 0f,
+    val hatY: Float = 0f,
 )
