@@ -2,34 +2,34 @@
 
 **ThorAI fait de la console AYN Thor un poste de pilotage pour Claude Code et Codex : on parle à l’agent, on suit son travail sur l’écran du haut et on le règle sur l’écran du bas, à la manette.**
 
-| Écran du haut : le fil de la session | Écran du bas : les réglages de l’agent |
+| Écran du haut : le hameau | Écran du bas : le carnet |
 | --- | --- |
-| ![Fil brut d’une session Codex](artifacts/screenshots/22/apres-reglage-applique-haut.png) | ![Table des réglages de Codex](artifacts/screenshots/22/apres-reglage-applique-bas.png) |
+| ![Le hameau, une maison par session](docs/images/jeu/51-hameau-haut.png) | ![Le carnet du hameau](docs/images/jeu/51-hameau-bas.png) |
 
-*Captures de la Thor, 18 novembre 2026. Codex vient de répondre sur un projet d’essai ; en bas, sa réflexion passe à Medium, confirmée par l’agent.*
+*Version jeu (ADR 24), aux tailles des écrans de la Thor. Chaque maison est une session ; son habitant est l’agent, et la bulle sur le toit dit où il en est.*
 
 Claude Code et Codex tournent sur la console elle-même, dans une Debian sous Termux. ThorAI ne refait pas leur travail. Elle lance les sessions, montre ce que les agents produisent, relaie leurs demandes de validation et leur transmet ce que vous dites.
 
 ## Ce qu’on fait avec
 
-- **Voir toutes ses sessions d’un coup d’œil.** L’accueil est une liste : agent, projet, branche, état, dernière action, ancienneté.
+- **Voir toutes ses sessions d’un coup d’œil.** L’accueil est un hameau : une maison par session, une rue par projet. Le coursier y marche à la manette et entre dans une maison avec A. En bas, le carnet donne pour chaque session l’agent, le projet, la branche, l’état, la dernière action et l’ancienneté.
 - **Suivre l’agent comme sur un ordinateur.** Le fil reprend ce que l’agent produit, tel quel : messages, commandes, sorties, modifications, demandes de validation. ThorAI n’y ajoute rien.
 - **Lui parler.** Maintenir L2 et parler : la transcription s’écrit en bas, le haut ne bouge pas. Relâcher, relire, puis A envoie. La transcription est locale et gratuite par défaut ; ElevenLabs est une option. Rien n’est lu à voix haute.
 - **Régler la session sur place.** En bas, la table des réglages de l’agent : mode de validation, modèle, réflexion, mode rapide et toute autre option qu’il expose. Une valeur ne compte comme appliquée qu’une fois confirmée par l’agent.
-- **Valider à la manette.** Quatre modes : Plan d’abord, Modifications auto, Je valide chaque action, Tout autoriser. Une demande s’affiche dans le fil : A autorise, B refuse, L2 refuse en dictant une consigne.
+- **Valider à la manette.** Quatre modes : Plan d’abord, Modifications auto, Je valide chaque action, Tout autoriser. L’habitant tend sa demande sur un parchemin : A autorise, B refuse, L2 refuse en dictant une consigne.
 - **Donner des ordres.** Maintenir R2 : « lance Codex sur un nouveau projet qui s’appelle météo », « mets tout en pause ». Les ordres qui agissent attendent A. « Où en est la session console » ouvre directement la session.
-- **Relire les modifications.** X affiche les éditions de l’agent, ligne par ligne. L2 commente une ligne, Y demande une explication.
-- **Laisser l’agent piloter la console.** Claude et Codex voient et commandent Android sur les deux écrans. « Ouvre le navigateur sur wikipedia.org » ouvre la page dans Chrome, en haut, sous vos yeux. Sur l’accueil, Y prépare une session « console » faite pour ça.
+- **Relire les modifications.** X épingle les éditions de l’agent sur un tableau de liège, ligne par ligne. L2 commente une ligne, Y demande une explication.
+- **Laisser l’agent piloter la console.** Claude et Codex voient et commandent Android sur les deux écrans. « Ouvre le navigateur sur wikipedia.org » ouvre la page dans Chrome, en haut, sous vos yeux. Sur le hameau, Y prépare une session « console » faite pour ça.
 - **Lui parler depuis n’importe quelle appli.** Avec le mode console, L2 et R2 marchent même quand Chrome ou YouTube a la main. Si la conversation n’est visible nulle part, le message de l’agent passe en carte par-dessus l’écran du haut : L2 y répond, B la ferme.
 - **Connecter ses comptes depuis la console.** Codex se connecte par code d’appareil : adresse, code et QR code s’affichent, à scanner avec un téléphone. Claude n’a pas de code d’appareil ; ThorAI indique la marche à suivre dans Termux.
 
-| La liste des sessions | La dictée, sur l’écran du bas |
+| Dans une maison, la session | La validation, en parchemin |
 | --- | --- |
-| ![Accueil en liste](artifacts/screenshots/vitrine/accueil-haut.png) | ![Transcription relue avant envoi](artifacts/screenshots/25/04-dictee-relue-bas.png) |
-| **Codex ouvre Wikipédia dans Chrome, en haut** | **La connexion de Codex** (banc d’essai, code fictif) |
-| ![Wikipédia ouvert par l’agent](artifacts/screenshots/24/wikipedia-haut.png) | ![Adresse, code et QR code](artifacts/screenshots/23/09-final-simulation-code-haut.png) |
+| ![L’agent au travail dans sa maison](docs/images/jeu/51-maison-haut.png) | ![La demande tendue par l’habitant](docs/images/jeu/51-validation-haut.png) |
+| **Le fil brut et les réglages, en bas** | **La carte volante, par-dessus une autre appli** |
+| ![Le fil et la table des réglages](docs/images/jeu/51-maison-bas.png) | ![La carte volante du mode console](docs/images/jeu/51-console-carte.png) |
 
-ThorAI démarre son pont à l’ouverture. En arrière-plan, les sessions continuent et l’écran du bas reste affiché. **Quitter** arrête le pont et les sessions. Rien ne démarre au boot de la console.
+ThorAI démarre son pont à l’ouverture. En arrière-plan, les sessions continuent et l’écran du bas reste affiché. **Quitter** (menu Start ou carnet) arrête le pont et les sessions. Rien ne démarre au boot de la console.
 
 ## Les commandes de la manette
 
@@ -37,14 +37,14 @@ ThorAI démarre son pont à l’ouverture. En arrière-plan, les sessions contin
 | --- | --- |
 | L2 maintenu | Parler à la session : la transcription s’affiche en bas. Dans les modifications, commenter la ligne ; dans une validation, refuser en dictant une consigne. Avec le mode console, marche depuis toute appli. |
 | R2 maintenu | Donner un ordre vocal. Les ordres qui agissent attendent A ; « où en est … » ouvre la session sans attendre. |
-| A | Ouvrir, envoyer, appliquer. Dans une validation, autoriser une fois. |
-| B | Revenir, effacer, fermer. Dans une validation, refuser. Sur l’accueil, ouvrir la connexion des agents. |
-| X | Sur l’accueil, créer une session. Dans une session, voir les modifications. Dans une validation, autoriser pour la session, si l’agent le propose. En relecture, corriger un mot. |
-| Y | Sur l’accueil, piloter la console. En relecture, compléter la dictée. Dans les modifications, demander une explication. |
-| L1 / R1 | Session précédente ou suivante. Sur l’accueil, R1 ouvre d’abord une validation en attente. |
-| Croix | Sur l’accueil, choisir une session. Dans une session, faire défiler le fil ; Droite passe les réglages en modification, Gauche revient à la fin du fil. |
+| A | Ouvrir, envoyer, appliquer. Sur le hameau, entrer dans la maison devant le coursier, sinon y aller. Dans une validation, autoriser une fois. |
+| B | Revenir, effacer, fermer. Dans une validation, refuser. Sur le hameau, ouvrir la connexion des agents. |
+| X | Sur le hameau, bâtir une maison (créer une session). Dans une session, voir les modifications. Dans une validation, autoriser pour la session, si l’agent le propose. En relecture, corriger un mot. |
+| Y | Sur le hameau, piloter la console. En relecture, compléter la dictée. Dans les modifications, demander une explication. |
+| L1 / R1 | Maison ou session précédente ou suivante. Sur le hameau, R1 mène d’abord à une validation en attente. |
+| Croix | Sur le hameau, faire marcher le coursier (stick gauche aussi). Dans une session, faire défiler le fil ; Droite passe les réglages en modification, Gauche revient à la fin du fil. |
 | Stick droit | Faire défiler. |
-| Start | Interrompre le tour en cours. Sur l’accueil, interrompre toutes les sessions occupées. |
+| Start | Interrompre le tour en cours. Sur le hameau, ouvrir le menu : courrier, agents, réglages, préparer la console, tout mettre en pause, quitter. |
 
 L’écran du bas affiche toujours les touches utiles à l’instant. Il est tactile : les actions affichées s’y touchent aussi.
 
@@ -83,7 +83,7 @@ La [notice d’installation](docs/installation.md) part d’une Thor neuve : Te
 
 ThorAI s’appelait Régie : ce nom de code reste dans le dépôt, les paquets Kotlin et les scripts.
 
-Matériel visé : AYN Thor sous Android 13, ARM64, écran du haut 1920 × 1080 non tactile, écran du bas 1240 × 1080 tactile. Un mode à un écran rassemble tout en haut quand celui du bas est éteint. Versions éprouvées : Claude Code 2.1.322, Codex 0.167.2, Node 24.22.3, mobile-mcp 1.0.17 ; les adaptateurs ACP sont figés par `bridge/package-lock.json`. Une autre version d’agent est signalée « non testée » sur l’accueil.
+Matériel visé : AYN Thor sous Android 13, ARM64, écran du haut 1920 × 1080 non tactile, écran du bas 1240 × 1080 tactile. Un mode à un écran rassemble tout en haut quand celui du bas est éteint. Versions éprouvées : Claude Code 2.1.322, Codex 0.167.2, Node 24.22.3, mobile-mcp 1.0.17 ; les adaptateurs ACP sont figés par `bridge/package-lock.json`. Une autre version d’agent est signalée « non testée » dans le carnet du hameau.
 
 ## Limites connues
 
