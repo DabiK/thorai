@@ -42,7 +42,11 @@ class BottomActivity : GamepadActivity() {
                 val settings by container.sessionSettings.collectAsStateWithLifecycle()
                 // Mode console : une autre appli occupe le haut, le fil compact passe en bas (ticket 25).
                 val topVisible by container.topStarted.collectAsStateWithLifecycle()
-                SessionBottomScreen(live, overview.neighboursOf(shown.id), control, draft, sessionCallbacks, approval = approval,
+                val session = live?.session?.takeIf { it.id == shown.id } ?: overview.sessions.firstOrNull { it.id == shown.id }
+                // Vue jeu (ticket 49) : la session console, quand une autre appli occupe le haut, est la tour.
+                if (!topVisible && !settings.visible && session?.project == app.regie.domain.usecase.ConsoleSession.PROJECT) {
+                    app.regie.game.ui.theme.GameTheme { ConsoleTower(session, live, approval) }
+                } else SessionBottomScreen(live, overview.neighboursOf(shown.id), control, draft, sessionCallbacks, approval = approval,
                     onDecision = container::answerInline, onNextApproval = container::nextInlineApproval, onDismissApproval = container::dismissInlineApproval,
                     settings = settings, onSelectSetting = container::selectSessionSetting, console = threadScroll.takeUnless { topVisible })
             },
@@ -54,6 +58,28 @@ class BottomActivity : GamepadActivity() {
                     .collect { if (!it) finish() }
             }
         }
+    }
+
+    /** La tour de la console (ticket 49) : l'habitant, l'état, le fil compact et les touches de la session. */
+    @androidx.compose.runtime.Composable
+    private fun ConsoleTower(session: app.regie.domain.model.Session, live: app.regie.domain.model.LiveSession?, review: app.regie.domain.usecase.ApprovalReview) {
+        val assets = app.regie.game.ui.atlas.rememberGameAssets()
+        val request = review.request?.takeIf { it.sessionId == session.id && review.pending && !review.sending }
+        app.regie.game.ui.console.ConsoleTowerScreen(live, session, assets, approval = request,
+            scroll = app.regie.game.ui.console.TowerScroll(container.sessionController.scrollSteps, container.sessionController.scrollVelocity),
+            callbacks = app.regie.game.ui.console.TowerCallbacks(
+                press = { key -> towerButton(key)?.let { container.handleInput(GamepadInput.Pressed(it)) } },
+                hold = { container.touchTrigger(app.regie.input.Trigger.L2, it) },
+            ))
+    }
+
+    private fun towerButton(key: String): app.regie.input.Button? = when (key) {
+        "A" -> app.regie.input.Button.A
+        "B" -> app.regie.input.Button.B
+        "X" -> app.regie.input.Button.X
+        "Start" -> app.regie.input.Button.START
+        "→" -> app.regie.input.Button.RIGHT
+        else -> null
     }
 
     override fun onStart() {

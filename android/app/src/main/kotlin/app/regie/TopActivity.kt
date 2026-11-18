@@ -55,6 +55,8 @@ class TopActivity : GamepadActivity() {
         applyDebugExtras(intent)
         container.start(replay = BuildConfig.DEBUG && intent.getBooleanExtra(EXTRA_FAKE_GATEWAY, false))
         container.topAlive.value = true
+        // Vue jeu (ticket 49) : l'écran titre, au premier lancement du processus ; une notification l'écarte.
+        container.showTitle()
         askRunCommandPermission()
         if (!askingPermission) askNotificationPermission()
         openNotification(intent)

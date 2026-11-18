@@ -34,6 +34,8 @@
 
     <string name="banner_awaiting">%1$s attend ta validation</string>
     <string name="banner_see">Voir</string>
+    <!-- Courrier du jeu (ticket 49) : une validation dont la session n'est pas encore connue. -->
+    <string name="courier_agent">Un agent</string>
 
     <!-- État du pont et marche à suivre, sans jargon (PRD, principes). -->
     <string name="bridge_connecting">Connexion au pont…</string>
