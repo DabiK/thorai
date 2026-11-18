@@ -89,6 +89,14 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
+import app.regie.courier.CourierNotifications
+import app.regie.game.ui.courier.CourierTiming
+import app.regie.game.engine.courier.Courier
+import app.regie.game.engine.menu.GameMenu
+import app.regie.game.engine.menu.MenuEntry
+import app.regie.game.engine.menu.MenuKey
+import app.regie.game.engine.menu.MenuOutcome
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.File
@@ -150,6 +158,100 @@ class AppContainer(
     var authenticationKeyAction: (() -> Unit)? = null
     fun refreshAuthentication() { authenticationReview?.refresh() }
     private var settingsReview: ReviewSessionSettings? = null
+
+    // --- Vue jeu : écran titre, menu de pause et courrier (ticket 49) ---
+
+    /** Le menu du jeu ouvert sur le hameau : le titre au lancement, la pause avec Start. */
+    val gameMenu = MutableStateFlow(GameMenu.CLOSED)
+    private var titleShown = false
+
+    /** Le courrier : les derniers événements qui demandent l'attention, d'après le domaine. */
+    val courier = MutableStateFlow(Courier())
+
+    /** Au premier lancement du processus seulement : l'écran titre et son menu principal. */
+    fun showTitle() {
+        if (titleShown) return
+        titleShown = true
+        if (_screen.value == Screen.Overview) gameMenu.value = GameMenu.title()
+    }
+
+    /** Un toucher sur une entrée : elle devient l'entrée choisie, puis A. */
+    fun chooseMenuEntry(index: Int) {
+        gameMenu.update { it.copy(selected = index.coerceIn(0, (it.entries.size - 1).coerceAtLeast(0))) }
+        pressMenu(MenuKey.A)
+    }
+
+    /** Un toucher sur une lettre : elle devient la lettre choisie, puis A. */
+    fun openCourierLetter(index: Int) {
+        gameMenu.update { it.copy(letter = index) }
+        pressMenu(MenuKey.A)
+    }
+
+    fun pressMenu(key: MenuKey) {
+        val step = gameMenu.value.press(key, courier.value.letters.size)
+        gameMenu.value = step.menu
+        when (val outcome = step.outcome) {
+            is MenuOutcome.Choose -> when (outcome.entry) {
+                MenuEntry.CONTINUE, MenuEntry.COURIER -> Unit
+                MenuEntry.NEW_SESSION -> openNewSession()
+                MenuEntry.AGENTS -> openAgentAuthentication()
+                MenuEntry.SETTINGS -> openVoiceSettings()
+                MenuEntry.PAUSE_ALL -> dispatch(OverviewAction.PauseAll)
+                MenuEntry.QUIT -> controller.requestQuit()
+            }
+            is MenuOutcome.OpenLetter -> openLetter(outcome.index)
+            MenuOutcome.MarkAllRead -> courier.update { it.markAllRead() }
+            null -> Unit
+        }
+    }
+
+    /**
+     * La validation que l'oiseau apporte en ce moment ([CourierTiming.SHOWN] après son arrivée), si elle
+     * attend encore : R1 l'ouvre. Quand le hameau sera branché (ticket 45), le coursier y marchera.
+     */
+    private fun openArrivingLetter(): Boolean {
+        val letter = courier.value.latest ?: return false
+        val pending = letter.approval?.takeIf { id -> gateway?.approvals?.value.orEmpty().any { it.id == id } } ?: return false
+        if (kotlin.time.Clock.System.now() - letter.receivedAt >= CourierTiming.SHOWN) return false
+        courier.update { it.read(letter.key) }
+        openApproval(pending)
+        return true
+    }
+
+    /** Une lettre ouverte : sa validation si elle attend encore, sinon sa session. */
+    private fun openLetter(index: Int) {
+        val letter = courier.value.letters.getOrNull(index) ?: return
+        courier.update { it.read(letter.key) }
+        val approval = letter.approval?.takeIf { id -> gateway?.approvals?.value.orEmpty().any { it.id == id } }
+        if (approval != null) openApproval(approval) else openSession(letter.sessionId)
+    }
+
+    private fun menuKey(button: Button): MenuKey? = when (button) {
+        Button.UP -> MenuKey.UP
+        Button.DOWN -> MenuKey.DOWN
+        Button.LEFT -> MenuKey.LEFT
+        Button.RIGHT -> MenuKey.RIGHT
+        Button.A -> MenuKey.A
+        Button.B -> MenuKey.B
+        Button.X -> MenuKey.X
+        Button.Y -> MenuKey.Y
+        Button.START -> MenuKey.START
+        Button.L1, Button.R1 -> null
+    }
+
+    /**
+     * Le menu du jeu a la manette sur le hameau. « Quitter » en confirmation passe d'abord ; L2 et
+     * R2 restent valables (dicter, ordre vocal) ; le reste va au menu. Vrai si l'entrée est prise.
+     */
+    private fun handleGameMenu(input: GamepadInput): Boolean {
+        if (!gameMenu.value.open || _screen.value != Screen.Overview) return false
+        if (controller.state.value.quit != null) { controller.handle(input); return true }
+        return when (input) {
+            is GamepadInput.Pressed -> { menuKey(input.button)?.let(::pressMenu); true }
+            is GamepadInput.Scroll -> true
+            is GamepadInput.TriggerDown, is GamepadInput.TriggerUp -> false
+        }
+    }
     val sessionSettings = MutableStateFlow(SessionSettingsReview())
     fun selectSessionSetting(index: Int) { settingsReview?.select(index) }
 
@@ -488,6 +590,11 @@ class AppContainer(
             return
         }
         if (input == GamepadInput.Pressed(Button.A) && closedByDelivery?.let { it.elapsedNow() < SECOND_A_IGNORED } == true) return
+        if (handleGameMenu(input)) return
+        // « R1 Voir » de l'oiseau messager : la validation de cette lettre-là, pas la première en attente.
+        if (_screen.value == Screen.Overview && controller.state.value.quit == null && input == GamepadInput.Pressed(Button.R1) && openArrivingLetter()) return
+        // Start sur le hameau : le menu de pause, qui garde « Tout mettre en pause » (ticket 49).
+        if (_screen.value == Screen.Overview && controller.state.value.quit == null && input == GamepadInput.Pressed(Button.START)) { gameMenu.value = GameMenu.pause(); return }
         if (_screen.value == Screen.Overview && controller.state.value.quit == null && input == GamepadInput.Pressed(Button.B)) { openAgentAuthentication(); return }
         if (input is GamepadInput.TriggerDown && input.trigger == Trigger.R2) { startVoiceCommand(); return }
         if (input is GamepadInput.TriggerUp && input.trigger == Trigger.R2) { stopVoiceCommand(); return }
@@ -897,6 +1004,15 @@ class AppContainer(
         scope.launch { review.state.collect { approvalReview.value = it } }
         NotifyApprovals(chosen, topStarted, AndroidApprovalNotifications(app), scope)
         NotifySessions(chosen, topStarted, AndroidSessionNotifications(app), scope)
+        // Le courrier du jeu : mêmes cas d'usage, mais il reçoit tout, Régie visible ou non (ticket 49).
+        val letters = CourierNotifications(courier, approvalText = { request ->
+            val session = chosen.sessions.value.firstOrNull { it.id == request.sessionId }
+            app.getString(R.string.banner_awaiting, session?.agent?.label ?: app.getString(R.string.courier_agent)) to
+                listOfNotNull(session?.project, request.subject ?: app.getString(R.string.card_wants_other)).joinToString(" · ")
+        })
+        val neverShown = MutableStateFlow(false)
+        NotifyApprovals(chosen, neverShown, letters, scope)
+        NotifySessions(chosen, neverShown, letters, scope)
         quit = Quit(chosen, launcher)
         sendMessage = SendMessage(chosen, dictated)
         interruptSession = InterruptSession(chosen)
@@ -998,6 +1114,7 @@ class AppContainer(
     /** Change d'écran : les gâchettes tenues sont relâchées, rien de la session précédente ne reste. */
     private fun navigate(to: Screen) {
         if (_screen.value == to) return
+        gameMenu.value = GameMenu.CLOSED
         settingsReview?.close()
         controller.releaseTriggers()
         sessionController.releaseTriggers()

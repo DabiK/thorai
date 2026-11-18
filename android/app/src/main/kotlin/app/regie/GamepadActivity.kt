@@ -11,8 +11,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.regie.display.ScreenMode
 import app.regie.ui.components.tappable
-import app.regie.ui.screens.VoiceCommandScreen
-import app.regie.ui.screens.VoiceSettingsScreen
 import app.regie.ui.theme.Palette
 import app.regie.ui.theme.sans
 import android.view.InputDevice
@@ -45,6 +43,7 @@ import app.regie.ui.screens.SessionCallbacks
 import app.regie.ui.screens.ThreadScroll
 import app.regie.ui.theme.RegieTheme
 import kotlinx.coroutines.launch
+import app.regie.game.ui.theme.GameTheme
 import kotlin.math.max
 
 /**
@@ -186,20 +185,28 @@ abstract class GamepadActivity : ComponentActivity() {
                     val controlsHere = this@GamepadActivity is BottomActivity || mode == ScreenMode.Single
                     val button: (Button) -> Unit = { container.handleInput(GamepadInput.Pressed(it)) }
                     val held: (Boolean) -> Unit = { container.touchTrigger(Trigger.L2, it) }
-                    if (authentication.visible) {
-                        app.regie.ui.screens.AgentAuthenticationScreen(authentication, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single,
-                            container::selectAuthenticationAgent, button, container::refreshAuthentication, container::submitAuthenticationKey, { container.authenticationKeyAction = it })
+                    val gameMenu by container.gameMenu.collectAsStateWithLifecycle()
+                    val assets = app.regie.game.ui.atlas.rememberGameAssets()
+                    if (authentication.visible) GameTheme {
+                        // Vue jeu (ticket 49) : la connexion des agents, dans le menu.
+                        app.regie.game.ui.menu.AgentsScreen(authentication, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single,
+                            gameMenu, current, assets, callbacks = app.regie.game.ui.menu.AgentsCallbacks(
+                                select = container::selectAuthenticationAgent, confirm = { button(Button.A) }, back = { button(Button.B) },
+                                refresh = container::refreshAuthentication, submitKey = container::submitAuthenticationKey,
+                                bindKeyAction = { container.authenticationKeyAction = it }))
                     } else if (setup.visible) {
                         app.regie.ui.screens.SetupScreen(setup, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single, packageName, container.setup::press, container.setupVelocity)
                     } else if (sessionSettings.visible && screen !is Screen.Session) {
                         app.regie.ui.screens.SessionSettingsScreen(sessionSettings, button, container::selectSessionSetting)
-                    } else if (settingsOpen && controlsHere) {
-                        VoiceSettingsScreen(settings, container::selectVoice, container::saveVoiceKey,
-                            { microphonePermission.launch(Manifest.permission.RECORD_AUDIO) }, container::closeVoiceSettings, container::saveCommandKey)
-                    } else if (command.visible) {
-                        VoiceCommandScreen(command, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single,
-                            button, { container.touchTrigger(Trigger.R2, it) }, container::openVoiceSettings,
-                            ThreadScroll(container.commandScroll, container.commandVelocity))
+                    } else if (settingsOpen && controlsHere) GameTheme {
+                        app.regie.game.ui.menu.GameVoiceSettingsScreen(settings, callbacks = app.regie.game.ui.menu.VoiceSettingsCallbacks(
+                            container::selectVoice, container::saveVoiceKey, { microphonePermission.launch(Manifest.permission.RECORD_AUDIO) },
+                            container::closeVoiceSettings, container::saveCommandKey))
+                    } else if (command.visible) GameTheme {
+                        app.regie.game.ui.console.GameVoiceCommandScreen(command, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single, assets,
+                            scroll = app.regie.game.ui.console.CommandScroll(container.commandScroll, container.commandVelocity),
+                            callbacks = app.regie.game.ui.console.CommandCallbacks({ button(Button.A) }, { button(Button.B) },
+                                { container.touchTrigger(Trigger.R2, it) }, container::openVoiceSettings))
                     } else if (newSession.visible) {
                         app.regie.ui.screens.NewSessionScreen(newSession, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single,
                             button, held, container::selectNewSessionField, container::editNewInstruction, container::editNewBranch, container.newSessionVelocity, container::editNewProjectName)
@@ -211,6 +218,9 @@ abstract class GamepadActivity : ComponentActivity() {
                         // Un seul écran, hors session : la dictée occupe l'écran. Dans une session, le fil reste.
                         app.regie.ui.game.GameDictation(dictation, current.sessions.firstOrNull { it.id == dictation.target?.sessionId },
                             button, held, container::openVoiceSettings, dictationScroll)
+                    } else if (gameMenu.open && screen == Screen.Overview) GameTheme {
+                        // Vue jeu (ticket 49) : l'écran titre au lancement, le menu de pause avec Start.
+                        GameMenuScreen(gameMenu, current, assets, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single)
                     } else Column(Modifier.fillMaxSize()) {
                         // Sur le hameau, les raccourcis (agents, parcours d'accueil, voix) sont dans le carnet (ticket 45).
                         Box(Modifier.weight(1f)) {
@@ -229,6 +239,15 @@ abstract class GamepadActivity : ComponentActivity() {
                     }
                         }
                     }
+                    // L'oiseau messager (ticket 49) : en haut, quand une lettre arrive au courrier.
+                    if (this@GamepadActivity !is BottomActivity) GameTheme {
+                        val mail by container.courier.collectAsStateWithLifecycle()
+                        Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.TopCenter) {
+                            app.regie.game.ui.courier.CourierToast(mail.latest, { kotlin.time.Clock.System.now() }, assets,
+                                action = app.regie.game.ui.kit.KeyHintSpec("R1", androidx.compose.ui.res.stringResource(R.string.banner_see))
+                                    .takeIf { screen == Screen.Overview && !gameMenu.open })
+                        }
+                    }
                 }
             }
         }
@@ -237,6 +256,46 @@ abstract class GamepadActivity : ComponentActivity() {
         findViewById<ViewGroup>(android.R.id.content).getChildAt(0)?.apply {
             isFocusableInTouchMode = true
             requestFocus()
+        }
+    }
+
+    /**
+     * Le menu du jeu sur le hameau (ticket 49) : l'écran titre et son menu principal, ou le menu de
+     * pause. Sur deux écrans, le haut montre le décor et le bas les choix ; sur un seul, tout est en haut.
+     */
+    @Composable
+    private fun GameMenuScreen(
+        menu: app.regie.game.engine.menu.GameMenu,
+        overview: Overview,
+        assets: app.regie.game.ui.atlas.GameAssets,
+        bottom: Boolean,
+        single: Boolean,
+    ) {
+        val control by container.controller.state.collectAsStateWithLifecycle()
+        val mail by container.courier.collectAsStateWithLifecycle()
+        val voice by container.voiceSettings.collectAsStateWithLifecycle()
+        val quit = when (val step = control.quit) {
+            is app.regie.overview.QuitStep.Confirm -> app.regie.game.ui.menu.QuitPrompt(step.busy)
+            app.regie.overview.QuitStep.Stopping -> app.regie.game.ui.menu.QuitPrompt(0, stopping = true)
+            null -> null
+        }
+        val callbacks = app.regie.game.ui.menu.MenuCallbacks(
+            onChoose = container::chooseMenuEntry,
+            onClose = { container.pressMenu(app.regie.game.engine.menu.MenuKey.B) },
+            onConfirmQuit = container.controller::confirmQuit,
+            onCancelQuit = container.controller::cancelQuit,
+            onOpenLetter = container::openCourierLetter,
+            onMarkAllRead = { container.pressMenu(app.regie.game.engine.menu.MenuKey.X) },
+            onLeaveCourier = { container.pressMenu(app.regie.game.engine.menu.MenuKey.B) },
+        )
+        val now = kotlin.time.Clock.System.now()
+        when {
+            menu.kind == app.regie.game.engine.menu.MenuKind.TITLE && bottom ->
+                app.regie.game.ui.menu.MainMenuScreen(menu, overview, quit = quit, callbacks = callbacks)
+            menu.kind == app.regie.game.engine.menu.MenuKind.TITLE ->
+                app.regie.game.ui.menu.TitleTopScreen(menu, overview, assets, single, quit = quit, callbacks = callbacks)
+            bottom -> app.regie.game.ui.menu.PauseMenuBottom(menu, overview, mail, now, assets, quit = quit, callbacks = callbacks)
+            else -> app.regie.game.ui.menu.PauseMenuTop(menu, overview, mail, voice, now, assets, single, quit = quit, callbacks = callbacks)
         }
     }
 }
