@@ -34,7 +34,7 @@ CRITÈRES:
 - [ ] Cycle réel du compte habituel depuis l’app Thor → différé avec l’utilisateur ; aucun APK installé ni compte courant déconnecté.
 PORTE DE QUALITÉ: android/ ./gradlew check vert (371 tests + lint) ; bridge/ npm run check vert (321 tests + typage/lint).
 THOR: série THOR0000000001 ; vrais état/challenge/annulation/logout du seul profil Codex temporaire ; comptes habituels toujours connectés.
-REVIEW: courses callback/lecture périmée, annulation après accusé perdu, récupération réseau, arrêt/expiration et champs inattendus corrigés par tests rouges/verts.
+REVIEW: courses callback/lecture périmée, annulation après accusé perdu, récupération réseau, arrêt/expiration et champs inattendus corrigés par tests rouges/verts ; après b2d74c2, test d’expiration renforcé et mutation détectée, deux portes repassées vertes.
 DÉCISIONS PRISES: ADR 17 ; QR local ZXing, états transitoires hors journal, changements de compte avant ACP, B depuis l’accueil.
 POUR L’UTILISATEUR: après intégration, Quitter/rouvrir, B → Codex, A puis B garde le compte, A puis A déconnecte ; A lance le code, scanner/saisir au téléphone, attendre Connecté ; créer une session Codex puis Quitter. Pour Claude, suivre Termux puis Y. Détail : artifacts/screenshots/23/essai.md, six étapes.
 QUESTIONS: aucune.

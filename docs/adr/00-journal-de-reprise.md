@@ -140,6 +140,8 @@ physiques différés restent requis même lorsqu’un ticket est marqué fait.
 
 - **18 novembre, ticket 23 à fusionner (solo Codex)** : auth.status/start/cancel/logout, écran dédié code/QR, entrée B accueil et proposition initiale, repli Claude dans Termux (ADR 17). Android 371 tests + lint, pont 321 + typage/lint verts. Émulateur deux écrans, pont Mac 47623 isolé : APK final vers vrai CLI Codex jusqu’au code, cycle complet simulé explicitement. Thor : nouveaux ports/adapter dans Debian, challenge réel et annulation sur profil temporaire, logout du seul profil vide ; comptes habituels connectés avant/après. Aucun APK installé sur Thor, aucun prompt Claude, sous-agent, push ou fusion. Cycle du compte habituel dans l’app physique réservé à l’utilisateur ; preuves et six étapes dans artifacts/screenshots/23/essai.md. Relecture après commit consignée séparément.
 
+- **18 novembre, ticket 23, relecture après b2d74c2 (solo Codex)** : diff main...HEAD relu ; test d’expiration renforcé par le marqueur ready du vrai processus Node synthétique, retour immédiat erroné détecté par mutation puis restauré. Aucun changement de production ; Android 371 tests + lint et pont 321 + typage/lint repassés verts. Traces nettoyées, app/pont Mac/AVD arrêtés, forward Thor conservé. Détail artifacts/screenshots/23/relecture.md ; statut à fusionner maintenu.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

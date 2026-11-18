@@ -71,15 +71,23 @@ describe('CLI authentication adapter without any real agent', () => {
 });
 
 it('expires and reaps a synthetic CLI process without contacting a service', async () => {
-  const commands = new NodeAuthenticationCommands({ loginTimeoutMs: 50, killGraceMs: 20 });
-  const task = commands.login(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], () => {});
+  const commands = new NodeAuthenticationCommands({ loginTimeoutMs: 1000, killGraceMs: 20 });
+  let output = '';
+  const task = commands.login(
+    process.execPath,
+    ['-e', 'process.stdout.write("ready\\n"); setInterval(() => {}, 1000)'],
+    (chunk) => {
+      output += chunk;
+    },
+  );
   try {
     expect(
       await Promise.race([
         task.done,
-        new Promise((resolve) => setTimeout(() => resolve('still-running'), 300)),
+        new Promise((resolve) => setTimeout(() => resolve('still-running'), 3000)),
       ]),
     ).toBeNull();
+    expect(output).toContain('ready');
   } finally {
     await task.cancel();
   }
