@@ -1,6 +1,6 @@
 # 31 — opencode comme troisième agent
 
-Statut : à fusionner
+Statut : fait
 Possède : `bridge/`, `android/domain` (modèle des agents), le choix de l'agent dans l'app, `thor/` (installation)
 
 ## Objectif
