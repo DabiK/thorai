@@ -1,6 +1,6 @@
 # 50 — Cohabitation sur la Thor
 
-Statut : à fusionner
+Statut : fusionné dans ticket/40-vue-jeu
 Possède : `android/app/build.gradle.kts` (identifiant), la gestion du jeton dans `bridge/` si nécessaire
 Dépend de : —
 
