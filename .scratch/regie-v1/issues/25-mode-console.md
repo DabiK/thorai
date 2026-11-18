@@ -1,6 +1,6 @@
 # 25 — Mode console : parler à l'agent depuis n'importe quelle appli et le suivre
 
-Statut : en attente (après 22 et 24)
+Statut : en attente (après 22)
 Possède : `android/`
 
 ## Retour de l'utilisateur, 18 novembre
@@ -15,6 +15,7 @@ Possède : `android/`
 - **Suivre l'agent sans revenir dans l'appli.**
   - L'écran du bas garde Régie : la session en cours en version compacte (derniers messages, actions, validation en attente), la dictée, les réglages. L'écran du haut, lui, montre ce que l'agent pilote.
   - Si l'écran du bas est éteint ou occupé : une bulle flottante discrète sur l'écran du haut (`SYSTEM_ALERT_WINDOW`), avec l'état de l'agent et sa dernière phrase.
+- **Message volant** (retour du 18 novembre) : quand l'agent envoie un message et que Régie n'est pas visible à l'endroit où l'utilisateur regarde, le message s'affiche dans une carte flottante sur l'écran du haut, par-dessus l'appli en cours. On voit l'agent, sa phrase, et éventuellement sa question. La carte s'efface seule après quelques secondes, ou avec B. Avec L2, on répond directement depuis la carte, sans revenir dans Régie. Pas de carte pour les fragments en cours de flux : seulement pour un message terminé, une question ou une validation demandée.
 - **Une session « console »** : un raccourci pour lancer ou reprendre une session dont le dossier de travail est neutre, prévue pour piloter la console plutôt qu'un projet.
 - **Les permissions spéciales** (accessibilité, superposition) sont demandées avec une explication courte. Ce sont des gestes de l'utilisateur.
 
