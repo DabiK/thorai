@@ -1,6 +1,6 @@
 # 43 — Hameau procédural
 
-Statut : à fusionner
+Statut : fusionné dans ticket/40-vue-jeu
 Possède : `android/game/engine/` (monde, génération, collisions, chemins)
 Dépend de : le contrat des assets (empreintes et portes)
 
