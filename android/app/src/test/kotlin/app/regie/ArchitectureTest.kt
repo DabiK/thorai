@@ -15,9 +15,10 @@ class ArchitectureTest {
     private val domainSources = File("../domain/src/main/kotlin")
     private val gatewaySources = File("../gateway-bridge/src/main/kotlin")
 
-    /** Les adapters : la passerelle vers le pont (module) et les accès à la console (Android). */
+    /** Les adapters : la passerelle vers le pont (module), les accès à la console et le stockage (Android). */
     private fun isAdapter(name: String) =
-        name.startsWith("app.regie.commandmodel.") || name.startsWith("app.regie.gateway.") || name.startsWith("app.regie.console.") || name.startsWith("app.regie.voice.")
+        name.startsWith("app.regie.commandmodel.") || name.startsWith("app.regie.gateway.") || name.startsWith("app.regie.console.") || name.startsWith("app.regie.voice.") ||
+            name.startsWith("app.regie.storage.")
 
     private fun File.kotlinFiles() = walkTopDown().filter { it.extension == "kt" }.toList()
 

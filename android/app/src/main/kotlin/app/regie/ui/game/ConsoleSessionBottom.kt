@@ -39,7 +39,6 @@ fun ConsoleSessionBottom(
     callbacks: SessionCallbacks,
     approval: ApprovalReview,
     onDecision: (ApprovalId, ApprovalDecision) -> Unit,
-    onNextApproval: () -> Unit,
     onDismissApproval: () -> Unit,
     onSelectSetting: (Int) -> Unit,
 ) {
@@ -47,7 +46,7 @@ fun ConsoleSessionBottom(
     Column(Modifier.fillMaxSize()) {
         GameTheme { ConsoleTowerHeader(live?.session ?: session, assets, Modifier.fillMaxWidth()) }
         Box(Modifier.weight(1f)) {
-            GameSessionBottom(live, gone, neighbours, control, draft, settings, scroll, callbacks, approval, onDecision, onNextApproval,
+            GameSessionBottom(live, gone, neighbours, control, draft, settings, scroll, callbacks, approval, onDecision,
                 onDismissApproval, onSelectSetting, console = true)
         }
     }

@@ -248,11 +248,27 @@ fun rememberGameAssets(directory: String = GameAssetLoader.DIRECTORY): GameAsset
  * La cheminée et les fenêtres, données dans l'atlas depuis le coin de l'image, passent au repère de
  * [HouseModel] : le coin haut gauche de l'empreinte.
  */
-fun GameAssets.houseCatalog(): HouseCatalog? {
-    val models = atlases.flatMap { atlas ->
-        atlas.spec.objects.filterKeys { it.startsWith("maison.") }.mapNotNull { (id, house) ->
+fun GameAssets.houseCatalog(): HouseCatalog? = houseCatalogOf(atlases.map { it.spec })
+
+/**
+ * Les modèles de maison lus dans `maisons.json` seul, sans décoder d'image : la vue d'ensemble
+ * génère le hameau dès la première vue d'ensemble, avant que les atlas ne soient chargés (ticket 45).
+ * `null` si le fichier manque ou ne donne aucun modèle valide.
+ */
+fun GameAssetLoader.houseCatalog(assets: AssetManager, directory: String = DIRECTORY): HouseCatalog? = try {
+    val spec = assets.open("$directory/maisons.json").use { AssetJson.parseAtlas(it.readBytes().decodeToString()) }
+    houseCatalogOf(listOf(spec))
+} catch (_: IOException) {
+    null
+} catch (_: IllegalArgumentException) {
+    null
+}
+
+private fun houseCatalogOf(specs: List<AtlasSpec>): HouseCatalog? {
+    val models = specs.flatMap { spec ->
+        spec.objects.filterKeys { it.startsWith("maison.") }.mapNotNull { (id, house) ->
             val door = house.door ?: return@mapNotNull null
-            val frame = atlas.spec.frames[house.frame] ?: return@mapNotNull null
+            val frame = spec.frames[house.frame] ?: return@mapNotNull null
             // Le coin de l'image, depuis le coin haut gauche de l'empreinte (ancre au milieu de la dernière rangée).
             val dx = house.footprint.w * HOUSE_TILE / 2 - frame.ax
             val dy = house.footprint.h * HOUSE_TILE - 1 - frame.ay

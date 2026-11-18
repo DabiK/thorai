@@ -140,7 +140,7 @@ L'habitant d'une maison est l'agent de la session : le scribe pour Claude, le br
 | X | sur le hameau, bâtir (nouvelle session) ; dans une maison, voir les modifications |
 | Y | sur le hameau, aller à la tour (console) ; dans une maison, sans effet (ADR 17) : c’est Droite qui ouvre les réglages, comme dans le PRD |
 | L1, R1 | maison précédente ou suivante. R1 ouvre d'abord la validation en attente |
-| L2 maintenu | le coursier parle à l'habitant (dictée) |
+| L2 maintenu | le coursier parle à l'habitant (dictée). Même si une validation attend dans la maison, L2 parle à l'agent ; refuser en dictant se fait depuis l'écran des validations (R1). Décision de l'utilisateur, 18 novembre |
 | R2 maintenu | ordre vocal, valable partout |
 | Start | menu de pause ; dans une maison, interrompre l'agent |
 | Stick droit | faire défiler le fil |

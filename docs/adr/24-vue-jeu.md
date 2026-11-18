@@ -173,6 +173,32 @@ garder le routeur d'entrées de la manette (ADR 05) et se tester sans console.
   leurs animations (`GameAssets.animation`), ne dessine que ce qui est dans la vue et n'alloue rien
   par objet et par image.
 
+### La vue d'ensemble en hameau (ticket 45)
+
+- **Branchement** : `VillageController` (`android/app`, paquet `overview`) régénère le hameau à
+  chaque vue d'ensemble qui change une maison (session, projet, agent, titre, état, validation ;
+  l'ordre n'y compte pas), sur un fil à part (un seul à la fois), et porte l'unique `VillageSceneState` du processus : le coursier garde sa place d'un écran à l'autre.
+  La disposition passe par `PreferencesVillageLayoutStore` (paquet `storage`, un adapter : l'interface
+  ne l'importe pas), en JSON versionné ; une valeur illisible donne un hameau neuf. Les modèles de
+  maison sont lus dans `maisons.json` seul, sans décoder d'image, pour générer dès la première vue
+  d'ensemble.
+- **Manette** : `InputRouter` publie en plus, à part, les directions tenues (croix de l'appui au
+  relâché, sans répétitions ; stick gauche, direction dominante avec hystérésis). Sur le hameau elles
+  font marcher le coursier ; ailleurs rien ne change. Les touches de croix qu'Android tire d'un
+  mouvement non consommé (`FLAG_FALLBACK`) sont avalées quand elles viennent du stick gauche, gardées
+  quand elles viennent d'une croix en axe (HAT). A entre devant une porte, sinon marche jusqu'à la
+  maison choisie et y entre ; L1/R1 changent de maison ; avec une validation en attente, R1 va à celle
+  de `firstPendingApproval` (devant sa porte, il y rentre) ; une ligne
+  touchée du carnet et « R1 Voir » de l'oiseau messager y envoient le coursier. Le titre, le parcours
+  d'accueil, le menu de pause et les panneaux ouverts prennent la manette avant lui ; B (agents) et
+  Start (menu de pause, ticket 49) sont pris par `AppContainer`. Le reste (X, Y, L2, R2, stick droit,
+  Quitter) suit `OverviewController`, dont le focus suit la maison choisie (L2 et R2 la visent).
+- **Repli** : sans hameau, ou quand l'écran du haut n'est pas visible (mode console), la vue
+  d'ensemble classique répond : un coursier qu'on ne voit pas ne marche pas.
+- **Maison choisie** : celle où va le coursier, sinon celle dont il regarde la porte, sinon la plus
+  proche (`Village.nearestHouse`, sans limite). C'est la ligne choisie du carnet et le `selected` de
+  `VillageOverlay`. Retour sur la vue d'ensemble : `leaveHouse`, le coursier ressort devant la porte.
+
 ### Le parcours d'accueil (ticket 53)
 
 - **Même parcours, autre décor.** Les étapes, les vérifications, les actions de A, B, X et Y et leur
@@ -201,6 +227,7 @@ garder le routeur d'entrées de la manette (ADR 05) et se tester sans console.
 - **Textes** : ceux du parcours classique (`strings_setup.xml`). Deux renvois changent : Y sur la fin
   dit « Terminer » (on arrive au titre ou au hameau, plus à l'accueil), et la note de fin renvoie à
   « Start › Préparer la console ».
+
 
 ## Conséquences
 

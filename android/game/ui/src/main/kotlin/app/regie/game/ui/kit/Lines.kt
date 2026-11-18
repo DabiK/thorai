@@ -17,7 +17,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import app.regie.domain.model.DiffKind
 import app.regie.domain.model.DiffLine
 import app.regie.game.ui.theme.Game
@@ -58,7 +57,8 @@ fun PixelDiffLine(line: DiffLine, modifier: Modifier = Modifier, selected: Boole
     ) {
         BasicText(number, Modifier.width(metrics.dp(48)), style = GameText.code(34, colors.muted).copy(textAlign = TextAlign.End), maxLines = 1)
         BasicText(sign, Modifier.width(metrics.dp(16)), style = GameText.code(34), maxLines = 1)
-        BasicText(line.text, style = GameText.code(34), maxLines = 1, softWrap = false, overflow = TextOverflow.Clip)
+        // Une ligne longue passe à la ligne : le code de l'agent se lit en entier (ADR 12).
+        BasicText(line.text.ifEmpty { " " }, Modifier.weight(1f), style = GameText.code(34))
     }
 }
 

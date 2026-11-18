@@ -82,7 +82,7 @@ class HouseWiringTest {
             host.setup().get().setContent { app.regie.ui.theme.RegieTheme {
                 GameSessionBottom(LiveSession.of(session, SessionThread(listOf(ThreadEntry.AgentText(1, "Je lance **les tests**.")), loaded = true)), false, null,
                     SessionControlState(notice = SessionNotice.Delivered(Delivery.UNKNOWN)), "", SessionSettingsReview(), scroll, recorder,
-                    ApprovalReview(request, listOf(request), pending = true), { _, decision -> decisions += decision }, {}, {}, {})
+                    ApprovalReview(request, listOf(request), pending = true), { _, decision -> decisions += decision }, {}, {})
             } }
             compose.onNodeWithText("Je lance les tests.▌", useUnmergedTree = true).assertIsDisplayed()
             compose.onNodeWithText("Envoi non confirmé. Vérifie le fil avant de renvoyer.").assertIsDisplayed()
@@ -101,7 +101,7 @@ class HouseWiringTest {
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
             host.setup().get().setContent { app.regie.ui.theme.RegieTheme {
                 GameSessionTop(live, false, null, SessionControlState(), "", SessionSettingsReview(), true, scroll, recorder, ApprovalReview(),
-                    { _, _ -> }, {}, {}, {}, dictation) { GameDictation(dictation, session, { buttons += it }, {}, {}, scroll, compact = true) }
+                    { _, _ -> }, {}, {}, dictation) { GameDictation(dictation, session, { buttons += it }, {}, {}, scroll, compact = true) }
             } }
             compose.onNode(androidx.compose.ui.test.hasTestTag("house-scene")).assertIsDisplayed()
             compose.onNodeWithText("Lance les tests").assertIsDisplayed()
