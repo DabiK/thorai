@@ -126,6 +126,24 @@ garder le routeur d'entrées de la manette (ADR 05) et se tester sans console.
   Google Fonts, sous SIL OFL 1.1. Les TTF sont dans `res/font`, leurs licences dans
   `assets/licences/`. Sources dans `docs/rebrand/da-jeu.md`.
 
+### Le coursier (ticket 44)
+
+- La marche est dans le moteur (`CourierController`, Kotlin pur) : un pas d'une tuile en 160 ms,
+  vitesse constante, jamais d'arrêt entre deux tuiles ; la dernière direction enfoncée l'emporte, un
+  appui pendant un pas est joué après lui. L'app traduit la manette en `CourierCommand` ; le
+  contrôleur répond par des `CourierEvent`. Il est piloté par le temps (`advance`), donc testé sans
+  horloge ni Compose.
+- La scène (`VillageScene`, `VillageSceneState`) ne fait tourner une horloge d'images que pendant
+  un pas ; à l'arrêt, rien n'est redessiné pour le coursier.
+- Le coursier est dessiné dans une couche au-dessus de `PixelWorld`, pas dans sa liste de sprites :
+  cette liste est triée à la composition, et la changer à chaque image recomposerait et allouerait.
+  Pour garder la profondeur, la couche redessine, découpés au seul rectangle du coursier, les objets
+  qui sont devant lui dans l'ordre de `PixelWorld` (un test compare au pixel près avec un sprite
+  fixe de `PixelWorld`). Si `PixelWorld` accepte un jour des sprites lus au dessin, la couche
+  pourra s'y fondre.
+- L'entrée dans une maison passe par un iris en vrais pixels (rangées de 4 pixels physiques),
+  fermé sur la porte, puis par le rappel `onEnterHouse`.
+
 ## Conséquences
 
 - Les lots suivants dessinent avec `PixelWorld` et le kit, sans nouvelle dépendance.
