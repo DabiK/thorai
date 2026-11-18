@@ -224,6 +224,8 @@ Les tickets qui touchent `android/` passent **un par un**. Ils installent tous l
 
 - 18 novembre : **le projet doit pouvoir se partager tel quel** : README vitrine et notice d'installation pour une Thor neuve, sans secret ni donnée personnelle.
 
+- 18 novembre : l'app s'appellera **ThorAI** (pas de commercialisation prévue, « Régie » reste le nom de code). opencode devient le troisième agent (ticket 31). Ordre : 27 → 31 → 28 et 30 (même agent) → 29 → nettoyage de l'historique → release.
+
 ## Questions en attente
 
 - Nom définitif de l'app (« Régie » est un nom de travail).
