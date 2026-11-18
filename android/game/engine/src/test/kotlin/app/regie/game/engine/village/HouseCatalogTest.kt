@@ -24,6 +24,26 @@ class HouseCatalogTest {
     }
 
     @Test
+    fun `une maison ne depasse pas l'empreinte maximale d'un terrain`() {
+        val w = HouseModel.MAX_FOOTPRINT_WIDTH
+        val h = HouseModel.MAX_FOOTPRINT_HEIGHT
+        HouseModel("maison.max", w, h, 0, h - 1)
+        assertFailsWith<IllegalArgumentException> { HouseModel("maison.large", w + 1, 3, 1, 2) }
+        assertFailsWith<IllegalArgumentException> { HouseModel("maison.haute", 4, h + 1, 1, h) }
+    }
+
+    @Test
+    fun `changer de catalogue ne deplace ni les rues ni les terrains`() {
+        val sessions = overview(session("a", "regie"), session("b", "regie"), session("c", "site-perso"))
+        val store = InMemoryVillageLayoutStore()
+        val before = VillageGenerator(store).generate(sessions)
+        val small = HouseCatalog(listOf(HouseModel("maison.petite", 3, 2, 1, 1)))
+        val after = VillageGenerator(store, catalog = small).generate(sessions)
+        assertEquals(before.streets, after.streets)
+        assertEquals(before.origin, after.origin)
+    }
+
+    @Test
     fun `un catalogue injecte remplace le catalogue par defaut`() {
         val catalog = HouseCatalog(listOf(HouseModel("maison.unique", 4, 3, 1, 2)))
         val village = VillageGenerator(InMemoryVillageLayoutStore(), catalog = catalog)

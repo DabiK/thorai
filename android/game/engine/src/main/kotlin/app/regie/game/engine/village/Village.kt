@@ -11,8 +11,9 @@ import app.regie.game.engine.world.World
 /**
  * Le hameau construit à partir de la vue d'ensemble. Toutes les positions sont en tuiles de [world].
  *
- * - [origin] : le centre de la place. Quand le hameau s'agrandit vers l'ouest, la carte s'élargit et
- *   tout glisse d'autant ; [relocate] reporte une position d'un hameau au suivant.
+ * - [origin] : le centre de la place. La carte est symétrique autour d'elle : dès qu'une rue, à l'est
+ *   comme à l'ouest, s'allonge au-delà des autres, la carte s'élargit et tout glisse d'autant. Après
+ *   chaque régénération, [relocate] reporte la position du coursier d'un hameau au suivant.
  * - [spawn] : la tuile d'arrivée du coursier, devant la fontaine.
  * - [houses] : rangées par rue puis par terrain.
  * - [decorations] : tout objet posé hors maisons, avec son empreinte ; aussi présents dans `world.objects`.
@@ -34,9 +35,54 @@ data class Village(
     /** La maison dont [tile] est la tuile d'entrée : le coursier y entre avec A. */
     fun houseAtEntry(tile: TilePos): House? = houses.firstOrNull { it.entry == tile }
 
-    /** Où se trouve, dans ce hameau, la tuile [pos] de [previous]. */
-    fun relocate(pos: TilePos, previous: Village): TilePos =
-        pos.offset(origin.x - previous.origin.x, origin.y - previous.origin.y)
+    /**
+     * Où mettre, dans ce hameau, ce qui était sur la tuile [pos] de [previous] (le coursier) :
+     * la même tuile par rapport à la place si elle est praticable et reliée à la place ; sinon la plus
+     * proche qui l'est (une maison a pu être bâtie dessus). À appeler à chaque régénération.
+     */
+    fun relocate(pos: TilePos, previous: Village): TilePos {
+        val map = world.map
+        val moved = pos.offset(origin.x - previous.origin.x, origin.y - previous.origin.y)
+        val start = TilePos(moved.x.coerceIn(0, map.width - 1), moved.y.coerceIn(0, map.height - 1))
+        val reachable = reachableFromSpawn()
+        val seen = BooleanArray(map.width * map.height)
+        val queue = ArrayDeque(listOf(start))
+        seen[start.y * map.width + start.x] = true
+        while (queue.isNotEmpty()) {
+            val tile = queue.removeFirst()
+            if (reachable[tile.y * map.width + tile.x]) return tile
+            for ((dx, dy) in NEIGHBOURS) {
+                val next = tile.offset(dx, dy)
+                if (!map.inside(next) || seen[next.y * map.width + next.x]) continue
+                seen[next.y * map.width + next.x] = true
+                queue.addLast(next)
+            }
+        }
+        return spawn
+    }
+
+    /** Les tuiles où le coursier peut aller depuis la place. */
+    private fun reachableFromSpawn(): BooleanArray {
+        val map = world.map
+        val reachable = BooleanArray(map.width * map.height)
+        val queue = ArrayDeque(listOf(spawn))
+        reachable[spawn.y * map.width + spawn.x] = true
+        while (queue.isNotEmpty()) {
+            val tile = queue.removeFirst()
+            for ((dx, dy) in NEIGHBOURS) {
+                val next = tile.offset(dx, dy)
+                if (map.isBlocked(next) || reachable[next.y * map.width + next.x]) continue
+                reachable[next.y * map.width + next.x] = true
+                queue.addLast(next)
+            }
+        }
+        return reachable
+    }
+
+    private companion object {
+        /** Haut, droite, bas, gauche : l'ordre départage les tuiles à égale distance. */
+        val NEIGHBOURS = listOf(0 to -1, 1 to 0, 0 to 1, -1 to 0)
+    }
 }
 
 /** Côté de l'avenue où part une rue. */

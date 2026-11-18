@@ -18,9 +18,16 @@ import app.regie.game.engine.world.World
  *   les rues 2 et 3 une rangée plus bas, et ainsi de suite. Une avenue descend de la place pour
  *   desservir les rangées suivantes ;
  * - les terrains, de même largeur, s'alignent au nord de leur route, en colonnes d'une rangée à l'autre.
- *   Chaque maison a sa porte au sud, un jardin clos et une allée jusqu'à la route.
+ *   Leur taille est fixe, faite pour l'empreinte maximale d'une maison ([HouseModel.MAX_FOOTPRINT_WIDTH] ×
+ *   [HouseModel.MAX_FOOTPRINT_HEIGHT]) : elle ne dépend pas du catalogue. Chaque maison a sa porte au sud,
+ *   un jardin clos et une allée jusqu'à la route.
  *
- * Le décor est tiré par tuile logique : une rue qui s'allonge ne déplace aucun arbre ailleurs.
+ * Le décor de l'intérieur est tiré par tuile logique : une rue qui s'allonge ne déplace aucun arbre de
+ * l'intérieur. La ceinture d'arbres, plus dense, suit les bords de la carte : elle se redessine quand la
+ * carte grandit.
+ *
+ * La carte est symétrique autour de la place : toute rue qui s'allonge au-delà des autres, à l'est comme
+ * à l'ouest, élargit la carte et déplace [Village.origin].
  */
 internal class VillageBuilder(
     private val catalog: HouseCatalog,
@@ -28,8 +35,9 @@ internal class VillageBuilder(
     private val config: VillageConfig,
     private val inhabitants: (Agent) -> InhabitantKind,
 ) {
-    private val plotWidth = catalog.maxWidth + PLOT_GAP
-    private val houseRows = catalog.maxHeight
+    // La géométrie des terrains ne dépend pas du catalogue : changer d'atlas ne déplace aucun terrain.
+    private val plotWidth = HouseModel.MAX_FOOTPRINT_WIDTH + PLOT_GAP
+    private val houseRows = HouseModel.MAX_FOOTPRINT_HEIGHT
     private val rowSpacing = houseRows + ROOF_OVERHANG + YARD + ROAD_WIDTH + LAWN_ROWS
 
     fun build(sessions: List<Session>, layout: VillageLayout): Village {

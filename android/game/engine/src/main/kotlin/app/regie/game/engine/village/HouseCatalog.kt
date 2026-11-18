@@ -13,6 +13,9 @@ data class PixelRect(val x: Int, val y: Int, val width: Int, val height: Int)
  * - [doorX], [doorY] : la tuile de la porte dans l'empreinte, depuis son coin haut gauche. Elle est
  *   sur la dernière rangée : la tuile juste en dessous reste accessible.
  * - [chimney] : le point d'où sort la fumée ; [windows] : les rectangles à éclairer.
+ *
+ * L'empreinte ne dépasse pas [MAX_FOOTPRINT_WIDTH] × [MAX_FOOTPRINT_HEIGHT] tuiles : c'est la taille des
+ * terrains du hameau, fixe pour qu'un changement d'atlas ne déplace aucun terrain.
  */
 data class HouseModel(
     val id: String,
@@ -26,8 +29,17 @@ data class HouseModel(
     init {
         require(id.isNotBlank()) { "Modèle sans identifiant" }
         require(footprintWidth > 0 && footprintHeight > 0) { "$id : empreinte vide" }
+        require(footprintWidth <= MAX_FOOTPRINT_WIDTH && footprintHeight <= MAX_FOOTPRINT_HEIGHT) {
+            "$id : empreinte $footprintWidth × $footprintHeight au-delà de $MAX_FOOTPRINT_WIDTH × $MAX_FOOTPRINT_HEIGHT"
+        }
         require(doorX in 0 until footprintWidth) { "$id : porte hors de l'empreinte" }
         require(doorY == footprintHeight - 1) { "$id : la porte doit être sur la dernière rangée de l'empreinte" }
+    }
+
+    companion object {
+        /** Empreinte maximale d'une maison, en tuiles : la contrainte que l'atlas `maisons` doit respecter. */
+        const val MAX_FOOTPRINT_WIDTH = 7
+        const val MAX_FOOTPRINT_HEIGHT = 5
     }
 }
 
@@ -44,9 +56,6 @@ class HouseCatalog(models: List<HouseModel>) {
     }
 
     private val byId = this.models.associateBy { it.id }
-
-    val maxWidth: Int = this.models.maxOf { it.footprintWidth }
-    val maxHeight: Int = this.models.maxOf { it.footprintHeight }
 
     operator fun get(id: String): HouseModel? = byId[id]
 

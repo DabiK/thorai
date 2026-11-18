@@ -3,8 +3,12 @@ package app.regie.game.engine.village
 import app.regie.domain.model.Session
 import app.regie.domain.model.SessionId
 import app.regie.game.engine.pathfinding.findPath
+import app.regie.game.engine.world.TilePos
+import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -125,12 +129,51 @@ class VillageGrowthTest {
     }
 
     @Test
-    fun `relocate reporte une position quand la carte s'elargit a l'ouest`() {
+    fun `relocate garde la tuile quand la carte s'elargit a l'ouest`() {
         val before = generate(session("a", "regie"), session("b", "site-perso"))
         val west = (0 until 8).map { session("w$it", "site-perso") }
         val after = generator.generate(overview(listOf(session("a", "regie")) + west))
+        assertNotEquals(before.origin, after.origin)
         val houseA = before.houseOf(SessionId("a"))!!
         assertEquals(after.houseOf(SessionId("a"))!!.entry, after.relocate(houseA.entry, before))
+        val onRoad = before.streets[0].road.bottomLeft.offset(4, 0)
+        val moved = after.relocate(onRoad, before)
+        assertEquals(before.relative(onRoad), after.relative(moved))
+        assertWalkable(after, moved)
+    }
+
+    @Test
+    fun `une rue de l'est qui s'allonge deplace aussi l'origine`() {
+        val before = generate(session("a", "regie"), session("b", "site-perso"))
+        val east = (0 until 8).map { session("e$it", "regie") }
+        val after = generator.generate(overview(east + session("b", "site-perso")))
+        assertNotEquals(before.origin, after.origin)
+        val moved = after.relocate(before.spawn, before)
+        assertEquals(after.spawn, moved)
+        assertWalkable(after, moved)
+    }
+
+    @Test
+    fun `relocate sort le coursier d'une maison batie sous ses pieds`() {
+        val before = generate(session("a", "regie"))
+        val plot = before.streets[0].plots[1]
+        assertNull(plot.sessionId)
+        val standing = TilePos(plot.area.left + 4, plot.area.bottom - 1)
+        assertFalse(before.world.map.isBlocked(standing))
+
+        val after = generate(session("a", "regie"), session("b", "regie"))
+        assertEquals(1, after.houseOf(SessionId("b"))!!.plot)
+        val same = standing.offset(after.origin.x - before.origin.x, after.origin.y - before.origin.y)
+        assertTrue(after.world.map.isBlocked(same), "la maison est bâtie sur la tuile du coursier")
+
+        val moved = after.relocate(standing, before)
+        assertWalkable(after, moved)
+        assertTrue(abs(moved.x - same.x) + abs(moved.y - same.y) <= 3, "$same -> $moved")
+    }
+
+    private fun assertWalkable(village: Village, tile: TilePos) {
+        assertFalse(village.world.map.isBlocked(tile), "$tile est bloquée")
+        assertNotNull(findPath(village.world.map, village.spawn, tile), "$tile n'est pas reliée à la place")
     }
 
     @Test
