@@ -174,7 +174,7 @@ Conventions, en pixels natifs (le rendu agrandit × 4) :
 - **Ancrage** (`ax`, `ay`) : les pieds d'un personnage. Pour un objet, le milieu de la rangée du bas de son empreinte, là où `PixelWorld` le pose.
 - **Échelle** : tous les personnages font 30 px de haut, une porte de maison environ 28 px. Les intérieurs sont réduits à la même échelle : la pièce (307 × 204) est centrée sur un fond sombre `#203648`. La tour garde son fond sarcelle `#1B5F53`.
 - **Marche** : `.0` pas A, `.1` debout, `.2` pas B ; l'animation enchaîne 0, 1, 2, 1. `coursier.debout.<direction>` montre l'image debout.
-- **Maisons** : empreinte de 7 × 5 tuiles au plus, porte sur la dernière rangée (règle du moteur). Les toits sont peints avec trois couleurs clés, du clair au sombre : `#3C78FF`, `#1E50D2`, `#0F2D96`. Elles sont hors de la palette et loin du magenta. `chimney` (sortie de la fumée) et `windows` (rectangles à éclairer) sont comptés depuis le coin haut gauche de l'image de la maison. Le chargeur ne les lit pas encore.
+- **Maisons** : empreinte de 7 × 5 tuiles au plus, porte sur la dernière rangée (règle du moteur). Les toits sont peints avec trois couleurs clés, du clair au sombre : `#3C78FF`, `#1E50D2`, `#0F2D96`. Elles sont hors de la palette et loin du magenta. `chimney` (sortie de la fumée) et `windows` (rectangles à éclairer) sont comptés depuis le coin haut gauche de l'image de la maison. Le chargeur les lit (ticket 52) : fumée et fenêtres éclairées.
 - **Décor** : l'empreinte est la partie qui bloque. Les fleurs et l'herbe ne sont pas des objets : on les traverse. Les ponts se traversent aussi. Une clôture est nommée par ses voisines (`n`, `e`, `s`, `o`) : `cloture.eo` est un morceau droit horizontal, `cloture.ns` vertical, `cloture.es` un coin. Sa tuile est le bas de l'image de 16 × 24. Les clés de `DecorCatalog.DEFAULT` (`decor.arbre.0`, `decor.fontaine` en 3 × 3…) sont des alias vers ces images.
 - **Fonds** : `fonds.json` ajoute `scenes`, que le chargeur ignore : `piece` (la pièce), `sol` (le plancher praticable, approché), `habitant` (les pieds de l'agent, sur son tapis) et `entree` (les pieds du coursier à la porte).
 
@@ -219,6 +219,5 @@ Elles restent sur le canvas.
 
 ## À faire avant l'intégration
 
-- Lire la cheminée et les fenêtres des maisons dans le chargeur, pour la fumée et les fenêtres éclairées.
 - Le mode un seul écran, quand celui du bas est éteint.
 - Un essai de lisibilité sur la Thor : taille du texte du fil, contraste des étiquettes.

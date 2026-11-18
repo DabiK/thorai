@@ -84,8 +84,9 @@ garder le routeur d'entrées de la manette (ADR 05) et se tester sans console.
 - Ajout au contrat : `palette.json` est `{"colors": ["#RRGGBB", …], "roles": {"grass.light": …}}`.
   Un rôle absent garde sa couleur par défaut, prise dans la palette du hameau.
 - Lu tel que le lot 42 l'a livré : l'ancre d'un objet est le milieu de la dernière rangée de son
-  empreinte ; les toits ont pour clés `#3C78FF`, `#1E50D2`, `#0F2D96`. Les champs `chimney`,
-  `windows` (en pixels de l'image) et `scenes` (atlas `fonds`) ne sont pas encore lus : ticket 52.
+  empreinte ; les toits ont pour clés `#3C78FF`, `#1E50D2`, `#0F2D96`. `chimney` et `windows`
+  (en pixels de l'image) sont lus depuis le ticket 52 (`AtlasObject`), et passés au repère de
+  l'empreinte dans `houseCatalog()` ; `scenes` (atlas `fonds`) ne l'est pas encore.
 
 ### Agrandissement ×4 au pixel près
 
@@ -143,6 +144,34 @@ garder le routeur d'entrées de la manette (ADR 05) et se tester sans console.
   pourra s'y fondre.
 - L'entrée dans une maison passe par un iris en vrais pixels (rangées de 4 pixels physiques),
   fermé sur la porte, puis par le rappel `onEnterHouse`.
+
+### Le hameau vivant et ce qui se lit dessus (ticket 52)
+
+- **Décor** : le moteur pose un décor abondant mais ordonné (`VillageDecorator`) : jardins par
+  maison (lanterne, clôture aux bouts raccordés, haie ou fleurs, accessoires contre les pignons tirés
+  par session), bords des routes et de l'avenue en rythme avec les terrains, place arrondie, puits
+  et bosquet au pont, berges, ceinture d'arbres en quinconce, bosquets dans les prés. Jamais sur un
+  passage, une porte, un terrain libre ni la place d'un toit ; les empreintes multi-tuiles (puits,
+  jardinière, banc de côté…) viennent de `DecorCatalog.sizes`, alignées sur l'atlas.
+- **Eau** : un sentier monte de la place et franchit la rivière (trois rangées) sur un pont en
+  planches peint par le code, avec garde-corps, poteaux et ombre sur l'eau ; nénuphars.
+- **Variété** : une maison évite le modèle et le toit de ses voisines de rue, puis de ses voisines
+  franches (en face sur la place, au-dessus, au-dessous), puis du reste de ce qui se voit. Huit toits,
+  tous dans la palette Aube (pas de prune : aucune couleur de la palette ne la donne).
+- **Vie** : `PixelWorld(states = village.houseStates())`. Au travail : fenêtres allumées qui
+  vacillent, fumée animée depuis `chimney`. En attente : fenêtres allumées, lumière ambre qui sort
+  de la porte. Au repos, arrêtée ou en échec : vitres éteintes (bleu ardoise). Les images de maison
+  (toit et vitres) sont recolorées une fois par (image, toit, lumière) et mises en cache.
+- **Ce qui se lit** (`VillageOverlay`, à mettre dans l'`overlay` de `PixelWorld`) : une petite bulle
+  d'état au-dessus de **chaque** maison, dessinée au pixel avec l'atlas `icones` (points au travail,
+  « ! » ambre qui sautille en attente, « z » au repos, « ! » rouge sur gris en échec), du côté opposé
+  à la cheminée, posée sur la ligne du toit ; le **panneau complet d'une seule maison**, `selected`
+  (devant laquelle est le coursier, `Village.nearestHouse`, ou désignée par un raccourci), qui pend
+  sous la porte, pointe vers le seuil, passe au-dessus du toit faute de place, et reste toujours
+  entier dans l'écran (`SignPlacement`). Plus de panneau sur les toits ni coupé par le bord.
+- **Performance** : `PixelWorld` prépare une fois par monde les objets, leurs boîtes, leurs images et
+  leurs animations (`GameAssets.animation`), ne dessine que ce qui est dans la vue et n'alloue rien
+  par objet et par image.
 
 ## Conséquences
 
