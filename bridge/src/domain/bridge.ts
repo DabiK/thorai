@@ -729,7 +729,7 @@ export class Bridge {
     ) {
       throw new BridgeError(
         'bad_request',
-        'Connexion indisponible pendant une session. Choisis Quitter, rouvre Régie puis Connexion des agents.',
+        'Connexion indisponible pendant une session. Choisis Quitter, rouvre ThorAI puis Connexion des agents.',
       );
     }
     this.authenticating.add(agent);

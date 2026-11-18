@@ -125,7 +125,7 @@ if command -v codex >/dev/null 2>&1; then
   }
   rule allow adb shell input -d 4 tap 100 200
   rule allow adb shell "dumpsys activity activities | grep -E '^Display #|topResumedActivity'"
-  rule allow thor-screen launch bas app.regie
+  rule allow thor-screen launch bas app.thorai
   rule aucune adbd
   rule aucune rm -rf /tmp/x
 else

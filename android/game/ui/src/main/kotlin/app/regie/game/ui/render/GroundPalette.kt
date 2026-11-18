@@ -6,7 +6,7 @@ import app.regie.game.engine.world.Ground
 data class Tones(val light: Int, val base: Int, val dark: Int)
 
 /**
- * Les rôles de couleur du sol, lus dans `palette.json` (ADR 21) :
+ * Les rôles de couleur du sol, lus dans `palette.json` (ADR 24) :
  * - `<sol>.light`, `<sol>.base`, `<sol>.dark` pour `grass`, `path`, `plaza`, `water`, `bridge` et `stone`
  *   (les pierres des berges et les joints de la place) ;
  * - `grass.deep` (le pied des touffes), `water.mid` (les remous), `outline` (les contours) ;

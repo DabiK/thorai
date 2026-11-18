@@ -45,7 +45,7 @@ Le build tourne sur le JDK par défaut (Temurin 25) et produit du bytecode 17. L
 - sinon le premier écran de présentation allumé et public ;
 - sinon le mode un seul écran, où la zone du bas devient un panneau en bas de l'écran haut.
 
-En debug, `am start -n app.regie/.TopActivity --ez force_single_screen true|false` force le mode, pour le tester sans éteindre l'écran du bas.
+En debug, `am start -n app.thorai/app.regie.TopActivity --ez force_single_screen true|false` force le mode, pour le tester sans éteindre l'écran du bas.
 
 ### Routeur d'entrées
 

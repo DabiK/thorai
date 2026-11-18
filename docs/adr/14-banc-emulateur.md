@@ -17,7 +17,7 @@ Le pont tourne à la demande sur `127.0.0.1:47600`, avec les mêmes dépendances
 épinglées et `npm ci` complet. `adb reverse` relie le loopback de l'émulateur au Mac.
 Projets, historique, jeton et journaux sont dans `~/Documents/regie-sandbox` ;
 `REGIE_BENCH_DIR` permet un autre dossier. Jeton généré avec 256 bits d'aléa,
-fichier 0600, transmis par stdin à `run-as app.regie`, jamais par un extra d'intent.
+fichier 0600, transmis par stdin à `run-as app.thorai`, jamais par un extra d'intent.
 Le chemin source du pont est conservé dans `bridge-root` : un autre worktree
 ne le réutilise pas silencieusement. Après modification du pont, le redémarrer
 explicitement avec `bridge-mac.sh stop` puis `bridge-mac.sh`.
@@ -48,7 +48,7 @@ reste inchangé. Les lectures natives n'ont pas besoin d'escalade.
 Les identifiants Codex du Mac sont réutilisés, sans copie ni modification. Claude est installé
 comme dépendance du pont mais **la démo ne lance aucune session Claude** (le pont relève seulement sa version).
 
-Troisième commande : `emu-install.sh` installe uniquement app.regie, accorde les
+Troisième commande : `emu-install.sh` installe uniquement app.thorai, accorde les
 notifications sur cet AVD contrôlé, ouvre une session Codex en mode « valider »
 et vérifie la lecture du repère `THOR-DEMO-16` dans README.md. Seule la session de démo
 identifiée dans `demo-session`, si elle est encore active, est réutilisée ; `--no-demo` évite tout lancement d'agent pour les

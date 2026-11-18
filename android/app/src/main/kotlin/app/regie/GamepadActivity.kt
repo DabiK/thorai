@@ -38,6 +38,7 @@ import app.regie.input.Trigger
 import app.regie.input.TriggerAxes
 import app.regie.overview.ControlState
 import app.regie.domain.model.Overview
+import app.regie.domain.model.SetupPermission
 import app.regie.session.Screen
 import app.regie.session.SessionNotice
 import app.regie.ui.screens.ControlCallbacks
@@ -68,12 +69,6 @@ abstract class GamepadActivity : ComponentActivity() {
         override fun onConfirmQuit() = container.controller.confirmQuit()
 
         override fun onCancelQuit() = container.controller.cancelQuit()
-
-        // Accessibilité s'ouvre sur l'écran qui l'a demandée : celui du bas est tactile.
-        override fun onEnableConsole() = startActivity(
-            android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
-            android.app.ActivityOptions.makeBasic().setLaunchDisplayId(display.displayId).toBundle(),
-        )
     }
 
     protected val sessionCallbacks = object : SessionCallbacks {
@@ -100,6 +95,14 @@ abstract class GamepadActivity : ComponentActivity() {
 
     private val microphonePermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
+    /** La permission que le parcours d'accueil fait demander, sur l'écran tactile. */
+    private var setupPermission: SetupPermission? = null
+    private val setupPermissionRequest = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        val asked = setupPermission ?: return@registerForActivityResult
+        setupPermission = null
+        container.onPermissionAnswer(asked, granted, askAgain = shouldShowRequestPermissionRationale(asked.manifestName))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -111,6 +114,16 @@ abstract class GamepadActivity : ComponentActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.CREATED) {
                 container.closing.collect { if (it) finishAndRemoveTask() }
+            }
+        }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                container.permissionRequests.collect { permission ->
+                    if (container.asksPermissions(this@GamepadActivity is BottomActivity) && setupPermission == null) {
+                        setupPermission = permission
+                        setupPermissionRequest.launch(permission.manifestName)
+                    }
+                }
             }
         }
     }
@@ -149,6 +162,7 @@ abstract class GamepadActivity : ComponentActivity() {
             RegieTheme {
                 Box(Modifier.fillMaxSize().background(Palette.background).safeDrawingPadding()) {
                     val authentication by container.agentAuthentication.collectAsStateWithLifecycle()
+                    val setup by container.setup.state.collectAsStateWithLifecycle()
                     val screen by container.screen.collectAsStateWithLifecycle()
                     val current by container.overview.collectAsStateWithLifecycle()
                     val dictation by container.dictation.state.collectAsStateWithLifecycle()
@@ -164,6 +178,8 @@ abstract class GamepadActivity : ComponentActivity() {
                     if (authentication.visible) {
                         app.regie.ui.screens.AgentAuthenticationScreen(authentication, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single,
                             container::selectAuthenticationAgent, button, container::refreshAuthentication, container::submitAuthenticationKey, { container.authenticationKeyAction = it })
+                    } else if (setup.visible) {
+                        app.regie.ui.screens.SetupScreen(setup, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single, packageName, container.setup::press, container.setupVelocity)
                     } else if (sessionSettings.visible && screen !is Screen.Session) {
                         app.regie.ui.screens.SessionSettingsScreen(sessionSettings, button, container::selectSessionSetting)
                     } else if (settingsOpen && controlsHere) {
@@ -184,13 +200,11 @@ abstract class GamepadActivity : ComponentActivity() {
                         // Un seul écran, hors session : la dictée occupe l'écran. Dans une session, le fil reste.
                         DictationTopScreen(dictation, current.sessions.firstOrNull { it.id == dictation.target?.sessionId }, true, button, held, container::openVoiceSettings, dictationScroll)
                     } else Column(Modifier.fillMaxSize()) {
-                        // Dans une session, la table du bas règle la session et la dictée règle la voix.
-                        if (controlsHere && screen !is Screen.Session) Row(Modifier.fillMaxWidth().background(Palette.background).padding(horizontal = 16.dp, vertical = 4.dp)) {
-                            if (screen == Screen.Overview) {
-                                app.regie.ui.components.BarAction("B", "Connexion des agents", container::openAgentAuthentication)
-                            }
-                            Spacer(Modifier.weight(1f))
-                            BasicText("Régler la voix", style = sans(11.sp, color = Palette.textSubtle), modifier = Modifier.tappable(container::openVoiceSettings))
+                        // Sur l'accueil seulement : la session règle la voix depuis sa dictée, le diff aussi.
+                        if (controlsHere && screen == Screen.Overview) {
+                            val console by container.consoleService.collectAsStateWithLifecycle()
+                            app.regie.ui.screens.OverviewShortcuts(setupLeft = (!console && !container.replaying) || current.androidAccessMissing,
+                                onAgents = container::openAgentAuthentication, onSetup = container::openSetup, onVoice = container::openVoiceSettings)
                         }
                         Box(Modifier.weight(1f)) {
                     when (val shown = screen) {
@@ -218,6 +232,13 @@ abstract class GamepadActivity : ComponentActivity() {
             requestFocus()
         }
     }
+}
+
+/** Le nom Android d'une permission du parcours d'accueil. */
+private val SetupPermission.manifestName: String get() = when (this) {
+    SetupPermission.RUN_COMMAND -> app.regie.console.TermuxBridgeLauncher.PERMISSION
+    SetupPermission.MICROPHONE -> Manifest.permission.RECORD_AUDIO
+    SetupPermission.NOTIFICATIONS -> Manifest.permission.POST_NOTIFICATIONS
 }
 
 /**

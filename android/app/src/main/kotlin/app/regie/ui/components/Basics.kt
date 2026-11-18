@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -106,16 +107,19 @@ fun StatusPill(status: SessionStatus) {
     }
 }
 
-/** Puce ronde d'un bouton de la manette (« A », « X », « Y ») suivie de l'action. */
+/**
+ * Puce ronde d'un bouton de la manette (« A », « X », « Y ») suivie de l'action. 13 sp par défaut, pour
+ * que quatre actions tiennent sur une ligne de l'écran du bas ; [size] grandit là où il y a la place.
+ */
 @Composable
-fun ButtonChip(button: String, label: String, modifier: Modifier = Modifier) {
+fun ButtonChip(button: String, label: String, modifier: Modifier = Modifier, size: TextUnit = 13.sp) {
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(7.dp),
     ) {
         KeyChip(button)
-        BasicText(label, style = sans(12.5.sp, color = Palette.footerText), maxLines = 1)
+        BasicText(label, style = sans(size, color = Palette.footerText), maxLines = 1)
     }
 }
 

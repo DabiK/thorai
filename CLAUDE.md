@@ -2,7 +2,7 @@
 
 ## Projet
 
-Régie (nom de travail) est une app Android pour l'AYN Thor, une console Android à deux écrans. Elle sert de poste de pilotage pour Claude Code et Codex, qui tournent déjà sur la console (dans une Debian sous Termux). Elle se commande à la voix et à la manette.
+ThorAI (nom de code historique : Régie, ADR 21) est une app Android pour l'AYN Thor, une console Android à deux écrans. Elle sert de poste de pilotage pour Claude Code et Codex, qui tournent déjà sur la console (dans une Debian sous Termux). Elle se commande à la voix et à la manette.
 
 L'app ne refait pas le travail des agents. Elle :
 - lance des sessions ;

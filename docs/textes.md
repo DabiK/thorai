@@ -1,4 +1,4 @@
-# Textes de Régie
+# Textes de ThorAI
 
 On tutoie. Chaque phrase d’interface tient en huit mots au plus.
 On compte les mots, pas les signes de ponctuation. Une erreur peut
@@ -28,7 +28,7 @@ invisible, comme maintenir L2 ou faire défiler au stick.
 Les noms de modèles et les autres options natives viennent de l’agent.
 Les consignes, réponses, chemins, commandes, extraits et erreurs externes
 sont des **données**, pas des textes à réécrire. On conserve leur contenu,
-y compris leurs mots, ponctuation et longueur. Les messages de Régie qui
+y compris leurs mots, ponctuation et longueur. Les messages de ThorAI qui
 les entourent suivent ce guide. Les commandes de dépannage restent dans
 la notice d’installation (`docs/installation.md`). Une limite de données reste annoncée : écriture par commande
 absente du suivi, résultat inconnu, information non communiquée.
