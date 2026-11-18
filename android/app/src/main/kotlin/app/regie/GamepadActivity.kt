@@ -5,6 +5,7 @@ import android.Manifest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import app.regie.display.ScreenMode
 import android.view.InputDevice
 import android.view.KeyEvent
@@ -111,7 +112,7 @@ abstract class GamepadActivity : ComponentActivity() {
         androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightNavigationBars = false
         androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = false
         window.hideSystemBars()
-        window.callback = GamepadWindowCallback(window.callback, container.inputRouter, container::releaseTouchDictation)
+        window.callback = GamepadWindowCallback(window.callback, container.inputRouter, container::releaseTouchDictation, ::keyboardFirst)
         // « Quitter » est allé au bout : les deux écrans se ferment, même en arrière-plan.
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.CREATED) {
@@ -137,6 +138,33 @@ abstract class GamepadActivity : ComponentActivity() {
     override fun onTopResumedActivityChanged(isTopResumedActivity: Boolean) {
         super.onTopResumedActivityChanged(isTopResumedActivity)
         container.gamepadFocus(this, isTopResumedActivity)
+    }
+
+    /** Un champ de texte de l'écran a le focus (message de secours, clé, fiche) : le clavier est ouvert. */
+    private var textFocused = false
+    private var focusManager: androidx.compose.ui.focus.FocusManager? = null
+
+    /**
+     * Le clavier passe d'abord, comme pour le retour système (ticket 54). Après un message tapé, le
+     * champ gardait le focus : le clavier restait ouvert par-dessus le fil, et B quittait la maison
+     * sans avoir rendu le fil. Désormais, champ actif :
+     * - B ferme le clavier et rend l'écran (le fil), sans rien d'autre ; le B suivant fait « retour » ;
+     * - A garde son action (envoyer, valider la clé, lancer la fiche), puis ferme le clavier.
+     * Vrai si la touche est prise ici. Les autres touches suivent le routeur, comme avant.
+     */
+    private fun keyboardFirst(keyCode: Int, isDown: Boolean, route: () -> Boolean): Boolean {
+        if (!textFocused || !isDown) return route()
+        return when (keyCode) {
+            KeyEvent.KEYCODE_BUTTON_B -> { closeKeyboard(); true }
+            KeyEvent.KEYCODE_BUTTON_A -> route().also { closeKeyboard() }
+            else -> route()
+        }
+    }
+
+    private fun closeKeyboard() {
+        focusManager?.clearFocus(force = true)
+        textFocused = false
+        androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).hide(androidx.core.view.WindowInsetsCompat.Type.ime())
     }
 
     /** Un clavier, une autre appli ou une boîte système ont pu rendre les barres : on les recache au retour. */
@@ -169,7 +197,9 @@ abstract class GamepadActivity : ComponentActivity() {
         setContent {
             GameTheme {
                 // Les barres système sont cachées (plein écran, ticket 51) ; le clavier et une découpe gardent leur place.
-                Box(Modifier.fillMaxSize().safeDrawingPadding()) {
+                focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+                // Un champ de texte a le focus quelque part dessous : le clavier passe d'abord (ticket 54).
+                Box(Modifier.fillMaxSize().safeDrawingPadding().onFocusChanged { textFocused = it.hasFocus }) {
                     val authentication by container.agentAuthentication.collectAsStateWithLifecycle()
                     val setup by container.setup.state.collectAsStateWithLifecycle()
                     val screen by container.screen.collectAsStateWithLifecycle()
@@ -337,6 +367,8 @@ private class GamepadWindowCallback(
     private val wrapped: Window.Callback,
     private val router: InputRouter,
     private val touchEnd: () -> Unit,
+    /** Le clavier ouvert prend B et ferme après A ; sinon il appelle le routage. */
+    private val keyboardFirst: (keyCode: Int, isDown: Boolean, route: () -> Boolean) -> Boolean,
 ) : Window.Callback by wrapped {
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
@@ -352,7 +384,9 @@ private class GamepadWindowCallback(
             else -> return wrapped.dispatchKeyEvent(event)
         }
         val fallback = (event.flags and KeyEvent.FLAG_FALLBACK) != 0
-        return router.onKey(event.keyCode, isDown, event.repeatCount, fallback) || wrapped.dispatchKeyEvent(event)
+        val repeated = event.repeatCount > 0
+        return keyboardFirst(event.keyCode, isDown && !repeated) { router.onKey(event.keyCode, isDown, event.repeatCount, fallback) } ||
+            wrapped.dispatchKeyEvent(event)
     }
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {

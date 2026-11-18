@@ -196,7 +196,9 @@ class AppContainer(
         gameMenu.value = step.menu
         when (val outcome = step.outcome) {
             is MenuOutcome.Choose -> when (outcome.entry) {
-                MenuEntry.CONTINUE, MenuEntry.COURIER -> Unit
+                // « Continuer » mène au hameau, coursier jouable, d'où qu'on vienne (ticket 54).
+                MenuEntry.CONTINUE -> openOverview()
+                MenuEntry.COURIER -> Unit
                 MenuEntry.NEW_SESSION -> openNewSession()
                 MenuEntry.AGENTS -> openAgentAuthentication()
                 MenuEntry.SETTINGS -> openVoiceSettings()

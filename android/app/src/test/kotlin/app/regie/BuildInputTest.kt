@@ -204,6 +204,93 @@ class BuildInputTest {
         assertFalse(container.village.mapOpen.value)
         assertFalse(container.agentAuthentication.value.visible, "B ferme la carte, sans ouvrir les agents")
     }
+
+    // --- Ticket 54 : le menu et B, de bout en bout ---
+
+    /** La croix tenue quelques pas, dans chaque direction jusqu'à ce qu'une soit libre : le coursier a-t-il bougé ? */
+    private fun TestScope.walks(container: AppContainer): Boolean {
+        val scene = assertNotNull(container.village.scene.value, "le hameau est à l'écran")
+        var t = 0L
+        repeat(200) { scene.onFrame(t); t += 16 }
+        val start = scene.foot
+        for (key in listOf(android.view.KeyEvent.KEYCODE_DPAD_RIGHT, android.view.KeyEvent.KEYCODE_DPAD_LEFT,
+            android.view.KeyEvent.KEYCODE_DPAD_DOWN, android.view.KeyEvent.KEYCODE_DPAD_UP)) {
+            container.inputRouter.onKey(key, isDown = true, repeatCount = 0); runCurrent()
+            repeat(40) { scene.onFrame(t); t += 16 }
+            container.inputRouter.onKey(key, isDown = false, repeatCount = 0); runCurrent()
+            repeat(40) { scene.onFrame(t); t += 16 }
+            if (scene.foot != start) return true
+        }
+        return false
+    }
+
+    @Test fun `Continuer on the title lands on the hamlet, with a courier that walks`() = runTest {
+        val container = container()
+        container.showTitle()
+        press(container, Button.A)
+        assertFalse(container.gameMenu.value.open)
+        assertEquals(Screen.Overview, container.screen.value)
+        assertTrue(walks(container), "le coursier est jouable")
+    }
+
+    @Test fun `out of a house, after the app went to the background, Start then B give the hamlet back`() = runTest {
+        val container = container()
+        container.openSession(SessionId("a")); runCurrent()
+        press(container, Button.B)
+        assertEquals(Screen.Overview, container.screen.value)
+        // L'app passe en arrière-plan puis revient (onStop, onStart des deux activités).
+        container.inputRouter.reset(); container.topStarted.value = false; runCurrent()
+        container.topStarted.value = true; runCurrent()
+        press(container, Button.START)
+        assertTrue(container.gameMenu.value.open)
+        press(container, Button.B)
+        assertFalse(container.gameMenu.value.open)
+        assertFalse(container.agentAuthentication.value.visible, "B ferme le menu, rien d'autre")
+        assertTrue(walks(container))
+    }
+
+    @Test fun `Nouvelle session on the title opens the form, A builds a house, and the courier enters it`() = runTest {
+        val container = container()
+        container.showTitle()
+        press(container, Button.DOWN, Button.A)
+        assertFalse(container.gameMenu.value.open)
+        assertTrue(container.newSession.value.visible, "la fiche du jeu")
+        // L'agent, puis le projet « regie ».
+        press(container, Button.RIGHT, Button.DOWN, Button.RIGHT, Button.RIGHT)
+        assertEquals("regie", container.newSession.value.project)
+        assertNotNull(container.newSession.value.agent)
+        container.walk { it.courierTile == it.village.site?.entry && !it.moving }
+
+        press(container, Button.A)
+        assertFalse(container.newSession.value.visible)
+        assertEquals(Screen.Overview, container.screen.value, "on regarde le chantier")
+        assertNotNull(container.village.scene.value?.village?.houseOf(gateway.created), "la maison est sur le hameau")
+
+        gateway.thread.value = SessionThread(listOf(ThreadEntry.AgentText(1, "J'attends ta consigne.")), loaded = true)
+        runCurrent()
+        container.walk { it.entering != null }
+        container.enterHouse(gateway.created); runCurrent()
+        assertEquals(Screen.Session(gateway.created), container.screen.value, "le coursier est entré dans la nouvelle maison")
+    }
+
+    @Test fun `B on the form goes back to the hamlet, from the title as from a house`() = runTest {
+        val container = container()
+        container.showTitle()
+        press(container, Button.DOWN, Button.A, Button.B)
+        assertFalse(container.newSession.value.visible)
+        assertEquals(Screen.Overview, container.screen.value)
+        assertFalse(container.gameMenu.value.open)
+        assertTrue(walks(container))
+
+        // Ouverte dans une maison (ordre R2 « lance… ») : la fiche ramène d'abord sur le hameau, B y reste.
+        container.openSession(SessionId("a")); runCurrent()
+        container.openNewSession(draft); runCurrent()
+        assertEquals(Screen.Overview, container.screen.value)
+        press(container, Button.B)
+        assertFalse(container.newSession.value.visible)
+        assertEquals(Screen.Overview, container.screen.value)
+        assertTrue(walks(container))
+    }
 }
 
 private class SilentCapture : DictationCapture {
