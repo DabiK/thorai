@@ -23,7 +23,7 @@ class InterpretVoiceCommand(private val model: VoiceCommandModel) {
         val description = when (command) {
             is VoiceCommand.Reply -> "${if (command.decision == ApprovalDecision.ONCE) "Autoriser une fois" else "Refuser"} : ${command.approval.subject ?: "validation affichée"}"
             is VoiceCommand.Pause -> "Interrompre : ${command.ids.joinToString { name(it) }}"
-            is VoiceCommand.Summary -> "Faire le point écrit sur : ${command.ids.joinToString { name(it) }}"
+            VoiceCommand.ShowOverview -> "Ouvrir la vue d’ensemble"
             is VoiceCommand.Navigate -> "Ouvrir : ${name(command.id)}"
             is VoiceCommand.Launch -> with(command.draft) {
                 "Lancer $agent sur $project\nMode : plan d’abord\nBranche : ${branch ?: "courante"}\nConsigne : ${instruction ?: "aucune (session vide)"}"
@@ -65,8 +65,9 @@ class InterpretVoiceCommand(private val model: VoiceCommandModel) {
             }
             "pause" -> target()?.takeIf { id -> context.sessions.any { it.id == id && it.status.isBusy } }?.let { VoiceCommand.Pause(listOf(it)) }
             "pause_all" -> if (intent.target != null) null else context.sessions.filter { it.status.isBusy }.map { it.id }.takeIf { it.isNotEmpty() }?.let(VoiceCommand::Pause)
-            "summary" -> target()?.let { VoiceCommand.Summary(listOf(it)) }
-            "summary_all" -> if (intent.target != null) null else context.sessions.map { it.id }.takeIf { it.isNotEmpty() }?.let(VoiceCommand::Summary)
+            // « Où en est … » opens the conversation, like L1/R1; no written report any more (ticket 25).
+            "summary" -> target()?.let(VoiceCommand::Navigate)
+            "summary_all" -> if (intent.target != null) null else VoiceCommand.ShowOverview
             "navigate" -> if (intent.target == null) null else target()?.let(VoiceCommand::Navigate)
             "launch" -> {
                 if (intent.target != null) return null

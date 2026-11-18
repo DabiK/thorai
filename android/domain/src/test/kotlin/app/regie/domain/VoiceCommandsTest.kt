@@ -29,11 +29,12 @@ class VoiceCommandsTest {
             "Interromps cette session" to VoiceCommand.Pause(listOf(one.id)),
             "Mets tout en pause" to VoiceCommand.Pause(listOf(one.id, two.id)),
             "Mets toutes les sessions en pause" to VoiceCommand.Pause(listOf(one.id, two.id)),
-            "Fais le point" to VoiceCommand.Summary(listOf(one.id)),
-            "Où en est Codex ?" to VoiceCommand.Summary(listOf(one.id)),
-            "Fais le point sur Cuisine" to VoiceCommand.Summary(listOf(two.id)),
-            "Fais le point sur toutes les sessions" to VoiceCommand.Summary(listOf(one.id, two.id)),
-            "Où en sont toutes les sessions ?" to VoiceCommand.Summary(listOf(one.id, two.id)),
+            // « Où en est … » opens the conversation, like L1/R1 (ticket 25): no written report.
+            "Fais le point" to VoiceCommand.Navigate(one.id),
+            "Où en est Codex ?" to VoiceCommand.Navigate(one.id),
+            "Fais le point sur Cuisine" to VoiceCommand.Navigate(two.id),
+            "Fais le point sur toutes les sessions" to VoiceCommand.ShowOverview,
+            "Où en sont toutes les sessions ?" to VoiceCommand.ShowOverview,
             "Passe à Atelier" to VoiceCommand.Navigate(one.id),
             "Ouvre la session Cuisine" to VoiceCommand.Navigate(two.id),
             "Va sur atelier" to VoiceCommand.Navigate(one.id),
@@ -62,7 +63,7 @@ class VoiceCommandsTest {
             calls++; assertEquals("montre-moi comment avance la cuisine", text); assertEquals(context, ctx)
             VoiceIntent("summary", "Cuisine")
         })
-        assertEquals(VoiceCommand.Summary(listOf(two.id)), interpreter("montre-moi comment avance la cuisine", context).command)
+        assertEquals(VoiceCommand.Navigate(two.id), interpreter("montre-moi comment avance la cuisine", context).command)
         assertEquals(1, calls)
     }
 
@@ -123,8 +124,6 @@ class VoiceCommandsTest {
         assertEquals(listOf(approval.id to "yes"), gateway.answers)
         executor(VoiceCommand.Navigate(two.id))
         assertEquals(listOf(two.id), opened)
-        gateway.threadOf(one.id).value = SessionThread(loaded = true)
-        assertTrue(executor(VoiceCommand.Summary(listOf(one.id))).contains("résultats non communiqués"))
         assertTrue(gateway.sent.isEmpty())
         gateway.approvals.value = listOf(approval.copy(id = ApprovalId("b")))
         executor(VoiceCommand.Reply(gateway.approvals.value.single(), ApprovalDecision.REJECT))
@@ -171,6 +170,24 @@ class VoiceCommandsTest {
         executor(launch)
         assertEquals(listOf(one.id), opened)
         assertEquals("plan", gateway.creations.last().approvalMode)
+    }
+
+    @Test fun `where is a session opens its conversation and never builds a written report`() = runTest {
+        val interpreter = InterpretVoiceCommand(noModel)
+        // No session named: the active one.
+        assertEquals(VoiceCommand.Navigate(one.id), interpreter("Où en est cette session ?", context).command)
+        assertEquals("Ouvrir\u00A0: Atelier · CODEX", interpreter("Où en est Atelier ?", context).description)
+        assertNull(interpreter("Fais le point", context.copy(current = null)).command)
+        val gateway = StubGateway().apply { sessions.value = listOf(one, two) }
+        val opened = mutableListOf<SessionId>()
+        var overview = 0
+        val executor = ExecuteVoiceCommand(gateway, AnswerApproval(gateway), { opened += it }, { overview++ })
+        assertEquals("Session ouverte.", executor(interpreter("Où en est Cuisine ?", context).command!!))
+        assertEquals("Vue d’ensemble ouverte.", executor(interpreter("Où en sont toutes les sessions ?", context).command!!))
+        assertEquals(listOf(two.id), opened)
+        assertEquals(1, overview)
+        assertTrue(gateway.threads.isEmpty(), "no thread is read to write a report")
+        assertTrue(gateway.sent.isEmpty())
     }
 
     @Test fun `confirmation rechecks original approval and pause snapshot`() = runTest {

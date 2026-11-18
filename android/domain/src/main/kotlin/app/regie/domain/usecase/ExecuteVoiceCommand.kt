@@ -2,11 +2,14 @@ package app.regie.domain.usecase
 
 import app.regie.domain.model.*
 import app.regie.domain.port.AgentGateway
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withTimeoutOrNull
 
 /** Called only after confirmation. Checks the frozen target against current bridge state. */
-class ExecuteVoiceCommand(private val gateway: AgentGateway, private val answer: AnswerApproval, private val open: (SessionId) -> Unit) {
+class ExecuteVoiceCommand(
+    private val gateway: AgentGateway,
+    private val answer: AnswerApproval,
+    private val open: (SessionId) -> Unit,
+    private val openOverview: () -> Unit = {},
+) {
     suspend operator fun invoke(command: VoiceCommand): String = when (command) {
         is VoiceCommand.Reply -> {
             if (gateway.approvals.value.none { it == command.approval }) "Validation modifiée ou déjà traitée. Aucun ordre envoyé."
@@ -25,12 +28,7 @@ class ExecuteVoiceCommand(private val gateway: AgentGateway, private val answer:
         is VoiceCommand.Navigate -> if (gateway.sessions.value.any { it.id == command.id }) {
             open(command.id); "Session ouverte."
         } else "Session indisponible."
-        is VoiceCommand.Summary -> command.ids.mapNotNull { id ->
-            val session = gateway.sessions.value.firstOrNull { it.id == id } ?: return@mapNotNull null
-            val thread = withTimeoutOrNull(2000) { gateway.thread(id).first { it.loaded } } ?: SessionThread.EMPTY
-            val summary = WrittenSummary.of(session, thread)
-            "${session.title ?: session.project} · ${session.agent}\n${if (summary.fromAgent) "Bilan déclaré par l’agent" else "État observé · bilan absent"}\n${(summary.lines + listOfNotNull(summary.question)).joinToString("\n")}"
-        }.joinToString("\n\n").ifEmpty { "Aucune session disponible." }
+        VoiceCommand.ShowOverview -> { openOverview(); "Vue d’ensemble ouverte." }
         is VoiceCommand.Launch -> {
             if (command.draft.project !in gateway.projects()) "Projet indisponible. Aucune session créée."
             else {
