@@ -1,6 +1,6 @@
 # 23 — Se connecter à Claude et à Codex depuis la console
 
-Statut : en attente (après 22)
+Statut : prêt
 Possède : `bridge/`, `android/` (écran de connexion)
 
 ## Retour de l'utilisateur, 18 novembre
