@@ -1,6 +1,6 @@
 # 27 — Préparer le partage : rien de propre à l'utilisateur, APK de release, installation sans Mac
 
-Statut : à fusionner
+Statut : fait
 Possède : `scripts/`, `thor/`, `bridge/`, `android/` (build, jeton), `LICENSE`
 
 ## Contexte

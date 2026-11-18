@@ -1,6 +1,6 @@
 # 31 — opencode comme troisième agent
 
-Statut : en attente (après 27)
+Statut : prêt
 Possède : `bridge/`, `android/domain` (modèle des agents), le choix de l'agent dans l'app, `thor/` (installation)
 
 ## Objectif
