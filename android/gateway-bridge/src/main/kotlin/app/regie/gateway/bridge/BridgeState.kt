@@ -369,8 +369,6 @@ internal class BridgeState {
         /** « 2.1.322 (Claude Code) » → « 2.1.322 » ; « codex-cli 0.167.2 » → « 0.167.2 ». */
         fun versionNumber(binary: String): String? = VERSION.find(binary)?.value
 
-        private fun agentOf(name: String?): Agent? = name?.let { Agent.fromId(it) }
-
         private fun statusOf(status: String?): SessionStatus? = when (status) {
             "working" -> SessionStatus.WORKING
             "awaiting_approval" -> SessionStatus.AWAITING_APPROVAL

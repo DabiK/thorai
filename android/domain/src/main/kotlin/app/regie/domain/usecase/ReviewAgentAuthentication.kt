@@ -55,8 +55,13 @@ class ReviewAgentAuthentication(private val gateway: AgentAuthenticationGateway,
             val agents = gateway.authentication()
             if (revision == version) {
                 agents.filter { it.phase in setOf(AuthenticationPhase.CONNECTED, AuthenticationPhase.DISCONNECTED, AuthenticationPhase.FAILED) }.forEach { attemptedLogins.remove(it.agent) }
-                mutable.value = state.value.copy(agents = agents, notice = when {
+                val previousAgent = state.value.current?.agent
+                val selected = agents.indexOfFirst { it.agent == previousAgent }.takeIf { it >= 0 } ?: 0
+                val targetChanged = previousAgent != agents.getOrNull(selected)?.agent
+                mutable.value = state.value.copy(agents = agents, selected = selected,
+                    confirmingLogout = state.value.confirmingLogout && !targetChanged, notice = when {
                     agents.isEmpty() -> "Connexion indisponible sur ce pont."
+                    targetChanged -> ""
                     refreshFailed && !state.value.confirmingLogout -> ""
                     else -> state.value.notice
                 })
@@ -101,11 +106,11 @@ class ReviewAgentAuthentication(private val gateway: AgentAuthenticationGateway,
         }
     }
 
-    fun submitKey(key: String) {
+    fun submitKey(key: String, expectedAgent: Agent? = state.value.current?.agent) {
         val review = state.value
         val agent = review.current ?: return
         val provider = agent.login.provider ?: return
-        if (review.busy || agent.login.method != "api_key" || key.isBlank()) return
+        if (review.busy || agent.agent != expectedAgent || agent.login.method != "api_key" || key.isBlank()) return
         revision++
         mutable.value = review.copy(busy = true, notice = "")
         scope.launch {

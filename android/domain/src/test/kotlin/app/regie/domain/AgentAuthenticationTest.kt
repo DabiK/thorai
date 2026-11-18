@@ -115,3 +115,35 @@ class AgentKeyTest {
         assertTrue(review.state.value.current!!.connected == true)
     }
 }
+
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+class AuthenticationCatalogueTest {
+    @Test fun `refresh preserves the selected identity and cancels logout when that identity disappears`() = runTest {
+        val one = Agent("one"); val two = Agent("two")
+        var agents = listOf(AgentAuthentication(one, true), AgentAuthentication(two, true))
+        val gateway = object : AgentAuthenticationGateway { override suspend fun authentication() = agents }
+        val review = ReviewAgentAuthentication(gateway, backgroundScope)
+        review.open(); runCurrent(); review.select(1); review.requestLogout()
+        agents = agents.reversed(); review.refresh(); runCurrent()
+        assertEquals(two, review.state.value.current?.agent)
+        assertTrue(review.state.value.confirmingLogout)
+        agents = listOf(AgentAuthentication(one, true)); review.refresh(); runCurrent()
+        assertEquals(one, review.state.value.current?.agent)
+        assertFalse(review.state.value.confirmingLogout)
+    }
+
+    @Test fun `a stale screen action cannot send the previous agents key to the new selection`() = runTest {
+        val one = Agent("one"); val two = Agent("two")
+        val saved = mutableListOf<Agent>()
+        val gateway = object : AgentAuthenticationGateway {
+            override suspend fun authentication() = listOf(one, two).map { AgentAuthentication(it, false, login = AgentLogin("api_key", provider = it.id)) }
+            override suspend fun submitAgentKey(agent: Agent, provider: String, key: String): AgentAuthentication { saved += agent; return AgentAuthentication(agent, true) }
+        }
+        val review = ReviewAgentAuthentication(gateway, backgroundScope)
+        review.open(); runCurrent(); review.select(1)
+        review.submitKey("test-only-key", one); runCurrent()
+        assertTrue(saved.isEmpty())
+        review.submitKey("test-only-key", two); runCurrent()
+        assertEquals(listOf(two), saved)
+    }
+}

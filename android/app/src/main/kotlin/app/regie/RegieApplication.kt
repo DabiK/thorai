@@ -138,7 +138,7 @@ class AppContainer(
         authenticationReview?.open()
     }
     fun selectAuthenticationAgent(index: Int) { authenticationReview?.select(index) }
-    fun submitAuthenticationKey(key: String) { authenticationReview?.submitKey(key) }
+    fun submitAuthenticationKey(agent: Agent, key: String) { authenticationReview?.submitKey(key, agent) }
     var authenticationKeyAction: (() -> Unit)? = null
     fun refreshAuthentication() { authenticationReview?.refresh() }
     private var settingsReview: ReviewSessionSettings? = null

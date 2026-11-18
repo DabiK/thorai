@@ -44,7 +44,7 @@ class AgentAuthenticationScreenTest {
         val sent = mutableListOf<String>()
         var action: (() -> Unit)? = null
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
-            host.setup().get().setContent { RegieTheme { AgentAuthenticationScreen(review, false, true, {}, {}, {}, { sent += it }, { action = it }) } }
+            host.setup().get().setContent { RegieTheme { AgentAuthenticationScreen(review, false, true, {}, {}, {}, { _, key -> sent += key }, { action = it }) } }
             compose.onNodeWithText("AGENT FUTUR").assertIsDisplayed()
             kotlin.test.assertTrue(compose.onNodeWithText("AGENT FUTUR").getUnclippedBoundsInRoot().right <= compose.onRoot().getUnclippedBoundsInRoot().right)
             compose.onNodeWithContentDescription("Clé de connexion").performTextInput("test-only-key")

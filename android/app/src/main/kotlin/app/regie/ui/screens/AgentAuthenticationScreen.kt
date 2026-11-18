@@ -42,7 +42,7 @@ fun AgentAuthenticationScreen(
     select: (Int) -> Unit,
     button: (Button) -> Unit,
     refresh: () -> Unit,
-    submitKey: (String) -> Unit = {},
+    submitKey: (Agent, String) -> Unit = { _, _ -> },
     bindKeyAction: ((() -> Unit)?) -> Unit = {},
 ) {
     val controls = bottom || singleScreen
@@ -51,7 +51,7 @@ fun AgentAuthenticationScreen(
         if (controls && review.agents.isNotEmpty()) tabs.scrollToItem(review.selected.coerceIn(review.agents.indices))
     }
     var key by remember(review.visible, review.current?.agent) { mutableStateOf("") }
-    val sendKey = { if (key.isNotBlank() && !review.busy) { val entered = key; key = ""; submitKey(entered) } }
+    val sendKey = { val expected = review.current?.agent; if (key.isNotBlank() && !review.busy && expected != null) { val entered = key; key = ""; submitKey(expected, entered) } }
     DisposableEffect(key, review.busy, review.current?.agent, controls) {
         if (controls) bindKeyAction(sendKey)
         onDispose { if (controls) bindKeyAction(null) }

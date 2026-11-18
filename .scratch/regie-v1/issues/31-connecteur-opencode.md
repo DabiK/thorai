@@ -22,15 +22,15 @@ Demande de l'utilisateur, 18 novembre : ajouter opencode comme connecteur, à c�
 
 ## Critères d'acceptation
 
-- [x] Tests du pont et du domaine. `npm run check` et `./gradlew check` sont verts : 336 tests pont, 450 Android, typage/lint ; traces dans `artifacts/screenshots/31/`.
+- [x] Tests du pont et du domaine. `npm run check` et `./gradlew check` sont verts : 336 tests pont, 452 Android, typage/lint ; traces dans `artifacts/screenshots/31/`.
 - [ ] Sur la Thor autonome (agent dans la Debian) : attend la clé saisie par l’utilisateur. Le même parcours est prouvé sur la Thor avec le pont/agent sur le Mac et la connexion Go existante : création depuis Régie, réponse, A/B, modèle/réflexion et reprise. Pas à pas dans `artifacts/screenshots/31/essai-thor.md`.
 
 
 ## Rapport
 
 - Livré : connecteur ACP natif opencode 2.1.2 ; catalogue ouvert (y compris voix et connexion), modes/configuration communs ; auth Go éphémère, stockage par l'API native et déconnexion ciblée ; installation officielle arm64, consignes/MCP Android ; contrat d'onboarding facultatif du ticket 28.
-- Preuves : `artifacts/screenshots/31/essai-thor.md`, portes vertes, cycle de clé factice dans un profil Mac isolé, capt. 09 (réponse), 11 (validation), 15 (réglages), 20 (refus), 22 (connexion native vide). Aucun compte usuel déconnecté, aucune clé transférée.
-- Relecture solo : sélecteur natif build/plan séparé des permissions, disponibilité initiale des fournisseurs et enveloppe API corrigées ; rejet d'agent inconnu avant création de projet ; quatrième onglet entièrement visible. Deux axes de revue conservés dans `relecture.md`.
+- Preuves : `artifacts/screenshots/31/essai-thor.md`, portes vertes, cycle de clé factice dans un profil Mac isolé, capt. 09 (réponse), 11 (validation), 15 (réglages), 20 (refus), 23 (connexion native vide). Aucun compte usuel déconnecté, aucune clé transférée.
+- Relecture solo : sélecteur natif build/plan séparé des permissions, disponibilité initiale des fournisseurs et enveloppe API corrigées ; rejet d'agent inconnu avant création de projet ; quatrième onglet entièrement visible ; après commit, sélection conservée par id et refus d'une clé issue d'une ancienne action d'écran. Deux axes de revue conservés dans `relecture.md`.
 - État : APK final release signé installé sans désinstallation ; pont Debian rétabli et 49 sessions conservées. Ancien Codex idle reprenable. Banc Mac et ses adapters arrêtés, reverse retiré. Aucun push/fusion/sous-agent.
 - Décisions : ADR 02/18 complétés. Go seul dans le parcours de clé, autres fournisseurs et modèles natifs ; pas d'éditeur JSON dans l'app. Étape 28 documentée, non implémentée ici.
 - Utilisateur : suivre les sept étapes d'`essai-thor.md` (saisir la clé Go dans l'app, puis essai autonome Debian, validation/refus, réglages, accès Android et reprise). Aucun blocage produit.
