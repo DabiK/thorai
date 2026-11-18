@@ -8,10 +8,15 @@ import androidx.compose.runtime.produceState
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import app.regie.game.engine.village.HouseCatalog
+import app.regie.game.engine.village.HouseModel
 import app.regie.game.engine.world.RoofColors
 import app.regie.game.ui.render.GroundPalette
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
 import java.io.IOException
 import java.io.InputStream
 
@@ -75,6 +80,12 @@ class GameAssets(
         return null
     }
 
+    /** Vrai si [id] désigne une animation, directement ou par son objet. */
+    fun isAnimated(id: String): Boolean = atlases.any { atlas ->
+        val ref = atlas.spec.objects[id]?.frame ?: id
+        ref in atlas.spec.anims
+    }
+
     /** L'empreinte d'un objet, une tuile s'il est inconnu. */
     fun footprint(id: String): Footprint =
         atlases.firstNotNullOfOrNull { it.spec.objects[id]?.footprint } ?: Footprint(1, 1)
@@ -130,11 +141,48 @@ object GameAssetLoader {
     }
 }
 
-/** Charge les assets hors du fil principal ; en attendant, tout est en formes de remplacement. */
+/**
+ * Les assets du processus : décodés une seule fois, hors du fil principal, et partagés par les
+ * deux écrans (les deux activités vivent dans le même processus).
+ */
+object SharedGameAssets {
+    private val loaded = ConcurrentHashMap<String, GameAssets>()
+    private val mutex = Mutex()
+
+    /** Les assets déjà chargés depuis [directory], sinon `null`. */
+    fun peek(directory: String = GameAssetLoader.DIRECTORY): GameAssets? = loaded[directory]
+
+    suspend fun get(assets: AssetManager, directory: String = GameAssetLoader.DIRECTORY): GameAssets =
+        loaded[directory] ?: mutex.withLock {
+            loaded[directory] ?: withContext(Dispatchers.IO) { GameAssetLoader.load(assets, directory) }
+                .also { loaded[directory] = it }
+        }
+}
+
+/** Les assets partagés du processus ; en attendant le premier chargement, tout est en formes de repli. */
 @Composable
 fun rememberGameAssets(directory: String = GameAssetLoader.DIRECTORY): GameAssets {
     val assets = LocalContext.current.applicationContext.assets
-    return produceState(GameAssets.Placeholder, assets, directory) {
-        value = withContext(Dispatchers.IO) { GameAssetLoader.load(assets, directory) }
+    return produceState(SharedGameAssets.peek(directory) ?: GameAssets.Placeholder, assets, directory) {
+        value = SharedGameAssets.get(assets, directory)
     }.value
+}
+
+/**
+ * Les modèles de maison de l'atlas `maisons` (objets `maison.*`), pour le générateur du hameau :
+ * empreinte et porte viennent de l'atlas. `null` si l'atlas n'en donne aucun de valide.
+ * La cheminée et les fenêtres (en pixels de l'image dans l'atlas) restent au ticket 52.
+ */
+fun GameAssets.houseCatalog(): HouseCatalog? {
+    val models = atlases.flatMap { atlas ->
+        atlas.spec.objects.filterKeys { it.startsWith("maison.") }.mapNotNull { (id, house) ->
+            val door = house.door ?: return@mapNotNull null
+            try {
+                HouseModel(id, house.footprint.w, house.footprint.h, door.x, door.y)
+            } catch (_: IllegalArgumentException) {
+                null
+            }
+        }
+    }.distinctBy { it.id }
+    return if (models.isEmpty()) null else HouseCatalog(models)
 }

@@ -45,7 +45,7 @@ class CameraTest {
         val order = WorldLayout.drawOrder(
             listOf(house, Placed("arbre", TilePos(10, 2)), Placed("arbre", TilePos(0, 5))),
             listOf(Sprite("coursier", ArtPoint(60, 100))),
-        ) { footprints[it] ?: Footprint(1, 1) }
+        ) { footprints[it.objectId] ?: Footprint(1, 1) }
         assertEquals(
             listOf("arbre" to ArtPoint(168, 47), "arbre" to ArtPoint(8, 95), "maison" to ArtPoint(80, 95), "coursier" to ArtPoint(60, 100)),
             order.map { it.id to it.foot },

@@ -3,6 +3,7 @@ package app.regie.game.ui.render
 import app.regie.game.engine.world.Ground
 import app.regie.game.engine.world.TileMap
 import app.regie.game.engine.world.TilePos
+import kotlin.math.sqrt
 
 /** Une image ARGB au pixel du dessin, ligne par ligne. */
 class PixelImage(val width: Int, val height: Int, val pixels: IntArray) {
@@ -89,10 +90,11 @@ object GroundPainter {
     internal fun grass(gx: Int, gy: Int, palette: GroundPalette): Int {
         val bloom = flower(gx, gy, palette)
         if (bloom != NONE) return bloom
-        val n = 0.65f * noise(gx, gy, 22, 1) + 0.35f * noise(gx, gy, 8, 2)
-        val dither = (BAYER[(gy and 3) * 4 + (gx and 3)] - 7.5f) / 16f * 0.14f
-        val patch = n + dither
-        val dark = patch > 0.60f
+        // Plaques douces : un cœur plein, puis une trame à 50 % et à 25 % vers le fond.
+        val n = 0.7f * noise(gx, gy, 24, 1) + 0.3f * noise(gx, gy, 9, 2)
+        val bayer = BAYER[(gy and 3) * 4 + (gx and 3)]
+        val dark = n > 0.74f || (n > 0.68f && bayer < 8) || (n > 0.63f && bayer < 3)
+        val patch = n
         when (tuft(gx, gy)) {
             TUFT_BASE -> return palette.grassDeep
             TUFT_BLADE -> return if (dark) palette.grassDeep else palette.grass.dark
@@ -145,47 +147,98 @@ object GroundPainter {
         }
     }
 
-    /** Le chemin : crème, quelques plaques plus claires et des cailloux éclairés en haut à gauche. */
+    /** Le chemin : crème, de rares reflets clairs et des cailloux roses ou gris, éclairés en haut à gauche. */
     private fun path(gx: Int, gy: Int, palette: GroundPalette): Int {
-        val cx = Math.floorDiv(gx, 6)
-        val cy = Math.floorDiv(gy, 5)
+        val cx = Math.floorDiv(gx, 7)
+        val cy = Math.floorDiv(gy, 6)
         val h = hash(cx, cy, 17)
-        if (h % 4 == 0) {
-            val px = cx * 6 + 1 + (h ushr 4) % 3
-            val py = cy * 5 + 1 + (h ushr 8) % 3
-            if (gy == py && (gx == px || gx == px + 1)) return palette.path.dark
+        if (h % 3 == 0) {
+            val px = cx * 7 + 1 + (h ushr 4) % 4
+            val py = cy * 6 + 1 + (h ushr 8) % 4
+            val pebble = if ((h ushr 12) % 3 == 0) palette.stone.base else palette.plaza.dark
+            if (gy == py && (gx == px || ((h ushr 14) % 2 == 0 && gx == px + 1))) return pebble
             if (gy == py - 1 && gx == px) return palette.path.light
         }
-        val n = noise(gx, gy, 14, 19) + (BAYER[(gy and 3) * 4 + (gx and 3)] - 7.5f) / 16f * 0.12f
-        return if (n > 0.72f) palette.path.light else palette.path.base
+        val n = noise(gx, gy, 9, 19)
+        return if (n > 0.9f && BAYER[(gy and 3) * 4 + (gx and 3)] < 8) palette.path.light else palette.path.base
     }
 
-    /** La place : pavés arrondis de 6 × 5 en quinconce, joints gris, lumière en haut à gauche. */
+    /**
+     * La place : des pavés arrondis et irréguliers (cellules de Voronoï sur une grille de 8 × 7),
+     * joints gris, chaque pavé éclairé en haut à gauche et ombré en bas à droite.
+     */
     private fun cobble(gx: Int, gy: Int, palette: GroundPalette): Int {
-        val row = Math.floorDiv(gy, 5)
-        val shift = (row % 2) * 3 + (hash(row, 0, 23) % 2)
-        val col = Math.floorDiv(gx + shift, 6)
-        val sx = Math.floorMod(gx + shift, 6)
-        val sy = Math.floorMod(gy, 5)
-        val joint = sx == 5 || sy == 4 || (sx == 0 || sx == 4) && (sy == 0 || sy == 3)
-        if (joint) return palette.stone.base
-        val pale = hash(col, row, 29) % 4 == 0
-        return when {
-            sy == 0 || sx == 0 -> palette.plaza.light
-            sx == 4 || sy == 3 -> palette.plaza.dark
-            pale -> palette.plaza.light
-            else -> palette.plaza.base
+        val cell = stoneCell(gx, gy, 8, 7, 23, edge = 2.6f)
+        return when (cell and 3) {
+            STONE_JOINT -> palette.stone.base
+            STONE_LIT -> palette.plaza.light
+            STONE_SHADED -> palette.plaza.dark
+            else -> if ((cell ushr 2) % 5 == 0) palette.plaza.light else palette.plaza.base
         }
+    }
+
+    /** Une pierre de berge : petits moellons gris arrondis, joints sombres. */
+    private fun bankStone(gx: Int, gy: Int, palette: GroundPalette): Int = when (stoneCell(gx, gy, 6, 4, 47, edge = 1.8f) and 3) {
+        STONE_JOINT -> palette.stone.dark
+        STONE_LIT -> palette.stone.light
+        else -> palette.stone.base
+    }
+
+    private const val STONE_JOINT = 0
+    private const val STONE_LIT = 1
+    private const val STONE_SHADED = 2
+    private const val STONE_FACE = 3
+
+    /**
+     * Pavage de Voronoï : chaque cellule de [w] × [h] a un centre tiré au hasard ; le pixel appartient
+     * au centre le plus proche. Renvoie la classe du pixel dans les 2 bits bas (joint, bord éclairé,
+     * bord ombré, face), et le hachage de sa pierre au-dessus. Sans allocation.
+     */
+    private fun stoneCell(gx: Int, gy: Int, w: Int, h: Int, salt: Int, edge: Float): Int {
+        val cx = Math.floorDiv(gx, w)
+        val cy = Math.floorDiv(gy, h)
+        var best = Float.MAX_VALUE
+        var second = Float.MAX_VALUE
+        var bestDx = 0f
+        var bestDy = 0f
+        var bestCell = 0
+        for (oy in -1..1) for (ox in -1..1) {
+            val nx = cx + ox
+            val ny = cy + oy
+            val cellHash = hash(nx, ny, salt)
+            val px = nx * w + 1.5f + (cellHash and 0xFF) / 255f * (w - 3)
+            val py = ny * h + 1.5f + ((cellHash ushr 8) and 0xFF) / 255f * (h - 3)
+            val dx = gx + 0.5f - px
+            val dy = gy + 0.5f - py
+            val d = dx * dx + dy * dy
+            if (d < best) {
+                second = best
+                best = d
+                bestDx = dx
+                bestDy = dy
+                bestCell = cellHash
+            } else if (d < second) {
+                second = d
+            }
+        }
+        val gap = sqrt(second) - sqrt(best)
+        val kind = when {
+            gap < 1.1f -> STONE_JOINT
+            gap < edge && bestDx + bestDy < -1f -> STONE_LIT
+            gap < edge && bestDx + bestDy > 1f -> STONE_SHADED
+            else -> STONE_FACE
+        }
+        return ((bestCell ushr 4) shl 2) or kind
     }
 
     /** L'eau : liseré d'herbe, berge de pierres, écume, puis remous et reflets. */
     private fun water(distance: Float, gx: Int, gy: Int, palette: GroundPalette): Int {
-        if (distance < 6f) {
-            val lip = 0.4f + 1.2f * noise(gx, gy, 4, 31)
+        if (distance < 8f) {
+            val lip = 0.5f + 1.5f * noise(gx, gy, 4, 31)
             if (distance < lip) return grass(gx, gy, palette)
-            if (distance < lip + 3f) return bankStone(gx, gy, palette)
-            if (distance < lip + 4f) return palette.water.light
-            if (distance < lip + 5f) return palette.waterMid
+            if (distance < lip + 4f) return bankStone(gx, gy, palette)
+            if (distance < lip + 5f) return palette.water.dark
+            if (distance < lip + 6f) return palette.waterMid
         }
         val cx = Math.floorDiv(gx, 11)
         val cy = Math.floorDiv(gy, 5)
@@ -199,19 +252,6 @@ object GroundPainter {
         }
         val n = noise(gx, gy, 18, 41) + (BAYER[(gy and 3) * 4 + (gx and 3)] - 7.5f) / 16f * 0.16f
         return if (n > 0.66f) palette.waterMid else palette.water.base
-    }
-
-    /** Pierres de berge, de 5 × 4 en quinconce. */
-    private fun bankStone(gx: Int, gy: Int, palette: GroundPalette): Int {
-        val row = Math.floorDiv(gy, 4)
-        val shift = (row % 2) * 2
-        val sx = Math.floorMod(gx + shift, 5)
-        val sy = Math.floorMod(gy, 4)
-        return when {
-            sx == 4 || sy == 3 -> palette.stone.dark
-            sy == 0 && sx < 3 -> palette.stone.light
-            else -> palette.stone.base
-        }
     }
 
     /** Le pont : planches de 4 pixels perpendiculaires au passage, garde-corps contre l'eau. */

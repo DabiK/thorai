@@ -118,17 +118,53 @@ class GroundTest {
         assertContentEquals(first.pixels, second.pixels)
 
         val t = GroundPainter.TILE
-        // Chemin : la ligne du haut prend le sombre de l'herbe ; le coin extérieur s'arrondit.
-        assertEquals(palette.grass.dark, first[t + 5, t])
-        assertEquals(palette.grass.base, first[t, t])
-        // Eau : berge puis écume, le long de l'herbe à l'ouest.
-        assertEquals(palette.outline, first[t, 2 * t + 8])
-        assertEquals(palette.water.light, first[t + 1, 2 * t + 8])
+        val grass = with(palette) { setOf(grass.light, grass.base, grass.dark, grassDeep) + flowers }
+        val stones = with(palette.stone) { setOf(light, base, dark) }
+        // Chemin : l'herbe déborde sur le bord et dans le coin arrondi, puis vient le liseré.
+        assertTrue(first[t, t] in grass, "coin du chemin")
+        assertTrue(first[t + 8, t] in grass, "bord du chemin")
+        assertTrue((0 until 6).any { first[t + 8, t + it] == palette.path.dark }, "liseré du chemin")
+        assertTrue(first[t + 8, t + 8] in with(palette) { setOf(path.light, path.base, plaza.dark, stone.base) }, "milieu du chemin")
+        // Eau : berge de pierres le long de l'herbe à l'ouest, puis l'eau.
+        assertTrue((0 until 5).any { first[t + it, 2 * t + 8] in stones }, "berge")
+        assertTrue(first[t + 7, 2 * t + 10] in with(palette) { setOf(water.base, water.light, water.dark, waterMid) })
         // Toutes les couleurs viennent de la palette.
-        val allowed = with(palette) {
-            listOf(grass, path, plaza, water, bridge).flatMap { listOf(it.light, it.base, it.dark) } + outline
-        }.toSet()
-        assertTrue(first.pixels.all { it in allowed })
+        assertTrue(first.pixels.all { it in palette.all })
+    }
+
+    @Test
+    fun `the grass is rich, three tones, tufts and small flowers in soft patches`() {
+        val m = map(List(12) { ".".repeat(16) })
+        val image = GroundPainter.paint(m, GroundPalette.Default)
+        val counts = image.pixels.groupBy { it }.mapValues { it.value.size }
+        with(GroundPalette.Default) {
+            listOf(grass.light, grass.base, grass.dark, grassDeep).forEach { assertTrue((counts[it] ?: 0) > 20, "ton absent") }
+            assertTrue(flowers.any { (counts[it] ?: 0) > 0 }, "pas de fleur")
+            // Le fond domine : des plaques, pas un bruit uniforme.
+            assertTrue((counts[grass.base] ?: 0) > image.pixels.size / 3)
+        }
+    }
+
+    @Test
+    fun `the plaza is made of rounded cobbles with grey joints`() {
+        val m = map(List(3) { "ooo" })
+        val image = GroundPainter.paint(m, GroundPalette.Default)
+        val counts = image.pixels.groupBy { it }.mapValues { it.value.size }
+        with(GroundPalette.Default) {
+            assertTrue((counts[stone.base] ?: 0) > image.pixels.size / 6, "joints")
+            assertTrue((counts[plaza.base] ?: 0) + (counts[plaza.light] ?: 0) > image.pixels.size / 3, "pavés clairs")
+        }
+    }
+
+    @Test
+    fun `edge distances round the outer corners and bite the inner ones`() {
+        assertEquals(GroundEdges.FAR, GroundEdges.distance(0, 3, 3, 16, 6f))
+        assertEquals(0.5f, GroundEdges.distance(GroundEdges.N, 8, 0, 16, 6f))
+        // Coin extérieur : le pixel du coin est plus loin dans l'herbe qu'un pixel du bord droit.
+        val corner = GroundEdges.distance(GroundEdges.N or GroundEdges.W, 0, 0, 16, 6f)
+        assertTrue(corner < 0f)
+        assertTrue(GroundEdges.distance(NE, 15, 0, 16, 6f) < 1f)
+        assertTrue(GroundEdges.distance(NE, 0, 15, 16, 6f) > 10f)
     }
 
     @Test
@@ -137,6 +173,7 @@ class GroundTest {
         assertEquals(1, custom.water.base)
         assertEquals(2, custom.outline)
         assertEquals(GroundPalette.Default.water.light, custom.water.light)
-        assertEquals(16, GroundPalette.ROLES.size)
+        assertEquals(25, GroundPalette.ROLES.size)
+        assertEquals(3, GroundPalette.Default.withRoles(mapOf("flower.0" to 3)).flowers[0])
     }
 }

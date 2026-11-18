@@ -43,36 +43,64 @@ garder le routeur d'entrées de la manette (ADR 05) et se tester sans console.
 ### Le sol dessiné par le code
 
 - Herbe, chemin, place, eau et pont sont peints par `GroundPainter` dans une image au pixel natif,
-  calculée une fois par carte puis agrandie : pas de jeu de tuiles généré, qui se raccorde mal.
-- Chaque matière a trois tons (`palette.json`, rôles `<sol>.light`, `.base`, `.dark`, plus
-  `outline`) et une texture déterministe (hachage des coordonnées) : la même carte donne toujours
-  le même sol.
-- Les bords dépendent des huit voisines (`GroundEdges`) : l'herbe est le fond ; le chemin et la
-  place se bordent contre l'herbe, la place contre le chemin ; l'eau a une berge et de l'écume ; le
-  pont a des garde-corps au-dessus de l'eau. Coins extérieurs arrondis, coins intérieurs marqués.
+  puis agrandie : pas de jeu de tuiles généré, qui se raccorde mal. Le dessin suit le hameau de
+  l'artefact (`docs/rebrand/assets/aube/hameau.png`), comparé au banc en trois tours :
+  - l'herbe en trois tons, par plaques douces tramées (bruit de valeur et trame de Bayer), avec des
+    touffes, des brins clairs et de petites fleurs ;
+  - le chemin crème et caillouteux, bordé d'un liseré, l'herbe débordant de 0 à 2 pixels sur des
+    bords aux coins arrondis ;
+  - la place en pavés arrondis et irréguliers (cellules de Voronoï), joints gris, éclairés en haut
+    à gauche ;
+  - l'eau turquoise avec remous et reflets, bordée de moellons gris et d'une ombre ;
+  - le pont en planches perpendiculaires au passage, avec ses garde-corps.
+- Chaque matière a trois tons (`palette.json`, rôles `<sol>.light`, `.base`, `.dark` pour `grass`,
+  `path`, `plaza`, `water`, `bridge` et `stone`, plus `grass.deep`, `water.mid`, `flower.0` à
+  `flower.3` et `outline`). Tout est déterministe (hachage des coordonnées) : la même carte donne
+  toujours le même sol.
+- Les bords dépendent des huit voisines (`GroundEdges`) : une distance au bord, arrondie aux coins
+  extérieurs et mordant aux coins intérieurs, choisit la bande (herbe qui déborde, liseré, berge).
+- Le sol est peint **hors du fil principal**, une fois par contenu : `GroundKey` est l'empreinte du
+  sol (dimensions et matière de chaque tuile), `GroundCache` garde les derniers sols peints, partagés
+  par les deux écrans. Le générateur du hameau crée une `TileMap` à chaque vue d'ensemble : un sol
+  identique n'est pas repeint. En attendant le premier dessin, l'écran montre l'herbe unie ; ensuite
+  l'ancien sol reste affiché jusqu'au nouveau. La boucle des pixels n'alloue rien.
 
 ### Atlas et toits
 
 - Le contrat de `plan-dev-jeu.md` est appliqué tel quel : `<atlas>.png` et `<atlas>.json`
   (`frames`, `anims`, `objects`), lus par `GameAssetLoader` dans `assets/game/`.
 - Un identifiant se résout dans cet ordre : objet, animation (image selon l'horloge), image.
-- Un atlas absent ou invalide est signalé dans `GameAssets.problems` et remplacé par des formes
-  (bloc de l'empreinte, toit compris) : les lots avancent sans attendre les images.
+- Un atlas absent ou invalide est signalé dans `GameAssets.problems`. Un objet qu'aucun atlas ne
+  connaît est dessiné par une **forme de repli** (`PlaceholderPainter`) : l'appelant donne la nature
+  et l'empreinte du moteur (`Village.fallbacks()`), et la maison de repli couvre toute son empreinte,
+  toit aux couleurs de la session, porte, fenêtres et cheminée visibles ; arbres, buissons, fleurs,
+  rochers, clôtures, fontaine, bancs, lanternes et panneaux ont aussi la leur. Le repli ne sert que
+  si l'atlas manque.
+- Les atlas sont décodés une fois par processus (`SharedGameAssets`) et partagés par les deux écrans.
+- Les modèles de maison du générateur viennent de l'atlas (`GameAssets.houseCatalog()` : empreinte
+  et porte de chaque objet `maison.*`) : le moteur bloque exactement ce que l'image occupe.
 - Les trois couleurs clés d'un toit sont remplacées par les `RoofColors` de la session ; l'image
   repeinte est gardée en cache par couple (image, couleurs).
 - Ajout au contrat : `palette.json` est `{"colors": ["#RRGGBB", …], "roles": {"grass.light": …}}`.
   Un rôle absent garde sa couleur par défaut, prise dans la palette du hameau.
-- Pas encore dans le contrat : la cheminée et les fenêtres des maisons. Le lot des assets (42)
-  fixe leurs noms de champs ; le lecteur les ajoutera alors.
+- Lu tel que le lot 42 l'a livré : l'ancre d'un objet est le milieu de la dernière rangée de son
+  empreinte ; les toits ont pour clés `#3C78FF`, `#1E50D2`, `#0F2D96`. Les champs `chimney`,
+  `windows` (en pixels de l'image) et `scenes` (atlas `fonds`) ne sont pas encore lus : ticket 52.
 
 ### Agrandissement ×4 au pixel près
 
 - Un pixel du dessin vaut 4 pixels physiques, sur les deux écrans (`GameScale.WORLD`).
+- Les tailles de texte du kit sont aussi en pixels physiques : `GameMetrics.sp` divise par la
+  densité et par l'échelle de police du système. Le réglage « taille du texte » d'Android est donc
+  **ignoré** par la vue jeu : un texte pixel doit tomber sur la grille ×4 et tenir dans ses cadres.
+  La lisibilité se règle dans le jeu, sur la Thor.
 - La Thor a une densité de 2,3 : des dp ronds donneraient des pixels de 4 ou 5 pixels physiques.
   Le kit passe donc par `GameMetrics`, qui convertit les pixels de l'écran des maquettes en dp
   exacts, et le rendu travaille en pixels physiques entiers.
 - Images dessinées avec `FilterQuality.None`, positions entières, caméra centrée sur un point et
-  bornée au monde (centrée si le monde est plus petit que la vue).
+  bornée au monde (centrée si le monde est plus petit que la vue). Le point suivi est une fonction
+  (`focus: () -> ArtPoint`) lue au dessin et au placement : la caméra suit le coursier sans
+  recomposer les panneaux accrochés au monde (`anchorBottomCenter`).
 - Une horloge (`rememberGameClock`, `withInfiniteAnimationFrameMillis`) anime les sprites et le
   kit. Elle est lue au dessin, sans recomposer ; les tests Compose la mettent en pause ou la figent.
   Les clignotements suivent les pas francs des maquettes (`Blink`).
@@ -101,6 +129,7 @@ garder le routeur d'entrées de la manette (ADR 05) et se tester sans console.
 ## Conséquences
 
 - Les lots suivants dessinent avec `PixelWorld` et le kit, sans nouvelle dépendance.
-- Une carte modifiée doit arriver dans un nouveau `World` : le sol est recalculé par carte.
+- Une carte modifiée doit arriver dans un nouveau `World` (ou une nouvelle `TileMap`) : le sol est
+  repeint si son contenu a changé, jamais sur le fil principal.
 - Les textes du kit sont rendus avec l'anticrénelage des polices ; seules les images sont au plus
   proche voisin.

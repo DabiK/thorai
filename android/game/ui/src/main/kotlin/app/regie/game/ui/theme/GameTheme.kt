@@ -105,7 +105,7 @@ class GameMetrics(private val density: Density, val scale: Int = GameScale.WORLD
     /** [screenPx] pixels physiques, en dp. */
     fun dp(screenPx: Int): Dp = (screenPx / density.density).dp
 
-    /** Une taille de police donnée en pixels de l'écran, en sp. */
+    /** Une taille de police donnée en pixels de l'écran, en sp ; l'échelle de police du système est ignorée (ADR 21). */
     fun sp(screenPx: Int): TextUnit = (screenPx / (density.density * density.fontScale)).sp
 
     /** [pixels] pixels du dessin, en dp. */
