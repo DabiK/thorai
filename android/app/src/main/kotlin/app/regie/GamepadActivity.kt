@@ -71,6 +71,8 @@ abstract class GamepadActivity : ComponentActivity() {
         override fun onSend() = container.sessionController.send()
 
         override fun onNoticeSeen(notice: SessionNotice) = container.sessionController.dismissNotice(notice)
+
+        override fun onNextApproval() = container.nextInlineApproval()
     }
 
     /** Les rappels du carnet du hameau (ticket 45) : une ligne touchée y envoie le coursier. */

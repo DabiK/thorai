@@ -63,7 +63,7 @@ Ces migrations ont révélé trois écarts du jeu, corrigés :
 
 ### Écarts et décisions
 
-- « Voir la suivante » touché pendant les réglages d'une session ne fait rien (R1 est pris par les réglages) : on ferme les réglages (B), puis R1. La validation classique offrait ce bouton au doigt pendant les réglages.
+- « Voir la suivante » touché pendant les réglages d'une session montre la validation suivante, comme l'écran classique (rétabli après la première fusion, à la demande de l'orchestrateur : le tactile est un secours). La touche R1 reste prise par les réglages. `HouseCallbacks.onNextApproval` et `SessionCallbacks.onNextApproval` mènent à `nextInlineApproval` ; `SessionActionsIntegrationTest` le vérifie, sur un et deux écrans.
 - Les captures `51-*` sont dessinées au niveau des écrans de `:game-ui`, avec des données d'exemple rédigées comme l'app (carnet), et sans barre système, comme la Thor en plein écran.
 - `README.md`, `docs/developpement.md`, `docs/textes.md` et l'index des ADR décrivent la version jeu ; le PRD n'est pas modifié (orchestrateur).
 

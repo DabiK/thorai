@@ -137,14 +137,12 @@ class SessionActionsIntegrationTest {
             val next = gateway.request.copy(id = ApprovalId("next"))
             gateway.approvals.value = listOf(next); runCurrent()
             compose.onNodeWithText("Réponse reçue.", substring = true).assertIsDisplayed()
-            // The options keep R1 too: the next request waits until they close (B), then R1 shows it.
+            // The options keep the R1 key, but a touch on « Voir la suivante » still shows the next request (touch as a fallback).
             container.handleInput(GamepadInput.Pressed(Button.R1)); runCurrent()
             assertEquals(gateway.request.id, container.inlineApproval.value.request?.id)
-            container.handleInput(GamepadInput.Pressed(Button.B)); runCurrent()
-            compose.onNodeWithText("Voir la suivante").assertIsDisplayed()
-            container.handleInput(GamepadInput.Pressed(Button.R1)); runCurrent()
+            compose.onNodeWithText("Voir la suivante").assertIsDisplayed().performClick(); runCurrent()
             assertEquals(next.id, container.inlineApproval.value.request?.id)
-            container.handleInput(GamepadInput.Pressed(Button.RIGHT)); runCurrent()
+            assertTrue(container.sessionSettings.value.visible)
             compose.onNodeWithText("Refuser").assertIsDisplayed().performClick(); runCurrent()
             assertTrue(container.sessionSettings.value.visible)
             gateway.approvals.value = emptyList(); runCurrent()
@@ -290,6 +288,7 @@ class SessionActionsIntegrationTest {
             override fun onDraftChange(text: String) = container.sessionController.onDraftChange(text)
             override fun onSend() = container.sessionController.send()
             override fun onNoticeSeen(notice: SessionNotice) {}
+            override fun onNextApproval() = container.nextInlineApproval()
         }
         val scroll = ThreadScroll(container.sessionController.scrollSteps, container.sessionController.scrollVelocity)
         if (singleScreen) GameSessionTop(live, false, null, control, draft, settings, true, scroll, callbacks, approval,

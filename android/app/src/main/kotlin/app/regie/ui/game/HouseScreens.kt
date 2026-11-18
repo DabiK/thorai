@@ -73,6 +73,7 @@ fun SessionCallbacks.house(select: (Int) -> Unit): HouseCallbacks = object : Hou
     override fun onSelectSetting(index: Int) = select(index)
     override fun onDraftChange(text: String) = this@house.onDraftChange(text)
     override fun onSend() = this@house.onSend()
+    override fun onNextApproval() = this@house.onNextApproval()
 }
 
 private fun ThreadScroll.input() = ScrollInput(steps, velocity)

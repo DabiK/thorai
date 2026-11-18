@@ -192,7 +192,8 @@ private fun NeighbourBar(neighbours: Neighbours?, approvalShown: Boolean, approv
         }
         neighbours?.let { BasicText("${it.position} / ${it.count}", style = GameText.code(30, colors.muted)) }
         Row(
-            Modifier.weight(1f).clickable { callbacks.onKey(PadKey.R1) },
+            // « Voir la suivante » touché passe même pendant les réglages, qui prennent la touche R1.
+            Modifier.weight(1f).clickable { if (approvalShown && approvalQueued) callbacks.onNextApproval() else callbacks.onKey(PadKey.R1) },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(metrics.dp(12), Alignment.End),
         ) {
