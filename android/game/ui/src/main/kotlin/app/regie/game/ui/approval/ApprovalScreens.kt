@@ -84,7 +84,7 @@ fun ApprovalScene(
             }
             val parchment = rememberScrollState()
             LaunchedEffect(request?.id) { parchment.scrollTo(0) }
-            parchment.followPad(scroll)
+            PadScroll(parchment, scroll)
             if (request == null) {
                 BasicText(stringResource(R.string.game_approval_done), style = GameText.body(32, Game.colors.paper), modifier = Modifier.align(Alignment.Center))
             } else {
@@ -162,7 +162,7 @@ fun ApprovalNotebook(
         ) {
             BasicText(stringResource(R.string.game_approval_title), style = GameText.display(52))
             session?.let {
-                StateTag(TagState.WAITING, Modifier.weight(1f, fill = false), label = "${it.agent.label} · ${it.project}")
+                StateTag(TagState.WAITING, label = "${it.agent.label} · ${it.project}")
             }
             Box(Modifier.weight(1f))
             BasicText(stringResource(R.string.game_approval_pending, review.queue.size), style = GameText.body(24, colors.muted), maxLines = 1)

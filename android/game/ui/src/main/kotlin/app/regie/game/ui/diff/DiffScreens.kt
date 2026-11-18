@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -294,12 +295,13 @@ fun DiffNotebook(review: DiffReview, callbacks: DiffCallbacks, modifier: Modifie
         if (explanation == null) {
             FileList(review, callbacks, Modifier.weight(1f))
             SelectedLine(review, callbacks)
+            // Un seul écran : le carnet est étroit, L1 / R1 gardent leur effet sans aide.
             PadActionBar(
-                listOf(
+                listOfNotNull(
                     PadAction(listOf("↑↓"), stringResource(R.string.game_diff_lines)),
                     PadAction(listOf("←→"), stringResource(R.string.game_diff_file)),
                     PadAction("B", stringResource(R.string.game_diff_back)) { callbacks.onKey(PadKey.B) },
-                    PadAction(listOf("L1", "R1"), stringResource(R.string.game_diff_navigate)),
+                    PadAction(listOf("L1", "R1"), stringResource(R.string.game_diff_navigate)).takeIf { !compact },
                 ),
                 compact = compact,
             )
@@ -369,7 +371,7 @@ private fun SelectedLine(review: DiffReview, callbacks: DiffCallbacks) {
         Column(verticalArrangement = Arrangement.spacedBy(metrics.dp(14))) {
             BasicText(selectedLabel(selected), style = GameText.body(30, weight = 600))
             if (selected != null) {
-                Row(horizontalArrangement = Arrangement.spacedBy(metrics.dp(40)), verticalAlignment = Alignment.CenterVertically) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(metrics.dp(40)), verticalArrangement = Arrangement.spacedBy(metrics.dp(10))) {
                     // L2 se maintient au doigt, comme la gâchette.
                     Box(
                         Modifier.pointerInput(Unit) {
@@ -393,18 +395,12 @@ private fun SelectedLine(review: DiffReview, callbacks: DiffCallbacks) {
 @Composable
 private fun selectedLabel(selected: DiffSelection?): String {
     selected ?: return stringResource(R.string.game_diff_no_line)
-    val number = selected.line.number ?: 0
-    val removed = selected.line.kind == DiffKind.REMOVED
-    val excerpt = !selected.block.fileCoordinates
-    return stringResource(
-        when {
-            removed && excerpt -> R.string.game_diff_line_removed_excerpt
-            removed -> R.string.game_diff_line_removed
-            excerpt -> R.string.game_diff_line_excerpt
-            else -> R.string.game_diff_line
-        },
-        number,
-    )
+    // « Ligne 7 · supprimée · extrait » : une ligne retirée, un numéro relatif à l'extrait (ADR 12).
+    return listOfNotNull(
+        stringResource(R.string.game_diff_line, selected.line.number ?: 0),
+        stringResource(R.string.game_diff_removed).takeIf { selected.line.kind == DiffKind.REMOVED },
+        stringResource(R.string.game_diff_from_excerpt).takeIf { !selected.block.fileCoordinates },
+    ).joinToString(" · ")
 }
 
 /** « +12 −3 », ou « +/− ? » quand l'agent n'a pas communiqué les lignes. */
@@ -423,8 +419,10 @@ private fun Counts(changes: LineChanges?, known: Boolean) {
 }
 
 @Composable
-private fun BoxScope.Note(text: String) {
-    BasicText(text, style = GameText.body(32, Game.colors.muted), modifier = Modifier.align(Alignment.Center).padding(Game.metrics.dp(40)))
+private fun Note(text: String) {
+    Box(Modifier.fillMaxSize().padding(Game.metrics.dp(40)), contentAlignment = Alignment.Center) {
+        BasicText(text, style = GameText.body(32, Game.colors.muted))
+    }
 }
 
 /** Où en est la demande d'explication, avec les mots de l'écran classique. */
@@ -466,4 +464,4 @@ private val PIN_SHADE = Color(0xFF8A2A1E)
 private const val SHEET_PADDING_PX = 28
 private const val STEP_PX = 160
 private const val STICK_PX = 1600f
-private const val SINGLE_NOTEBOOK_PX = 720
+private const val SINGLE_NOTEBOOK_PX = 800

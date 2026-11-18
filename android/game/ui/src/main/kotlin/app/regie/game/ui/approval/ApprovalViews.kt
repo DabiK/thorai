@@ -9,6 +9,8 @@ import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -19,8 +21,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -42,6 +48,7 @@ import app.regie.game.ui.kit.Choice
 import app.regie.game.ui.kit.ChoiceMenu
 import app.regie.game.ui.kit.DialogBox
 import app.regie.game.ui.kit.FrameDefaults
+import app.regie.game.ui.kit.KeyChip
 import app.regie.game.ui.kit.PixelArrow
 import app.regie.game.ui.kit.PixelFrame
 import app.regie.game.ui.kit.StateTag
@@ -153,8 +160,9 @@ private fun CodeSheet(text: String, background: Color, sizePx: Int) {
 /**
  * Le menu de choix d'une validation : où elle en est, puis chaque décision possible avec sa touche.
  * Un toucher sur une option la choisit ; « Refuser et dicter une consigne » se maintient au doigt
- * comme L2. [standalone] : l'écran des validations, où L2 refuse en dictant une consigne et où
- * l'absence d'autorisation pour la session est dite. [onDismiss] ferme une validation traitée.
+ * comme L2. [standalone] : l'écran des validations, menu en colonne, où L2 refuse en dictant une
+ * consigne et où l'absence d'autorisation pour la session est dite ; sinon, le carnet d'une maison,
+ * menu en une rangée. [onDismiss] ferme une validation traitée.
  */
 @Composable
 fun ApprovalMenu(
@@ -186,30 +194,63 @@ fun ApprovalMenu(
             enabled = choice.enabled,
         )
     }
+    val touch: (Int) -> Modifier = { index ->
+        val choice = choices[index]
+        when {
+            !choice.enabled -> Modifier
+            choice.dictate -> Modifier.pointerInput(Unit) {
+                detectTapGestures(onPress = {
+                    speak?.invoke(true)
+                    try {
+                        tryAwaitRelease()
+                    } finally {
+                        speak?.invoke(false)
+                    }
+                })
+            }
+            else -> Modifier.clickable { choose(choice) }
+        }
+    }
+    val cursor = ApprovalMenuModel.cursor(choices)
     Column(modifier.testTag("approval-menu"), verticalArrangement = Arrangement.spacedBy(metrics.dp(12))) {
         StatusLine(ApprovalMenuModel.status(review))
-        ChoiceMenu(labels, ApprovalMenuModel.cursor(choices), Modifier.fillMaxWidth()) { index ->
-            val choice = choices[index]
-            when {
-                !choice.enabled -> Modifier
-                choice.dictate -> Modifier.pointerInput(Unit) {
-                    detectTapGestures(onPress = {
-                        speak?.invoke(true)
-                        try {
-                            tryAwaitRelease()
-                        } finally {
-                            speak?.invoke(false)
-                        }
-                    })
-                }
-                else -> Modifier.clickable { choose(choice) }
-            }
-        }
+        if (standalone) ChoiceMenu(labels, cursor, Modifier.fillMaxWidth(), touch)
+        else ChoiceRow(labels, cursor, touch)
         if (standalone && review.request != null && review.request?.optionFor(ApprovalDecision.SESSION) == null) {
             BasicText(stringResource(R.string.game_approval_no_session), style = GameText.body(24, colors.muted))
         }
         if (onDismiss != null && !review.pending && !review.sending && review.queue.isEmpty()) {
             PadActionHint(PadAction("←", stringResource(R.string.game_approval_close), onTap = onDismiss))
+        }
+    }
+}
+
+/**
+ * Le menu de choix en une rangée, pour le carnet d'une maison : le fil garde la hauteur où lire le
+ * parchemin. Même curseur, mêmes touches et mêmes touchers que [ChoiceMenu].
+ */
+@Composable
+private fun ChoiceRow(choices: List<Choice>, selected: Int, touch: (Int) -> Modifier) {
+    val metrics = Game.metrics
+    val colors = Game.colors
+    PixelFrame(Modifier.fillMaxWidth(), thick = true, contentPadding = PaddingValues(horizontal = metrics.dp(18), vertical = metrics.dp(14))) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(metrics.dp(12)), verticalArrangement = Arrangement.spacedBy(metrics.dp(8))) {
+            choices.forEachIndexed { index, choice ->
+                val on = index == selected
+                Row(
+                    touch(index)
+                        .semantics { this.selected = on }
+                        .then(if (on) Modifier.background(colors.paperDeep) else Modifier)
+                        .alpha(if (choice.enabled) 1f else 0.4f)
+                        .padding(horizontal = metrics.dp(12), vertical = metrics.dp(8)),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(metrics.dp(12)),
+                ) {
+                    if (on) PixelArrow(ArrowDirection.RIGHT, color = colors.focus, blink = true)
+                    choice.key?.let { KeyChip(it) }
+                    BasicText(choice.label, style = GameText.body(30), maxLines = 1)
+                }
+            }
         }
     }
 }
@@ -241,7 +282,7 @@ fun WaitingMarker(modifier: Modifier = Modifier) {
     val clock = Game.clock
     Column(
         modifier.offset { IntOffset(0, if (Blink.bobUp(clock.value)) -2 * metrics.pixelPx else 0) }.testTag("approval-marker"),
-        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         PixelFrame(colors = FrameDefaults.filled(colors.wait), contentPadding = PaddingValues(horizontal = metrics.dp(16), vertical = metrics.dp(2))) {
             BasicText("!", style = GameText.display(52, colors.waitInk))
@@ -252,8 +293,7 @@ fun WaitingMarker(modifier: Modifier = Modifier) {
 
 /** Le défilement d'un parchemin à la manette : la croix par pas, le stick droit en continu. */
 @Composable
-fun ScrollState.followPad(input: ScrollInput, stepPx: Int = STEP_PX) {
-    val state = this
+internal fun PadScroll(state: ScrollState, input: ScrollInput, stepPx: Int = STEP_PX) {
     LaunchedEffect(state, input) { input.steps.collect { state.animateScrollBy(it * stepPx.toFloat()) } }
     LaunchedEffect(state, input) {
         input.velocity.collectLatest { velocity ->

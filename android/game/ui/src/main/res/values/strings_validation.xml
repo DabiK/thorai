@@ -48,9 +48,8 @@
     <string name="game_diff_edit">Édition %d</string>
     <string name="game_diff_excerpt">Édition %d · extrait · position dans le fichier non communiquée</string>
     <string name="game_diff_line">Ligne %d</string>
-    <string name="game_diff_line_removed">Ligne %d supprimée</string>
-    <string name="game_diff_line_excerpt">Ligne %d de l’extrait</string>
-    <string name="game_diff_line_removed_excerpt">Ligne %d supprimée de l’extrait</string>
+    <string name="game_diff_removed">supprimée</string>
+    <string name="game_diff_from_excerpt">extrait</string>
     <string name="game_diff_no_line">Aucune ligne à commenter</string>
     <string name="game_diff_comment">Commenter à la voix</string>
     <string name="game_diff_explain">Expliquer le bloc</string>
