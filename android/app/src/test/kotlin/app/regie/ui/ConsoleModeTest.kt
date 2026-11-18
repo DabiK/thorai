@@ -59,7 +59,7 @@ class ConsoleModeTest {
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
             host.setup().get().setContent { RegieTheme {
                 GameSessionBottom(LiveSession.of(session, thread), false, Neighbours(null, null, 1, 1), SessionControlState(), "", SessionSettingsReview(),
-                    scroll, sessionCallbacks, ApprovalReview(), { _, _ -> }, {}, {}, {}, console = true)
+                    scroll, sessionCallbacks, ApprovalReview(), { _, _ -> }, {}, {}, console = true)
             } }
             compose.onNodeWithTag("house-thread").assertIsDisplayed()
             compose.onNodeWithText("ouvre YouTube et cherche lofi").assertIsDisplayed()
@@ -76,7 +76,7 @@ class ConsoleModeTest {
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
             host.setup().get().setContent { RegieTheme {
                 GameSessionBottom(LiveSession.of(session, thread), false, Neighbours(null, null, 1, 1), SessionControlState(), "", SessionSettingsReview(),
-                    scroll, sessionCallbacks, ApprovalReview(), { _, _ -> }, {}, {}, {})
+                    scroll, sessionCallbacks, ApprovalReview(), { _, _ -> }, {}, {})
             } }
             compose.onNodeWithTag("house-settings").assertIsDisplayed()
             compose.onNodeWithTag("house-thread").assertIsDisplayed()

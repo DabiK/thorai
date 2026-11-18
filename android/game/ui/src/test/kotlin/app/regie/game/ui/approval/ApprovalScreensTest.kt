@@ -2,18 +2,18 @@ package app.regie.game.ui.approval
 
 import android.app.Application
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.view.ViewGroup
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.down
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasAnyDescendant
@@ -21,7 +21,6 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
@@ -76,9 +75,11 @@ class ApprovalScreensTest {
     private val assets: GameAssets by lazy { GameAssetLoader.load(app.assets) }
     private val scenes by lazy { InteriorScenes.load(app.assets) }
 
+    private var activity: ComponentActivity? = null
+
     private fun show(content: @Composable () -> Unit) {
         val clock = mutableLongStateOf(0L)
-        Robolectric.buildActivity(ComponentActivity::class.java).setup().get().apply {
+        activity = Robolectric.buildActivity(ComponentActivity::class.java).setup().get().apply {
             setContent { GameTheme(clock = clock) { content() } }
         }
     }
@@ -142,7 +143,7 @@ class ApprovalScreensTest {
         val labels = listOf("Autoriser une fois", "Refuser", "Autoriser pour la session", "Refuser et dicter une consigne")
         val tops = labels.map { compose.onNodeWithText(it).assertIsDisplayed().getUnclippedBoundsInRoot().top }
         assertEquals(tops.sorted(), tops, "A, B, X, L2")
-        compose.onNode(SemanticsMatcher.expectValue(SemanticsProperties.Selected, true) and hasAnyDescendant(hasText("Autoriser une fois"))).assertExists()
+        compose.onNode(SemanticsMatcher.expectValue(SemanticsProperties.Selected, true) and hasAnyDescendant(hasText("Autoriser une fois")), useUnmergedTree = true).assertExists()
         compose.onNodeWithText("Maintiens L2 pour dicter.").assertIsDisplayed()
         labels.take(3).forEach { compose.onNodeWithText(it).performClick() }
         compose.onNodeWithText("Refuser et dicter une consigne").performTouchInput { down(center); up() }
@@ -165,7 +166,7 @@ class ApprovalScreensTest {
         compose.runOnIdle { review.value = review.value.copy(pending = false, answer = ApprovalAnswer(ApprovalReply.ACCEPTED)) }
         compose.onNodeWithText("Réponse reçue.").assertIsDisplayed()
         compose.onNodeWithText("Autoriser une fois").performClick()
-        compose.onAllNodes(SemanticsMatcher.expectValue(SemanticsProperties.Selected, true)).fetchSemanticsNodes().let { assertEquals(0, it.size) }
+        compose.onAllNodes(SemanticsMatcher.expectValue(SemanticsProperties.Selected, true), useUnmergedTree = true).fetchSemanticsNodes().let { assertEquals(0, it.size) }
         assertEquals(emptyList(), decisions)
     }
 
@@ -239,10 +240,15 @@ class ApprovalScreensTest {
         assertEquals(listOf(ApprovalDecision.REJECT), decisions)
     }
 
-    /** L'écran entier, dessiné par Robolectric ; gardé dans `build/` pour le relire. */
+    /**
+     * L'écran entier, dessiné en logiciel par Robolectric (graphismes natifs) ; gardé dans `build/` pour
+     * le relire. `captureToImage()` attend un nouveau dessin de la fenêtre, que Robolectric ne produit pas ici.
+     */
     private fun capture(name: String) {
         compose.waitForIdle()
-        val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
+        val view = requireNotNull(activity).findViewById<ViewGroup>(android.R.id.content).getChildAt(0)
+        val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+        view.draw(Canvas(bitmap))
         val dir = File("build/jeu-47").apply { mkdirs() }
         File(dir, name).outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
