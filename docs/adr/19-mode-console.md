@@ -111,7 +111,9 @@ l'agent ouvrait Chrome sur l'écran du haut, L2 allait à Chrome.
 - S'il n'y en a pas, la fiche de nouvelle session s'ouvre pré-remplie : projet `console`
   (nouveau dossier vide `~/projects/console`, comme tout nouveau projet, ticket 15, s'il
   n'existe pas), agent de la dernière session utilisée (Codex à défaut), mode « Je valide
-  chaque action ». « Plan d'abord », le mode par défaut, ferait préparer un plan au lieu d'agir.
+  chaque action » au ticket 25, remplacé par **« Tout autoriser » au ticket 26** (décision
+  de l'utilisateur, 18 novembre). Ce défaut reste modifiable dans la fiche puis les réglages ;
+  reprendre une session existante ne change pas son mode.
   A lance, comme toute fiche.
 - Les consignes globales des agents (ticket 24) leur apprennent déjà à piloter Android de façon
   visible : la session console n'ajoute pas de consigne.
@@ -123,7 +125,11 @@ l'agent ouvrait Chrome sur l'écran du haut, L2 allait à Chrome.
   (`VoiceCommand.Summary` est retiré ; `WrittenSummary` ne sert plus qu'à la détection de
   question des notifications).
 - « Où en sont toutes les sessions ? » ouvre la vue d'ensemble.
-- La relecture avant A reste celle de tout ordre vocal (« Ouvrir : … »).
+- **Ticket 26, décision de l'utilisateur du 18 novembre** : la navigation ouvre directement
+  après relâchement de R2 et transcription finale, sans relecture ni A ; le panneau vocal se
+  ferme. Cela vaut aussi pour les autres formulations de navigation et la vue d'ensemble :
+  aucun ordre n'est envoyé à l'agent. Les cibles restent uniques et figées à R2 ; les ordres
+  qui agissent (lancer, approuver, refuser, interrompre) gardent A.
 - L'heure du fil reste affichée une fois par minute (ADR 17).
 
 ## Vérification

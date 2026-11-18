@@ -145,6 +145,10 @@ physiques différés restent requis même lorsqu’un ticket est marqué fait.
 
 - **18 novembre, ticket 25 à fusionner** : mode console (ADR 19). Le service d'accessibilité de Régie prend L2/R2 à toute appli ; le bas suit la session en fil compact ; la carte volante ne passe que si aucun écran de Régie n'est visible ; Y ouvre la session console ; « où en est … » ouvre la session (décision de l'utilisateur). Bogue « l'écran du bas crash » : le retour système du bas fermait `BottomActivity`, corrigé avec test ; une dictée vide se referme avec un avis. Android check vert après fusion de main (ticket 23). Thor : session console, Codex ouvre YouTube dans Chrome, bas suivi. **Le service reste à activer par l'utilisateur** (pas à pas dans le ticket). Relecture indépendante : remarques corrigées. Questions : mode de la session console, A pour « où en est ».
 
+- **18 novembre, ticket 26 à fusionner (solo Codex)** : défaut console Tout autoriser, navigation R2 sans relecture/A dans le domaine, formes « la session » et cible active couvertes ; mutations toujours confirmées. Android 434 tests + lint verts. Thor : APK installé, Y reprend la console personnelle en ask, WAV Thomas/local « où en est la session console » ouvre le fil sans A ; création Y/A non rejouée car la console existe déjà, défaut/création/correction prouvés par tests isolés. Aucun agent lancé ; WAV retiré, app relancée sans extra, session personnelle conservée. ADR 19/11 et PRD actualisés ; preuves et pas à pas `artifacts/screenshots/26/essai-thor.md`.
+
+- **18 novembre, ticket 26, relecture après 30d2595 (solo Codex)** : diff main...HEAD relu, création physique non revendiquée ; libellé R2 « relire » devenu trompeur remplacé par « quand tu as fini ». Mutations confirmation réintroduite et défaut ask détectées, puis sources restaurées. Android 434 tests + lint repassés verts ; APK réinstallé, WAV/local et R2 sans A rejoués (07/08), WAV retiré et relance sans extra (09). Aucun agent lancé ni session personnelle modifiée ; statut à fusionner maintenu.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

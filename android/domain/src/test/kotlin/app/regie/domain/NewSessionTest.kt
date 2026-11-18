@@ -10,6 +10,23 @@ import kotlin.test.*
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class NewSessionTest {
+    @Test fun `console default reaches creation only on A and remains editable in the form`() = runTest {
+        val gateway = FormGateway()
+        val seed = assertIs<ConsoleLaunch.Create>(ConsoleSession.choose(emptyList(), listOf("demo"))).draft
+        val form = ReviewNewSession(gateway, FormCapture(), backgroundScope) {}
+        form.open(seed); runCurrent()
+        assertEquals("allow-all", form.state.value.approvalMode)
+        assertTrue(gateway.creations.isEmpty())
+        form.launch(); runCurrent()
+        assertEquals("allow-all", gateway.creations.single().approvalMode)
+
+        form.open(seed); runCurrent()
+        form.select(NewSessionField.VALIDATION); form.change(-1)
+        assertEquals("ask", form.state.value.approvalMode)
+        form.launch(); runCurrent()
+        assertEquals(listOf("allow-all", "ask"), gateway.creations.map { it.approvalMode })
+    }
+
     @Test fun `catalog failure is unavailable and never permits a new creation`() = runTest {
         val gateway = FormGateway(); val form = ReviewNewSession(gateway, FormCapture(), backgroundScope) {}
         gateway.catalogFailure = true

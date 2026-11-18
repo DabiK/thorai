@@ -49,6 +49,22 @@ class ConsoleModeIntegrationTest {
         assertTrue(container.key(KeyEvent.KEYCODE_BUTTON_L2, false)); runCurrent()
     }
 
+    @Test fun `R2 opens the named session over Chrome without A and returns gamepad control`() = runTest {
+        val container = container()
+        container.bottomStarted.value = true
+        container.openOverview(); runCurrent()
+        assertTrue(container.key(KeyEvent.KEYCODE_BUTTON_R2, true)); runCurrent()
+        capture.state.value = CaptureState(text = "Où en est la session console ?", complete = true)
+        runCurrent()
+        assertEquals(Screen.Overview, container.screen.value)
+        assertTrue(container.key(KeyEvent.KEYCODE_BUTTON_R2, false)); runCurrent()
+        assertEquals(Screen.Session(gateway.target), container.screen.value)
+        assertFalse(container.voiceCommand.state.value.visible)
+        assertNull(container.consoleOverlay.value)
+        assertFalse(container.key(KeyEvent.KEYCODE_BUTTON_A, true), "A belongs to Chrome after navigation")
+        assertTrue(gateway.sent.isEmpty())
+    }
+
     @Test fun `L2 held over Chrome dictates to the session shown in Régie and A sends it`() = runTest {
         val container = container()
         dictate(container, "ouvre YouTube et cherche lofi")

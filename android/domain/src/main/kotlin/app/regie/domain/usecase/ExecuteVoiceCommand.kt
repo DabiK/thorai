@@ -3,7 +3,7 @@ package app.regie.domain.usecase
 import app.regie.domain.model.*
 import app.regie.domain.port.AgentGateway
 
-/** Called only after confirmation. Checks the frozen target against current bridge state. */
+/** Mutations require confirmation; navigation runs on R2 release. Rechecks the frozen target. */
 class ExecuteVoiceCommand(
     private val gateway: AgentGateway,
     private val answer: AnswerApproval,

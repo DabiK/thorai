@@ -38,8 +38,8 @@ class InterpretVoiceCommand(private val model: VoiceCommandModel) {
         if (text in setOf("mets tout en pause", "mets toutes les sessions en pause", "pause tout", "interromps tout")) return VoiceIntent("pause_all")
         if (text in setOf("pause", "mets en pause", "met en pause", "mais en pause", "mets cette session en pause", "interromps cette session", "interrompt cette session")) return VoiceIntent("pause")
         if (text in setOf("fais le point sur tout", "fais le point sur toutes les sessions", "ou en sont toutes les sessions", "fais le point sur toutes")) return VoiceIntent("summary_all")
-        if (text in setOf("fais le point", "ou en est cette session")) return VoiceIntent("summary")
-        Regex("(?:fais le point sur|ou en est) (.+)").matchEntire(text)?.let { return VoiceIntent("summary", it.groupValues[1]) }
+        if (text in setOf("fais le point", "ou en est", "ou en est cette session")) return VoiceIntent("summary")
+        Regex("(?:fais le point sur|ou en est) (?:la session )?(.+)").matchEntire(text)?.let { return VoiceIntent("summary", it.groupValues[1]) }
         Regex("(?:passe a|ouvre|va sur) (?:la session )?(.+)").matchEntire(text)?.let { return VoiceIntent("navigate", it.groupValues[1]) }
         Regex("(?:mets|met) (.+) en pause").matchEntire(text)?.let { return VoiceIntent("pause", it.groupValues[1]) }
         Regex("(?:lance|demarre) (Claude|Codex) sur ([\\p{L}\\p{N}_.-]+)(?: pour (.+))?[.!?]?", RegexOption.IGNORE_CASE)
