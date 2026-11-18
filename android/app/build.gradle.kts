@@ -36,10 +36,19 @@ android {
     }
 
     buildTypes {
+        // Ticket 50 (ADR 22) : la version jeu s'installe à côté de l'app classique, jamais
+        // par-dessus. Un suffixe, pas un identifiant écrit en dur : il suit le renommage de l'app.
+        configureEach { applicationIdSuffix = ".jeu" }
         release {
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
         }
+    }
+
+    // Son nom et celui de son mode console, distincts dans le lanceur et dans Accessibilité.
+    sourceSets {
+        getByName("debug") { res.srcDir("src/jeu/res") }
+        getByName("release") { res.srcDir("src/jeu/res") }
     }
 
     compileOptions {
@@ -80,6 +89,8 @@ dependencies {
     implementation(libs.voice.local)
     implementation(libs.voice.elevenlabs)
     implementation(project(":gateway-bridge"))
+    // La vue jeu (ticket 41) : rendu pixel et kit, pas encore branchés sur les écrans.
+    implementation(project(":game-ui"))
     // Les enregistrements rejoués par la passerelle factice, qui n'est choisissable qu'en debug.
     debugImplementation(project(":bridge-fixtures"))
 

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug seulement : le bac à sable de la vue jeu, lancé à la main sur le banc (ticket 41). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity
+            android:name="app.regie.game.ui.demo.GameSandboxActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar.Fullscreen" />
+    </application>
+</manifest>

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Le hameau s'agrandit</title>
+<link rel="stylesheet" href="../outils/thorai-pixel.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jersey+10&amp;family=Pixelify+Sans:wght@400;600;700&amp;family=VT323&amp;display=swap">
+<style>body{margin:0}.lb{position:absolute;transform:translate(-50%,-100%);padding:8px 14px;font-size:24px;line-height:1.15;z-index:2;white-space:nowrap}.lb b{display:block;font-size:26px}.street{display:flex;align-items:center;gap:18px}.street .nm{width:230px;flex:none;font-size:28px;font-weight:600}.road{flex:1;display:flex;gap:14px;padding:12px 16px;background:#E3A673;box-shadow:inset 0 -6px 0 #C17049}.h{width:76px;height:76px;flex:none;display:flex;flex-direction:column}.h .r{height:30px}.h .w{flex:1;background:#FFF4D6;display:flex;align-items:center;justify-content:center}.h .w i{width:18px;height:18px;display:block}.h.plot{box-shadow:inset 0 0 0 5px #A16948;background:#9ED345}.h.plot .r,.h.plot .w{background:transparent}</style>
+</helmet>
+<div class="thor t-aube" style="width: 1920px; height: 2200px;">
+  <div class="top">
+    <img class="px world" src="../assets/aube/hameau-agrandi.png" alt="Le hameau agrandi : une nouvelle rue et un chantier">
+    <div class="pbox lb" style="left: 640px; top: 250px;"><b>notifications</b><span style="color: #1A8657;">Au travail</span></div>
+    <div class="pbox lb" style="left: 1240px; top: 200px;"><b>onboarding</b><span class="muted">Au repos</span></div>
+    <div class="pbox lb" style="left: 1720px; top: 170px; background: #FBE6B2;"><b>release</b><span class="muted">Chantier</span></div>
+    <div class="pbox lb" style="left: 640px; top: 690px; background: #F5B53D;"><b>migration</b><span style="color: #3A2A10;">! Validation</span></div>
+    <div class="pbox lb" style="left: 1320px; top: 650px;"><b>cache</b><span style="color: #1A8657;">Au travail</span></div>
+    <div class="pbox lb" style="left: 1760px; top: 760px; background: #FBE6B2;"><b style="color: #2D5354;">+ Terrain</b><span class="muted">libre</span></div>
+    <div class="frame toast" style="font-size: 38px;"><img class="px" src="../assets/aube/panneau.png" alt="" style="width: 92px; height: 114px;">Nouvelle rue : regie</div>
+  </div>
+  <div class="hinge"></div>
+  <div class="bot">
+    <div class="screen">
+      <div class="head">
+        <h1>Carte du hameau</h1>
+        <span class="muted" style="font-size: 26px;">3 rues · 7 maisons</span>
+      </div>
+      <div class="body" style="padding-top: 6px; gap: 22px;">
+        <div class="street"><span class="nm">site-perso</span><div class="road">
+          <div class="h"><div class="r" style="background: #5A718C;"></div><div class="w"><i style="background: #C9C2A8;"></i></div></div>
+          <div class="h"><div class="r" style="background: #9E5A37;"></div><div class="w"><i style="background: #1A8657;"></i></div></div>
+        </div></div>
+        <div class="street"><span class="nm">regie</span><div class="road">
+          <div class="h"><div class="r" style="background: #DB6633;"></div><div class="w"><i style="background: #1A8657;"></i></div></div>
+          <div class="h"><div class="r" style="background: #05ACAB;"></div><div class="w"><i style="background: #C9C2A8;"></i></div></div>
+          <div class="h"><div class="r" style="background: #A16948;"></div><div class="w"><i style="background: #1A8657;"></i></div></div>
+          <div class="h" style="opacity: .6;"><div class="r" style="background: #AB886D;"></div><div class="w"><i style="background: #A19E5C;"></i></div></div>
+        </div></div>
+        <div class="street"><span class="nm">api-meteo</span><div class="road">
+          <div class="h"><div class="r" style="background: #DF724A;"></div><div class="w"><i style="background: #F5B53D;"></i></div></div>
+          <div class="h"><div class="r" style="background: #DDDC2C;"></div><div class="w"><i style="background: #1A8657;"></i></div></div>
+          <div class="h plot"><div class="r"></div><div class="w"></div></div>
+        </div></div>
+        <div class="street"><span class="nm muted">Projet suivant</span><div class="road" style="background: transparent; box-shadow: inset 0 0 0 4px #A19E5C;"><span class="muted" style="font-size: 26px; padding: 18px 6px;">Une nouvelle rue s'ouvre à sa création.</span></div></div>
+        <div class="pbox" style="margin: 4px; padding: 18px 22px; font-size: 28px; line-height: 1.3;">Un projet = une rue. Une session = une maison. Plus de terrain : la rue s'allonge.</div>
+      </div>
+      <div class="hints">
+        <span class="hint"><span class="k r">A</span>Y aller</span>
+        <span class="hint"><span class="k r">X</span>Bâtir ici</span>
+        <span class="hint"><span class="k">Croix</span>Rues</span>
+        <span class="hint"><span class="k r">B</span>Fermer</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1920,"height":2200}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

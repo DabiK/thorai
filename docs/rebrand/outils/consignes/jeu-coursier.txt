@@ -1,0 +1,9 @@
+WHAT TO DRAW
+The walk-cycle sprite sheet of the player character of the attached game: the young courier seen standing on the plaza in the attached hamlet. Spiky red-orange hair, a short red-orange scarf whose end flutters, a slate-blue tunic, a brown leather satchel on a strap across the chest, dark trousers, brown boots. Chibi proportions. Every figure has exactly the same size: about 30 art pixels tall and 20 art pixels wide (about 180 image pixels tall).
+Layout: a grid of 4 rows and 4 columns, evenly spaced, each figure centred in its cell, the feet of each row on the same baseline.
+Row 1, facing down toward the camera (front view): (a) standing still; (b) walking, left foot forward; (c) walking, right foot forward; (d) talking: one hand raised in a friendly gesture, mouth open.
+Row 2, facing up, away from the camera (back view: we see the back of the hair, the scarf knot and the satchel strap): (a) standing; (b) walking, left foot; (c) walking, right foot. The fourth cell stays empty.
+Row 3, facing left (side profile): (a) standing; (b) stride, legs apart; (c) the other stride, the other leg in front. The fourth cell stays empty.
+Row 4, facing right (side profile, the mirror image of row 3): the same three poses. The fourth cell stays empty.
+Same character, same colours, same proportions and same size in every frame; only the legs, the arms and the scarf move.
+No text, letters, numbers, labels, grid lines or watermark.

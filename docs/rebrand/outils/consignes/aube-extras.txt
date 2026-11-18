@@ -1,0 +1,5 @@
+WHAT TO DRAW
+A prop sprite sheet in exactly the same pixel art style, pixel scale, palette, outline colour and camera as the attached hamlet, on a perfectly flat, solid, pure magenta #FF00FF background (no shadow, no gradient, nothing else on the background). Every object is separate, with plenty of magenta space around it; nothing touches.
+Row 1, four stages of building a cottage, all on the same baseline, each about 80 x 72 art pixels: (1) an empty grass plot with a low wooden fence and four stakes; (2) stone foundations, a pile of planks and a wheelbarrow; (3) the timber frame with scaffolding and a ladder; (4) the finished cottage of the same family as in the hamlet, with a new plum-purple roof and a few confetti above it.
+Row 2, small props, each about 24 to 32 art pixels: a white messenger bird with a small red satchel, flying, wings up; the same bird, wings down; a sealed letter with a red wax seal; a large unrolled parchment; a rolled parchment tied with a ribbon; a small brass bell; a wooden signpost with a blank board.
+No text, letters, numbers, logos or watermark.

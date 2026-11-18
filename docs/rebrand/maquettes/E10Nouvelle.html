@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Nouvelle session : bâtir une maison</title>
+<link rel="stylesheet" href="../outils/thorai-pixel.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jersey+10&amp;family=Pixelify+Sans:wght@400;600;700&amp;family=VT323&amp;display=swap">
+<style>body{margin:0}.stage{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:22px}.stage img{height:auto}.stage.off{opacity:.45}.f2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 18px}.t-aube .field{padding:10px 18px}.t-aube .field .v{font-size:30px}</style>
+</helmet>
+<div class="thor t-aube" style="width: 1920px; height: 2200px;">
+  <div class="top">
+    <img class="px world" src="../assets/aube/hameau.png" alt="Le terrain libre où naît une nouvelle maison">
+    <img class="px" src="../assets/aube/chantier2.png" alt="Fondations posées sur le terrain" style="position: absolute; left: 180px; top: 700px; width: 440px; height: 360px;">
+    <div class="frame bubble" style="left: 1000px; top: 740px; font-size: 34px;">« Lance Claude sur météo »<span class="tail" style="left: 40px; bottom: -26px;"></span></div>
+    <div class="frame" style="position: absolute; right: 56px; top: 56px; padding: 26px 30px; display: flex; flex-direction: column; gap: 18px;">
+      <span class="disp" style="font-size: 48px;">Bâtir une maison</span>
+      <div style="display: flex; gap: 22px; align-items: flex-end;">
+        <div class="stage"><img class="px" src="../assets/aube/chantier1.png" alt="" style="width: 109px; height: 90px;">Fiche</div>
+        <div class="stage" style="font-weight: 600;"><img class="px" src="../assets/aube/chantier2.png" alt="" style="width: 110px; height: 90px;">Session créée</div>
+        <div class="stage off"><img class="px" src="../assets/aube/chantier3.png" alt="" style="width: 110px; height: 119px;">Agent lancé</div>
+        <div class="stage off"><img class="px" src="../assets/aube/chantier4.png" alt="" style="width: 111px; height: 124px;">Première réponse</div>
+      </div>
+    </div>
+  </div>
+  <div class="hinge"></div>
+  <div class="bot">
+    <div class="screen">
+      <div class="head">
+        <h1>Nouvelle session</h1>
+        <span class="muted" style="font-size: 26px;">Remplie depuis ton ordre vocal</span>
+      </div>
+      <div class="body" style="padding-top: 6px; gap: 16px;">
+        <div class="f2">
+          <div class="pbox field on" style="margin: 4px;"><span class="l">Agent</span><span class="v"><i class="ar left"></i>Claude<i class="ar right"></i></span></div>
+          <div class="pbox field" style="margin: 4px;"><span class="l">Projet</span><span class="v">api-meteo</span></div>
+          <div class="pbox field" style="margin: 4px;"><span class="l">Branche</span><span class="v code" style="font-size: 34px;">main</span></div>
+          <div class="pbox field" style="margin: 4px;"><span class="l">Modèle</span><span class="v">Opus 5.5</span></div>
+          <div class="pbox field" style="margin: 4px;"><span class="l">Réflexion</span><span class="v">Moyenne</span></div>
+          <div class="pbox field" style="margin: 4px;"><span class="l">Mode</span><span class="v">Je valide</span></div>
+        </div>
+        <div class="pbox" style="margin: 4px; padding: 16px 20px; display: flex; flex-direction: column; gap: 8px;">
+          <span class="l muted" style="font-size: 24px;">Consigne</span>
+          <span style="font-size: 32px; line-height: 1.3;">Ajoute un cache de dix minutes sur les prévisions.</span>
+        </div>
+        <div class="pbox row" style="margin: 4px; padding: 12px 20px; background: transparent;"><span style="font-size: 44px; color: #2D5354; font-weight: 700;">+</span><span style="flex: 1; font-size: 28px;">Nouveau projet : créer un dépôt vide</span></div>
+      </div>
+      <div class="hints">
+        <span class="hint"><span class="k r">A</span>Bâtir</span>
+        <span class="hint"><span class="k">L2</span>Dicter la consigne</span>
+        <span class="hint"><span class="k">Croix</span>Champs</span>
+        <span class="hint"><span class="k r">B</span>Annuler</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1920,"height":2200}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+ "pixel": 1,
+ "frames": {
+  "fond.interieur.bricoleur": {"x": 1, "y": 1, "w": 480, "h": 270, "ax": 0, "ay": 0},
+  "fond.interieur.cartographe": {"x": 482, "y": 1, "w": 480, "h": 270, "ax": 0, "ay": 0},
+  "fond.interieur.scribe": {"x": 1, "y": 272, "w": 480, "h": 270, "ax": 0, "ay": 0},
+  "fond.titre": {"x": 482, "y": 272, "w": 480, "h": 270, "ax": 0, "ay": 0},
+  "fond.tour": {"x": 1, "y": 543, "w": 480, "h": 270, "ax": 0, "ay": 0}
+ },
+ "anims": {},
+ "objects": {},
+ "scenes": {
+  "fond.interieur.bricoleur": {"piece": {"x": 86, "y": 33, "w": 307, "h": 204}, "sol": {"x": 96, "y": 109, "w": 286, "h": 98}, "habitant": {"x": 236, "y": 156}, "entree": {"x": 236, "y": 205}},
+  "fond.interieur.cartographe": {"piece": {"x": 86, "y": 33, "w": 307, "h": 204}, "sol": {"x": 104, "y": 111, "w": 272, "h": 94}, "habitant": {"x": 240, "y": 160}, "entree": {"x": 240, "y": 222}},
+  "fond.interieur.scribe": {"piece": {"x": 86, "y": 33, "w": 307, "h": 204}, "sol": {"x": 94, "y": 93, "w": 292, "h": 128}, "habitant": {"x": 236, "y": 178}, "entree": {"x": 238, "y": 218}},
+  "fond.tour": {"piece": {"x": 86, "y": 33, "w": 307, "h": 204}, "sol": {"x": 114, "y": 123, "w": 252, "h": 94}, "habitant": {"x": 236, "y": 176}, "entree": {"x": 239, "y": 226}}
+ }
+}

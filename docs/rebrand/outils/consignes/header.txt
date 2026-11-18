@@ -1,0 +1,2 @@
+Use your built-in image generation tool to create ONE image, then save it as a PNG file named @@FILE@@ in the current working directory. Do not write any code to draw the picture (no SVG, no Python drawing, no canvas): the picture must come from the image generation tool. Do not read, create or modify anything outside the current working directory, apart from copying the generated image into it. When done, confirm the file path.
+Image size: landscape, 1536 x 1024.

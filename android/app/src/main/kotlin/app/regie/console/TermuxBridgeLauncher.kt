@@ -31,7 +31,8 @@ class TermuxBridgeLauncher(
         }
         return try {
             val token = BridgeTokenFile(File(context.filesDir, "bridge-token")).readOrCreate()
-            run("regie-bridge-configure", arrayOf(transfer(token, uid)))
+            // Le paquet nomme le jeton de cette app sur le pont, à côté de celui des autres (ADR 22).
+            run("regie-bridge-configure", arrayOf(transfer(token, uid), context.packageName))
         } catch (_: java.io.IOException) {
             LaunchResult.TERMUX_MISSING
         } catch (_: android.system.ErrnoException) {

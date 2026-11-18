@@ -19,8 +19,9 @@ ROOTFS="$TPREFIX/var/lib/proot-distro/containers/debian/rootfs"
 DEB_APP=/home/dev/.local/share/regie/bridge
 DEB_TOKEN=/home/dev/.config/regie/bridge-token
 BRIDGE_PORT="${REGIE_BRIDGE_PORT:-47600}"
-# The app (ticket 01): its token file, in its private storage.
-APP_ID=app.regie
+# The app (ticket 01): its token file, in its private storage. Its package follows the build
+# (ticket 50: app.regie.jeu next to the classic app); REGIE_APP_ID=app.regie targets the classic.
+APP_ID="$(regie_app_id)"
 APP_TOKEN=files/bridge-token
 
 # termux_sh '<bash script>': runs the script in Termux. Stdin is forwarded.

@@ -19,6 +19,12 @@ rootProject.name = "regie"
 
 include(":command-model", ":domain", ":gateway-bridge", ":bridge-fixtures", ":app")
 
+// La vue jeu (ticket 40) vit à part, dans android/game/.
+include(":game-engine")
+project(":game-engine").projectDir = file("game/engine")
+include(":game-ui")
+project(":game-ui").projectDir = file("game/ui")
+
 // La voix vit dans un build Gradle séparé (ticket 04, ADR 01). Il est inclus
 // en composite build dès que le dossier existe, sans rien changer ici.
 if (file("../voice/settings.gradle.kts").exists()) {

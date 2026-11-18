@@ -1,0 +1,9 @@
+WHAT TO DRAW
+The animation sprite sheet of one inhabitant of the attached game: THE CARTOGRAPHER, a small character in a moss-green hooded cloak with the hood up, long orange hair in a braid, a cream tunic, a brown belt with pouches, brown boots. Chibi proportions, always seen from the front (facing the camera). Every standing figure has exactly the same size: about 30 art pixels tall and 20 art pixels wide (about 180 image pixels tall).
+Layout: a grid of 4 rows and 4 columns, evenly spaced, each figure centred in its cell, the feet of each row on the same baseline.
+Row 1: (a) idle, standing, holding a small brass lantern; (b) idle, the same pose, eyes closed for a blink; (c) waiting: holding up a large unrolled cream parchment with both hands toward the viewer; (d) waiting: the same, parchment raised a little higher, surprised face.
+Row 2, working: holding an unrolled map in front of the chest and drawing on it with a pencil, four successive frames (pencil left, pencil centre, pencil right, looking up thinking).
+Row 3: (a) sleeping, sitting on the ground, hood pulled down, eyes closed, hands on the knees; (b) the same, head a bit lower. Do not draw any Z letters. The last two cells stay empty.
+Row 4: (a) talking: one hand raised in a friendly gesture, mouth open; (b) cheering: both arms up, happy. The last two cells stay empty.
+Same character, same colours, same proportions and same size in every frame; only the arms, the head and the props move.
+No text, letters, numbers, labels, grid lines or watermark.

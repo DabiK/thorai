@@ -1,0 +1,7 @@
+WHAT TO DRAW
+The inside of the scribe's cottage (the one with the terracotta roof in the attached village), seen from above in the same top-down oblique RPG view, same pixel scale and palette. One cosy room: wooden floor planks, a back wall with tall bookshelves full of colourful books and scrolls, a sunny window with light beams on the floor, a plant, a round rug, a small stove.
+In the centre, a big wooden desk where the resident agent works: a small original character, a round-faced scribe wearing a terracotta-orange hooded tunic and big round glasses, writing with a quill, with a few sheets of paper floating around it.
+On the right wall, a large cork board with pinned sheets of paper and red strings between them. On the left, a small lectern with an open book.
+At the bottom centre, the door mat where the courier (short red-orange scarf, leather satchel, seen from behind) has just entered.
+Keep all important content inside the central part of the image: about 8% on every side will be cropped.
+No text, letters, numbers, logos, UI, speech bubbles or watermark anywhere.
