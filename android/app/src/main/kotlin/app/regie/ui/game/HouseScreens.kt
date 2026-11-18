@@ -78,7 +78,7 @@ fun SessionCallbacks.house(select: (Int) -> Unit): HouseCallbacks = object : Hou
 private fun ThreadScroll.input() = ScrollInput(steps, velocity)
 
 /**
- * L'écran du haut d'une session : la maison. Un seul écran : le carnet (ou la dictée, [dictationPanel])
+ * L'écran du haut d'une session : la maison. Un seul écran : le carnet (et sa dictée, [dictationPanel])
  * prend la droite. Une validation (ticket 47) : l'habitant tend son parchemin, borné, dans la pièce ;
  * le parchemin entier finit le fil du carnet et le menu de choix prend la place des touches.
  */
@@ -116,10 +116,11 @@ fun GameSessionTop(
             dictation = dictation,
             format = MarkdownFormat,
             approval = card,
+            // Un seul écran : le fil reste, la dictée prend le panneau du bas (ADR 17).
             single = if (!singleScreen) null else ({
-                dictationPanel?.invoke() ?: SessionCarnet(
+                SessionCarnet(
                     live, gone, neighbours, control, draft, settings, scroll, callbacks, approval, onDecision,
-                    onDismissApproval, onSelectSetting, compact = true,
+                    onDismissApproval, onSelectSetting, compact = true, dictation = dictationPanel,
                 )
             }),
         )
@@ -141,9 +142,12 @@ fun GameSessionBottom(
     onDecision: (ApprovalId, ApprovalDecision) -> Unit,
     onDismissApproval: () -> Unit,
     onSelectSetting: (Int) -> Unit,
+    /** Mode console : une autre appli occupe le haut. */
+    console: Boolean = false,
 ) {
     GameTheme {
-        SessionCarnet(live, gone, neighbours, control, draft, settings, scroll, callbacks, approval, onDecision, onDismissApproval, onSelectSetting)
+        SessionCarnet(live, gone, neighbours, control, draft, settings, scroll, callbacks, approval, onDecision, onDismissApproval, onSelectSetting,
+            console = console)
     }
 }
 
@@ -162,6 +166,8 @@ private fun SessionCarnet(
     onDismissApproval: () -> Unit,
     onSelectSetting: (Int) -> Unit,
     compact: Boolean = false,
+    console: Boolean = false,
+    dictation: (@Composable () -> Unit)? = null,
 ) {
     val notice = control.notice
     val assets = rememberGameAssets()
@@ -187,6 +193,8 @@ private fun SessionCarnet(
             ApprovalParchment(request, live?.session?.agent, assets)
         }) else null,
         compact = compact,
+        console = console,
+        dictation = dictation,
     )
 }
 

@@ -87,7 +87,7 @@ class TopActivity : GamepadActivity() {
                 val options by container.sessionSettings.collectAsStateWithLifecycle()
                 val dictation by container.dictation.state.collectAsStateWithLifecycle()
                 val single = mode == ScreenMode.Single
-                // La maison (ticket 46). Un seul écran : la dictée prend la place du carnet, la maison reste.
+                // La maison (ticket 46). Un seul écran : le fil reste, la dictée prend la place de la table, du champ et des touches.
                 val dictationPanel: (@androidx.compose.runtime.Composable () -> Unit)? = if (single && dictation.visible) ({
                     app.regie.ui.game.GameDictation(dictation, overview.sessions.firstOrNull { it.id == dictation.target?.sessionId },
                         { container.handleInput(GamepadInput.Pressed(it)) }, { container.touchTrigger(app.regie.input.Trigger.L2, it) },

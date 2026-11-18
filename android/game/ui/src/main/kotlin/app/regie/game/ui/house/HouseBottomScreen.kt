@@ -78,6 +78,13 @@ fun HouseBottomScreen(
     approvalQueued: Boolean = false,
     threadApproval: (@Composable () -> Unit)? = null,
     compact: Boolean = false,
+    /** Mode console (ticket 25) : une autre appli occupe le haut, le carnet nomme la session suivie. */
+    console: Boolean = false,
+    /**
+     * Un seul écran, pendant une dictée de la session : le fil reste, la dictée prend la place de la
+     * table, du champ et des touches (ADR 17).
+     */
+    dictation: (@Composable () -> Unit)? = null,
 ) {
     val metrics = Game.metrics
     val colors = Game.colors
@@ -87,6 +94,22 @@ fun HouseBottomScreen(
     val editing = settings.visible && settings.session != null
     Column(modifier.fillMaxSize().background(colors.paper).imePadding()) {
         NeighbourBar(neighbours, approval != null, approvalQueued, callbacks)
+        if (console && live != null) {
+            BasicText(
+                sessionName(live.session),
+                style = GameText.body(26, colors.ink, weight = 700),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = metrics.dp(32), vertical = metrics.dp(10)).testTag("console-session"),
+            )
+        }
+        if (dictation != null) {
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                if (live != null) androidx.compose.runtime.key(live.session.id) { HouseThread(live, scroll, format, Modifier.fillMaxSize(), threadApproval) }
+            }
+            Box(Modifier.fillMaxWidth().height(metrics.dp(DICTATION_PANEL_PX)).testTag("dictation-panel")) { dictation() }
+            return@Column
+        }
         if (keyboardOpen) {
             Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal = metrics.dp(32), vertical = metrics.dp(12)), contentAlignment = Alignment.BottomStart) {
                 notice?.let { NoticeLine(it, onNoticeSeen) }
@@ -336,3 +359,6 @@ private fun NoFullscreenKeyboard(content: @Composable () -> Unit) {
 }
 
 private const val NOTICE_MS = 6_000L
+
+/** La dictée en panneau, sous le fil : transcription, niveau du micro et touches. */
+private const val DICTATION_PANEL_PX = 520

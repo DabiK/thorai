@@ -3,6 +3,7 @@ package app.regie.game.ui.house
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -58,6 +59,7 @@ import app.regie.game.ui.kit.TagState
 import app.regie.game.ui.kit.WorkDots
 import app.regie.game.ui.kit.tagLabel
 import app.regie.game.ui.render.ArtPoint
+import app.regie.game.ui.render.Camera
 import app.regie.game.ui.render.Sprite
 import app.regie.game.ui.render.SpriteImage
 import app.regie.game.ui.theme.GameScale
@@ -128,9 +130,11 @@ private fun Interior(
         dictation.phase in setOf(DictationPhase.RECORDING, DictationPhase.FINALIZING)
     val pose = HouseLook.pose(session)
     val reply = if (compact) null else HouseLook.lastReply(live.lines)
-    // Deux écrans : la pièce remonte juste assez pour que le coursier reste au-dessus de la réplique.
-    val lift = if (compact) 0 else (scene.entrance.y + 4 - DIALOG_TOP_ART).coerceIn(0, scene.roomTop)
-    Box(Modifier.fillMaxSize()) {
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        // Deux écrans : la pièce remonte juste assez pour que le coursier reste au-dessus de la réplique.
+        // Un seul écran : au-dessus du journal de quête, en bas de la colonne.
+        val lift = if (compact) compactLift(scene, (constraints.maxHeight + GameScale.WORLD - 1) / GameScale.WORLD)
+        else (scene.entrance.y + 4 - DIALOG_TOP_ART).coerceIn(0, scene.roomTop)
         HouseScene(
             assets,
             background,
@@ -143,7 +147,18 @@ private fun Interior(
             lift = lift,
         ) { projection ->
             HouseLook.activity(session, live.lines)?.let { action ->
-                ActivityBubble(action, Modifier.anchorBottomCenter { projection.toScreen(ArtPoint(scene.inhabitant.x, scene.inhabitant.y - HEAD_ART)) })
+                if (compact) {
+                    // Colonne étroite : la bulle part de l'épaule, à droite, pour laisser le panneau dégagé.
+                    ActivityBubble(
+                        action, BubbleTail.LEFT, metrics.dp(COMPACT_BUBBLE_PX),
+                        Modifier.anchorBottomStart { projection.toScreen(ArtPoint(scene.inhabitant.x + 8, scene.inhabitant.y - 16)) },
+                    )
+                } else {
+                    ActivityBubble(
+                        action, BubbleTail.BOTTOM, metrics.dp(900),
+                        Modifier.anchorBottomCenter { projection.toScreen(ArtPoint(scene.inhabitant.x, scene.inhabitant.y - HEAD_ART)) },
+                    )
+                }
             }
             if (pose == Pose.WAITING) {
                 WaitingMarker(Modifier.anchorBottomCenter { projection.toScreen(ArtPoint(scene.inhabitant.x, scene.inhabitant.y - HEAD_ART)) })
@@ -152,12 +167,17 @@ private fun Interior(
                 CourierBubble(dictation, assets, Modifier.anchorBottomStart { projection.toScreen(ArtPoint(scene.entrance.x + 8, scene.entrance.y - 14)) })
             }
         }
-        Sign(live, ageLabel, Modifier.padding(start = metrics.dp(if (compact) 24 else 44), top = metrics.dp(if (compact) 24 else 40)))
+        Sign(
+            live, ageLabel,
+            Modifier.padding(start = metrics.dp(if (compact) 24 else 44), top = metrics.dp(if (compact) 24 else 40))
+                .widthIn(max = metrics.dp(if (compact) COMPACT_SIGN_PX else 720)),
+        )
         if (live.plan != null || live.modifiedFiles.isNotEmpty()) {
             QuestLog(
                 live.plan.orEmpty(), live.modifiedFiles,
                 if (compact) {
-                    Modifier.align(Alignment.BottomCenter).padding(metrics.dp(24)).fillMaxWidth().heightIn(max = metrics.dp(400))
+                    // En bas de la colonne, sous le coursier : la pièce remonte d'autant (compactLift).
+                    Modifier.align(Alignment.BottomCenter).padding(metrics.dp(24)).fillMaxWidth().heightIn(max = metrics.dp(COMPACT_LOG_PX))
                 } else {
                     Modifier.align(Alignment.TopEnd).padding(end = metrics.dp(52), top = metrics.dp(48)).width(metrics.dp(520)).heightIn(max = metrics.dp(660))
                 },
@@ -184,7 +204,7 @@ private fun Sign(live: LiveSession, ageLabel: String?, modifier: Modifier) {
     val colors = Game.colors
     val session = live.session
     val state = TagState.of(session.status)
-    PixelFrame(modifier.widthIn(max = metrics.dp(720)), contentPadding = PaddingValues(horizontal = metrics.dp(22), vertical = metrics.dp(14))) {
+    PixelFrame(modifier.testTag("house-sign"), contentPadding = PaddingValues(horizontal = metrics.dp(22), vertical = metrics.dp(14))) {
         Column(verticalArrangement = Arrangement.spacedBy(metrics.dp(6))) {
             BasicText(session.project, style = GameText.display(44), maxLines = 1, overflow = TextOverflow.Ellipsis)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(metrics.dp(12))) {
@@ -201,9 +221,9 @@ private fun Sign(live: LiveSession, ageLabel: String?, modifier: Modifier) {
 
 /** La bulle d'activité au-dessus de l'habitant : la dernière action, comme dans le fil. */
 @Composable
-private fun ActivityBubble(action: ThreadLine, modifier: Modifier) {
+private fun ActivityBubble(action: ThreadLine, tail: BubbleTail, maxWidth: androidx.compose.ui.unit.Dp, modifier: Modifier) {
     val (verb, subject) = activityText(action) ?: return
-    Bubble(modifier.widthIn(max = Game.metrics.dp(900)).testTag("house-activity")) {
+    Bubble(modifier.widthIn(max = maxWidth).testTag("house-activity"), tail = tail) {
         WorkDots(Game.colors.work)
         BasicText(verb, style = GameText.body(30), maxLines = 1)
         BasicText(subject, style = GameText.code(34), maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -323,4 +343,20 @@ private const val DIALOG_TOP_ART = (1080 - 24 - DIALOG_HEIGHT_PX) / 4
 /** Hauteur d'un personnage et un pixel d'air : la bulle part de là. */
 private const val HEAD_ART = 33
 private const val SINGLE_SCENE_PX = 800
+private const val COMPACT_SIGN_PX = 340
+private const val COMPACT_BUBBLE_PX = 360
+
+/** Un seul écran : le journal de quête en bas de la colonne, marges comprises, en pixels du dessin. */
+private const val COMPACT_LOG_PX = 360
+private const val COMPACT_LOG_ART = (COMPACT_LOG_PX + 2 * 24) / 4 + 2
+
+/**
+ * Un seul écran : de combien remonter la pièce, vue sur [viewHeight] pixels du dessin, pour que les
+ * pieds du coursier restent au-dessus du journal de quête. La caméra seule centre déjà l'habitant.
+ */
+internal fun compactLift(scene: InteriorScene, viewHeight: Int): Int {
+    val natural = Camera.topLeft(scene.inhabitant, InteriorSize.WIDTH, InteriorSize.HEIGHT, InteriorSize.WIDTH, viewHeight).y
+    val wanted = scene.entrance.y + 4 - (viewHeight - COMPACT_LOG_ART)
+    return (wanted - natural).coerceAtLeast(0)
+}
 private const val MAX_BUBBLE_LEVELS = 8

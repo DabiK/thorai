@@ -10,12 +10,13 @@ import app.regie.input.Button
 import app.regie.input.Trigger
 import app.regie.overlay.OverlayContent
 import app.regie.overview.ControlState
+import app.regie.domain.usecase.ApprovalReview
 import app.regie.session.SessionControlState
 import app.regie.ui.screens.ConsoleOverlayScreen
 import app.regie.ui.screens.ControlCallbacks
 import app.regie.ui.screens.OverviewBottomScreen
+import app.regie.ui.game.GameSessionBottom
 import app.regie.ui.screens.OverviewShortcuts
-import app.regie.ui.screens.SessionBottomScreen
 import app.regie.ui.screens.SessionCallbacks
 import app.regie.ui.screens.ThreadScroll
 import app.regie.ui.theme.RegieTheme
@@ -52,30 +53,34 @@ class ConsoleModeTest {
         override fun onNoticeSeen(notice: app.regie.session.SessionNotice) {}
     }
 
-    @Test fun `another app on top puts the compact thread on the bottom, settings one gesture away`() {
+    // La maison (ticket 46) : le fil brut est toujours dans le carnet du bas, la table aussi.
+    @Test @Config(qualifiers = "w538dp-h468dp-land-369dpi")
+    fun `another app on top keeps the thread on the bottom, names the session, settings one gesture away`() {
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
             host.setup().get().setContent { RegieTheme {
-                SessionBottomScreen(LiveSession.of(session, thread), Neighbours(null, null, 1, 1), SessionControlState(), "", sessionCallbacks,
-                    console = scroll)
+                GameSessionBottom(LiveSession.of(session, thread), false, Neighbours(null, null, 1, 1), SessionControlState(), "", SessionSettingsReview(),
+                    scroll, sessionCallbacks, ApprovalReview(), { _, _ -> }, {}, {}, {}, console = true)
             } }
-            compose.onNodeWithTag("console-thread").assertIsDisplayed()
+            compose.onNodeWithTag("house-thread").assertIsDisplayed()
             compose.onNodeWithText("ouvre YouTube et cherche lofi").assertIsDisplayed()
-            compose.onNodeWithText("J’ouvre YouTube.").assertIsDisplayed()
-            compose.onNodeWithTag("session-settings").assertDoesNotExist()
+            compose.onNodeWithText("J’ouvre YouTube.", useUnmergedTree = true).assertIsDisplayed()
             compose.onNodeWithText("Codex · console").assertIsDisplayed()
-            compose.onNodeWithText("Régler la session").performClick()
+            compose.onNodeWithText("→ Modifier").performClick()
             assertEquals(listOf(Button.RIGHT), buttons)
             compose.onNodeWithText("Parler").assertIsDisplayed()
         }
     }
 
-    @Test fun `with Régie on top the bottom keeps its settings table`() {
+    @Test @Config(qualifiers = "w538dp-h468dp-land-369dpi")
+    fun `with Régie on top the bottom keeps its thread and settings table, without the session name`() {
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
             host.setup().get().setContent { RegieTheme {
-                SessionBottomScreen(LiveSession.of(session, thread), Neighbours(null, null, 1, 1), SessionControlState(), "", sessionCallbacks)
+                GameSessionBottom(LiveSession.of(session, thread), false, Neighbours(null, null, 1, 1), SessionControlState(), "", SessionSettingsReview(),
+                    scroll, sessionCallbacks, ApprovalReview(), { _, _ -> }, {}, {}, {})
             } }
-            compose.onNodeWithTag("session-settings").assertIsDisplayed()
-            compose.onNodeWithTag("console-thread").assertDoesNotExist()
+            compose.onNodeWithTag("house-settings").assertIsDisplayed()
+            compose.onNodeWithTag("house-thread").assertIsDisplayed()
+            compose.onNodeWithTag("console-session").assertDoesNotExist()
         }
     }
 
