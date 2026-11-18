@@ -162,7 +162,7 @@ Les images retenues sont dans `assets/aube/`.
 | Élément | Source | Licence |
 | --- | --- | --- |
 | Décors, personnages, accessoires (`assets/aube/`) | générés pour ce projet avec Codex (`image_gen`), puis retouchés par `pixelize.py` | produits par l'utilisateur ; sous réserve des conditions d'utilisation d'OpenAI |
-| Jersey 10, Pixelify Sans, VT323 | Google Fonts | SIL Open Font License 1.1 |
+| Jersey 10, Pixelify Sans, VT323 | Google Fonts, dépôt `google/fonts` : `ofl/jersey10/Jersey10-Regular.ttf`, `ofl/pixelifysans/PixelifySans[wght].ttf` (variable, 400 à 700), `ofl/vt323/VT323-Regular.ttf`, relevés le 18 novembre 2026. Dans l'app : `android/game/ui/src/main/res/font/` (`jersey10.ttf`, `pixelify_sans.ttf`, `vt323.ttf`) | SIL Open Font License 1.1 ; le `OFL.txt` de chaque police est dans `android/game/ui/src/main/assets/licences/` |
 | Écran Android générique de la maquette 12 | dessiné en HTML pour la maquette | — |
 
 Aucun asset tiers n'est utilisé, ni Kenney, ni OpenGameArt. Les consignes de génération interdisent de reprendre des personnages, des tuiles ou une interface de jeux existants.
