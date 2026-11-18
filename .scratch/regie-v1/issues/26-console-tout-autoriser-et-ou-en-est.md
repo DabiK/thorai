@@ -1,6 +1,6 @@
 # 26 — Session console en « Tout autoriser », « où en est » sans confirmation
 
-Statut : à fusionner
+Statut : fait
 Possède : `android/`
 
 ## Décisions de l'utilisateur, 18 novembre (questions du ticket 25)
