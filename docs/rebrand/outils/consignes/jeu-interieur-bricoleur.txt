@@ -1,0 +1,6 @@
+WHAT TO DRAW
+The inside of the tinkerer's workshop, seen from above in the same top-down oblique RPG view and at the same zoom and pixel scale as the attached hamlet: the furniture is small, as if the roof of one of the hamlet's workshops had been lifted, so the room looks spacious. A person would be only about 30 art pixels tall here; the doorway is about 20 art pixels wide.
+One big bright workshop filling the whole image: stone and plank floor, timber and stone walls, a long workbench with a vice, tools and brass gears, a pegboard of hanging tools, a small forge with a warm orange glow and an anvil, shelves with jars of bolts, the wooden axle of the waterwheel coming through the side wall with turning gears, crates, a barrel, a sunny window, a potted plant.
+IMPORTANT: the room is EMPTY: no people, no animals at all. In the middle of the room, just in front of the workbench, a round slate-blue rug on which nothing stands: keep this rug completely empty (the resident will be drawn there later). At the bottom centre, the doorway with a door mat, also empty.
+Keep all important content inside the central part of the image: about 8% on every side will be cropped.
+No text, letters, numbers, logos, UI, speech bubbles or watermark anywhere.

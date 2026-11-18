@@ -1,0 +1,6 @@
+WHAT TO DRAW
+The inside of the hamlet's control tower, seen from above in the same top-down oblique RPG view and at the same zoom and pixel scale as the attached hamlet: the furniture is small, so the round room looks spacious. A person would be only about 30 art pixels tall here; the doorway is about 20 art pixels wide.
+A round stone room with wooden beams, sunlight from two narrow windows. On the back wall, a very large framed magic mirror that glows softly with a pale turquoise light and shows only abstract rectangles and lines (like the shapes of an app screen, with no readable text). In front of it, a big wooden and brass control desk with levers, dials, buttons, a crank and a few cables going to the mirror. Around: a spiral staircase going down in one corner, a map of the hamlet pinned on the wall, a stool, a bucket of tools, potted plants.
+IMPORTANT: the room is EMPTY: no people, no animals at all. Just in front of the control desk, a round coral rug on which nothing stands: keep this rug completely empty (a character will be drawn there later).
+Keep all important content inside the central part of the image: about 8% on every side will be cropped.
+No text, letters, numbers, logos, UI, speech bubbles or watermark anywhere.
