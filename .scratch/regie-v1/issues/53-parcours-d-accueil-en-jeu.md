@@ -1,6 +1,6 @@
 # 53 — Parcours d'accueil dans le style du jeu
 
-Statut : à fusionner
+Statut : fusionné dans ticket/40-vue-jeu
 Possède : la présentation du parcours d'accueil du ticket 28 (`SetupScreens`) dans `:game-ui`, et son branchement
 Dépend de : 49
 
