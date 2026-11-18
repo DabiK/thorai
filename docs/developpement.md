@@ -1,6 +1,6 @@
-# Développer Régie
+# Développer ThorAI
 
-Cette page s’adresse à qui veut modifier Régie. Pour l’installer, voir la [notice d’installation](installation.md).
+Cette page s’adresse à qui veut modifier ThorAI. Pour l’installer, voir la [notice d’installation](installation.md).
 
 ## Organisation du dépôt
 
@@ -73,7 +73,7 @@ scripts/thor-install.sh
 scripts/thor-shot.sh artifacts/screenshots/<ticket>
 ```
 
-`thor-install.sh` construit et installe `app.regie` seulement, puis l’ouvre. `thor-shot.sh` capture les deux écrans. Après un changement du pont : `thor/bridge/install.sh`. La [fiche de la console](thor.md) donne les écrans, la manette et l’environnement Termux.
+`thor-install.sh` construit et installe `app.thorai` seulement, puis l’ouvre. En debug, `--es setup_step VOICE` (ou une autre étape de `SetupStep`) ouvre le parcours d’accueil sur cette étape, pour la capturer sans accorder de permission à la place de l’utilisateur. `thor-shot.sh` capture les deux écrans. Après un changement du pont : `thor/bridge/install.sh`. La [fiche de la console](thor.md) donne les écrans, la manette et l’environnement Termux.
 
 ## Façon de travailler
 

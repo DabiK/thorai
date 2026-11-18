@@ -103,7 +103,7 @@ jeton absent ou refusé (autoriser les commandes Termux puis rouvrir Régie), si
 - À accorder une fois, depuis le Mac, l'app installée :
 
   ```
-  adb -s $THOR_SERIAL shell pm grant app.regie android.permission.WRITE_SECURE_SETTINGS
+  adb -s $THOR_SERIAL shell pm grant app.thorai android.permission.WRITE_SECURE_SETTINGS
   ```
 
 ### « Quitter »
@@ -117,8 +117,8 @@ jeton absent ou refusé (autoriser les commandes Termux puis rouvrir Régie), si
 Mécanisme historique de debug, réservé aux tests : ne pas l’activer sur la Thor de l’utilisateur. Sur un émulateur contrôlé, au premier lancement du processus :
 
 ```
-adb -s emulator-5580 shell am force-stop app.regie
-adb -s emulator-5580 shell am start -n app.regie/.TopActivity --ez fake_gateway true
+adb -s emulator-5580 shell am force-stop app.thorai
+adb -s emulator-5580 shell am start -n app.thorai/app.regie.TopActivity --ez fake_gateway true
 ```
 
 Rien ne part vers Termux : ni permission demandée, ni démarrage, ni débogage sans fil.
