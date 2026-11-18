@@ -86,6 +86,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import app.regie.courier.CourierNotifications
+import app.regie.game.ui.courier.CourierTiming
 import app.regie.game.engine.courier.Courier
 import app.regie.game.engine.menu.GameMenu
 import app.regie.game.engine.menu.MenuEntry
@@ -197,6 +198,19 @@ class AppContainer(
             MenuOutcome.MarkAllRead -> courier.update { it.markAllRead() }
             null -> Unit
         }
+    }
+
+    /**
+     * La validation que l'oiseau apporte en ce moment ([CourierTiming.SHOWN] après son arrivée), si elle
+     * attend encore : R1 l'ouvre. Quand le hameau sera branché (ticket 45), le coursier y marchera.
+     */
+    private fun openArrivingLetter(): Boolean {
+        val letter = courier.value.latest ?: return false
+        val pending = letter.approval?.takeIf { id -> gateway?.approvals?.value.orEmpty().any { it.id == id } } ?: return false
+        if (kotlin.time.Clock.System.now() - letter.receivedAt >= CourierTiming.SHOWN) return false
+        courier.update { it.read(letter.key) }
+        openApproval(pending)
+        return true
     }
 
     /** Une lettre ouverte : sa validation si elle attend encore, sinon sa session. */
@@ -571,6 +585,8 @@ class AppContainer(
         }
         if (input == GamepadInput.Pressed(Button.A) && closedByDelivery?.let { it.elapsedNow() < SECOND_A_IGNORED } == true) return
         if (handleGameMenu(input)) return
+        // « R1 Voir » de l'oiseau messager : la validation de cette lettre-là, pas la première en attente.
+        if (_screen.value == Screen.Overview && controller.state.value.quit == null && input == GamepadInput.Pressed(Button.R1) && openArrivingLetter()) return
         // Start sur le hameau : le menu de pause, qui garde « Tout mettre en pause » (ticket 49).
         if (_screen.value == Screen.Overview && controller.state.value.quit == null && input == GamepadInput.Pressed(Button.START)) { gameMenu.value = GameMenu.pause(); return }
         if (_screen.value == Screen.Overview && controller.state.value.quit == null && input == GamepadInput.Pressed(Button.B)) { openAgentAuthentication(); return }

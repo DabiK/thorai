@@ -24,7 +24,7 @@ Branche `ticket/49-titre-menu-courrier-console`, partie de `ticket/40-vue-jeu` (
 - [x] Mêmes fonctions que `AgentAuthenticationScreen` : agents annoncés par le pont (liste dynamique), état par agent, code d'appareil de Codex (adresse, code, QR de l'adresse seule), marche de Claude et clé d'opencode (champ masqué, vidé à l'envoi) comme aujourd'hui, A selon l'état (connecter, déconnecter, confirmer), B (fermer, annuler, garder le compte), Y actualiser, croix et onglets tactiles pour choisir l'agent. Tests `MenuScreensTest` (QR décodé), `GameMenuInputTest`, `AgentAuthenticationInputTest` inchangé et vert.
 - [x] Mêmes fonctions que `VoiceSettingsScreen` : fournisseur, clé ElevenLabs, clé Mistral, microphone, B revenir, au doigt comme aujourd'hui (`MenuScreensTest`).
 - [x] Mêmes fonctions que `VoiceCommandScreen` : phrase entendue, action proposée, niveau et durée, A confirmer, B annuler ou revenir, R2 maintenu pour redire (aussi au doigt), lien « Régler la voix », défilement à la croix et au stick (`ConsoleScreensTest`).
-- [x] Mêmes fonctions que `ConsoleScreens` : carte volante (L2 Répondre, B Fermer ; pour une validation, seulement les choix offerts : A Autoriser une fois, L2 Refuser en dictant ; touches cachées tant que la carte ne les prend pas), bulle de la session qui travaille, ordre vocal par-dessus une autre appli. Placement et priorités inchangés (`OverlayContent`, `OverlayWindow`), tests de l'ADR 19 inchangés et verts.
+- [x] Mêmes fonctions que `ConsoleScreens` : carte volante (L2 Répondre, B Fermer ; pour une validation, seulement les choix offerts : A Autoriser une fois, L2 Refuser en dictant ; touches cachées tant que la carte ne les prend pas), bulle de la session qui travaille, ordre vocal et dictée (panneau du ticket 46, avec la phrase à laquelle on répond) par-dessus une autre appli. Placement et priorités inchangés (`OverlayContent`, `OverlayWindow`). `ConsoleModeTest` teste désormais les écrans réellement posés (`GameConsoleOverlay`, `ConsoleSessionBottom`).
 - [x] Tests : `GameMenuTest`, `CourierTest` (moteur, JUnit) ; `MenuScreensTest`, `ConsoleScreensTest`, `CourierToastTest` (Robolectric, graphismes natifs, vrais atlas) ; `GameMenuInputTest` (de la manette au domaine).
 
 ### Livré
@@ -36,8 +36,9 @@ Branche `ticket/49-titre-menu-courrier-console`, partie de `ticket/40-vue-jeu` (
   - `courier/CourierNotifications` : adapter des ports `SessionNotifications` et `ApprovalNotifications`, branché sur une seconde instance de `NotifySessions` et `NotifyApprovals`. Le courrier ne contient donc que ce que le domaine décide de signaler (validation, question, fin, échec), avec ses titres et textes. Les notifications Android ne changent pas ;
   - `GamepadActivity.setScreen` : agents, réglages de la voix et ordre vocal en jeu ; nouvelle branche du menu ; l'oiseau messager par-dessus l'écran du haut ;
   - `TopActivity` : écran titre au premier lancement du processus ;
-  - `BottomActivity` : la tour pour la session console quand une autre appli occupe le haut ;
-  - `ConsoleService` : carte, bulle et ordre vocal en pixel.
+  - `BottomActivity` : pour la session console quand une autre appli occupe le haut, `ConsoleSessionBottom` (`ui/game/`) : la tour en en-tête (`ConsoleTowerHeader`), puis le carnet de session du ticket 46 en mode console. Le carnet garde le fil, les avis (« Rien entendu. Aucun message envoyé. », message non parti, interruption refusée), le brouillon au clavier, la validation et les touches ;
+  - `ConsoleService` : `GameConsoleOverlay` (`ui/game/`) pose la dictée du 46, l'ordre vocal, la carte et la bulle en pixel ;
+  - « R1 Voir » de l'oiseau : pendant que l'oiseau est là, R1 ouvre la validation de cette lettre, et non la première en attente. Le hameau n'est pas encore branché (ticket 45) : le coursier n'y marche pas encore.
 
 ### Correspondance des touches retenue
 
@@ -46,9 +47,10 @@ Branche `ticket/49-titre-menu-courrier-console`, partie de `ticket/40-vue-jeu` (
 | Titre (au lancement) | Croix, A | choisir : Continuer, Nouvelle session (fiche existante), Agents, Réglages, Quitter (confirmation existante) |
 | Titre | Start | Continuer |
 | Titre | B | rien : premier écran |
-| Hameau | Start | menu de pause (au lieu de « tout mettre en pause » direct) |
+| Hameau | Start | menu de pause (au lieu de « tout mettre en pause » direct ; validé par l'utilisateur, PRD mis à jour par l'orchestrateur) |
 | Hameau | B | connexion des agents, directement (ticket 23 inchangé) |
 | Hameau | X, Y | inchangés : nouvelle session, session console |
+| Hameau, oiseau présent | R1 | la validation de la lettre apportée |
 | Menu de pause | Croix, A | Courrier, Agents, Réglages, Tout mettre en pause, Quitter |
 | Menu de pause | B, Start | fermer |
 | Agents ou Réglages ouverts depuis le menu | B | revenir au menu |
@@ -66,7 +68,7 @@ Branche `ticket/49-titre-menu-courrier-console`, partie de `ticket/40-vue-jeu` (
 - Logo du titre : « ThorAI », le nom du produit, dans une ressource du jeu (`game_title_logo`), jamais le libellé de l'app, qui vaut « ThorAI jeu » dans la build `.jeu` (test dans `MenuScreensTest`).
 - Courrier : titres et détails du domaine (« Session terminée », « L'agent te pose une question », « Session en échec », « Codex attend ta validation ») au lieu des formules de la maquette. L'oiseau propose « R1 Voir » seulement pour une validation, sur le hameau.
 - Carte volante : en haut à droite (ADR 19), pas en bas.
-- Tour : l'étiquette donne l'état de la session et non le mode. Le fil compact ne montre que les lignes du fil. Les touches sont celles de la session (→ Modifier, B Revenir, L2 Parler, Start Interrompre) ; une validation en attente met ses choix dans les touches.
+- Tour : un en-tête au-dessus du carnet de la session (ticket 46), et non un écran à part. Ainsi aucune information de la session n'est perdue. L'étiquette donne l'état de la session, et non le mode.
 
 ### Avec le parcours d'accueil (ticket 28, ADR 23)
 
@@ -75,10 +77,10 @@ Après la fusion de main (ThorAI, `app.thorai`), le parcours d'accueil passe d'a
 ### Reste
 
 - Pas d'essai sur la Thor ni au banc (consigne du lot) : écran titre au lancement réel, service d'accessibilité et carte volante à vérifier à l'intégration.
-- La dictée par-dessus une autre appli garde son panneau classique (`ConsoleOverlayScreen`), en attendant la dictée du jeu (ticket 46).
+- La marche du coursier vers la maison de la lettre (R1 sous l'oiseau) attend le hameau du ticket 45 ; en attendant, R1 ouvre directement la validation.
 - Le lien « B · Connexion des agents » et le « Quitter » tactile de l'accueil classique restent jusqu'au ticket 45.
 - Le courrier vit en mémoire : il repart vide à chaque lancement.
 
 ### Captures
 
-Robolectric, graphismes natifs, vrais atlas, à la taille des écrans de la Thor : `docs/images/jeu/49-*.png`. Pour les refaire : `./gradlew :game-ui:testDebugUnitTest --rerun -PgameCaptures=$PWD/../docs/images/jeu` dans `android/`.
+Robolectric, graphismes natifs, vrais atlas, à la taille des écrans de la Thor : `docs/images/jeu/49-*.png` (`49-tour-bas.png` est l'écran réel : tour et carnet, avec un avis et un brouillon). Pour les refaire, dans `android/` : `./gradlew :game-ui:testDebugUnitTest :app:testDebugUnitTest --rerun -PgameCaptures=$PWD/../docs/images/jeu`.

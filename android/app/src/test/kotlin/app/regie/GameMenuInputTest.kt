@@ -142,6 +142,27 @@ class GameMenuInputTest {
         container.handleInput(GamepadInput.TriggerDown(Trigger.L2)); runCurrent()
         assertTrue(container.dictation.state.value.visible)
         container.handleInput(GamepadInput.TriggerUp(Trigger.L2)); runCurrent()
+        container.handleInput(GamepadInput.Pressed(Button.B)); runCurrent()
+        assertFalse(container.dictation.state.value.visible)
+        assertTrue(container.gameMenu.value.open)
+        container.handleInput(GamepadInput.TriggerDown(Trigger.R2)); runCurrent()
+        assertTrue(container.voiceCommand.state.value.visible, "R2 donne un ordre vocal sous le menu")
+        container.handleInput(GamepadInput.TriggerUp(Trigger.R2)); runCurrent()
+    }
+
+    @Test fun `R1 under the arriving bird opens the validation of that letter, not the first pending one`() = runTest {
+        val first = Approval(ApprovalId("p0"), gateway.other, ApprovalKind.COMMAND, "rm -rf build",
+            options = listOf(ApprovalOption("once", ApprovalOptionKind.ALLOW_ONCE, "Oui")))
+        gateway.sessions.value = gateway.sessions.value.map {
+            if (it.id == gateway.other) it.copy(pendingApproval = first) else it.copy(pendingApproval = gateway.approval)
+        }
+        val container = container()
+        gateway.approvals.value = listOf(first, gateway.approval); runCurrent()
+        assertEquals(first.id, container.overview.value.firstPendingApproval?.approval?.id)
+        assertEquals(gateway.approval.id, container.courier.value.latest?.approval)
+        press(container, Button.R1)
+        assertEquals(Screen.Approval, container.screen.value)
+        assertEquals(gateway.approval.id, container.approvalReview.value.request?.id)
     }
 
     @Test fun `a validation becomes a letter, and opening it shows the validation`() = runTest {
@@ -188,7 +209,12 @@ private class MenuCapture : DictationCapture {
 private class MenuGateway : AgentGateway {
     val working = SessionId("meteo")
     private val t = Instant.fromEpochMilliseconds(0)
-    override val sessions = MutableStateFlow(listOf(Session(working, Agent.CODEX, "api-meteo", "main", null, SessionStatus.WORKING, true, t, t)))
+    val other = SessionId("site")
+    override val sessions = MutableStateFlow(listOf(
+        Session(working, Agent.CODEX, "api-meteo", "main", null, SessionStatus.WORKING, true, t, t),
+        // Plus récente : elle passe devant dans la vue d'ensemble.
+        Session(other, Agent.CLAUDE, "site-perso", "main", null, SessionStatus.IDLE, true, Instant.fromEpochMilliseconds(1), t),
+    ))
     val approval = Approval(ApprovalId("p1"), working, ApprovalKind.COMMAND, "npm run db:migrate",
         options = listOf(ApprovalOption("once", ApprovalOptionKind.ALLOW_ONCE, "Oui")))
     override val approvals = MutableStateFlow(emptyList<Approval>())

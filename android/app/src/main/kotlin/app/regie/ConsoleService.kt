@@ -6,18 +6,9 @@ import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 import app.regie.input.Button
 import app.regie.input.GamepadInput
-import app.regie.overlay.OverlayContent
 import app.regie.overlay.OverlayWindow
-import androidx.compose.runtime.Composable
-import app.regie.game.ui.atlas.rememberGameAssets
-import app.regie.game.ui.console.CommandScroll
-import app.regie.game.ui.console.GameCommandOverlay
-import app.regie.game.ui.console.PixelConsoleBubble
-import app.regie.game.ui.console.PixelFloatingCard
-import app.regie.game.ui.theme.GameTheme
-import app.regie.ui.screens.ConsoleOverlayScreen
+import app.regie.ui.game.GameConsoleOverlay
 import app.regie.ui.screens.ThreadScroll
-import app.regie.ui.theme.RegieTheme
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -44,31 +35,13 @@ class ConsoleService : AccessibilityService() {
         container.consoleService.value = true
         val press: (Button) -> Unit = { container.handleInput(GamepadInput.Pressed(it)) }
         val window = OverlayWindow(this) { content ->
-            when (content) {
-                // La dictée garde son panneau classique en attendant celui du jeu (ticket 46).
-                is OverlayContent.Dictation -> RegieTheme {
-                    ConsoleOverlayScreen(content, press,
-                        ThreadScroll(container.dictationScroll, container.dictationVelocity),
-                        ThreadScroll(container.commandScroll, container.commandVelocity))
-                }
-                // Vue jeu (ticket 49) : l'ordre vocal, la carte volante et la bulle en pixel.
-                else -> GameTheme { GameOverlay(content) }
-            }
+            // Vue jeu (tickets 46 et 49) : dictée, ordre vocal, carte volante et bulle en pixel.
+            GameConsoleOverlay(content, press,
+                ThreadScroll(container.dictationScroll, container.dictationVelocity),
+                ThreadScroll(container.commandScroll, container.commandVelocity))
         }
         overlay = window
         following = scope.launch { container.consoleOverlay.collect { window.show(it) } }
-    }
-
-    @Composable
-    private fun GameOverlay(content: OverlayContent) {
-        val assets = rememberGameAssets()
-        when (content) {
-            is OverlayContent.Command -> GameCommandOverlay(content.review,
-                scroll = CommandScroll(container.commandScroll, container.commandVelocity))
-            is OverlayContent.Card -> PixelFloatingCard(content.card, assets, keys = content.keys)
-            is OverlayContent.Bubble -> PixelConsoleBubble(content.session, content.lastSentence)
-            is OverlayContent.Dictation -> Unit
-        }
     }
 
     override fun onKeyEvent(event: KeyEvent): Boolean {

@@ -63,6 +63,9 @@ android {
 
     testOptions {
         unitTests.isIncludeAndroidResources = true
+        // Captures Robolectric des écrans du jeu (ticket 49) : `-PgameCaptures=<dossier>`, sinon rien n'est écrit.
+        val captures = providers.gradleProperty("gameCaptures").orNull
+        unitTests.all { test -> captures?.let { test.systemProperty("game.captures", it) } }
     }
 
     lint {
