@@ -13,7 +13,11 @@ export const HOST = '127.0.0.1';
 
 export interface ListenOptions {
   readonly port: number;
-  readonly token: string;
+  /**
+   * The tokens accepted now, one per app (ADR 22). Called at each connection: a token added or
+   * removed on disk applies without restarting the bridge.
+   */
+  readonly tokens: () => readonly string[];
   readonly logger: Logger;
   readonly info: { readonly version: string; readonly pid: number; readonly startedAt: string };
   readonly heartbeatMs?: number;
@@ -43,8 +47,8 @@ export interface ListeningServer extends RunningServer {
 const MAX_PAYLOAD = 1024 * 1024;
 
 /**
- * The WebSocket the app talks to. The token is checked on the HTTP upgrade, before any data:
- * a client without it gets a 401 and the socket is closed.
+ * The WebSocket the apps talk to. The token is checked on the HTTP upgrade, before any data:
+ * a client without one of the accepted tokens gets a 401 and the socket is closed.
  */
 export async function startWsServer(options: WsServerOptions): Promise<RunningServer> {
   const server = await listenWs(options);
@@ -59,7 +63,6 @@ export async function startWsServer(options: WsServerOptions): Promise<RunningSe
 export function listenWs(options: ListenOptions): Promise<ListeningServer> {
   const { logger } = options;
   let served: (ListenOptions & ServeOptions) | null = null;
-  const expected = digest(options.token);
   const http = createServer((request, response) => {
     if (request.url === '/health') {
       response.writeHead(200, { 'content-type': 'application/json' }).end('{"ok":true}');
@@ -78,7 +81,7 @@ export function listenWs(options: ListenOptions): Promise<ListeningServer> {
       return;
     }
     const serving = served;
-    if (!authorized(request, expected)) {
+    if (!authorized(request, options.tokens())) {
       logger.warn('connection refused: missing or wrong token');
       socket.end('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
       return;
@@ -268,12 +271,16 @@ function toError(error: unknown): { code: string; message: string } {
   return { code: 'internal', message: 'Erreur interne du pont.' };
 }
 
-function authorized(request: IncomingMessage, expected: Buffer): boolean {
+function authorized(request: IncomingMessage, accepted: readonly string[]): boolean {
   const header = request.headers.authorization ?? '';
   const match = /^Bearer (.+)$/.exec(header);
   if (match?.[1] === undefined) return false;
-  // Same length digests: the comparison takes the same time whatever the token sent.
-  return timingSafeEqual(digest(match[1]), expected);
+  const sent = digest(match[1]);
+  // Same length digests, and every accepted token compared: the time does not depend on which
+  // token matches, nor on how much of it.
+  let ok = false;
+  for (const token of accepted) ok = timingSafeEqual(sent, digest(token)) || ok;
+  return ok;
 }
 
 function digest(value: string): Buffer {

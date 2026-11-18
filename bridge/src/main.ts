@@ -5,7 +5,9 @@
  *
  * Settings, all optional (docs/protocole-pont.md, « Démarrage et arrêt »):
  * - REGIE_BRIDGE_PORT (47600), the bridge listens on 127.0.0.1 only;
- * - REGIE_BRIDGE_TOKEN_FILE (~/.config/regie/bridge-token);
+ * - REGIE_BRIDGE_TOKEN_FILE (~/.config/regie/bridge-token), the token of an app that names no
+ *   client, and REGIE_BRIDGE_TOKEN_DIR (~/.config/regie/bridge-tokens), one token file per app
+ *   (ADR 22). Both are read again at each connection;
  * - REGIE_BRIDGE_STATE_DIR (~/.local/state/regie/bridge): sessions, events, pid;
  * - REGIE_PROJECTS_DIR (~/projects);
  * - REGIE_BRIDGE_RETENTION_DAYS (30): days the events of a session are kept after its last
@@ -15,7 +17,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { processConnector } from './adapters/acp/adapter-process.ts';
@@ -23,6 +25,7 @@ import { CliAuthentication } from './adapters/auth/cli-authentication.ts';
 import { FileEventStore, FileSessionStore } from './adapters/files/file-stores.ts';
 import { GitWorkspace } from './adapters/files/git-workspace.ts';
 import { lockStateDir } from './adapters/files/state-lock.ts';
+import { TokenFiles } from './adapters/files/token-files.ts';
 import { StderrLogger } from './adapters/logging/logger.ts';
 import { runNowThenDaily } from './adapters/schedule/daily.ts';
 import { ShellQuoteParser } from './adapters/shell/shell-quote-parser.ts';
@@ -37,6 +40,7 @@ const env = process.env;
 const home = homedir();
 const port = Number(env.REGIE_BRIDGE_PORT ?? DEFAULT_PORT);
 const tokenFile = env.REGIE_BRIDGE_TOKEN_FILE ?? join(home, '.config/regie/bridge-token');
+const tokenDir = env.REGIE_BRIDGE_TOKEN_DIR ?? join(home, '.config/regie/bridge-tokens');
 const stateDir = env.REGIE_BRIDGE_STATE_DIR ?? join(home, '.local/state/regie/bridge');
 const projectsDir = env.REGIE_PROJECTS_DIR ?? join(home, 'projects');
 const retentionSetting = env.REGIE_BRIDGE_RETENTION_DAYS ?? String(DEFAULT_RETENTION_DAYS);
@@ -52,18 +56,13 @@ const version = (
 
 const logger = new StderrLogger();
 
-function readToken(): string {
-  let token: string;
-  try {
-    if ((statSync(tokenFile).mode & 0o077) !== 0) {
-      throw new Error(`${tokenFile} is readable by others: chmod 600 it`);
-    }
-    token = readFileSync(tokenFile, 'utf8').trim();
-  } catch (error) {
-    throw new Error(`no token: ${(error as Error).message}. Run thor/bridge/install.sh.`);
+const tokens = new TokenFiles(tokenFile, tokenDir, logger);
+
+/** At start, at least one valid token: the refused files are named in the log just before. */
+function checkTokens(): void {
+  if (tokens.read().length === 0) {
+    throw new Error(`no token in ${tokenFile} nor ${tokenDir}. Run thor/bridge/install.sh.`);
   }
-  if (token.length < 32) throw new Error(`token too short in ${tokenFile}`);
-  return token;
 }
 
 function readRetentionDays(): number {
@@ -75,7 +74,7 @@ function readRetentionDays(): number {
 }
 
 async function main(): Promise<void> {
-  const token = readToken();
+  checkTokens();
   const retentionDays = readRetentionDays();
   // A second bridge stops here, before reading or writing the journal: first the state
   // folder, then the port.
@@ -83,7 +82,7 @@ async function main(): Promise<void> {
   process.on('exit', unlock);
   const server = await listenWs({
     port,
-    token,
+    tokens: () => tokens.read(),
     logger,
     info: { version, pid: process.pid, startedAt: new Date().toISOString() },
   });

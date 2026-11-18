@@ -13,7 +13,7 @@ Le pont **relaie** ce que les agents envoient. Il ne réinvente pas leur schéma
   Authorization: Bearer <jeton>
   ```
 
-- Sans jeton, ou avec un mauvais jeton : réponse HTTP `401`, la connexion est fermée avant toute donnée. La comparaison se fait à temps constant.
+- Sans jeton, ou avec un jeton qu'il n'accepte pas : réponse HTTP `401`, la connexion est fermée avant toute donnée. Le pont accepte un jeton par app (voir « Le jeton ») ; la comparaison se fait à temps constant, contre chacun d'eux.
 - `GET http://127.0.0.1:47600/health` répond `{"ok":true}`, sans jeton. Il dit seulement si le pont est démarré.
 - Pendant les premiers instants du démarrage, une connexion reçoit `503` : réessayer.
 - Le pont envoie un ping WebSocket toutes les 20 s. Un client qui ne répond pas est déconnecté.
@@ -62,28 +62,45 @@ Un refus ou un résultat inconnu demande une vérification, jamais un renvoi cac
 - L'app crée le secret dans `files/bridge-token` (stockage privé, 0600) avec
   `SecureRandom`, puis le garde. Un jeton déjà copié en debug est conservé.
 - Pour configurer le pont, RUN_COMMAND lance `~/bin/regie-bridge-configure` avec
-  `com.termux.RUN_COMMAND_ARGUMENTS` (String[]) contenant seulement le nom d'une
-  socket Unix abstraite éphémère `regie-pair-<UUID>`. Le serveur Android vérifie
+  `com.termux.RUN_COMMAND_ARGUMENTS` (String[]) contenant le nom d'une socket Unix
+  abstraite éphémère `regie-pair-<UUID>`, puis, depuis le ticket 50, le nom du
+  paquet de l'app (`app.regie.jeu`). Le serveur Android vérifie
   les credentials du pair fournis par le noyau (`LocalSocket.peerCredentials.uid`)
   et n'envoie le secret qu'à l'UID du paquet Termux installé. Il ferme la socket
   après la première connexion ; sans client, l'attente expire après 30 s.
   Le script lit la socket avec Python dans la Debian (même UID Android que Termux).
   Ni arguments, ni stdin de l'intent ne contiennent le jeton : la trace détaillée
   de Termux ne peut le recopier. Aucun port TCP ni fichier partagé n'est créé.
-- Côté pont : `/home/dev/.config/regie/bridge-token` dans la Debian, en `600`.
-  Configuration sérialisée : si le secret diffère, arrêt du pont, écriture
-  atomique puis démarrage. S'il est identique, aucune session n'est interrompue.
+- Côté pont, dans la Debian, en `600` (ADR 22) :
+  - avec un paquet : `/home/dev/.config/regie/bridge-tokens/<paquet>`, le jeton
+    de cette app seule. Le dossier est en `700`. Le pont relit les jetons à
+    chaque connexion : l'écriture se fait sans l'arrêter, les sessions et les
+    autres apps continuent ;
+  - sans paquet (l'app classique telle qu'avant le ticket 50) :
+    `/home/dev/.config/regie/bridge-token`. Si le secret diffère, arrêt du pont,
+    écriture atomique puis démarrage, comme avant : c'est le seul jeton que lit
+    un pont plus ancien, et seulement à son démarrage.
+
+  Chaque app ne remplace que son fichier : deux apps sur la même console ne se
+  déconnectent plus l'une l'autre. Le paquet doit être un nom de paquet Android
+  (`^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$`), sinon la commande refuse.
+  Configuration sérialisée ; un secret identique n'interrompt aucune session.
   Le verrou de configuration est libéré au retour de la commande : ni le
   superviseur détaché ni l'accès Android ne l'héritent.
-  Le pont refuse toujours un fichier absent ou lisible par d'autres.
+  Le pont refuse toujours un fichier lisible par d'autres, trop court ou, dans
+  `bridge-tokens/`, qui n'est pas un fichier ordinaire (lien) ; le journal nomme
+  le fichier, jamais le jeton. Les fichiers en cours d'écriture commencent par
+  un point et sont ignorés. Il ne démarre pas sans au moins un jeton valable.
+  Retirer une app du pont : supprimer son fichier dans `bridge-tokens/`.
 - Tant que le WebSocket n'est pas authentifié, l'app peut redemander cette
   configuration au premier plan, au plus une fois toutes les 30 secondes.
   Un simple `/health` réussi ne prouve pas que les secrets correspondent.
 - Le jeton ne passe jamais dans le dépôt, les journaux ou un stockage partagé
   (`/sdcard`, `/data/local/tmp`). Il n'est pas affiché par la commande.
 - En debug USB, `thor/bridge/install.sh token-app` peut toujours copier le jeton
-  du pont via `run-as app.regie`. En release, cette copie est ignorée ; l'app
-  configure le pont à sa prochaine ouverture.
+  historique du pont via `run-as` dans l'app de ce dépôt (`regie_app_id`,
+  `REGIE_APP_ID` pour en viser une autre). En release, cette copie est ignorée ;
+  l'app configure le pont à sa prochaine ouverture.
 
 ## Trames
 
@@ -503,12 +520,12 @@ Les sessions arrêtées restent dans l'historique, en `stopped`.
 | --- | --- |
 | Pont installé | Debian : `/home/dev/.local/share/regie/bridge/` |
 | Sessions et journal d'événements | Debian : `/home/dev/.local/state/regie/bridge/` (`sessions.json`, `events.jsonl` dont la première ligne nomme le journal et, après une purge, garde le dernier numéro `lastSeq`, `bridge.pid`, `bridge.lock`) |
-| Jeton du pont | Debian : `/home/dev/.config/regie/bridge-token` |
+| Jetons du pont | Debian : `/home/dev/.config/regie/bridge-tokens/<paquet>` (un par app), `/home/dev/.config/regie/bridge-token` (historique) |
 | Scripts | Termux : `~/bin/regie-bridge-start`, `regie-bridge-stop`, `regie-bridge-supervise` |
 | Journal du pont et du superviseur | Termux : `~/.local/state/thor/regie-bridge.log` (le précédent en `.1` au-delà de 5 Mo) |
 | PID du superviseur | Termux : `~/.local/state/thor/regie-bridge-supervisor.pid` |
 
-Réglages du pont, par variables d'environnement : `REGIE_BRIDGE_PORT`, `REGIE_BRIDGE_TOKEN_FILE`, `REGIE_BRIDGE_STATE_DIR`, `REGIE_PROJECTS_DIR`, `REGIE_BRIDGE_RETENTION_DAYS` (voir « Conservation de l'historique »), `CLAUDE_CODE_EXECUTABLE`, `CODEX_PATH` (voir `bridge/src/main.ts`).
+Réglages du pont, par variables d'environnement : `REGIE_BRIDGE_PORT`, `REGIE_BRIDGE_TOKEN_FILE`, `REGIE_BRIDGE_TOKEN_DIR`, `REGIE_BRIDGE_STATE_DIR`, `REGIE_PROJECTS_DIR`, `REGIE_BRIDGE_RETENTION_DAYS` (voir « Conservation de l'historique »), `CLAUDE_CODE_EXECUTABLE`, `CODEX_PATH` (voir `bridge/src/main.ts`).
 
 ## Depuis le Mac
 
