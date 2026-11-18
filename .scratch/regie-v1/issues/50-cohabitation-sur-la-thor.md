@@ -100,6 +100,10 @@ connectées. `ls -l ~/.config/regie/bridge-tokens/` dans la Debian montre
   Si le pont de main (un seul jeton) est redéployé sans ce changement, la
   version jeu ne se connecte plus (401), sans gêner l'app classique. Reporter
   le commit du pont sur main (`bridge/`, `thor/bridge/configure.sh`).
+- Premier appairage de la version jeu : l'app peut se connecter avant que
+  `regie-bridge-configure` ait écrit son jeton, et recevoir un bref `401`. Le
+  réessai de l'app (configuration redemandée au plus toutes les 30 s, puis
+  reconnexion) l'absorbe ; aucune action de l'utilisateur (relecture, point 3).
 - « Quitter » dans l'une des apps arrête le pont et toutes les sessions pour
   les deux : c'est le comportement produit actuel, non changé ici.
 - La règle des agents `thor-screen launch bas app.regie` et les consignes de
@@ -115,10 +119,21 @@ connectées. `ls -l ~/.config/regie/bridge-tokens/` dans la Debian montre
 - `scripts/repo-audit.py` signale `docs/rebrand/plan-dev-jeu.md:121`, un
   signalement antérieur à ce lot : la règle elle-même cite `/home/…`.
 
+### Suites de la relecture (e30b893)
+
+- Un fichier de jeton refusé n'est plus signalé à chaque connexion : une fois
+  par fichier et par problème, de nouveau si le problème change ou revient
+  après réparation (test `reports a refused file once per state`).
+- `scripts/bridge-mac.sh` donne au pont du banc son propre dossier,
+  `$REGIE_BENCH/bridge-tokens` : il n'accepte plus les jetons du Mac.
+- d9197a2 puis e30b893, rejoués sur main (`git merge-tree`, sans conflit) :
+  `npm run check` (351 tests), `configure-token-test.sh` et
+  `configure-lock-test.py` verts, sans aucun fichier du jeu.
+
 ### Porte de qualité
 
 - `bridge/` : `npm run check` vert (Biome : 2 avertissements antérieurs dans
-  `bridge.test.ts` ; tsc ; 350 tests vitest, après fusion de
+  `bridge.test.ts` ; tsc ; 351 tests vitest, après fusion de
   `ticket/40-vue-jeu` qui apporte le ticket 31).
 - `android/` : `./gradlew check` vert, avec `:app:assembleDebug` et le manifeste
   release contrôlés (`app.regie.jeu`).
