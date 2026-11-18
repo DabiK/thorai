@@ -47,14 +47,25 @@ class WrittenSummaryTest {
     }
 
     @Test fun `the thread hides the report block Régie asked for and keeps the agent words`() {
-        val text = "J’ai corrigé le seuil.\n\n[Point Régie]\nFait : seuil\nTests : non communiqués\nSuite : rien\nQuestion : aucune\n[/Point Régie]"
+        val text = "J’ai corrigé le seuil.\n\n[Point Régie]  \nFait : seuil  \nTests : non communiqués\nSuite : rien\nQuestion : aucune\n[/Point Régie]"
         assertEquals("J’ai corrigé le seuil.", RegieReport.strip(text))
         assertEquals("Avant\n\nAprès", RegieReport.strip("Avant\n[Point Régie]\nFait : x\n[/Point Régie]\nAprès"))
         // Unfinished while it streams: everything from the opening marker stays hidden.
         assertEquals("Je regarde.", RegieReport.strip("Je regarde.\n\n[Point Régie]\nFait : en c"))
+        assertEquals("Je regarde.", RegieReport.strip("Je regarde.\n\n[Point Régie]\nFait : x\nTes"))
+        assertEquals("Je regarde.", RegieReport.strip("Je regarde.\n\n[Point Régie]\nFait : x\nQuestion\u00a0: aucune\n[/Point"))
         assertEquals("", RegieReport.strip("[Point Régie]\nFait : x\n[/Point Régie]"))
         val untouched = "  Code :\n```\n[Point] x\n```\n"
         assertSame(untouched, RegieReport.strip(untouched))
+    }
+
+    @Test fun `a marker the agent quotes or discusses stays in its answer`() {
+        val inline = "J’ai retiré `[Point Régie]` du pont. Tests OK."
+        assertSame(inline, RegieReport.strip(inline))
+        val quoted = "Ancien format :\n```\n[Point Régie]\nVoici le code à garder\n```\nFin."
+        assertSame(quoted, RegieReport.strip(quoted))
+        val unclosedProse = "[Point Régie]\nCe marqueur venait de Régie."
+        assertSame(unclosedProse, RegieReport.strip(unclosedProse))
     }
 
     @Test fun `a thread line made only of the report disappears and the last sentence is the agent one`() {

@@ -89,9 +89,9 @@ class TopActivity : GamepadActivity() {
                 val dictationPanel: (@androidx.compose.runtime.Composable () -> Unit)? = if (mode == ScreenMode.Single && dictation.visible) ({
                     app.regie.ui.screens.DictationBottomScreen(dictation, { container.handleInput(GamepadInput.Pressed(it)) },
                         { container.touchTrigger(app.regie.input.Trigger.L2, it) }, container::openVoiceSettings, compact = true,
-                        session = live?.session, transcript = dictationScroll)
+                        session = overview.sessions.firstOrNull { it.id == dictation.target?.sessionId }, transcript = dictationScroll)
                 }) else null
-                SessionTopScreen(live, gone = overview.neighboursOf(shown.id) == null, control, draft, singleScreen = mode == ScreenMode.Single, scroll = threadScroll, callbacks = sessionCallbacks, approval = approval, onDecision = container::answerInline, onNextApproval = container::nextInlineApproval, onDismissApproval = container::dismissInlineApproval, options = panel, dictation = dictationPanel)
+                SessionTopScreen(live, gone = overview.neighboursOf(shown.id) == null, control, draft, singleScreen = mode == ScreenMode.Single, scroll = threadScroll, callbacks = sessionCallbacks, approval = approval, onDecision = container::answerInline, onNextApproval = container::nextInlineApproval, onDismissApproval = container::dismissInlineApproval, options = panel, dictation = dictationPanel, dictating = dictation.visible)
             },
         )
 

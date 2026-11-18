@@ -240,6 +240,14 @@ class OverviewControllerTest {
     }
 
     @Test
+    fun `the list stops scrolling while the quit confirmation is open`() {
+        controller.handle(GamepadInput.Scroll(0.8f))
+        controller.requestQuit()
+        controller.handle(GamepadInput.Scroll(0f))
+        assertEquals(0f, controller.scrollVelocity.value)
+    }
+
+    @Test
     fun `B cancels the confirmation and the overview answers again`() {
         controller.requestQuit()
         press(Button.B)

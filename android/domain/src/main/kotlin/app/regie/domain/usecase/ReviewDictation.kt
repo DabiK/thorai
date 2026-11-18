@@ -12,12 +12,14 @@ import kotlinx.coroutines.launch
 /**
  * Holds the destination and the reviewed text until explicit confirmation. A message the agent
  * received closes the review by itself, with no screen to dismiss; [onDelivered] receives its
- * receipt. Uncertain results, failures and other targets keep their notice until B.
+ * receipt. Away from its session ([shown] false), only a new turn closes: a queued or steering
+ * message keeps its notice, as do uncertain results, failures and other targets, until B.
  */
 class ReviewDictation(
     private val capture: DictationCapture,
     private val deliver: suspend (DictationTarget, String) -> DictationDelivery,
     private val scope: CoroutineScope,
+    private val shown: (SessionId) -> Boolean = { true },
     private val onDelivered: (DictationTarget, Delivery) -> Unit = { _, _ -> },
 ) {
     private val mutable = MutableStateFlow(DictationReview())
@@ -88,7 +90,7 @@ class ReviewDictation(
         mutable.value = current.copy(phase = DictationPhase.SENDING, notice = "Envoi…")
         scope.launch {
             val result = deliver(target, current.text)
-            if (target is DictationTarget.Message && result.delivered) {
+            if (target is DictationTarget.Message && result.delivered && (result.delivery == Delivery.PROMPT || shown(target.sessionId))) {
                 watching?.cancel()
                 mutable.value = DictationReview()
                 onDelivered(target, result.delivery!!)

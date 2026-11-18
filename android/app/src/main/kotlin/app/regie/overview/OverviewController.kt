@@ -115,9 +115,13 @@ class OverviewController(
         if (_state.value.quit is QuitStep.Confirm) _state.update { it.copy(quit = null) }
     }
 
-    /** Pendant la confirmation : A confirme, B annule, le reste attend. Une gâchette relâchée l'est toujours. */
+    /**
+     * Pendant la confirmation : A confirme, B annule, le reste attend. Une gâchette relâchée l'est
+     * toujours ; la liste cesse de défiler.
+     */
     private fun handleWhileQuitting(input: GamepadInput) {
         when {
+            input is GamepadInput.Scroll -> _scrollVelocity.value = 0f
             input == GamepadInput.Pressed(Button.A) && _state.value.quit is QuitStep.Confirm -> confirmQuit()
             input == GamepadInput.Pressed(Button.B) -> cancelQuit()
             input is GamepadInput.TriggerUp -> onTrigger(input.trigger, held = false)

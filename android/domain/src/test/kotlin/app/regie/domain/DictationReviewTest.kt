@@ -158,6 +158,23 @@ class DictationReviewTest {
         assertEquals(listOf(target to Delivery.PROMPT, target to Delivery.STEERING, target to Delivery.QUEUED), delivered)
     }
 
+    @Test fun `away from its session a queued or steering message keeps its notice, a new turn still closes`() = runTest {
+        val capture = TestCapture()
+        val delivered = mutableListOf<Delivery>()
+        val target: DictationTarget = DictationTarget.Message(SessionId("one"))
+        val phases = listOf(Delivery.PROMPT, Delivery.QUEUED, Delivery.STEERING).map { delivery ->
+            val review = ReviewDictation(capture, { _, _ -> DictationDelivery("Message mis en attente. B pour revenir.", delivery = delivery) },
+                backgroundScope, shown = { false }) { _, d -> delivered += d }
+            review.start(target, emptyList())
+            capture.events.value = CaptureState(text = "Continue", complete = true)
+            runCurrent(); review.finish()
+            review.send(); runCurrent()
+            review.state.value.phase
+        }
+        assertEquals(listOf(DictationPhase.CLOSED, DictationPhase.SENT, DictationPhase.SENT), phases)
+        assertEquals(listOf(Delivery.PROMPT), delivered)
+    }
+
     @Test fun `uncertain refused and other targets keep their notice until B`() = runTest {
         val capture = TestCapture()
         val delivered = mutableListOf<Delivery>()

@@ -185,6 +185,8 @@ fun SessionTopScreen(
     onDismissApproval: () -> Unit = {},
     options: (@Composable () -> Unit)? = null,
     dictation: (@Composable () -> Unit)? = null,
+    /** Une dictée capte A, B et X : la carte de validation du fil garde ses touchers, sans puces. */
+    dictating: Boolean = false,
 ) {
     val now by rememberNow()
     Column(Modifier.fillMaxSize().background(Palette.background).imePadding()) {
@@ -201,7 +203,7 @@ fun SessionTopScreen(
                 when {
                     live == null -> StateMessage(stringResource(if (gone) R.string.session_gone else R.string.thread_opening))
                     // Une liste par session : passer à la voisine repart de la fin de son fil.
-                    else -> key(live.session.id) { ThreadList(live, scroll, approval, onDecision, onNextApproval, onDismissApproval, shortcutsEnabled = options == null) }
+                    else -> key(live.session.id) { ThreadList(live, scroll, approval, onDecision, onNextApproval, onDismissApproval, shortcutsEnabled = options == null && !dictating) }
                 }
             }
             // Le plan et les fichiers seulement quand l'agent en expose : pas de cadre vide.

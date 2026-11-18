@@ -48,7 +48,10 @@ class SessionNotificationsTest {
         gateway.sessions.value = listOf(session("live"), session("quiet"))
         gateway.threadOf(SessionId("live")).value = SessionThread(listOf(ThreadEntry.UserMessage(1, "Corrige"),
             ThreadEntry.AgentText(2, "Le seuil est corrigé.\n\n[Point Régie]\nFait : x\nTests : y\nSuite : rien\nQuestion : aucune\n[/Point Régie]")), loaded = true)
-        gateway.threadOf(SessionId("quiet")).value = SessionThread(listOf(ThreadEntry.UserMessage(1, "Lis")), loaded = true)
+        // A turn made only of tools must not quote the previous turn.
+        gateway.threadOf(SessionId("quiet")).value = SessionThread(listOf(ThreadEntry.UserMessage(1, "Lis"),
+            ThreadEntry.AgentText(2, "Tour précédent terminé."), ThreadEntry.UserMessage(3, "Relis"),
+            ThreadEntry.ToolCall(4, ToolKind.READ, "Read", path = "a.kt", status = ActionStatus.COMPLETED)), loaded = true)
         NotifySessions(gateway, MutableStateFlow(false), port, backgroundScope)
         runCurrent()
         gateway.sessions.value = listOf(session("live", SessionStatus.IDLE), session("quiet", SessionStatus.IDLE))
