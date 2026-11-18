@@ -57,11 +57,7 @@
     <string name="game_hint_mark_read">Tout marquer lu</string>
     <string name="game_hint_refresh">Actualiser</string>
     <string name="game_hint_choose_agent">Choisir l’agent</string>
-    <string name="game_hint_see">Voir</string>
     <string name="game_hint_close">Fermer</string>
-    <string name="game_hint_speak">Parler</string>
-    <string name="game_hint_interrupt">Interrompre</string>
-    <string name="game_hint_settings">Modifier</string>
 
     <!-- Quitter (mêmes textes que la vue classique). -->
     <plurals name="game_quit_busy">
@@ -127,20 +123,6 @@
     <!-- Mode console (écran 12, ADR 19). -->
     <string name="game_tower_title">Tour de la console</string>
     <string name="game_tower_pilots">%s pilote Android</string>
-    <string name="game_thread_you">Toi</string>
-    <string name="game_thread_empty">Aucun message.</string>
-    <string name="game_thread_loading">Chargement du fil…</string>
-    <string name="game_thread_read">lu</string>
-    <string name="game_thread_reading">lit</string>
-    <string name="game_thread_edited">modifié</string>
-    <string name="game_thread_editing">modifie</string>
-    <string name="game_thread_ran">lancé</string>
-    <string name="game_thread_running">lance</string>
-    <string name="game_thread_action">action</string>
-    <string name="game_thread_failed">La réponse a échoué.</string>
-    <string name="game_thread_interrupted">Interrompue</string>
-    <string name="game_approval_session">Autoriser pour la session</string>
-    <string name="game_approval_refuse">Refuser</string>
     <string name="game_card_awaiting_answer">Attend ta réponse</string>
     <string name="game_card_allow_once">Autoriser une fois</string>
     <string name="game_card_answer">Répondre</string>

@@ -11,8 +11,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.regie.display.ScreenMode
 import app.regie.ui.components.tappable
-import app.regie.ui.screens.DictationTopScreen
-import app.regie.ui.screens.DictationBottomScreen
 import app.regie.ui.theme.Palette
 import app.regie.ui.theme.sans
 import android.view.InputDevice
@@ -201,11 +199,12 @@ abstract class GamepadActivity : ComponentActivity() {
                             button, held, container::selectNewSessionField, container::editNewInstruction, container::editNewBranch, container.newSessionVelocity, container::editNewProjectName)
                     } else if (dictation.visible && this@GamepadActivity is BottomActivity) {
                         // Deux écrans : la dictée et sa transcription en direct sont en bas ; le haut ne change pas.
-                        DictationBottomScreen(dictation, button, held, container::openVoiceSettings,
-                            session = current.sessions.firstOrNull { it.id == dictation.target?.sessionId }, transcript = dictationScroll)
+                        app.regie.ui.game.GameDictation(dictation, current.sessions.firstOrNull { it.id == dictation.target?.sessionId },
+                            button, held, container::openVoiceSettings, dictationScroll)
                     } else if (dictation.visible && mode == ScreenMode.Single && screen !is Screen.Session) {
                         // Un seul écran, hors session : la dictée occupe l'écran. Dans une session, le fil reste.
-                        DictationTopScreen(dictation, current.sessions.firstOrNull { it.id == dictation.target?.sessionId }, true, button, held, container::openVoiceSettings, dictationScroll)
+                        app.regie.ui.game.GameDictation(dictation, current.sessions.firstOrNull { it.id == dictation.target?.sessionId },
+                            button, held, container::openVoiceSettings, dictationScroll)
                     } else if (gameMenu.open && screen == Screen.Overview) GameTheme {
                         // Vue jeu (ticket 49) : l'écran titre au lancement, le menu de pause avec Start.
                         GameMenuScreen(gameMenu, current, assets, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single)

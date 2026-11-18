@@ -15,7 +15,6 @@ import app.regie.display.ScreenMode
 import app.regie.input.GamepadInput
 import app.regie.ui.screens.ApprovalTopScreen
 import app.regie.ui.screens.OverviewTopScreen
-import app.regie.ui.screens.SessionTopScreen
 import kotlinx.coroutines.launch
 
 /** Écran du haut (display 0). Il lance l'écran du bas quand celui-ci est allumé. */
@@ -89,16 +88,17 @@ class TopActivity : GamepadActivity() {
                 val approval by container.inlineApproval.collectAsStateWithLifecycle()
                 val options by container.sessionSettings.collectAsStateWithLifecycle()
                 val dictation by container.dictation.state.collectAsStateWithLifecycle()
-                val panel: (@androidx.compose.runtime.Composable () -> Unit)? = if (options.visible) ({
-                    app.regie.ui.screens.SessionSettingsScreen(options, { container.handleInput(GamepadInput.Pressed(it)) }, container::selectSessionSetting, compact = true)
+                val single = mode == ScreenMode.Single
+                // La maison (ticket 46). Un seul écran : le fil reste, la dictée prend la place de la table, du champ et des touches.
+                val dictationPanel: (@androidx.compose.runtime.Composable () -> Unit)? = if (single && dictation.visible) ({
+                    app.regie.ui.game.GameDictation(dictation, overview.sessions.firstOrNull { it.id == dictation.target?.sessionId },
+                        { container.handleInput(GamepadInput.Pressed(it)) }, { container.touchTrigger(app.regie.input.Trigger.L2, it) },
+                        container::openVoiceSettings, dictationScroll, compact = true)
                 }) else null
-                // Un seul écran : la dictée prend le panneau du bas, le fil reste au-dessus.
-                val dictationPanel: (@androidx.compose.runtime.Composable () -> Unit)? = if (mode == ScreenMode.Single && dictation.visible) ({
-                    app.regie.ui.screens.DictationBottomScreen(dictation, { container.handleInput(GamepadInput.Pressed(it)) },
-                        { container.touchTrigger(app.regie.input.Trigger.L2, it) }, container::openVoiceSettings, compact = true,
-                        session = overview.sessions.firstOrNull { it.id == dictation.target?.sessionId }, transcript = dictationScroll)
-                }) else null
-                SessionTopScreen(live, gone = overview.neighboursOf(shown.id) == null, control, draft, singleScreen = mode == ScreenMode.Single, scroll = threadScroll, callbacks = sessionCallbacks, approval = approval, onDecision = container::answerInline, onNextApproval = container::nextInlineApproval, onDismissApproval = container::dismissInlineApproval, options = panel, dictation = dictationPanel, dictating = dictation.visible)
+                val neighbours = overview.neighboursOf(shown.id)
+                app.regie.ui.game.GameSessionTop(live, gone = neighbours == null, neighbours, control, draft, options, single, threadScroll, sessionCallbacks,
+                    approval, container::answerInline, container::nextInlineApproval, container::dismissInlineApproval, container::selectSessionSetting,
+                    dictation, dictationPanel)
             },
         )
 

@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -18,16 +19,13 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
-import app.regie.domain.model.ActionStatus
 import app.regie.domain.model.Agent
 import app.regie.domain.model.CommandPhase
 import app.regie.domain.model.FloatingCard
 import app.regie.domain.model.FloatingKind
-import app.regie.domain.model.LiveSession
 import app.regie.domain.model.Session
 import app.regie.domain.model.SessionId
 import app.regie.domain.model.SessionStatus
-import app.regie.domain.model.ThreadLine
 import app.regie.domain.model.VoiceCommandReview
 import app.regie.game.ui.THOR_BOTTOM
 import app.regie.game.ui.THOR_TOP
@@ -108,37 +106,14 @@ class ConsoleScreensTest {
     }
 
     @Test
-    fun `the console session is the tower with its compact thread`() {
-        val pressed = mutableListOf<String>()
-        val live = LiveSession(
-            console,
-            listOf(
-                ThreadLine.UserMessage(1, "Baisse un peu la luminosité de l'écran du haut.", dictated = true),
-                ThreadLine.Other(2, "Ouvre Paramètres › Affichage", ActionStatus.COMPLETED),
-                ThreadLine.Run(3, "input tap 1340 196", ActionStatus.IN_PROGRESS, null),
-                ThreadLine.AgentText(4, "J'ai ouvert l'affichage.", streaming = false),
-            ),
-            plan = null, modifiedFiles = emptyList(), context = null, loading = false,
-        )
-        show { ConsoleTowerScreen(live, console, assets, callbacks = TowerCallbacks(press = { pressed += it })) }
-        listOf(
-            "Tour de la console", "Claude pilote Android", "Au travail", "Toi", "Baisse un peu la luminosité de l'écran du haut.",
-            "Ouvre Paramètres › Affichage", "input tap 1340 196", "lance", "J'ai ouvert l'affichage.", "Parler", "Interrompre", "Revenir",
-        ).forEach { compose.onNodeWithText(it).assertIsDisplayed() }
+    fun `the tower header shows the inhabitant at the mirror, who pilots Android and the session state`() {
+        show { Column { ConsoleTowerHeader(console, assets); Box(Modifier.fillMaxSize().background(Color(0xFFFBE6B2))) } }
+        listOf("Tour de la console", "Claude pilote Android", "Au travail").forEach { compose.onNodeWithText(it).assertIsDisplayed() }
         assertTrue(assets.resolve("fond.tour") != null)
-        Captures.save(compose, activity, "tour-bas")
-        compose.onNodeWithText("Modifier").performClick()
-        compose.onNodeWithText("Interrompre").performClick()
-        assertEquals(listOf("→", "Start"), pressed)
-    }
-
-    @Test
-    fun `a validation in the tower puts its choices in the keys`() {
-        val waiting = console.copy(status = SessionStatus.AWAITING_APPROVAL)
-        val live = LiveSession(waiting, listOf(ThreadLine.AwaitingApproval("npm run db:migrate")), null, emptyList(), null, loading = false)
-        show { ConsoleTowerScreen(live, waiting, assets, approval = Samples.approval.copy(sessionId = console.id)) }
-        listOf("Autoriser une fois", "Autoriser pour la session", "Refuser").forEach { compose.onNodeWithText(it).assertIsDisplayed() }
-        compose.onNodeWithText("Interrompre").assertDoesNotExist()
+        assertEquals("travail", TowerScene.pose(SessionStatus.WORKING))
+        assertEquals("attente", TowerScene.pose(SessionStatus.AWAITING_APPROVAL))
+        assertEquals("sommeil", TowerScene.pose(SessionStatus.STOPPED))
+        Captures.save(compose, activity, "tour-entete")
     }
 
     @Test
