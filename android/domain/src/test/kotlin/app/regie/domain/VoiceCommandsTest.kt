@@ -99,6 +99,72 @@ class VoiceCommandsTest {
         assertEquals(listOf<VoiceCommand>(VoiceCommand.Reply(approval, ApprovalDecision.ONCE)), executed)
     }
 
+    @Test fun `where is the console session opens it on R2 release without review or A`() = runTest {
+        val console = two.copy(project = "console")
+        val gateway = StubGateway().apply { sessions.value = listOf(one, console) }
+        val opened = mutableListOf<SessionId>()
+        val capture = CommandCapture()
+        val executor = ExecuteVoiceCommand(gateway, AnswerApproval(gateway), { opened += it })
+        val review = ReviewVoiceCommand(capture, InterpretVoiceCommand(noModel), executor::invoke, backgroundScope)
+        review.start(context.copy(sessions = gateway.sessions.value))
+        capture.events.value = CaptureState(text = "Où en est la session console ?", complete = true)
+        runCurrent()
+        review.confirm(); runCurrent()
+        assertTrue(opened.isEmpty(), "even a final transcript must wait for R2 release")
+        review.finish(); runCurrent()
+        assertEquals(listOf(console.id), opened)
+        assertFalse(review.state.value.visible, "navigation leaves no review panel over the session")
+        review.confirm(); review.finish(); runCurrent()
+        assertEquals(listOf(console.id), opened, "no duplicate navigation")
+        assertTrue(gateway.sent.isEmpty())
+        assertTrue(gateway.creations.isEmpty())
+        assertTrue(gateway.answers.isEmpty())
+        assertTrue(gateway.interrupted.isEmpty())
+    }
+
+    @Test fun `navigation to the active session or overview needs no A but mutations still do`() = runTest {
+        val cases = listOf(
+            "Où en est cette session ?" to VoiceCommand.Navigate(one.id),
+            "Où en est ?" to VoiceCommand.Navigate(one.id),
+            "Où en sont toutes les sessions ?" to VoiceCommand.ShowOverview,
+            "Approuve" to VoiceCommand.Reply(approval, ApprovalDecision.ONCE),
+            "Refuse" to VoiceCommand.Reply(approval, ApprovalDecision.REJECT),
+            "Mets tout en pause" to VoiceCommand.Pause(listOf(one.id, two.id)),
+            "Lance Codex sur atelier" to VoiceCommand.Launch(NewSessionDraft(Agent.CODEX, "atelier")),
+        )
+        cases.forEachIndexed { index, (phrase, expected) ->
+            val capture = CommandCapture()
+            val executed = mutableListOf<VoiceCommand>()
+            val review = ReviewVoiceCommand(capture, InterpretVoiceCommand(noModel), { executed += it; "Fait" }, backgroundScope)
+            review.start(context)
+            capture.events.value = CaptureState(text = phrase, complete = true)
+            review.finish(); runCurrent()
+            if (index < 3) {
+                assertEquals(listOf(expected), executed, phrase)
+                assertFalse(review.state.value.visible, phrase)
+            } else {
+                assertTrue(executed.isEmpty(), phrase)
+                assertTrue(review.state.value.canConfirm, phrase)
+                review.confirm(); review.confirm(); runCurrent()
+                assertEquals(listOf(expected), executed, phrase)
+            }
+            review.discard()
+        }
+    }
+
+    @Test fun `unknown and duplicate session names never navigate without confirmation`() = runTest {
+        listOf(context, context.copy(sessions = listOf(one, two.copy(project = one.project)))).forEachIndexed { index, snapshot ->
+            val capture = CommandCapture()
+            val review = ReviewVoiceCommand(capture, InterpretVoiceCommand(VoiceCommandModel { _, _ -> null }),
+                { error("an unresolved target must never execute") }, backgroundScope)
+            review.start(snapshot)
+            capture.events.value = CaptureState(text = if (index == 0) "Où en est absente ?" else "Où en est atelier ?", complete = true)
+            review.finish(); runCurrent()
+            assertEquals(CommandPhase.UNKNOWN, review.state.value.phase)
+            assertFalse(review.state.value.canConfirm)
+        }
+    }
+
     @Test fun `discard cancels late interpretation and never sends a partial on capture error`() = runTest {
         val capture = CommandCapture()
         val answer = CompletableDeferred<VoiceIntent?>()

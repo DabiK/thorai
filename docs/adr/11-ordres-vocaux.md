@@ -2,6 +2,10 @@
 
 Statut : accepté, 14 novembre 2026 (ticket 09).
 
+> Ticket 26 (ADR 19) : la navigation vocale ouvre directement à la transcription finale,
+> après relâchement de R2, sans relecture ni A. Les confirmations décrites ci-dessous
+> restent requises pour les actions sur les agents.
+
 ## Interprétation et fournisseur
 
 R2 utilise le même port de capture et le même fournisseur de transcription que L2 :

@@ -18,7 +18,7 @@ On prend la console et on parle. On voit d'un coup d'œil où en sont toutes ses
 
 - **La voix d'abord, la manette ensuite, le tactile en secours.** Tout se fait sans clavier.
 - **Écran du haut = le contenu**, ce qui se passe dans les sessions. **Écran du bas = la voix et les actions**, tactiles aussi.
-- **Rien ne part sans un appui sur A.** Une dictée se relit avant l'envoi. Dire « approuve » demande quand même A.
+- **Rien ne part sans un appui sur A.** Une dictée se relit avant l'envoi. Dire « approuve » demande quand même A. La navigation vocale (« où en est … ») ouvre directement la session visée ou active, sans relecture ni A (ticket 26).
 - **L'attention n'est demandée que pour une décision** : une validation, une question de l'agent, une fin de session, un échec. Le reste se consulte.
 - **L'app ne refait pas le travail des agents.** Outils, consignes et réglages restent ceux de Claude Code et Codex. On relaie ce qu'ils exposent. Quand un agent n'expose pas une information, l'app le dit au lieu d'inventer.
 - **Une app qu'on lance, rien au démarrage de la console.** Rien ne démarre au boot. À son lancement, l'app démarre le pont s'il ne tourne pas. Passer l'app en arrière-plan ou éteindre l'écran ne coupe pas une session en cours. « Quitter » arrête le pont et les sessions, avec une confirmation si une session travaille encore.
@@ -88,7 +88,7 @@ Chaque lot correspond à un ou plusieurs tickets.
 - **Options natives** : modèle, réflexion et sélecteurs ACP exposés, à la création et en session ; Plan d’abord, Modifs auto, Je valide chaque action et Tout autoriser (ticket 17).
 - **Session tout-en-un** : validations de la session dans son fil, options sur le bas, détails d’actions dépliables, dates et suivi du défilement (ticket 18).
 - **Configuration native** : MCP, consignes et permissions restent résolus par les agents, sans copie par le pont (ticket 19).
-- **Mode console** (ticket 25, ADR 19) : L2 et R2 marchent depuis toute appli grâce au service d'accessibilité de Régie, activé par l'utilisateur ; l'écran du bas suit la session quand une autre appli occupe le haut ; un message terminé, une question ou une validation de l'agent passe en carte volante par-dessus l'écran du haut (B la ferme, L2 y répond) ; Y ouvre la session console.
+- **Mode console** (tickets 25–26, ADR 19) : L2 et R2 marchent depuis toute appli grâce au service d'accessibilité de Régie, activé par l'utilisateur ; l'écran du bas suit la session quand une autre appli occupe le haut ; un message terminé, une question ou une validation de l'agent passe en carte volante par-dessus l'écran du haut (B la ferme, L2 y répond) ; Y ouvre la session console. À sa création, elle propose « Tout autoriser », modifiable dans la fiche et les réglages ; A la crée. Les sessions existantes gardent leur mode.
 - **Points écrits et notifications** :
   - fin de session, validation demandée, ou point d'avancement à la demande (Y), sous forme de résumé écrit ;
   - aucune lecture à voix haute.

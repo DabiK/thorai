@@ -23,10 +23,10 @@ object ConsoleSession {
     const val PROJECT = "console"
 
     /**
-     * Mode proposé : « Je valide chaque action ». « Plan d'abord », le mode par défaut des projets,
-     * ferait préparer un plan à l'agent au lieu d'agir sur la console.
+     * Mode proposé : « Tout autoriser » (décision utilisateur, ticket 26), modifiable dans la fiche
+     * puis les réglages. Les sessions existantes conservent leur mode.
      */
-    const val APPROVAL_MODE = "ask"
+    const val APPROVAL_MODE = "allow-all"
 
     /**
      * Reprendre la session console la plus récente (une session chargée d'abord), sinon préparer sa

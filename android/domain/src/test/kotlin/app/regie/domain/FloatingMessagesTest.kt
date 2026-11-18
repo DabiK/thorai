@@ -162,9 +162,10 @@ class FloatingMessagesTest {
         assertEquals(ConsoleLaunch.Resume(live.id), ConsoleSession.choose(listOf(old, live, other), listOf("console")))
         assertEquals(ConsoleLaunch.Resume(old.id), ConsoleSession.choose(listOf(old, other), listOf("console")))
         val create = ConsoleSession.choose(listOf(other), listOf("atelier")) as ConsoleLaunch.Create
-        assertEquals(NewSessionDraft(Agent.CLAUDE, "console", approvalMode = "ask", newProject = true), create.draft)
+        assertEquals(NewSessionDraft(Agent.CLAUDE, "console", approvalMode = "allow-all", newProject = true), create.draft)
         val existing = ConsoleSession.choose(emptyList(), listOf("console")) as ConsoleLaunch.Create
         assertEquals(Agent.CODEX, existing.draft.agent)
+        assertEquals("allow-all", existing.draft.approvalMode)
         assertFalse(existing.draft.newProject)
     }
 }

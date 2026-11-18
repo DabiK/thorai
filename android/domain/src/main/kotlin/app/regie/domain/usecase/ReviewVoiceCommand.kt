@@ -53,6 +53,17 @@ class ReviewVoiceCommand(
                     onLaunch(launch.draft, event.text)
                     return@launch
                 }
+                // Opening a conversation or the overview changes no agent state (ticket 26).
+                if (result.command is VoiceCommand.Navigate || result.command == VoiceCommand.ShowOverview) {
+                    mutable.value = state.value.copy(phase = CommandPhase.RUNNING, command = result.command)
+                    try {
+                        execute(result.command)
+                        mutable.value = VoiceCommandReview()
+                    } catch (e: CancellationException) { throw e } catch (_: Exception) {
+                        mutable.value = state.value.copy(phase = CommandPhase.DONE, notice = "Ouverture impossible. Réessaie depuis la régie.")
+                    }
+                    return@launch
+                }
                 mutable.value = state.value.copy(phase = if (result.command == null) CommandPhase.UNKNOWN else CommandPhase.REVIEW,
                     command = result.command, notice = result.description)
             }
