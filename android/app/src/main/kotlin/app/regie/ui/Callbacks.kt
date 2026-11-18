@@ -38,6 +38,12 @@ interface SessionCallbacks {
 
     /** L'avis est resté affiché assez longtemps. */
     fun onNoticeSeen(notice: SessionNotice)
+
+    /**
+     * « Voir la suivante », au toucher : la validation suivante, même pendant les réglages, qui prennent
+     * la touche R1. Le tactile reste un secours (PRD).
+     */
+    fun onNextApproval() = onButton(Button.R1)
 }
 
 /** Défilement demandé à la manette : pas de la croix, vitesse du stick droit. */

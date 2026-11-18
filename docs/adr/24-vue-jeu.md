@@ -283,7 +283,8 @@ garder le routeur d'entrées de la manette (ADR 05) et se tester sans console.
   - la fiche de nouvelle session défile au stick droit et montre toute la consigne choisie : une longue
     consigne se relit jusqu'au bout avant A (ADR 13) ;
   - pendant les réglages d'une session, la validation garde ses choix au doigt, sans touche ni curseur,
-    au-dessus des touches des réglages (ADR 15).
+    au-dessus des touches des réglages (ADR 15) ;
+  - pendant ces réglages, « Voir la suivante » touché montre la validation suivante ; la touche R1 reste aux réglages.
 - Le lien du carnet s'appelle « Préparer la console », comme l'entrée du menu de pause.
 
 

@@ -30,6 +30,9 @@ interface HouseCallbacks {
 
     /** Envoi tactile explicite du message écrit. */
     fun onSend()
+
+    /** « Voir la suivante » touché : la validation suivante, même quand les réglages prennent R1. */
+    fun onNextApproval() = onKey(PadKey.R1)
 }
 
 /** Ce que l'écran de la dictée peut demander. */
