@@ -29,6 +29,9 @@ class ReviewAgentAuthentication(private val gateway: AgentAuthenticationGateway,
         }
     }
 
+    /** Le parcours d'accueil (ticket 28) a déjà son étape des comptes : plus d'offre à la connexion. */
+    fun dismissLaunchOffer() { offered = true }
+
     fun open() {
         if (state.value.visible) return
         mutable.value = state.value.copy(visible = true, notice = "")

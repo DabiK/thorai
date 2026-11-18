@@ -28,5 +28,7 @@ fi
 (cd "$ANDROID" && ./gradlew --quiet :app:assemble"$variant")
 
 adb -s "$SERIAL" install -r "$APK"
-# Par le lanceur du paquet : le nom de la classe ne suit pas le suffixe du paquet.
-adb -s "$SERIAL" shell am start -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -p "$APP_ID" "$@"
+# Par le lanceur du paquet : le nom de la classe ne suit pas le suffixe du paquet. « am start -p »
+# exige CATEGORY_DEFAULT, qu'un lanceur n'a pas : on résout d'abord son activité.
+launcher="$(adb -s "$SERIAL" shell cmd package resolve-activity --brief -c android.intent.category.LAUNCHER "$APP_ID" | tail -n 1 | tr -d '\r')"
+adb -s "$SERIAL" shell am start -n "$launcher" "$@"

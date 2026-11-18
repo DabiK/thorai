@@ -24,9 +24,8 @@ import android.app.Application
 import android.hardware.display.DisplayManager
 import android.os.Process
 import android.util.Log
-import app.regie.console.ExternalBridge
-import app.regie.console.TermuxBridgeLauncher
-import app.regie.console.WirelessDebuggingAccess
+import app.regie.console.AndroidSetup
+import app.regie.console.ConsoleBridge
 import app.regie.display.DisplayMonitor
 import app.regie.domain.model.Delivery
 import app.regie.domain.model.LiveSession
@@ -67,6 +66,10 @@ import app.regie.overview.OverviewController
 import app.regie.overview.OverviewList
 import app.regie.session.Screen
 import app.regie.domain.usecase.ReviewAgentAuthentication
+import app.regie.domain.usecase.ReviewSetup
+import app.regie.display.ScreenMode
+import app.regie.voice.api.ProviderStatus
+import app.regie.voice.api.VoiceError
 import app.regie.domain.usecase.ReviewSessionSettings
 import app.regie.domain.model.SessionSettingsReview
 import app.regie.session.SessionAction
@@ -190,6 +193,143 @@ class AppContainer(
         controller.releaseTriggers()
         sessionController.releaseTriggers()
     }
+    // --- Parcours d'accueil (ticket 28) ---
+
+    private val androidSetup = AndroidSetup(app, android.content.ComponentName(app, ConsoleService::class.java))
+    val setup = ReviewSetup(androidSetup, ::performSetup)
+    private var setupJob: Job? = null
+    private var setupAgents: List<AgentAuthentication>? = null
+    private val refusedPermissions = mutableSetOf<SetupPermission>()
+    private var voiceDownload: VoiceModel? = null
+    private var voiceDownloadJob: Job? = null
+
+    /** Le stick droit fait défiler l'explication de l'étape, sur l'écran du haut qui n'est pas tactile. */
+    val setupVelocity = MutableStateFlow(0f)
+
+    /** Une permission que l'activité visible doit demander : seule une activité peut afficher la demande. */
+    val permissionRequests = kotlinx.coroutines.flow.MutableSharedFlow<SetupPermission>(extraBufferCapacity = 4)
+
+    /** Le parcours n'a jamais été mené au bout ni refermé : il remplace les demandes du premier lancement. */
+    val setupPending: Boolean get() = setup.pending
+
+    /** Au lancement : la bienvenue, si le parcours n'a jamais été mené au bout. */
+    fun offerSetup() {
+        if (!setup.offerOnLaunch()) return
+        authenticationReview?.dismissLaunchOffer()
+        followSetup()
+    }
+
+    /** « Configurer », depuis l'accueil : la première étape qui n'est pas faite. */
+    fun openSetup() {
+        if (dictation.state.value.visible || voiceCommand.state.value.visible || newSession.value.visible || controller.state.value.quit != null) return
+        controller.releaseTriggers(); sessionController.releaseTriggers()
+        setup.update(readSetup())
+        setup.open()
+        followSetup()
+    }
+
+    /** En debug seulement (extra `setup_step`) : une étape précise, pour la capturer. */
+    fun openSetupAt(step: SetupStep) {
+        setup.update(readSetup())
+        setup.open(at = step)
+        followSetup()
+    }
+
+    /** Relit l'état de la console chaque seconde tant que le parcours est ouvert : les étapes passent seules au vert. */
+    private fun followSetup() {
+        if (setupJob?.isActive == true) return
+        setupJob = scope.launch {
+            var tick = 0
+            while (setup.state.value.visible) {
+                val chosen = gateway
+                if (tick % 3 == 0 && chosen != null && chosen.connection.value == BridgeConnection.Connected) {
+                    setupAgents = try { chosen.authentication() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { setupAgents }
+                }
+                setup.update(readSetup())
+                tick++
+                delay(SETUP_POLL)
+            }
+        }
+    }
+
+    private fun readSetup() = SetupChecks(
+        termux = androidSetup.termuxInstalled(),
+        runCommand = androidSetup.granted(SetupPermission.RUN_COMMAND),
+        bridge = overview.value.bridge,
+        microphone = androidSetup.granted(SetupPermission.MICROPHONE),
+        voiceModel = voiceModel(),
+        notifications = androidSetup.granted(SetupPermission.NOTIFICATIONS),
+        consoleMode = consoleService.value || androidSetup.consoleModeEnabled(),
+        androidAccess = androidSetup.androidAccess(),
+        wirelessDebugging = androidSetup.wirelessDebugging(),
+        agents = setupAgents ?: gateway?.agents?.value?.takeIf { it.isNotEmpty() }?.map { AgentAuthentication(it.agent, it.connected) },
+        refused = refusedPermissions.filterNot(androidSetup::granted).toSet(),
+    )
+
+    private fun voiceModel(): VoiceModel = when {
+        voiceSettings.value.provider == DictationProvider.ELEVENLABS -> VoiceModel.NotNeeded
+        localVoice.speechToTextInstalled -> VoiceModel.Installed
+        else -> voiceDownload ?: VoiceModel.Missing(localVoice.speechToTextDownloadBytes, localVoice.speechToTextFreeBytes)
+    }
+
+    /** Transcription seule, chargée une fois : la première dictée démarre aussitôt. */
+    private fun downloadVoice() {
+        if (voiceDownloadJob?.isActive == true) return
+        voiceDownload = VoiceModel.Downloading(0f)
+        voiceDownloadJob = scope.launch {
+            localVoice.prepareSpeechToText().collect { status ->
+                voiceDownload = when (status) {
+                    is ProviderStatus.Downloading -> VoiceModel.Downloading(status.progress)
+                    ProviderStatus.Ready -> null
+                    is ProviderStatus.Unavailable -> VoiceModel.Failed(when (val error = status.error) {
+                        VoiceError.Offline -> VoiceModelFailure.OFFLINE
+                        is VoiceError.Provider -> if (error.code == "storage_full" || error.code == "storage") VoiceModelFailure.STORAGE else VoiceModelFailure.OTHER
+                        else -> VoiceModelFailure.OTHER
+                    })
+                }
+                Log.i(TAG, "modèle de voix : ${status.javaClass.simpleName}")
+                setup.update(readSetup())
+            }
+        }
+    }
+
+    /** L'écran tactile : celui du bas s'il est là, sinon le seul écran. */
+    private fun touchDisplay(): Int = (displays.mode.value as? ScreenMode.Dual)?.bottomDisplayId ?: android.view.Display.DEFAULT_DISPLAY
+
+    /** Les permissions se demandent depuis l'écran tactile, le bas s'il est affiché. */
+    fun asksPermissions(bottom: Boolean): Boolean = bottom == (bottomStarted.value && displays.mode.value is ScreenMode.Dual)
+
+    /** Réponse à une demande : refusée sans retour possible, seule la page des infos de l'appli l'accorde. */
+    fun onPermissionAnswer(permission: SetupPermission, granted: Boolean, askAgain: Boolean) {
+        if (!granted && !askAgain) refusedPermissions += permission
+        Log.i(TAG, "permission $permission : ${if (granted) "accordée" else "refusée"}")
+        if (granted && permission == SetupPermission.RUN_COMMAND) runStartUp()
+        setup.update(readSetup())
+    }
+
+    private fun performSetup(action: SetupAction) {
+        Log.i(TAG, "accueil : $action")
+        when (action) {
+            SetupAction.OPEN_TERMUX_RELEASES -> androidSetup.openTermuxReleases(touchDisplay())
+            // Copiées, puis Termux s'ouvre sur l'écran tactile, où l'on colle et tape.
+            SetupAction.COPY_INSTALL_COMMANDS -> { androidSetup.copy("Installation", SetupCommands.INSTALL); androidSetup.openTermux(touchDisplay()) }
+            SetupAction.COPY_PAIRING_COMMANDS -> { androidSetup.copy("Association", SetupCommands.pairing(app.packageName)); androidSetup.openTermux(touchDisplay()) }
+            SetupAction.GRANT_RUN_COMMAND -> permissionRequests.tryEmit(SetupPermission.RUN_COMMAND)
+            SetupAction.GRANT_MICROPHONE -> permissionRequests.tryEmit(SetupPermission.MICROPHONE)
+            SetupAction.GRANT_NOTIFICATIONS -> permissionRequests.tryEmit(SetupPermission.NOTIFICATIONS)
+            SetupAction.RETRY_BRIDGE -> runStartUp()
+            SetupAction.DOWNLOAD_VOICE -> downloadVoice()
+            SetupAction.OPEN_ACCESSIBILITY -> androidSetup.openAccessibility(touchDisplay())
+            SetupAction.OPEN_APP_INFO -> androidSetup.openAppInfo(touchDisplay())
+            // En haut, à la croix : la fenêtre d'association y reste ouverte pendant qu'on tape dans Termux, en bas.
+            SetupAction.OPEN_DEVELOPER_OPTIONS -> androidSetup.openDeveloperOptions(android.view.Display.DEFAULT_DISPLAY)
+            SetupAction.OPEN_AGENTS -> openAgentAuthentication()
+            SetupAction.CREATE_SESSION -> openNewSession()
+            SetupAction.NEXT, SetupAction.BACK, SetupAction.SKIP, SetupAction.CLOSE -> Unit
+        }
+        setup.update(readSetup())
+    }
+
     private var executeVoiceCommand: ExecuteVoiceCommand? = null
     private var projects: List<String> = emptyList()
     val voiceCommand = ReviewVoiceCommand(capture, InterpretVoiceCommand(MistralCommandModel(voicePreferences::commandKey)),
@@ -247,6 +387,7 @@ class AppContainer(
             controller.handle(input)
             diffVelocity.value = 0f
             newSessionVelocity.value = 0f
+            setupVelocity.value = 0f
         }
         if (agentAuthentication.value.visible) {
             if (input is GamepadInput.Pressed) when (input.button) {
@@ -255,6 +396,18 @@ class AppContainer(
                 Button.LEFT, Button.UP -> authenticationReview?.move(-1)
                 Button.RIGHT, Button.DOWN -> authenticationReview?.move(1)
                 Button.Y -> authenticationReview?.refresh()
+                else -> Unit
+            }
+            return
+        }
+        if (setup.state.value.visible) {
+            val keys = setup.state.value.keys
+            if (input is GamepadInput.Scroll) setupVelocity.value = input.velocity
+            if (input is GamepadInput.Pressed) when (input.button) {
+                Button.A -> setup.press(keys.a)
+                Button.B -> setup.press(keys.b)
+                Button.X -> setup.press(keys.x)
+                Button.Y -> setup.press(keys.y)
                 else -> Unit
             }
             return
@@ -533,8 +686,9 @@ class AppContainer(
      * agents) se referme d'abord. Le reste suit le chemin habituel.
      */
     private fun handleConsoleInput(input: GamepadInput) {
+        // Le parcours d'accueil ouvert (Termux ou les réglages en bas, par exemple) : L2 ne dicte rien.
         val busy = dictation.state.value.visible || voiceCommand.state.value.visible || newSession.value.visible ||
-            controller.state.value.quit != null
+            controller.state.value.quit != null || setup.state.value.visible
         val card = floatingCard.value?.takeIf { !busy }
         val l2 = input is GamepadInput.TriggerDown && input.trigger == Trigger.L2
         if (card != null) when {
@@ -615,8 +769,9 @@ class AppContainer(
     var replaying = false
         private set
 
-    /** Termux présent : transport local de la Thor ; absent : pont externe du banc. */
-    val hasTermux = TermuxBridgeLauncher.isInstalled(app)
+    /** Termux, relu à chaque demande : transport local de la Thor ; absent, pont externe du banc. */
+    private val consoleBridge = ConsoleBridge(app)
+    val hasTermux: Boolean get() = consoleBridge.hasTermux
 
     /**
      * Branche la passerelle, une fois pour le processus. [replay] choisit la passerelle factice, qui
@@ -625,9 +780,8 @@ class AppContainer(
     fun start(replay: Boolean) {
         if (gateway != null) return
         replaying = replay
-        val external = ExternalBridge()
-        val launcher = if (hasTermux) TermuxBridgeLauncher(app) else external
-        val androidAccess = if (hasTermux) WirelessDebuggingAccess(app) else external
+        val launcher = consoleBridge
+        val androidAccess = consoleBridge
         val chosen: AgentGateway = gatewayFactory?.invoke() ?: if (replay) {
             ReplayAgentGateway()
         } else {
@@ -641,12 +795,13 @@ class AppContainer(
         val reports: StateFlow<StartUpReport?> = if (replay) {
             MutableStateFlow(null)
         } else {
-            StartUp(chosen, androidAccess, launcher, pairing = launcher as? app.regie.domain.port.BridgePairing).also { startUp = it }.report
+            StartUp(chosen, androidAccess, launcher, pairing = launcher).also { startUp = it }.report
         }
         gateway = chosen
         authenticationReview = ReviewAgentAuthentication(chosen, scope).also { review ->
             scope.launch { review.state.collect { agentAuthentication.value = it } }
-            scope.launch { chosen.connection.collect { if (it == BridgeConnection.Connected) review.offerOnLaunch() } }
+            // Le parcours d'accueil ouvert a son étape des comptes : pas de seconde offre par-dessus.
+            scope.launch { chosen.connection.collect { if (it == BridgeConnection.Connected && !setup.state.value.visible) review.offerOnLaunch() } }
         }
         settingsReview = ReviewSessionSettings(chosen, scope).also { review -> scope.launch { review.state.collect { sessionSettings.value = it } } }
         reviewNewSession = ReviewNewSession(chosen, capture, scope) { openSession(it) }.also { review ->
@@ -830,6 +985,7 @@ class AppContainer(
         const val CLOSE_DELAY_MS = 400L
         val SECOND_A_IGNORED = 500.milliseconds
         val CARD_KEYS_DELAY = 1000.milliseconds
+        val SETUP_POLL = 1000.milliseconds
         val DICTATION_KEYS = setOf(Button.A, Button.B, Button.X, Button.Y, Button.UP, Button.DOWN, Button.LEFT, Button.RIGHT)
     }
 }
