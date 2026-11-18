@@ -1,6 +1,8 @@
 package app.regie.ui.game
 
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.res.stringResource
@@ -14,6 +16,8 @@ import app.regie.domain.model.Neighbours
 import app.regie.domain.model.Session
 import app.regie.domain.model.SessionSettingsReview
 import app.regie.domain.usecase.ApprovalReview
+import app.regie.game.ui.approval.ApprovalMenu
+import app.regie.game.ui.approval.ApprovalParchment
 import app.regie.game.ui.atlas.rememberGameAssets
 import app.regie.game.ui.house.AgentBlock
 import app.regie.game.ui.house.AgentSpan
@@ -36,7 +40,6 @@ import app.regie.session.SessionNotice
 import app.regie.ui.formatAge
 import app.regie.ui.markdown.Markdown
 import app.regie.ui.markdown.MdBlock
-import app.regie.ui.screens.InlineApproval
 import app.regie.ui.screens.SessionCallbacks
 import app.regie.ui.screens.ThreadScroll
 import app.regie.ui.screens.recognizedTerms
@@ -76,7 +79,8 @@ private fun ThreadScroll.input() = ScrollInput(steps, velocity)
 
 /**
  * L'écran du haut d'une session : la maison. Un seul écran : le carnet (ou la dictée, [dictationPanel])
- * prend la droite, la validation finit le fil comme avant.
+ * prend la droite. Une validation (ticket 47) : l'habitant tend son parchemin, borné, dans la pièce ;
+ * le parchemin entier finit le fil du carnet et le menu de choix prend la place des touches.
  */
 @Composable
 fun GameSessionTop(
@@ -91,29 +95,31 @@ fun GameSessionTop(
     callbacks: SessionCallbacks,
     approval: ApprovalReview,
     onDecision: (ApprovalId, ApprovalDecision) -> Unit,
-    onNextApproval: () -> Unit,
     onDismissApproval: () -> Unit,
     onSelectSetting: (Int) -> Unit,
     dictation: DictationReview,
     dictationPanel: (@Composable () -> Unit)?,
 ) {
     val now by rememberNow()
-    // Une dictée ou la table en modification capte A, B et X : la carte garde ses touchers, sans puces.
-    val shortcuts = !settings.visible && !dictation.visible
-    val card: (@Composable () -> Unit)? = if (approval.request != null) ({
-        InlineApproval(approval, onDecision, onNextApproval, shortcutsEnabled = shortcuts, onDismiss = onDismissApproval)
+    val assets = rememberGameAssets()
+    // Le parchemin tendu dans la pièce, tant que la validation attend ; borné, il renvoie au fil pour la suite.
+    val request = approval.request?.takeIf { approval.pending || approval.sending }
+    val card: (@Composable () -> Unit)? = if (request != null) ({
+        val scroll = rememberScrollState()
+        LaunchedEffect(request.id) { scroll.scrollTo(0) }
+        ApprovalParchment(request, live?.session?.agent, assets, scroll = scroll, overflowNote = true)
     }) else null
     GameTheme {
         HouseTopScreen(
-            live, gone, rememberGameAssets(), rememberInteriorScenes(),
+            live, gone, assets, rememberInteriorScenes(),
             ageLabel = live?.session?.let { formatAge(now - it.updatedAt) },
             dictation = dictation,
             format = MarkdownFormat,
             approval = card,
             single = if (!singleScreen) null else ({
                 dictationPanel?.invoke() ?: SessionCarnet(
-                    live, gone, neighbours, control, draft, settings, scroll, callbacks, approval, onDecision, onNextApproval,
-                    onDismissApproval, onSelectSetting, compact = true, threadApproval = card,
+                    live, gone, neighbours, control, draft, settings, scroll, callbacks, approval, onDecision,
+                    onDismissApproval, onSelectSetting, compact = true,
                 )
             }),
         )
@@ -133,12 +139,11 @@ fun GameSessionBottom(
     callbacks: SessionCallbacks,
     approval: ApprovalReview,
     onDecision: (ApprovalId, ApprovalDecision) -> Unit,
-    onNextApproval: () -> Unit,
     onDismissApproval: () -> Unit,
     onSelectSetting: (Int) -> Unit,
 ) {
     GameTheme {
-        SessionCarnet(live, gone, neighbours, control, draft, settings, scroll, callbacks, approval, onDecision, onNextApproval, onDismissApproval, onSelectSetting)
+        SessionCarnet(live, gone, neighbours, control, draft, settings, scroll, callbacks, approval, onDecision, onDismissApproval, onSelectSetting)
     }
 }
 
@@ -154,13 +159,13 @@ private fun SessionCarnet(
     callbacks: SessionCallbacks,
     approval: ApprovalReview,
     onDecision: (ApprovalId, ApprovalDecision) -> Unit,
-    onNextApproval: () -> Unit,
     onDismissApproval: () -> Unit,
     onSelectSetting: (Int) -> Unit,
     compact: Boolean = false,
-    threadApproval: (@Composable () -> Unit)? = null,
 ) {
     val notice = control.notice
+    val assets = rememberGameAssets()
+    val request = approval.request
     val house = remember(callbacks, onSelectSetting) { callbacks.house(onSelectSetting) }
     val input = remember(scroll) { scroll.input() }
     HouseBottomScreen(
@@ -172,11 +177,15 @@ private fun SessionCarnet(
         scroll = input,
         callbacks = house,
         format = MarkdownFormat,
-        approval = if (approval.request != null) ({
-            InlineApproval(approval, onDecision, onNextApproval, details = false, onDismiss = onDismissApproval)
+        // Le menu de choix prend la place des touches ; R1 vers la suivante passe par la barre des voisines.
+        approval = if (request != null) ({
+            ApprovalMenu(approval, standalone = false, onChoose = { onDecision(request.id, it.decision) }, onDismiss = onDismissApproval)
         }) else null,
-        approvalQueued = approval.queue.any { it.id != approval.request?.id },
-        threadApproval = threadApproval,
+        approvalQueued = approval.queue.any { it.id != request?.id },
+        // Le parchemin entier finit le fil : la croix et le stick le lisent jusqu'au bout, l'écran du haut n'étant pas tactile.
+        threadApproval = if (request != null && (approval.pending || approval.sending)) ({
+            ApprovalParchment(request, live?.session?.agent, assets)
+        }) else null,
         compact = compact,
     )
 }

@@ -13,7 +13,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import app.regie.console.TermuxBridgeLauncher
 import app.regie.display.ScreenMode
 import app.regie.input.GamepadInput
-import app.regie.ui.screens.ApprovalTopScreen
 import app.regie.ui.screens.OverviewTopScreen
 import kotlinx.coroutines.launch
 
@@ -67,9 +66,11 @@ class TopActivity : GamepadActivity() {
                 val review by container.approvalReview.collectAsStateWithLifecycle()
                 val overview by container.overview.collectAsStateWithLifecycle()
                 val mode by container.displays.mode.collectAsStateWithLifecycle()
-                ApprovalTopScreen(review, overview, mode == ScreenMode.Single,
+                // Le parchemin et le menu de choix (ticket 47).
+                app.regie.ui.game.GameApprovalTop(review, overview, mode == ScreenMode.Single,
                     container.approvalController.scrollSteps, container.approvalController.scrollVelocity,
                     onButton = { container.handleInput(GamepadInput.Pressed(it)) },
+                    onHeld = { container.touchTrigger(app.regie.input.Trigger.L2, it) },
                     onSelect = container::selectApproval)
             },
             overview = { overview, control ->
@@ -94,7 +95,7 @@ class TopActivity : GamepadActivity() {
                 }) else null
                 val neighbours = overview.neighboursOf(shown.id)
                 app.regie.ui.game.GameSessionTop(live, gone = neighbours == null, neighbours, control, draft, options, single, threadScroll, sessionCallbacks,
-                    approval, container::answerInline, container::nextInlineApproval, container::dismissInlineApproval, container::selectSessionSetting,
+                    approval, container::answerInline, container::dismissInlineApproval, container::selectSessionSetting,
                     dictation, dictationPanel)
             },
         )

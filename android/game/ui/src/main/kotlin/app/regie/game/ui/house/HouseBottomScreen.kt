@@ -54,10 +54,10 @@ import kotlinx.coroutines.delay
  * moment, la table des réglages exposés par l'agent, le message écrit de secours et les touches
  * (B, X, L2, Start). Droite ou un toucher sur un réglage passe la table en modification
  * ([settings] visible) : la croix choisit, A applique, B referme. Une validation en attente
- * ([approval]) prend la place des touches.
+ * ([approval], le menu de choix) prend la place des touches ; son parchemin entier ([threadApproval])
+ * termine le fil, que la croix et le stick font défiler.
  *
- * [compact] : mode un seul écran, le carnet occupe la droite de l'écran du haut ; [threadApproval]
- * termine alors le fil.
+ * [compact] : mode un seul écran, le carnet occupe la droite de l'écran du haut.
  */
 @Composable
 fun HouseBottomScreen(

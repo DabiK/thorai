@@ -66,7 +66,8 @@ import kotlin.time.Instant
  * Le fil brut de la session, dans le carnet du bas : messages, réponses de l'agent, actions sur une
  * ligne (un toucher déplie leur détail), texte en cours. Rien n'y est ajouté par Régie (ADR 17).
  * La fin reste visible tant qu'on ne remonte pas ; la croix et le stick droit font défiler.
- * [approval] s'ajoute en fin de fil (mode un seul écran).
+ * [approval], le parchemin entier de la validation en attente, finit le fil sur un ou deux écrans :
+ * l'écran du haut n'est pas tactile, c'est ici que la manette le lit jusqu'au bout.
  */
 @Composable
 fun HouseThread(
@@ -87,6 +88,8 @@ fun HouseThread(
     suspend fun bottom() {
         if (lastIndex < 0) return
         listState.scrollToItem(lastIndex)
+        // Une validation finit le fil : on la lit depuis son début, la croix descend vers la suite (ticket 47).
+        if (approval != null) return
         listState.scrollBy(listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == lastIndex }?.size?.toFloat() ?: 0f)
     }
     LaunchedEffect(listState, lastIndex) {
