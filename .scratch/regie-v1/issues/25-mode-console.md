@@ -1,6 +1,6 @@
 # 25 — Mode console : parler à l'agent depuis n'importe quelle appli et le suivre
 
-Statut : à fusionner
+Statut : fait (L2 depuis une autre appli à vérifier avec l'utilisateur, après activation du service)
 Possède : `android/`
 
 ## Retour de l'utilisateur, 18 novembre
