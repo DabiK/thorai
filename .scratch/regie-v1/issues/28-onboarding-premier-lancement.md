@@ -18,7 +18,7 @@ Demande de l'utilisateur, 18 novembre : un parcours d'onboarding au premier lanc
   5. notifications ;
   6. mode console : le service d'accessibilité, facultatif, avec ce qu'il apporte ;
   7. accès des agents à Android : association du débogage sans fil, facultatif, avec la marche à suivre ;
-  8. connexion des agents (écran du ticket 23) ;
+  8. connexion des agents (écran du ticket 23) : Claude, Codex et opencode (ticket 31 ; pour opencode Go, saisie de la clé d'API par l'utilisateur), chacun facultatif ;
   9. fini : lancer une première session.
 - **Chaque étape facultative** peut être passée. Le parcours se rouvre depuis l'accueil (« Configurer ») et reprend à la première étape non faite.
 - **Les textes** suivent `docs/textes.md`. Le système visuel est celui de Régie.
