@@ -60,6 +60,9 @@ class TopActivity : GamepadActivity() {
             askRunCommandPermission()
             if (!askingPermission) askNotificationPermission()
         }
+        // Vue jeu (ticket 49) : l'écran titre, au premier lancement du processus. Le parcours d'accueil
+        // passe devant tant qu'il est ouvert ; une notification ouverte écarte le titre.
+        container.showTitle()
         openNotification(intent)
 
         setScreen(

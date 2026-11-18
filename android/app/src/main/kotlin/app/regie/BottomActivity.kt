@@ -40,7 +40,14 @@ class BottomActivity : GamepadActivity() {
                 // occupe le haut, le carnet nomme la session suivie (ticket 25).
                 val topVisible by container.topStarted.collectAsStateWithLifecycle()
                 val neighbours = overview.neighboursOf(shown.id)
-                app.regie.ui.game.GameSessionBottom(live, gone = neighbours == null, neighbours, control, draft, settings, threadScroll, sessionCallbacks,
+                val session = live?.session?.takeIf { it.id == shown.id } ?: overview.sessions.firstOrNull { it.id == shown.id }
+                // Vue jeu (ticket 49) : la session console, quand une autre appli occupe le haut, a la tour en
+                // en-tête ; le carnet du 46 reste dessous, avec son fil, ses avis et son brouillon.
+                if (!topVisible && session?.project == app.regie.domain.usecase.ConsoleSession.PROJECT) {
+                    app.regie.ui.game.ConsoleSessionBottom(session, live, gone = neighbours == null, neighbours, control, draft, settings, threadScroll,
+                        sessionCallbacks, approval, container::answerInline, container::nextInlineApproval, container::dismissInlineApproval,
+                        container::selectSessionSetting)
+                } else app.regie.ui.game.GameSessionBottom(live, gone = neighbours == null, neighbours, control, draft, settings, threadScroll, sessionCallbacks,
                     approval, container::answerInline, container::nextInlineApproval, container::dismissInlineApproval, container::selectSessionSetting,
                     console = !topVisible)
             },
