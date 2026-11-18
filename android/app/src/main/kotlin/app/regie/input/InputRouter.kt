@@ -7,12 +7,19 @@ import kotlin.math.abs
  * Routeur d'entrées unique de l'app : les deux activités lui passent les touches
  * et les axes de la manette, il publie des [GamepadInput].
  *
+ * Il publie aussi, à part ([held]), les directions tenues : de l'appui au relâché d'une flèche de la
+ * croix, sans ses répétitions, et la direction dominante du stick gauche. Le coursier du hameau
+ * marche tant qu'une direction est tenue ; les listes, elles, suivent les [GamepadInput.Pressed].
+ *
  * L2 et R2 arrivent à la fois en touche et en axe : une gâchette est maintenue tant
  * que l'une des deux sources l'est, si bien qu'un seul début et une seule fin sont publiés.
  *
  * N'utilise d'Android que les constantes de [KeyEvent], ce qui le garde testable en JVM.
  */
-class InputRouter(private val sink: (GamepadInput) -> Unit) {
+class InputRouter(
+    private val sink: (GamepadInput) -> Unit,
+    private val held: (Button, Boolean) -> Unit = { _, _ -> },
+) {
 
     private class TriggerState {
         var keyHeld = false
@@ -23,6 +30,12 @@ class InputRouter(private val sink: (GamepadInput) -> Unit) {
     private val triggers = Trigger.entries.associateWith { TriggerState() }
     private var lastScroll = 0f
 
+    /** Les flèches de la croix enfoncées, dans l'ordre d'appui. */
+    private val heldKeys = LinkedHashSet<Button>()
+
+    /** La direction tenue au stick gauche, ou null au centre. */
+    private var stickDirection: Button? = null
+
     /** Retourne `true` si la touche est consommée : elle n'ira ni au système de focus ni aux raccourcis système. */
     fun onKey(keyCode: Int, isDown: Boolean, repeatCount: Int): Boolean {
         TRIGGER_KEYS[keyCode]?.let { trigger ->
@@ -32,6 +45,7 @@ class InputRouter(private val sink: (GamepadInput) -> Unit) {
         BUTTON_KEYS[keyCode]?.let { button ->
             val repeats = button in DIRECTIONS
             if (isDown && (repeatCount == 0 || repeats)) sink(GamepadInput.Pressed(button))
+            if (repeats) holdKey(button, isDown)
             return true
         }
         // Raccourci système de A (DPAD_CENTER) et touche Entrée : avalés pour éviter un clic parasite.
@@ -47,6 +61,41 @@ class InputRouter(private val sink: (GamepadInput) -> Unit) {
             lastScroll = scroll
             sink(GamepadInput.Scroll(scroll))
         }
+        updateStick(axes.leftStickX, axes.leftStickY)
+    }
+
+    private fun holdKey(button: Button, isDown: Boolean) {
+        if (isDown) {
+            if (heldKeys.add(button)) held(button, true)
+        } else if (heldKeys.remove(button)) {
+            held(button, false)
+        }
+    }
+
+    /**
+     * La direction dominante du stick gauche, avec hystérésis : elle part au-delà de [LEFT_STICK_PRESS]
+     * et tient jusqu'à ce que son axe redescende sous [LEFT_STICK_RELEASE].
+     */
+    private fun updateStick(x: Float, y: Float) {
+        val current = stickDirection
+        val keep = current != null && when (current) {
+            Button.LEFT -> -x
+            Button.RIGHT -> x
+            Button.UP -> -y
+            else -> y
+        } >= LEFT_STICK_RELEASE && current == dominant(x, y, LEFT_STICK_RELEASE)
+        if (keep) return
+        val next = dominant(x, y, LEFT_STICK_PRESS)
+        if (next == current) return
+        current?.let { held(it, false) }
+        stickDirection = next
+        next?.let { held(it, true) }
+    }
+
+    private fun dominant(x: Float, y: Float, threshold: Float): Button? = when {
+        abs(x) < threshold && abs(y) < threshold -> null
+        abs(x) >= abs(y) -> if (x > 0) Button.RIGHT else Button.LEFT
+        else -> if (y > 0) Button.DOWN else Button.UP
     }
 
     /** Termine les appuis en cours : la manette ne nous parle plus, par exemple quand une autre appli prend l'écran. */
@@ -60,6 +109,11 @@ class InputRouter(private val sink: (GamepadInput) -> Unit) {
         if (lastScroll != 0f) {
             lastScroll = 0f
             sink(GamepadInput.Scroll(0f))
+        }
+        heldKeys.toList().forEach { holdKey(it, isDown = false) }
+        stickDirection?.let {
+            stickDirection = null
+            held(it, false)
         }
     }
 
@@ -89,6 +143,10 @@ class InputRouter(private val sink: (GamepadInput) -> Unit) {
         const val AXIS_PRESS = 0.5f
         const val AXIS_RELEASE = 0.25f
         const val STICK_DEAD_ZONE = 0.2f
+
+        /** Seuils du stick gauche : il fait marcher au-delà du premier et s'arrête sous le second. */
+        const val LEFT_STICK_PRESS = 0.5f
+        const val LEFT_STICK_RELEASE = 0.3f
 
         private val TRIGGER_KEYS = mapOf(
             KeyEvent.KEYCODE_BUTTON_L2 to Trigger.L2,

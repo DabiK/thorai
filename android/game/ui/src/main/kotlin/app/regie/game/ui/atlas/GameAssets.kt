@@ -173,9 +173,25 @@ fun rememberGameAssets(directory: String = GameAssetLoader.DIRECTORY): GameAsset
  * empreinte et porte viennent de l'atlas. `null` si l'atlas n'en donne aucun de valide.
  * La cheminée et les fenêtres (en pixels de l'image dans l'atlas) restent au ticket 52.
  */
-fun GameAssets.houseCatalog(): HouseCatalog? {
-    val models = atlases.flatMap { atlas ->
-        atlas.spec.objects.filterKeys { it.startsWith("maison.") }.mapNotNull { (id, house) ->
+fun GameAssets.houseCatalog(): HouseCatalog? = houseCatalogOf(atlases.map { it.spec })
+
+/**
+ * Les modèles de maison lus dans `maisons.json` seul, sans décoder d'image : la vue d'ensemble
+ * génère le hameau dès la première vue d'ensemble, avant que les atlas ne soient chargés (ticket 45).
+ * `null` si le fichier manque ou ne donne aucun modèle valide.
+ */
+fun GameAssetLoader.houseCatalog(assets: AssetManager, directory: String = DIRECTORY): HouseCatalog? = try {
+    val spec = assets.open("$directory/maisons.json").use { AssetJson.parseAtlas(it.readBytes().decodeToString()) }
+    houseCatalogOf(listOf(spec))
+} catch (_: IOException) {
+    null
+} catch (_: IllegalArgumentException) {
+    null
+}
+
+private fun houseCatalogOf(specs: List<AtlasSpec>): HouseCatalog? {
+    val models = specs.flatMap { spec ->
+        spec.objects.filterKeys { it.startsWith("maison.") }.mapNotNull { (id, house) ->
             val door = house.door ?: return@mapNotNull null
             try {
                 HouseModel(id, house.footprint.w, house.footprint.h, door.x, door.y)

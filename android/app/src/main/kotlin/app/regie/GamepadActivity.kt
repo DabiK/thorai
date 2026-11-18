@@ -252,6 +252,8 @@ private class GamepadWindowCallback(
                     leftTrigger = max(event.getAxisValue(MotionEvent.AXIS_LTRIGGER), event.getAxisValue(MotionEvent.AXIS_BRAKE)),
                     rightTrigger = max(event.getAxisValue(MotionEvent.AXIS_RTRIGGER), event.getAxisValue(MotionEvent.AXIS_GAS)),
                     rightStickY = event.getAxisValue(MotionEvent.AXIS_RZ),
+                    leftStickX = event.getAxisValue(MotionEvent.AXIS_X),
+                    leftStickY = event.getAxisValue(MotionEvent.AXIS_Y),
                 ),
             )
         }

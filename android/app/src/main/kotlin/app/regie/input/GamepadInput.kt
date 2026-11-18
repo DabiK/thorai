@@ -16,5 +16,14 @@ sealed interface GamepadInput {
     data class Scroll(val velocity: Float) : GamepadInput
 }
 
-/** Valeurs d'axes utiles, de 0 à 1 pour les gâchettes et de -1 à 1 pour le stick. */
-data class TriggerAxes(val leftTrigger: Float, val rightTrigger: Float, val rightStickY: Float)
+/**
+ * Valeurs d'axes utiles, de 0 à 1 pour les gâchettes et de -1 à 1 pour les sticks. Le stick gauche
+ * fait marcher le coursier sur le hameau (`da-jeu.md`, « Manette »).
+ */
+data class TriggerAxes(
+    val leftTrigger: Float,
+    val rightTrigger: Float,
+    val rightStickY: Float,
+    val leftStickX: Float = 0f,
+    val leftStickY: Float = 0f,
+)
