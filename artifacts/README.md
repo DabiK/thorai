@@ -4,9 +4,14 @@
 résultats de portes, régressions rouges/vertes, journaux et comptes rendus.
 Les numéros sont ceux des tickets, indépendants des ADR.
 
-La vitrine utilise uniquement [les deux captures de session du ticket 20](screenshots/20/),
-sur un projet de démonstration et un émulateur à deux écrans, avec un vrai Codex.
-Elles ont été ouvertes et inspectées ; aucun montage ni texte inventé.
+Le README et la notice d’installation utilisent des captures récentes, toutes
+ouvertes et inspectées, sans texte inventé : la session et ses réglages
+(`22/apres-reglage-applique-*`), la dictée (`25/04-dictee-relue-bas`), Wikipédia
+ouvert par Codex (`24/wikipedia-haut`), Thor réelle ; la connexion de Codex
+(`23/09-final-simulation-code-*`), banc d’essai avec un code fictif.
+[`screenshots/vitrine/`](screenshots/vitrine/) contient `accueil-haut.png`, recadrage de
+`26/09-final-clean-haut.png` aux seules sessions de démonstration, et `accueil-bas.png`,
+écran du bas de l’accueil pris sur la Thor le 18 novembre.
 
 Les anciennes captures illustrent la version du ticket au moment de son essai ;
 elles ne décrivent pas toutes l’interface actuelle. Les exports XML, WAV et clients

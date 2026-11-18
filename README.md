@@ -1,287 +1,101 @@
 # Régie
 
-**Régie transforme l’AYN Thor en poste de pilotage à la voix et à la manette pour Claude Code et Codex, avec le travail en haut et les commandes en bas.**
+**Régie fait de la console AYN Thor un poste de pilotage pour Claude Code et Codex : on parle à l’agent, on suit son travail sur l’écran du haut et on le règle sur l’écran du bas, à la manette.**
 
-| Écran du haut : suivre la session | Écran du bas : régler et agir |
+| Écran du haut : le fil de la session | Écran du bas : les réglages de l’agent |
 | --- | --- |
-| ![Fil brut de la session Codex](artifacts/screenshots/22/apres-session-haut.png) | ![Réglages de Codex, message et touches](artifacts/screenshots/22/apres-session-bas.png) |
+| ![Fil brut d’une session Codex](artifacts/screenshots/22/apres-reglage-applique-haut.png) | ![Table des réglages de Codex](artifacts/screenshots/22/apres-reglage-applique-bas.png) |
 
-Captures réelles de la Thor, le 18 novembre 2026 : Codex vient de répondre sur `hello-world`, un projet d’essai. Le pont tourne dans la Debian de la console.
+*Captures de la Thor, 18 novembre 2026. Codex vient de répondre sur un projet d’essai ; en bas, sa réflexion passe à Medium, confirmée par l’agent.*
+
+Claude Code et Codex tournent sur la console elle-même, dans une Debian sous Termux. Régie ne refait pas leur travail. Elle lance les sessions, montre ce que les agents produisent, relaie leurs demandes de validation et leur transmet ce que vous dites.
 
 ## Ce qu’on fait avec
 
-- **Suivre plusieurs sessions** : une liste dense des sessions, puis le fil brut de l’agent, son plan et ses fichiers modifiés quand il en fournit, et des notifications.
-- **Régler la session sur place** : en bas, le mode et toutes les options que l’agent expose (modèle, réflexion, mode rapide…), appliqués après l’accord de l’agent.
-- **Parler à l’agent** : maintenir L2, relire la transcription sur l’écran du bas, corriger ou compléter, puis envoyer avec A ; le fil reste en haut. La transcription est **locale par défaut** ; aucun texte n’est lu à voix haute.
-- **Donner un ordre** : maintenir R2, dire par exemple « ouvre cette session » ou « mets tout en pause », puis confirmer. Les règles courantes marchent sans clé de modèle distant.
-- **Choisir les validations** : Plan d’abord, Modifications auto, Je valide chaque action ou Tout autoriser. Une demande se lit dans le fil ; A autorise une fois, B refuse, X autorise pour la session quand l’agent le permet. Les lectures reconnues sont automatiques.
-- **Relire un diff** : parcourir les éditions exposées par l’agent, commenter une ligne avec L2 ou demander une explication écrite avec Y puis A.
-- **Lancer un nouveau projet** : X depuis la régie, ou « lance Codex sur un nouveau projet qui s’appelle météo ». La fiche permet de choisir agent, projet, modèle, réflexion, mode et consigne. Régie crée le dépôt vide ; les changements de branche sont confiés à l’agent.
-- **Piloter Android depuis les agents** : leurs outils MCP et `thor-screen` voient et commandent les deux écrans, Régie comprise, sans validation supplémentaire.
+- **Voir toutes ses sessions d’un coup d’œil.** L’accueil est une liste : agent, projet, branche, état, dernière action, ancienneté.
+- **Suivre l’agent comme sur un ordinateur.** Le fil reprend ce que l’agent produit, tel quel : messages, commandes, sorties, modifications, demandes de validation. Régie n’y ajoute rien.
+- **Lui parler.** Maintenir L2 et parler : la transcription s’écrit en bas, le haut ne bouge pas. Relâcher, relire, puis A envoie. La transcription est locale et gratuite par défaut ; ElevenLabs est une option. Rien n’est lu à voix haute.
+- **Régler la session sur place.** En bas, la table des réglages de l’agent : mode de validation, modèle, réflexion, mode rapide et toute autre option qu’il expose. Une valeur ne compte comme appliquée qu’une fois confirmée par l’agent.
+- **Valider à la manette.** Quatre modes : Plan d’abord, Modifications auto, Je valide chaque action, Tout autoriser. Une demande s’affiche dans le fil : A autorise, B refuse, L2 refuse en dictant une consigne.
+- **Donner des ordres.** Maintenir R2 : « lance Codex sur un nouveau projet qui s’appelle météo », « mets tout en pause ». Les ordres qui agissent attendent A. « Où en est la session console » ouvre directement la session.
+- **Relire les modifications.** X affiche les éditions de l’agent, ligne par ligne. L2 commente une ligne, Y demande une explication.
+- **Laisser l’agent piloter la console.** Claude et Codex voient et commandent Android sur les deux écrans. « Ouvre le navigateur sur wikipedia.org » ouvre la page dans Chrome, en haut, sous vos yeux. Sur l’accueil, Y prépare une session « console » faite pour ça.
+- **Lui parler depuis n’importe quelle appli.** Avec le mode console, L2 et R2 marchent même quand Chrome ou YouTube a la main. Si la conversation n’est visible nulle part, le message de l’agent passe en carte par-dessus l’écran du haut : L2 y répond, B la ferme.
+- **Connecter ses comptes depuis la console.** Codex se connecte par code d’appareil : adresse, code et QR code s’affichent, à scanner avec un téléphone. Claude n’a pas de code d’appareil ; Régie indique la marche à suivre dans Termux.
 
-Régie démarre son pont à l’ouverture. Passer en arrière-plan laisse les sessions tourner et le tableau de bord du bas visible. **Quitter** arrête le pont et ses sessions. Rien ne démarre au boot.
-
-## Matériel et état du projet
-
-La cible est l’**AYN Thor sous Android 13**, ARM64 : écran haut 1920 × 1080, écran bas tactile 1240 × 1080, manette intégrée. Un mode à un écran rassemble le contenu et les commandes. Voir la [fiche matérielle](docs/thor.md).
-
-C’est un prototype personnel installable en **debug**, pas une application distribuée sur un store. Il réutilise les comptes des CLI ; les fournisseurs de voix et d’ordres cloud sont facultatifs. Les versions éprouvées sont Claude Code **2.1.322**, Codex **0.167.2** et Node **24.22.3**. Les adaptateurs ACP sont figés par `bridge/package-lock.json`. Une autre version peut fonctionner mais est signalée comme non testée.
-
-## Installer sur la Thor
-
-Les étapes 1 à 3 préparent une **nouvelle installation**. Si Termux, Debian et les agents sont déjà configurés, vérifier les chemins puis passer à l’étape 4. La procédure complète sur une console vierge reste à rejouer ; les scripts de déploiement ont été utilisés sur la Thor existante. Les commandes mentionnent explicitement leur terminal.
-
-### 1. Termux et accès USB
-
-Sur la console, installer **Termux depuis les releases GitHub officielles, variante debug** : nos scripts utilisent `run-as com.termux`. La version relevée est 0.118.3. Ne pas mélanger les signatures des différentes distributions de Termux et de ses extensions. Termux:Boot n’est pas nécessaire. [Installation officielle de Termux](https://github.com/termux/termux-app#installation).
-
-Dans les options développeur d’Android, activer le débogage USB, brancher le Mac et accepter sa clé sur la console. Depuis le Mac :
-
-```sh
-adb devices
-export THOR_SERIAL=THOR0000000001  # remplacer par la série affichée pour une autre Thor
-adb -s "$THOR_SERIAL" shell run-as com.termux id
-```
-
-La dernière commande doit réussir. Si Android répond « package not debuggable », cette installation de Termux n’est pas compatible avec les scripts livrés. Exempter Termux de l’économie de batterie dans ses paramètres Android. La configuration de référence désactive aussi le moniteur de processus fantômes :
-
-```sh
-adb -s "$THOR_SERIAL" shell settings put global settings_enable_monitor_phantom_procs false
-```
-
-Dans **Termux** :
-
-```sh
-pkg update
-pkg upgrade
-pkg install proot-distro nodejs-lts tmux git
-mkdir -p ~/projects ~/.codex ~/bin
-proot-distro install debian:13 --name debian
-proot-distro login debian
-```
-
-Le conteneur doit s’appeler `debian`. Les scripts attendent le rootfs sous `$PREFIX/var/lib/proot-distro/containers/debian/rootfs`. Vérifier ce chemin si la version de PRoot Distro diffère. [Installation et options de PRoot Distro](https://github.com/termux/proot-distro#readme).
-
-### 2. Debian, Node et Codex
-
-Dans **Debian, en root** (le terminal ouvert ci-dessus), pour cette première installation :
-
-```sh
-apt-get update
-apt-get install -y ca-certificates curl xz-utils git jq procps python3 ripgrep
-useradd --create-home --shell /bin/bash dev
-mkdir -p /home/dev/projects /home/dev/.codex
-chown -R dev:dev /home/dev
-cd /tmp
-curl -fLO https://nodejs.org/dist/v24.22.3/node-v24.22.3-linux-arm64.tar.xz
-curl -fLO https://nodejs.org/dist/v24.22.3/SHASUMS256.txt
-grep ' node-v24.22.3-linux-arm64.tar.xz$' SHASUMS256.txt | sha256sum -c -
-tar -xJf node-v24.22.3-linux-arm64.tar.xz -C /opt
-ln -s /opt/node-v24.22.3-linux-arm64/bin/node /usr/local/bin/node
-ln -s /opt/node-v24.22.3-linux-arm64/bin/npm /usr/local/bin/npm
-ln -s /opt/node-v24.22.3-linux-arm64/bin/npx /usr/local/bin/npx
-npm install --global --prefix /opt/codex-cli @openai/codex@0.167.2
-ln -s /opt/codex-cli/bin/codex /usr/local/bin/codex
-node --version
-codex --version
-exit
-```
-
-Ne poursuivre l’extraction que si la vérification SHA-256 répond `OK`. Node et Codex sont installés **dans Debian**, même si Node existe aussi côté Termux. [Installation officielle de Codex](https://github.com/openai/codex#readme).
-
-### 3. Utilisateur dev, Claude Code et connexion aux comptes
-
-De retour dans **Termux**, ouvrir Debian avec les mêmes montages que le pont :
-
-```sh
-proot-distro login debian --user dev \
-  --bind "$HOME/projects:/home/dev/projects" \
-  --bind "$HOME/.codex:/home/dev/.codex" \
-  --work-dir /home/dev -- bash -l
-```
-
-Dans **Debian, en dev** :
-
-```sh
-curl -fsSL https://claude.ai/install.sh -o /tmp/claude-install.sh
-bash /tmp/claude-install.sh 2.1.322
-mkdir -p ~/.local/bin
-printf '\nexport PATH="$HOME/.local/bin:/usr/local/bin:$PATH"\n' >> ~/.profile
-export PATH="$HOME/.local/bin:/usr/local/bin:$PATH"
-claude --version
-claude
-# Suivre la connexion affichée, puis quitter le CLI.
-codex login --device-auth
-```
-
-Faire la connexion dans le navigateur indiqué, avec ses propres comptes. Le login par code de Codex doit être autorisé dans les paramètres du compte. Les connexions restent dans les dossiers privés des agents, jamais dans ce dépôt. [Installation Claude](https://code.claude.com/docs/en/setup), [authentification Codex](https://developers.openai.com/codex/auth/).
-
-Dans `~/.codex/config.toml` de **dev**, ajouter ou ajuster ces deux clés à la racine du fichier, avant les sections `[nom]`, sans écraser les autres réglages :
-
-```toml
-sandbox_mode = "danger-full-access"
-approval_policy = "on-request"
-```
-
-C’est le contournement PRoot de la configuration Thor : le sandbox Linux ne fonctionne pas dans cette Debian. Les niveaux choisis dans Régie sont ensuite appliqués à chaque session. Les gestes Android sont autorisés sans confirmation par choix du projet. Les [décisions du pont](docs/adr/02-pilotage-des-agents.md) détaillent cette limite. Quitter Debian avec `exit` avant la suite.
-
-### 4. Construire l’app et déployer le pont
-
-Sur le **Mac**, obtenir ce dépôt avec son accès Git habituel :
-
-```sh
-git clone git@github.com:DabiK/regie.git
-cd regie
-```
-
-Le dépôt est privé : cet accès doit déjà être autorisé. Installer JDK 25 (ou 21), Node 24+, Android SDK avec la plateforme 36, les build-tools et platform-tools. `adb` doit être dans le PATH. Depuis la racine du dépôt :
-
-```sh
-export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools  # adapter à son SDK
-printf 'sdk.dir=%s\n' "$ANDROID_HOME" > android/local.properties
-printf 'sdk.dir=%s\n' "$ANDROID_HOME" > voice/local.properties
-(cd bridge && npm ci && npm run check)
-(cd android && ./gradlew check)
-(cd voice && ./gradlew check)
-scripts/thor-install.sh
-thor/bridge/install.sh
-thor/computer-use/install.sh
-```
-
-`thor-install.sh` installe uniquement `app.regie`. Le pont est copié dans `/home/dev/.local/share/regie/bridge`, son jeton aléatoire est créé puis copié directement dans le stockage privé de l’app. Le déploiement active `allow-external-apps=true` dans Termux. L’installation computer-use ajoute les MCP, consignes et permissions Android aux configurations natives des deux agents ; les autres entrées sont conservées.
-
-Si l’app a été installée après le pont, recopier seulement son jeton :
-
-```sh
-thor/bridge/install.sh token-app
-```
-
-### 5. Associer Android à sa Debian
-
-La console doit être connectée au Wi-Fi. Dans **Paramètres → Options pour les développeurs → Débogage sans fil**, activer le débogage et autoriser ce réseau. Ouvrir **Associer l’appareil avec un code d’association** et garder la fenêtre ouverte.
-
-Sur le **Mac**, saisir le port et le code actuellement affichés (ils expirent) :
-
-```sh
-read -r -p 'Port d’association : ' REGIE_PAIR_PORT
-read -r -s -p 'Code d’association : ' REGIE_PAIR_CODE
-thor/computer-use/pair-from-mac.sh "$REGIE_PAIR_PORT" "$REGIE_PAIR_CODE"
-unset REGIE_PAIR_CODE REGIE_PAIR_PORT
-```
-
-Exécuter ce bloc dans **bash** (`bash` depuis le terminal du Mac si nécessaire). Le script doit répondre `THOR_ANDROID=ok`. Il associe la clé de la **Debian**, pour fonctionner ensuite sans le Mac. Le port d’association est distinct du port de connexion ; ne pas utiliser `adb pair` sur le Mac à la place. Détails et dépannage : [accès Android](thor/computer-use/README.md).
-
-### 6. Permissions et premier lancement
-
-Sur le Mac, accorder une fois la permission permettant à Régie de rallumer le débogage sans fil à son ouverture :
-
-```sh
-adb -s "$THOR_SERIAL" shell pm grant app.regie android.permission.WRITE_SECURE_SETTINGS
-adb -s "$THOR_SERIAL" shell am force-stop app.regie
-adb -s "$THOR_SERIAL" shell am start -n app.regie/.TopActivity
-```
-
-Sur la console, accepter **RUN_COMMAND** (exécuter des commandes dans Termux) et les **notifications**. Si elles ont été refusées, les réactiver dans Infos de l’appli → Autorisations, y compris Autorisations supplémentaires pour Termux. Ouvrir **Réglages voix**, garder le fournisseur local et accorder le microphone. Le premier usage télécharge les modèles : prévoir du réseau et environ 1,5 Go libres pour téléchargement et extraction ; la transcription peut ensuite fonctionner hors ligne. Les agents, eux, utilisent leurs services en ligne.
-
-Pour le **mode console** (L2 depuis toute appli, messages de l’agent par-dessus l’écran du haut), toucher l’avis « Mode console » en bas de la régie, puis activer **Régie, mode console** dans Accessibilité (Applications téléchargées). Régie ne lit que la manette, jamais l’écran ; aucune autre permission spéciale n’est demandée.
-
-Placer un dépôt dans `~/projects` de Termux, ou choisir **Nouveau projet** dans Régie. Lancer Codex, dicter avec L2, relire puis A. Les clés ElevenLabs et Mistral restent facultatives et se saisissent uniquement dans les réglages de l’app.
-
-Pour mettre à jour, quitter Régie puis relancer les scripts de déploiement concernés et rouvrir l’app. Ne pas désinstaller computer-use pour réparer une simple association perdue. Sa désinstallation conserve la clé adb, sauf option explicite `--oublier-association`.
-
-## Commandes de la manette
-
-| Entrée | Action |
+| La liste des sessions | La dictée, sur l’écran du bas |
 | --- | --- |
-| L2 maintenu | Dicter à la session ; dans le diff, commenter la ligne ; dans une validation, préparer un refus avec consigne. Mode console : aussi depuis une autre appli, vers la session au premier plan de Régie |
-| R2 maintenu | Donner un ordre, relu avant A ; peut ouvrir une fiche de lancement ; « où en est … » ouvre la session |
-| A | Ouvrir, confirmer, envoyer ; dans une validation, autoriser une fois |
-| B | Retour ou annulation ; **dans une validation, refuser** |
-| X | Nouvelle session depuis la régie ; diff depuis la session ; correction d’un mot en relecture de dictée |
-| Y | Depuis la régie, piloter la console (session `console`) ; compléter une dictée ; dans le diff, préparer une explication |
-| L1 / R1 | Session précédente / suivante ; R1 donne priorité aux validations, limitées à la session dans son fil |
-| Croix | Lignes de la régie, champs, lignes du diff ; Droite passe la table des réglages en modification, Gauche ferme une validation résolue ou rejoint la fin du fil |
-| Stick droit | Faire défiler |
-| Start | Interrompre le tour ; depuis la régie, interrompre toutes les sessions occupées |
+| ![Accueil en liste](artifacts/screenshots/vitrine/accueil-haut.png) | ![Transcription relue avant envoi](artifacts/screenshots/25/04-dictee-relue-bas.png) |
+| **Codex ouvre Wikipédia dans Chrome, en haut** | **La connexion de Codex** (banc d’essai, code fictif) |
+| ![Wikipédia ouvert par l’agent](artifacts/screenshots/24/wikipedia-haut.png) | ![Adresse, code et QR code](artifacts/screenshots/23/09-final-simulation-code-haut.png) |
 
-Les boutons affichés en bas précisent l’action courante. Dans la table des réglages en modification, A applique et B la referme : les validations gardent leurs boutons tactiles, sans détourner ces raccourcis. **Quitter** se touche en bas de la régie.
+Régie démarre son pont à l’ouverture. En arrière-plan, les sessions continuent et l’écran du bas reste affiché. **Quitter** arrête le pont et les sessions. Rien ne démarre au boot de la console.
 
-## Comprendre un message de connexion
+## Les commandes de la manette
 
-| Message | Action depuis le Mac, console branchée |
+| Touche | Action |
 | --- | --- |
-| Clé du pont absente ou refusée | `thor/bridge/install.sh token-app` |
-| Termux ne répond pas | `thor/bridge/install.sh`, puis rouvrir Régie |
-| Autorise les commandes Termux | Sur Android : Infos de Régie → Autorisations → Autorisations supplémentaires → « Run commands in Termux environment » |
-| Autorise la reconnexion Android | Une fois : `adb -s THOR0000000001 shell pm grant app.regie android.permission.WRITE_SECURE_SETTINGS` |
-| Démarre le pont sur le Mac | Sur le banc : `scripts/bridge-mac.sh` |
+| L2 maintenu | Parler à la session : la transcription s’affiche en bas. Dans les modifications, commenter la ligne ; dans une validation, refuser en dictant une consigne. Avec le mode console, marche depuis toute appli. |
+| R2 maintenu | Donner un ordre vocal. Les ordres qui agissent attendent A ; « où en est … » ouvre la session sans attendre. |
+| A | Ouvrir, envoyer, appliquer. Dans une validation, autoriser une fois. |
+| B | Revenir, effacer, fermer. Dans une validation, refuser. Sur l’accueil, ouvrir la connexion des agents. |
+| X | Sur l’accueil, créer une session. Dans une session, voir les modifications. Dans une validation, autoriser pour la session, si l’agent le propose. En relecture, corriger un mot. |
+| Y | Sur l’accueil, piloter la console. En relecture, compléter la dictée. Dans les modifications, demander une explication. |
+| L1 / R1 | Session précédente ou suivante. Sur l’accueil, R1 ouvre d’abord une validation en attente. |
+| Croix | Sur l’accueil, choisir une session. Dans une session, faire défiler le fil ; Droite passe les réglages en modification, Gauche revient à la fin du fil. |
+| Stick droit | Faire défiler. |
+| Start | Interrompre le tour en cours. Sur l’accueil, interrompre toutes les sessions occupées. |
 
-Ces instructions complètent les messages courts de l’app.
+L’écran du bas affiche toujours les touches utiles à l’instant. Il est tactile : les actions affichées s’y touchent aussi.
 
-## Architecture
+## Comment ça marche
 
 ```mermaid
 flowchart LR
-  subgraph Thor[AYN Thor]
-    Haut[Écran haut] --> Domaine[Domaine Kotlin et ports]
-    Bas[Écran bas et manette] --> Domaine
-    Domaine --> Voix[Adapter voix locale ou ElevenLabs]
-    Domaine --> Passerelle[Passerelle WebSocket et jeton]
-    subgraph Debian[Debian sous Termux]
-      Pont[Pont Node et domaine] --> ACP[Adaptateurs ACP]
-      ACP --> Claude[Claude Code]
-      ACP --> Codex[Codex]
-      Claude --> MCP[MCP Android et thor-screen]
-      Codex --> MCP
+  subgraph Thor["AYN Thor, Android 13"]
+    App["Régie<br/>haut : le fil<br/>bas : réglages et voix"]
+    Voix["Voix locale<br/>sherpa-onnx"]
+    Android["Applis Android<br/>sur les deux écrans"]
+    subgraph Debian["Debian sous Termux"]
+      Pont["Pont Node"]
+      Claude["Claude Code"]
+      Codex["Codex"]
+      Acces["Accès Android<br/>mobile-mcp, thor-screen"]
     end
-    Passerelle <--> Pont
-    MCP --> Android[Applications Android sur les deux écrans]
   end
+  App --- Voix
+  App -- "WebSocket local et jeton" --> Pont
+  Pont -- "ACP" --> Claude
+  Pont -- "ACP" --> Codex
+  Claude --> Acces
+  Codex --> Acces
+  Acces -- "débogage sans fil" --> Android
 ```
 
-`android/domain` porte les décisions de l’app ; les adapters traduisent le réseau et les accès Android. `voice/api` définit les ports audio et ses fournisseurs vivent dans un build séparé. `bridge/src/domain` décide du cycle des sessions et des validations, derrière des ports ACP, fichiers, horloge et shell. `android/app` assemble l’interface et ses adapters. Le [protocole du pont](docs/protocole-pont.md) et l’[index des ADR](docs/adr/README.md) décrivent les contrats.
+- **L’app** Android, en Kotlin et Jetpack Compose, occupe les deux écrans et lit la manette. Elle démarre le pont dans Termux par l’intent `RUN_COMMAND` et lui parle par un WebSocket local, protégé par un jeton.
+- **Le pont**, en Node et TypeScript, tourne dans la Debian. Il pilote les agents par l’[Agent Client Protocol](https://agentclientprotocol.com) (ACP), avec les adaptateurs publiés pour Claude Code et Codex, et garde l’historique des sessions.
+- **Les agents** gardent leurs propres réglages, outils et comptes. Pour agir sur Android, ils passent par le débogage sans fil de la console.
+- **La voix** est transcrite sur l’appareil par sherpa-onnx (modèle Parakeet). ElevenLabs peut la remplacer, avec votre clé.
+
+## Installer
+
+La [notice d’installation](docs/installation.md) part d’une Thor neuve : Termux, Debian, agents, pont, app, permissions et connexion des comptes. Il faut un Mac pour construire l’app et lancer les scripts par USB.
+
+Matériel visé : AYN Thor sous Android 13, ARM64, écran du haut 1920 × 1080 non tactile, écran du bas 1240 × 1080 tactile. Un mode à un écran rassemble tout en haut quand celui du bas est éteint. Versions éprouvées : Claude Code 2.1.322, Codex 0.167.2, Node 24.22.3, mobile-mcp 1.0.17 ; les adaptateurs ACP sont figés par `bridge/package-lock.json`. Une autre version d’agent est signalée « non testée » sur l’accueil.
 
 ## Limites connues
 
-- Le mode **Tout autoriser** et le pilotage Android sont volontairement libres. Un agent peut toucher Régie et ses validations. Ce prototype ne constitue pas une frontière de sécurité entre agents et console.
-- Les CLI, ACP et modèles évoluent. Une information absente reste annoncée comme non communiquée. X « Autoriser pour la session » dépend des options de l’agent ; Codex a parfois redemandé une validation après l’avoir accepté.
-- Le diff montre les éditions reçues, pas un `git diff` complet ; une écriture shell peut manquer. La branche affichée correspond au dossier de la session, même si l’agent travaille ensuite dans un autre worktree.
-- Start annule le tour mais ne garantit pas l’arrêt de tous ses sous-processus. Quitter termine les sessions du pont. Le détail du journal expire après 30 jours d’inactivité, les résumés restent.
-- La voix locale peut mal reconnaître les noms techniques. Les essais WAV synthétiques ne mesurent pas la qualité avec une voix humaine. ElevenLabs et le repli Mistral nécessitent leurs clés et transmettent des données au fournisseur choisi.
-- Android peut tuer Termux ou Régie ; les notifications ne sont observées que pendant la vie de l’app. Le retour du débogage sans fil après redémarrage, le micro réel et l’extinction physique du second écran restent à revalider sur la Thor.
-- Le banc émule Android 16, pas le firmware Thor Android 13. Il ne prouve ni RUN_COMMAND, ni les axes physiques de manette, ni l’association sans fil. Aucune installation vierge n’a été exécutée pendant cette revue.
+- **Ce n’est pas une frontière de sécurité.** Les agents pilotent tout Android sans validation, Régie comprise : ils peuvent toucher ses boutons. Le sandbox de Codex est désactivé dans la Debian, et le mode Tout autoriser ne demande rien. Une consigne cachée dans une page ou un dépôt peut donc agir sur la console.
+- **Un prototype personnel.** L’app s’installe en debug, avec ses scripts, sur une console préparée. Elle n’est sur aucun store.
+- **L’installation complète n’a pas été rejouée sur une Thor neuve.** Chaque commande de la notice suit les scripts du dépôt, mais la séquence entière reste à valider de bout en bout.
+- **Le mode console reste à éprouver sur la Thor.** L2 au-dessus d’une autre appli, la carte et la bulle sont couverts par des tests d’intégration ; leur essai sur la console, service d’accessibilité activé, reste à faire.
+- **Claude se connecte dans Termux.** Son CLI n’offre pas de code d’appareil. Un changement de compte demande de quitter Régie avant.
+- **La voix locale bute sur les noms techniques** et transcrit parfois le bruit ambiant. Rien ne part sans A. Les essais ont surtout utilisé des voix de synthèse rejouées.
+- **Les modifications affichées sont celles que l’agent expose**, pas un `git diff` complet : une écriture par commande shell peut manquer.
+- **Start interrompt le tour**, sans garantir l’arrêt de tous ses sous-processus.
+- **Android peut tuer Termux.** Les réglages de la notice limitent ce risque ; une mise à jour système peut les annuler.
+- **Les agents évoluent vite.** Une option ou une information qu’un agent n’expose pas est annoncée comme non communiquée, jamais inventée.
 
 ## Développer
 
-Les trois portes de qualité sont indépendantes :
-
-```sh
-(cd android && ./gradlew check)
-(cd voice && ./gradlew check)
-(cd bridge && npm ci && npm run check)
-python3 scripts/emu-test.py
-python3 scripts/repo-audit-test.py
-python3 scripts/repo-audit.py
-```
-
-Les tests utilisent des faux, des fichiers temporaires et des serveurs locaux de test ; ils ne lancent aucun véritable agent et ne contactent pas la console. Les contrats réels `test:contract` sont séparés, consomment les comptes et ne font pas partie de ces portes.
-
-Sur Mac Apple Silicon, avec l’image SDK `system-images;android-36;google_apis_playstore;arm64-v8a`, Python/Pillow et Codex connecté :
-
-```sh
-scripts/emu-start.sh
-scripts/bridge-mac.sh
-scripts/emu-install.sh
-scripts/emu-key.sh A
-scripts/emu-shot.sh artifacts/screenshots/21
-scripts/bridge-mac.sh stop
-adb -s emulator-5580 emu kill
-```
-
-Ces commandes lancent une **vraie démo Codex**, jamais Claude. `emu-install.sh --no-demo` ne fait qu’actualiser l’app. Le [guide du banc](docs/emulateur.md) précise les variables, le changement de worktree et la voix WAV. Sur la console : `scripts/thor-install.sh`, puis `scripts/thor-shot.sh artifacts/screenshots/21`.
-
-Les [règles de texte et d’interface](docs/textes.md) et l’[inventaire avant/après](artifacts/screenshots/21/inventaire-textes.md) fixent les libellés.
-
-Le travail suit [CLAUDE.md](CLAUDE.md), le [PRD](docs/PRD.md), le [journal de reprise](docs/adr/00-journal-de-reprise.md) et les [tickets](.scratch/regie-v1/issues). Un ticket par branche/worktree, tests d’abord, portes vertes, essai réel, rapport et Conventional Commit ; l’orchestrateur relit, fusionne et pousse. Les tickets d’interface passent un par un sur la console partagée. Les preuves sont rangées par ticket dans [artifacts](artifacts/README.md).
-
-Avant de partager des changements, l’audit `rg` vérifie le texte versionné et les nouveaux fichiers non ignorés : clés usuelles, jetons littéraux, IP privées, adresses personnelles et chemins de comptes. Ses exceptions sont explicites et testées (données fictives réservées, labels Kotlin, attribution publique, utilisateur SSH GitHub). Il ne certifie ni l’historique Git ni les images : les deux captures de cette page ont été inspectées visuellement. Aucun push ni publication n’est effectué par ce contrôle.
+La [documentation de développement](docs/developpement.md) décrit l’architecture, les tests, le banc d’essai sur émulateur et la façon de travailler. Le [PRD](docs/PRD.md) fixe le produit, les [ADR](docs/adr/README.md) les décisions techniques, et le [protocole du pont](docs/protocole-pont.md) le contrat entre l’app et le pont.
