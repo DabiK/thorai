@@ -8,7 +8,7 @@ import app.regie.game.ui.theme.GameTheme
 
 /**
  * Bac à sable de la vue jeu, en debug seulement, pour le banc : le hameau généré avec les atlas
- * de `assets/game/`. Extras : `screen` (`top`, `bottom` ou `kit`) et `sessions` (3 par défaut en
+ * de `assets/game/`. Extras : `screen` (`top`, `bottom`, `kit` ou `coursier`, ticket 44) et `sessions` (3 par défaut en
  * haut, 8 en bas).
  *
  * `adb shell am start -n app.regie/app.regie.game.ui.demo.GameSandboxActivity --display N --es screen bottom --ei sessions 8`
@@ -23,6 +23,7 @@ class GameSandboxActivity : ComponentActivity() {
                 val assets = rememberGameAssets()
                 when (screen) {
                     "kit" -> DemoKitScreen()
+                    "coursier" -> CourierSandbox(assets, sessions)
                     "bottom" -> DemoBottomScreen(assets, sessions = sessions)
                     else -> DemoTopScreen(assets, sessions = sessions)
                 }
