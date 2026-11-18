@@ -147,6 +147,8 @@ physiques différés restent requis même lorsqu’un ticket est marqué fait.
 
 - **18 novembre, ticket 26 à fusionner (solo Codex)** : défaut console Tout autoriser, navigation R2 sans relecture/A dans le domaine, formes « la session » et cible active couvertes ; mutations toujours confirmées. Android 434 tests + lint verts. Thor : APK installé, Y reprend la console personnelle en ask, WAV Thomas/local « où en est la session console » ouvre le fil sans A ; création Y/A non rejouée car la console existe déjà, défaut/création/correction prouvés par tests isolés. Aucun agent lancé ; WAV retiré, app relancée sans extra, session personnelle conservée. ADR 19/11 et PRD actualisés ; preuves et pas à pas `artifacts/screenshots/26/essai-thor.md`.
 
+- **18 novembre, ticket 26, relecture après 30d2595 (solo Codex)** : diff main...HEAD relu, création physique non revendiquée ; libellé R2 « relire » devenu trompeur remplacé par « quand tu as fini ». Mutations confirmation réintroduite et défaut ask détectées, puis sources restaurées. Android 434 tests + lint repassés verts ; APK réinstallé, WAV/local et R2 sans A rejoués (07/08), WAV retiré et relance sans extra (09). Aucun agent lancé ni session personnelle modifiée ; statut à fusionner maintenu.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

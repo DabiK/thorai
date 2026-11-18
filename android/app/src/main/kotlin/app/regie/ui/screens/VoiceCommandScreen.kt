@@ -46,7 +46,7 @@ fun VoiceCommandScreen(state: VoiceCommandReview, bottom: Boolean, single: Boole
                 if (state.phase == CommandPhase.RECORDING || state.phase == CommandPhase.FINALIZING) {
                     Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                         MicButton(state.phase == CommandPhase.RECORDING, { onHeld(true) }, { onHeld(false) }, size = 48.dp, halo = 4.dp)
-                        BasicText("${state.durationMs / 1000} s · niveau ${(state.level * 100).toInt()} %\nRelâche R2 pour relire", style = mono(12.sp, color = Palette.textMuted))
+                        BasicText("${state.durationMs / 1000} s · niveau ${(state.level * 100).toInt()} %\nRelâche R2 quand tu as fini", style = mono(12.sp, color = Palette.textMuted))
                     }
                 }
                 Row(Modifier.fillMaxWidth().topDivider().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(28.dp)) {
