@@ -178,6 +178,23 @@ class BridgeAgentGateway(
         }
     }
 
+    override suspend fun authentication(): List<AgentAuthentication> {
+        val result = call("auth.status", timeout = 20.seconds)
+        if (result !is CallResult.Accepted) throw java.io.IOException("État de connexion indisponible")
+        return (result.value["agents"] as? JsonArray)?.mapNotNull { decodeAuthentication(it as? JsonObject) }
+            ?: throw java.io.IOException("État de connexion non compris")
+    }
+
+    override suspend fun startAuthentication(agent: Agent) = authenticationAction("auth.start", agent)
+    override suspend fun cancelAuthentication(agent: Agent) = authenticationAction("auth.cancel", agent)
+    override suspend fun logoutAgent(agent: Agent) = authenticationAction("auth.logout", agent)
+
+    private suspend fun authenticationAction(method: String, agent: Agent): AgentAuthentication {
+        val result = call(method, buildJsonObject { put("agent", agent.name.lowercase(java.util.Locale.ROOT)) }, timeout = 20.seconds)
+        if (result !is CallResult.Accepted) throw java.io.IOException("Action de connexion non confirmée")
+        return decodeAuthentication(result.value.obj("authentication")) ?: throw java.io.IOException("Résultat de connexion non compris")
+    }
+
     override suspend fun agentOptions(agent: Agent, values: Map<String, String>): List<SessionOption> {
         val result = call("agent.options", buildJsonObject {
             put("agent", agent.name.lowercase(java.util.Locale.ROOT))

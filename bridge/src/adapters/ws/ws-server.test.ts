@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import WebSocket from 'ws';
+import { Authentication } from '../../domain/authentication.ts';
 import { Bridge } from '../../domain/bridge.ts';
 import type { BridgeEvent } from '../../domain/model.ts';
 import { FakeAgentConnector } from '../fake/fake-agent.ts';
@@ -39,6 +40,11 @@ beforeEach(async () => {
     port: 0,
     token: TOKEN,
     bridge,
+    authentication: new Authentication({
+      status: async () => ({ connected: false, account: null }),
+      start: () => ({ done: Promise.resolve(false), cancel: async () => {} }),
+      logout: async () => {},
+    }),
     logger: new MemoryLogger(),
     info: { version: 'test', pid: 1, startedAt: '2026-11-13T20:00:00.000Z' },
     onShutdown: () => {
@@ -368,5 +374,29 @@ it('accepts joint resume replacements and rejects mixed or empty configuration p
     },
   });
   expect(codex.callsOf('prompt')).toEqual([]);
+  await client.close();
+});
+
+it('exposes login status, start, cancel and logout through authenticated requests only', async () => {
+  const client = new Client();
+  const status = await client.call('auth.status');
+  expect(status.result).toMatchObject({
+    agents: [
+      { agent: 'claude', connected: false },
+      { agent: 'codex', connected: false },
+    ],
+  });
+  expect((await client.call('auth.start', { agent: 'claude' })).result).toMatchObject({
+    authentication: { phase: 'manual', code: null },
+  });
+  expect((await client.call('auth.cancel', { agent: 'codex' })).result).toMatchObject({
+    authentication: { connected: false },
+  });
+  expect((await client.call('auth.logout', { agent: 'codex' })).result).toMatchObject({
+    authentication: { connected: false },
+  });
+  expect((await client.call('auth.logout', { agent: 'other' })).error).toMatchObject({
+    code: 'bad_request',
+  });
   await client.close();
 });
