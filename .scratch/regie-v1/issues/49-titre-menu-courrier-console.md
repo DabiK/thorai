@@ -1,6 +1,6 @@
 # 49 — Titre, menu, courrier, console
 
-Statut : à fusionner
+Statut : fusionné dans ticket/40-vue-jeu
 Possède : titre, menu Start (agents, voix, réglages, Quitter), notifications, mode console et ordre vocal dans `:game-ui`
 Dépend de : 41
 

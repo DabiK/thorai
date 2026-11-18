@@ -1,6 +1,6 @@
 # 53 — Parcours d'accueil dans le style du jeu
 
-Statut : bloqué par 49
+Statut : prêt
 Possède : la présentation du parcours d'accueil du ticket 28 (`SetupScreens`) dans `:game-ui`, et son branchement
 Dépend de : 49
 
