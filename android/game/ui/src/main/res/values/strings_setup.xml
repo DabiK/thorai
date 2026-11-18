@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Ticket 53 : le parcours d'accueil (ticket 28, ADR 23) dans le style du jeu. Mêmes textes que la
+         vue classique (docs/textes.md) ; seuls changent les renvois à l'accueil, qui devient le menu Start. -->
+
+    <!-- Le nom court de chaque étape, sur son panneau. -->
+    <string name="game_setup_short_welcome">Bienvenue</string>
+    <string name="game_setup_short_termux">Termux et Debian</string>
+    <string name="game_setup_short_bridge">Pont</string>
+    <string name="game_setup_short_voice">Voix</string>
+    <string name="game_setup_short_notifications">Notifications</string>
+    <string name="game_setup_short_console">Mode console</string>
+    <string name="game_setup_short_android">Accès à Android</string>
+    <string name="game_setup_short_agents">Comptes des agents</string>
+    <string name="game_setup_short_finish">Première session</string>
+
+    <!-- Le titre de chaque étape. -->
+    <string name="game_setup_title_welcome">Bienvenue dans ThorAI</string>
+    <string name="game_setup_title_termux">Termux et Debian</string>
+    <string name="game_setup_title_bridge">Le pont</string>
+    <string name="game_setup_title_voice">La voix</string>
+    <string name="game_setup_title_notifications">Les notifications</string>
+    <string name="game_setup_title_console">Le mode console</string>
+    <string name="game_setup_title_android">L’accès des agents à Android</string>
+    <string name="game_setup_title_agents">Les comptes des agents</string>
+    <string name="game_setup_title_finish">C’est prêt</string>
+
+    <!-- « Étape » et « sur » ne varient pas avec le nombre : pas de pluriel. -->
+    <string name="game_setup_counter" tools:ignore="PluralsCandidate">Étape %1$d sur %2$d</string>
+    <string name="game_setup_counter_optional" tools:ignore="PluralsCandidate">Étape %1$d sur %2$d · facultative</string>
+    <string name="game_setup_sign_ready">Prête</string>
+    <string name="game_setup_sign_todo">À faire</string>
+
+    <!-- Les explications : huit mots au plus par phrase. Les commandes sont des données. -->
+    <string-array name="game_setup_lead_welcome">
+        <item>ThorAI pilote Claude Code, Codex et opencode.</item>
+        <item>Tu parles, l’agent agit, tu valides.</item>
+    </string-array>
+    <string name="game_setup_note_welcome">Ce parcours prépare la console, étape par étape. Chaque étape se vérifie seule. X passe les étapes facultatives.</string>
+
+    <string-array name="game_setup_lead_termux">
+        <item>Les agents tournent dans une Debian, sous Termux.</item>
+        <item>Une commande installe tout, une seule fois.</item>
+    </string-array>
+    <string-array name="game_setup_steps_termux">
+        <item>Installe Termux depuis ses releases GitHub.</item>
+        <item>Ouvre Termux et attends sa préparation.</item>
+        <item>Y copie ces commandes : colle-les dans Termux.</item>
+    </string-array>
+    <string name="game_setup_note_termux">Sans Termux, A ouvre sa page en bas.</string>
+
+    <string-array name="game_setup_lead_bridge">
+        <item>ThorAI parle aux agents par un pont local.</item>
+        <item>Termux le démarre quand ThorAI le demande.</item>
+    </string-array>
+    <string-array name="game_setup_steps_bridge">
+        <item>Autorise ThorAI à lancer des commandes Termux.</item>
+        <item>ThorAI confie une clé au pont.</item>
+        <item>Le pont répond : l’étape passe au vert.</item>
+    </string-array>
+    <string name="game_setup_note_bridge">La clé ne quitte jamais la console.</string>
+
+    <string-array name="game_setup_lead_voice">
+        <item>Maintiens L2 et parle : ThorAI écrit.</item>
+        <item>La transcription tourne sur la console, hors ligne.</item>
+    </string-array>
+    <string-array name="game_setup_steps_voice">
+        <item>Autorise le micro.</item>
+        <item>Télécharge le modèle de voix, une seule fois.</item>
+    </string-array>
+    <string name="game_setup_note_voice">Rien ne part sans un appui sur A.</string>
+
+    <string-array name="game_setup_lead_notifications">
+        <item>ThorAI te prévient quand un agent t’attend.</item>
+        <item>Une validation, une question, une fin, un échec.</item>
+    </string-array>
+    <string name="game_setup_note_notifications">Le reste se consulte dans l’app.</string>
+
+    <string-array name="game_setup_lead_console">
+        <item>L2 et R2 marchent depuis toute appli.</item>
+        <item>Les messages de l’agent passent par-dessus l’écran.</item>
+    </string-array>
+    <string-array name="game_setup_steps_console">
+        <item>Ouvre Accessibilité, sur l’écran du bas.</item>
+        <item>Choisis « ThorAI, mode console », puis active-le.</item>
+        <item>Bloqué ? Infos de l’appli › ⋮ › Autoriser les paramètres restreints.</item>
+    </string-array>
+    <string name="game_setup_note_console">ThorAI lit seulement la manette, jamais l’écran.</string>
+
+    <string-array name="game_setup_lead_android">
+        <item>Les agents voient et pilotent les deux écrans.</item>
+        <item>Ils passent par le débogage sans fil.</item>
+    </string-array>
+    <string-array name="game_setup_steps_android">
+        <item>En haut : Débogage sans fil › Associer avec un code.</item>
+        <item>Y copie les commandes, ouvre Termux en bas.</item>
+        <item>Colle-les, puis saisis le port et le code.</item>
+    </string-array>
+    <!-- THOR_ANDROID=ok est la sortie du script, une donnée. -->
+    <string name="game_setup_note_android" tools:ignore="Typos">Le script doit répondre THOR_ANDROID=ok. ThorAI rallumera ensuite le débogage sans fil.</string>
+
+    <string-array name="game_setup_lead_agents">
+        <item>Connecte au moins un agent pour travailler.</item>
+        <item>Chaque compte reste dans les fichiers de l’agent.</item>
+    </string-array>
+    <string-array name="game_setup_steps_agents">
+        <item>Codex : un code à saisir sur ton téléphone.</item>
+        <item>Claude : claude auth login, dans la Debian.</item>
+        <item>opencode : ta clé OpenCode Go.</item>
+    </string-array>
+
+    <string-array name="game_setup_lead_finish">
+        <item>Crée ta première session avec A.</item>
+        <item>Maintiens ensuite L2 pour parler à l’agent.</item>
+    </string-array>
+    <!-- L'accueil classique et son « Configurer » laissent la place au menu Start du hameau. -->
+    <string name="game_setup_note_finish">Start › Préparer la console rouvre ce parcours.</string>
+
+    <!-- L'état vérifié de chaque étape. -->
+    <string name="game_setup_need">Il te faut</string>
+    <string name="game_setup_need_termux">Termux</string>
+    <string name="game_setup_need_termux_value">depuis GitHub</string>
+    <string name="game_setup_need_network">Réseau</string>
+    <string name="game_setup_need_network_value">pour le téléchargement</string>
+    <string name="game_setup_need_account">Un compte</string>
+    <string name="game_setup_need_account_value">Claude, ChatGPT ou OpenCode</string>
+
+    <string name="game_setup_termux">Termux</string>
+    <string name="game_setup_installed">Installé</string>
+    <string name="game_setup_missing">Absent</string>
+    <string name="game_setup_debian">Debian et agents</string>
+    <string name="game_setup_debian_ready">Prêts</string>
+    <string name="game_setup_debian_later">Vérifiés à l’étape suivante</string>
+
+    <string name="game_setup_run_command">Commandes Termux</string>
+    <string name="game_setup_granted_plural">Autorisées</string>
+    <string name="game_setup_granted">Autorisé</string>
+    <string name="game_setup_granted_feminine">Autorisée</string>
+    <string name="game_setup_to_grant">À autoriser</string>
+    <string name="game_setup_refused">Refusé</string>
+    <string name="game_setup_bridge">Pont</string>
+    <string name="game_setup_bridge_reachable">Joignable</string>
+    <string name="game_setup_bridge_connecting">Connexion…</string>
+    <string name="game_setup_bridge_unreachable">Injoignable</string>
+
+    <string name="game_setup_microphone">Micro</string>
+    <string name="game_setup_voice_model">Modèle de voix</string>
+    <string name="game_setup_voice">Voix</string>
+    <string name="game_setup_voice_cloud" translatable="false">ElevenLabs</string>
+    <string name="game_setup_voice_to_download">%s à télécharger</string>
+    <string name="game_setup_voice_space">Il faut %s libres. Une seule fois.</string>
+    <string name="game_setup_voice_percent">%d %%</string>
+    <string name="game_setup_voice_loading">Chargement…</string>
+    <string name="game_setup_voice_continues">Le téléchargement continue si tu avances.</string>
+    <string name="game_setup_voice_interrupted">Interrompu</string>
+    <string name="game_setup_voice_offline">Pas de réseau. Réessaie une fois connecté.</string>
+    <string name="game_setup_voice_storage">Espace insuffisant. Libère de la place, puis réessaie.</string>
+    <string name="game_setup_voice_other">Téléchargement interrompu. Réessaie.</string>
+
+    <string name="game_setup_notifications">Notifications</string>
+    <string name="game_setup_console">Mode console</string>
+    <string name="game_setup_enabled">Activé</string>
+    <string name="game_setup_disabled">Désactivé</string>
+    <string name="game_setup_android">Reconnexion Android</string>
+    <string name="game_setup_wireless">Débogage sans fil</string>
+    <string name="game_setup_wireless_off">Coupé</string>
+    <string name="game_setup_copied">Commandes copiées. Colle-les dans Termux.</string>
+
+    <string name="game_setup_agents_need_bridge">Le pont doit être joignable. Reviens à l’étape 3.</string>
+    <string name="game_setup_agents_reading">Lecture des comptes…</string>
+    <string name="game_setup_agents_none">Aucun agent annoncé par le pont.</string>
+
+    <string name="game_setup_ready_steps">Étapes prêtes</string>
+    <string name="game_setup_ready_count" tools:ignore="PluralsCandidate">%1$d sur %2$d</string>
+    <string name="game_setup_skipped">Passée</string>
+
+    <string name="game_setup_hint_external">Démarre le pont sur le Mac.</string>
+    <string name="game_setup_hint_grant">Autorise les commandes Termux.</string>
+    <string name="game_setup_hint_termux">Termux ne répond pas. Relance l’installeur dans Termux.</string>
+    <string name="game_setup_hint_token">Clé refusée. Quitte ThorAI, puis rouvre-le.</string>
+    <string name="game_setup_hint_restarting">Démarrage du pont, quelques secondes…</string>
+
+    <!-- Les actions, dans l'ordre de lecture des touches A, B, X, Y. -->
+    <string name="game_setup_start">Commencer</string>
+    <string name="game_setup_continue">Continuer</string>
+    <string name="game_setup_back">Revenir</string>
+    <string name="game_setup_skip">Passer</string>
+    <string name="game_setup_later">Reprendre plus tard</string>
+    <string name="game_setup_done">Terminer</string>
+    <string name="game_setup_open_termux_releases">Ouvrir la page de Termux</string>
+    <string name="game_setup_copy_open_termux">Copier et ouvrir Termux</string>
+    <string name="game_setup_copy">Copier les commandes</string>
+    <string name="game_setup_grant_run_command">Autoriser les commandes Termux</string>
+    <string name="game_setup_retry_bridge">Relancer le pont</string>
+    <string name="game_setup_grant_microphone">Autoriser le micro</string>
+    <string name="game_setup_retry_download">Réessayer le téléchargement</string>
+    <string name="game_setup_download">Télécharger le modèle</string>
+    <string name="game_setup_grant_notifications">Autoriser les notifications</string>
+    <string name="game_setup_open_accessibility">Ouvrir Accessibilité</string>
+    <string name="game_setup_open_app_info">Ouvrir les infos de l’appli</string>
+    <string name="game_setup_open_developer">Ouvrir les options développeur</string>
+    <string name="game_setup_manage_accounts">Gérer les comptes</string>
+    <string name="game_setup_connect_agents">Connecter les agents</string>
+    <string name="game_setup_create_session">Créer une session</string>
+    <string name="game_setup_waiting_bridge">En attente du pont</string>
+    <string name="game_setup_waiting">En attente</string>
+
+    <!-- Le raccourci du menu de pause (ancien « Configurer » de l'accueil). -->
+    <string name="game_menu_setup">Préparer la console</string>
+    <string name="game_menu_setup_left">Étape facultative restante</string>
+    <string name="game_menu_setup_page">Reprend le parcours à la première étape restante.</string>
+    <string name="game_menu_setup_page_left">Une étape facultative reste à faire.</string>
+</resources>

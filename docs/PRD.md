@@ -75,7 +75,7 @@ Chaque lot correspond à un ou plusieurs tickets.
   - mode un seul écran si celui du bas est éteint ;
   - manette lue quel que soit l'écran qui a le focus ;
   - système visuel de la maquette.
-- **Parcours d'accueil** (ticket 28, ADR 23) : au premier lancement, neuf étapes vérifiées sur la console, explication en haut, état et actions en bas : Termux et Debian, pont, voix, notifications, puis mode console, accès à Android et comptes, facultatifs, jusqu'à la première session. « Configurer », sur l'accueil, le reprend à la première étape non faite.
+- **Parcours d'accueil** (ticket 28, ADR 23) : au premier lancement, neuf étapes vérifiées sur la console, explication en haut, état et actions en bas : Termux et Debian, pont, voix, notifications, puis mode console, accès à Android et comptes, facultatifs, jusqu'à la première session. « Configurer », sur l'accueil, le reprend à la première étape non faite. Version jeu : le parcours suit la route du hameau, de panneau en panneau, et « Préparer la console » du menu de pause (Start) le reprend (ticket 53).
 - **Agents disponibles** (ticket 31) : catalogue annoncé par le pont (nom, version, connexion, options), listes construites depuis ce catalogue dans l’app ; opencode est un troisième connecteur ACP, les fournisseurs et modèles restent natifs. Le parcours d'accueil (ticket 28) l'ouvre à son étape des comptes, facultative.
 - **Pont sur la Thor** :
   - sessions Claude et Codex exposées à l'app par une connexion locale protégée ;

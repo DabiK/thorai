@@ -194,8 +194,10 @@ abstract class GamepadActivity : ComponentActivity() {
                                 select = container::selectAuthenticationAgent, confirm = { button(Button.A) }, back = { button(Button.B) },
                                 refresh = container::refreshAuthentication, submitKey = container::submitAuthenticationKey,
                                 bindKeyAction = { container.authenticationKeyAction = it }))
-                    } else if (setup.visible) {
-                        app.regie.ui.screens.SetupScreen(setup, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single, packageName, container.setup::press, container.setupVelocity)
+                    } else if (setup.visible) GameTheme {
+                        // Vue jeu (ticket 53) : le parcours d'accueil sur la route du hameau, mêmes étapes et mêmes gestes.
+                        app.regie.game.ui.setup.GameSetupScreen(setup, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single, packageName,
+                            assets, container.setup::press, scrollVelocity = container.setupVelocity)
                     } else if (sessionSettings.visible && screen !is Screen.Session) {
                         app.regie.ui.screens.SessionSettingsScreen(sessionSettings, button, container::selectSessionSetting)
                     } else if (settingsOpen && controlsHere) GameTheme {
@@ -283,6 +285,8 @@ abstract class GamepadActivity : ComponentActivity() {
         val control by container.controller.state.collectAsStateWithLifecycle()
         val mail by container.courier.collectAsStateWithLifecycle()
         val voice by container.voiceSettings.collectAsStateWithLifecycle()
+        // « Préparer la console » signale une étape facultative restante, comme le carnet (ticket 30).
+        val optionalLeft = setupLeft(overview)
         val quit = when (val step = control.quit) {
             is app.regie.overview.QuitStep.Confirm -> app.regie.game.ui.menu.QuitPrompt(step.busy)
             app.regie.overview.QuitStep.Stopping -> app.regie.game.ui.menu.QuitPrompt(0, stopping = true)
@@ -303,8 +307,8 @@ abstract class GamepadActivity : ComponentActivity() {
                 app.regie.game.ui.menu.MainMenuScreen(menu, overview, quit = quit, callbacks = callbacks)
             menu.kind == app.regie.game.engine.menu.MenuKind.TITLE ->
                 app.regie.game.ui.menu.TitleTopScreen(menu, overview, assets, single, quit = quit, callbacks = callbacks)
-            bottom -> app.regie.game.ui.menu.PauseMenuBottom(menu, overview, mail, now, assets, quit = quit, callbacks = callbacks)
-            else -> app.regie.game.ui.menu.PauseMenuTop(menu, overview, mail, voice, now, assets, single, quit = quit, callbacks = callbacks)
+            bottom -> app.regie.game.ui.menu.PauseMenuBottom(menu, overview, mail, now, assets, quit = quit, callbacks = callbacks, setupLeft = optionalLeft)
+            else -> app.regie.game.ui.menu.PauseMenuTop(menu, overview, mail, voice, now, assets, single, quit = quit, callbacks = callbacks, setupLeft = optionalLeft)
         }
     }
 }
