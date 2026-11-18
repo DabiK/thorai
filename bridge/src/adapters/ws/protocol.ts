@@ -16,6 +16,10 @@ const configValues = z.record(z.string().min(1).max(200), z.string().min(1).max(
 const seq = z.number().int().min(0);
 
 export const paramsSchemas = {
+  'auth.status': z.object({}),
+  'auth.start': z.object({ agent: z.enum(AGENT_KINDS) }),
+  'auth.logout': z.object({ agent: z.enum(AGENT_KINDS) }),
+  'auth.cancel': z.object({ agent: z.enum(AGENT_KINDS) }),
   hello: z.object({
     since: seq.nullish(),
     journal: z.string().max(100).nullish(),

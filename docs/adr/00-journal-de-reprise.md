@@ -138,6 +138,8 @@ physiques différés restent requis même lorsqu’un ticket est marqué fait.
 
 - **18 novembre, ticket 24 à fusionner (solo Codex)** : consignes visibles Android/invisible thor_browser, mobile_open_url et repli VIEW documentés ; install.sh réexécuté, blocs globaux vérifiés par empreinte. Quatre suites shell et pont 308 tests + lint/typage verts. Thor : session Codex lancée par Régie, demande exacte puis Wikipédia dans Chrome en haut ; second essai rétablit seul adb privé après liste vide. Aucun APK/Claude/reboot. Deux tours terminés et annulations ciblées ; pont/adapteur partagé et sessions idle conservés pour le ticket 22 (pas de fermeture individuelle exposée). Sélection du bas restée ancienne hors périmètre : premier message ciblé via API du pont. Preuves et rejeu : `artifacts/screenshots/24/essai-thor.md` ; relecture solo après commit consignée dans `relecture.md`.
 
+- **18 novembre, ticket 23 à fusionner (solo Codex)** : auth.status/start/cancel/logout, écran dédié code/QR, entrée B accueil et proposition initiale, repli Claude dans Termux (ADR 17). Android 371 tests + lint, pont 321 + typage/lint verts. Émulateur deux écrans, pont Mac 47623 isolé : APK final vers vrai CLI Codex jusqu’au code, cycle complet simulé explicitement. Thor : nouveaux ports/adapter dans Debian, challenge réel et annulation sur profil temporaire, logout du seul profil vide ; comptes habituels connectés avant/après. Aucun APK installé sur Thor, aucun prompt Claude, sous-agent, push ou fusion. Cycle du compte habituel dans l’app physique réservé à l’utilisateur ; preuves et six étapes dans artifacts/screenshots/23/essai.md. Relecture après commit consignée séparément.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

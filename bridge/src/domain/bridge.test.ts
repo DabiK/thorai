@@ -1701,3 +1701,21 @@ it('restores the native permission mode when entering plan fails after set_mode'
   ]);
   expect(world.bridge.listSessions()[0]?.approvalMode).toBe('allow-all');
 });
+
+describe('authentication changes and ACP sessions', () => {
+  it('blocks an ACP start while login is pending, then releases it', async () => {
+    const release = world.bridge.acquireAuthentication('codex');
+    await expect(
+      world.bridge.createSession({ agent: 'codex', project: 'regie-demo', approvalMode: 'ask' }),
+    ).rejects.toThrow('connexion');
+    release();
+    const session = await world.bridge.createSession({
+      agent: 'codex',
+      project: 'regie-demo',
+      approvalMode: 'ask',
+    });
+    expect(session.agent).toBe('codex');
+    expect(() => world.bridge.acquireAuthentication('codex')).toThrow('Quitter');
+    await world.bridge.shutdown();
+  });
+});

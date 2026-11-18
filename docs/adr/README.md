@@ -23,6 +23,7 @@ Un ajout daté ou une décision du journal prime sur le contexte historique d’
 | [14](14-banc-emulateur.md) | Banc Mac et deux écrans | 16 |
 | [15](15-session-tout-en-un.md) | Validations dans le fil, options en bas | 18 |
 | [16](16-configuration-native-des-agents.md) | MCP, consignes et permissions natives | 19 |
+| [17](17-connexion-des-agents.md) | Code d’appareil Codex, connexion et repli Claude | 23 |
 
 Le [journal](00-journal-de-reprise.md) conserve les campagnes successives, leurs
 limites et les décisions produit. Le statut courant se lit dans les fichiers

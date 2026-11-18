@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 import { createServer, type IncomingMessage } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { type WebSocket, WebSocketServer } from 'ws';
+import type { Authentication } from '../../domain/authentication.ts';
 import type { Bridge } from '../../domain/bridge.ts';
 import { BridgeError, type BridgeEvent } from '../../domain/model.ts';
 import type { Logger } from '../../domain/ports.ts';
@@ -20,6 +21,7 @@ export interface ListenOptions {
 
 export interface ServeOptions {
   readonly bridge: Bridge;
+  readonly authentication?: Authentication;
   /** Called after answering `bridge.shutdown`. */
   readonly onShutdown: () => void;
 }
@@ -136,7 +138,22 @@ function serve(ws: WebSocket, options: WsServerOptions): void {
     unsubscribe = null;
   });
 
+  const authentication = () => {
+    if (!options.authentication)
+      throw new BridgeError('bad_request', 'Connexion des agents indisponible sur ce pont.');
+    return options.authentication;
+  };
   const handlers: { [M in Method]: (params: Params<M>) => unknown } = {
+    'auth.status': async () => ({ agents: await authentication().list() }),
+    'auth.start': async (params) => ({
+      authentication: await authentication().start(params.agent),
+    }),
+    'auth.logout': async (params) => ({
+      authentication: await authentication().logout(params.agent),
+    }),
+    'auth.cancel': async (params) => ({
+      authentication: await authentication().cancel(params.agent),
+    }),
     hello: (params) => {
       // Set at once: a second `hello`, even sent right after the first, is refused.
       if (greeted) throw new BridgeError('bad_request', 'Déjà abonné aux événements.');

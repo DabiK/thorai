@@ -115,6 +115,34 @@ class BridgeAgentGatewayTest {
         }
     }
 
+    @Test fun `authentication commands carry only agent identifiers and decode the public challenge`() {
+        val bridge = FakeBridge(); upgrade(bridge); val gateway = gateway()
+        withGateway(gateway) {
+            val ws = bridge.socket(); val hello = bridge.next("hello")
+            ws.send(helloResult(hello.long("id")!!, "j", 0, ""))
+            gateway.connection.first { it == BridgeConnection.Connected }
+            val status = async { gateway.authentication() }
+            val request = bridge.next("auth.status")
+            ws.send("""{"id":${request.long("id")},"result":{"agents":[{"agent":"codex","connected":false,"phase":"disconnected"}]}}""")
+            assertEquals(false, status.await().single().connected)
+            for (method in listOf("auth.start", "auth.cancel", "auth.logout")) {
+                val action = async {
+                    when (method) {
+                        "auth.start" -> gateway.startAuthentication(Agent.CODEX)
+                        "auth.cancel" -> gateway.cancelAuthentication(Agent.CODEX)
+                        else -> gateway.logoutAgent(Agent.CODEX)
+                    }
+                }
+                val command = bridge.next(method)
+                assertEquals("codex", command.obj("params")?.string("agent"))
+                assertEquals(setOf("agent"), command.obj("params")?.keys)
+                ws.send("""{"id":${command.long("id")},"result":{"authentication":{"agent":"codex","connected":false,"phase":"waiting","url":"https://auth.openai.com/codex/device","code":"ABCD-EFGHI","access_token":"not-for-the-app"}}}""")
+                assertEquals("ABCD-EFGHI", action.await().code)
+            }
+            assertTrue(lines.none { "ABCD-EFGHI" in it || "not-for-the-app" in it })
+        }
+    }
+
     @Test fun `agent options and confirmed session settings cross the real gateway`() {
         val bridge = FakeBridge(); upgrade(bridge); val gateway = gateway()
         withGateway(gateway) {

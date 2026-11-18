@@ -146,6 +146,8 @@ Conséquences du mode « valider » :
   - ils contiennent l'e-mail du compte ;
   - les filtrer, sans les journaliser ni les relayer à l'app ;
   - en garder seulement l'état connecté ou non.
+  - Ticket 23 : l’ADR 17 autorise séparément l’e-mail public facultatif dans
+    `auth.*.account`, lu par le CLI ; aucun changement du filtrage des événements ACP.
 - **Message pendant un tour** :
   - `_session/steering` (`{sessionId, prompt}`) pour l'injecter dans le tour en cours ;
   - sinon `session/prompt`, que les deux agents mettent en file.
