@@ -34,7 +34,12 @@ class BottomActivity : GamepadActivity() {
                 // Le carnet du hameau (ticket 45) : la ligne choisie suit le coursier quand le haut le montre.
                 val scene by container.village.scene.collectAsStateWithLifecycle()
                 val topVisible by container.topStarted.collectAsStateWithLifecycle()
-                app.regie.ui.game.GameOverviewBottom(scene, villageShown = topVisible, overview, control, setupLeft(overview), carnetCallbacks,
+                val mapOpen by container.village.mapOpen.collectAsStateWithLifecycle()
+                val mapStreet by container.village.mapStreet.collectAsStateWithLifecycle()
+                val shownScene = scene
+                // Pendant un chantier (ticket 48), la carte du hameau ; B la ferme et le carnet revient.
+                if (mapOpen && topVisible && shownScene != null) app.regie.ui.game.GameVillageMap(shownScene, mapStreet, mapCallbacks)
+                else app.regie.ui.game.GameOverviewBottom(scene, villageShown = topVisible, overview, control, setupLeft(overview), carnetCallbacks,
                     scrollVelocity = container.controller.scrollVelocity)
             },
             session = { shown, overview ->
@@ -65,6 +70,15 @@ class BottomActivity : GamepadActivity() {
                 combine(container.displays.mode, container.topAlive) { mode, topAlive -> belongsHere(mode, topAlive) }
                     .collect { if (!it) finish() }
             }
+        }
+    }
+
+    /** La carte du hameau, au doigt : une rue touchée y envoie le coursier. */
+    private val mapCallbacks by lazy {
+        object : app.regie.game.ui.chantier.MapCallbacks {
+            override fun onGoTo(street: Int) = container.village.goToStreet(street)
+            override fun onMove(delta: Int) = container.village.moveOnMap(delta)
+            override fun onClose() = container.village.closeMap()
         }
     }
 

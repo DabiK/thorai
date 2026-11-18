@@ -7,6 +7,7 @@ import app.regie.domain.model.SessionId
 import app.regie.domain.model.SessionStatus
 import app.regie.game.engine.world.Ground
 import app.regie.game.engine.world.TilePos
+import app.regie.game.engine.world.TileRect
 import kotlin.time.Instant
 
 private val T0: Instant = Instant.parse("2026-11-18T09:00:00Z")
@@ -67,3 +68,7 @@ fun Village.fingerprint(): String {
 
 /** Une position en coordonnées relatives à la place : stable quand la carte s'élargit. */
 fun Village.relative(p: TilePos) = TilePos(p.x - origin.x, p.y - origin.y)
+
+/** [this] est tout entier dans [other]. */
+fun TileRect.within(other: TileRect) =
+    left >= other.left && right <= other.right && top >= other.top && bottom <= other.bottom

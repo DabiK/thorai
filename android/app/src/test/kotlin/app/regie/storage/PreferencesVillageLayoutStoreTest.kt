@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import app.regie.domain.model.SessionId
 import app.regie.game.engine.village.HouseLayout
+import app.regie.game.engine.village.PlotReservation
 import app.regie.game.engine.village.StreetLayout
 import app.regie.game.engine.village.VillageLayout
 import app.regie.game.engine.world.RoofColors
@@ -40,6 +41,17 @@ class PreferencesVillageLayoutStoreTest {
         PreferencesVillageLayoutStore(context).save(layout)
 
         assertEquals(layout, PreferencesVillageLayoutStore(context).load())
+    }
+
+    @Test
+    fun `a reserved plot survives a restart, bound or not (ticket 48)`() {
+        val unbound = layout.copy(reservation = PlotReservation("meteo", 0, opensStreet = true))
+        PreferencesVillageLayoutStore(context).save(unbound)
+        assertEquals(unbound, PreferencesVillageLayoutStore(context).load())
+
+        val bound = layout.copy(reservation = PlotReservation("regie", 2, SessionId("n")))
+        PreferencesVillageLayoutStore(context).save(bound)
+        assertEquals(bound, PreferencesVillageLayoutStore(context).load())
     }
 
     @Test

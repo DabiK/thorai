@@ -58,4 +58,26 @@ class CourierInVillageTest {
         assertEquals(after.houseOf(SessionId(target.value))!!.entry, courier.tile)
         assertEquals(listOf<CourierEvent>(CourierEvent.EnterHouse(target)), events)
     }
+
+    @Test
+    fun `X sends the courier to the site, even when a new street opens during the walk`() {
+        val sessions = (0 until 3).map { session("s$it", "regie") }
+        val planning = generator.generate(overview(sessions), app.regie.game.engine.village.Construction("meteo", newProject = true))
+        val site = planning.site!!
+        val events = mutableListOf<CourierEvent>()
+        val courier = CourierController(planning) { events += it }
+        courier.handle(CourierCommand.GoToSite)
+        assertTrue(courier.walkingToSite)
+        courier.advance(STEP_MILLIS * 2L)
+        // Le nom change : la rue visée est la même place, le coursier continue.
+        val renamed = generator.generate(overview(sessions), app.regie.game.engine.village.Construction("meteo-du-jour", newProject = true))
+        courier.setVillage(renamed)
+        var guard = 0
+        while (courier.busy && guard++ < 500) courier.advance(STEP_MILLIS.toLong())
+        assertEquals(renamed.site!!.entry, courier.tile)
+        assertEquals(planning.relative(site.entry), renamed.relative(courier.tile))
+        assertEquals(Direction.UP, courier.facing)
+        assertEquals(listOf<CourierEvent>(CourierEvent.ArrivedAtSite), events)
+        assertTrue(!courier.walkingToSite)
+    }
 }

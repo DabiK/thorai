@@ -199,6 +199,33 @@ garder le routeur d'entrées de la manette (ADR 05) et se tester sans console.
   proche (`Village.nearestHouse`, sans limite). C'est la ligne choisie du carnet et le `selected` de
   `VillageOverlay`. Retour sur la vue d'ensemble : `leaveHouse`, le coursier ressort devant la porte.
 
+### Bâtir et agrandir (ticket 48)
+
+- **Réservation** : le terrain d'une nouvelle session est réservé dans la disposition enregistrée
+  (`VillageLayout.reservation`, `PlotReservation`) au moment où A lance la fiche, avant
+  `session.create`. Pendant la fiche, `VillageGenerator.generate(overview, construction)` montre le
+  terrain visé sans rien enregistrer ; `reserve` choisit ensuite le même. La session créée y est liée
+  (`bind`) et le planificateur la place là, nulle part ailleurs ; tant qu'elle n'est pas liée, une
+  session nouvelle du même projet attend (la vue d'ensemble peut l'apporter avant la réponse du pont).
+  Un échec libère le terrain (`release`) ; la rue ouverte par la réservation d'un nouveau projet
+  disparaît si elle est restée vide et la dernière. Au lancement de l'app, une réservation sans session
+  tombe. La clé d'un nouveau projet est son dossier normalisé (`projectFolderName`), celui que le pont crée.
+- **Étapes** : `Construction` (moteur, Kotlin pur) suit la création d'après le domaine seul : fiche
+  lancée (terrain, `chantier.0`), id rendu par le pont (fondations), session chargée dans l'agent
+  (`Session.active`, charpente), première réponse (texte ou action dans le fil, validation demandée,
+  tour fini ; sans consigne, l'agent qui attend la sienne : « Attend ta consigne »). Une étape ne
+  recule pas ; un échec (refus, création incertaine, session en échec, tour en échec) l'arrête, avec le
+  message tel quel. Le chantier fait partie de la clé de régénération du hameau.
+- **Branchement** : `AppContainer` réserve avant `ReviewNewSession.launch()`, lie la session dans le
+  rappel de création et observe le fil de la session. Le hameau à l'écran, on reste sur la vue
+  d'ensemble pour voir le chantier ; à la première réponse, le coursier resté devant entre dans la
+  maison finie. Sans hameau visible (mode console), la session s'ouvre directement, comme avant. Une
+  fiche ouverte dans une maison (ordre R2) ramène d'abord sur le hameau.
+- **Terrains libres** : une clôture de piquets (morceaux `cloture.*` raccordés, ouverte face à
+  l'entrée) ; l'intérieur reste praticable.
+- **Carte du hameau** : `Village.map()` lit les rues, maisons et terrains du hameau généré ; elle
+  occupe l'écran du bas pendant un chantier (croix, A y aller, B fermer).
+
 ### Le parcours d'accueil (ticket 53)
 
 - **Même parcours, autre décor.** Les étapes, les vérifications, les actions de A, B, X et Y et leur

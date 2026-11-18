@@ -32,7 +32,7 @@ internal class VillageBuilder(
     private val config: VillageConfig,
     private val inhabitants: (Agent) -> InhabitantKind,
 ) {
-    fun build(sessions: List<Session>, layout: VillageLayout): Village {
+    fun build(sessions: List<Session>, layout: VillageLayout, construction: Construction? = null): Village {
         val present = sessions.distinctBy { it.id }.associateBy { it.id }
         val occupant = HashMap<Pair<Int, Int>, Session>()
         val streetOf = layout.streets.withIndex().associate { (index, street) -> street.project to index }
@@ -110,14 +110,27 @@ internal class VillageBuilder(
             house.footprint.tiles().forEach { map.setBlocked(frame.world(it)) }
         }
 
-        // Le décor.
+        // Le chantier : le terrain réservé, ou la maison de la session en construction.
+        val site = site(layout, construction, streets, houses)
+        site?.takeIf { it.house == null && it.stage != null }?.footprint?.tiles()?.forEach { map.setBlocked(frame.world(it)) }
+        val building = site?.house?.takeIf { site.stage != null && site.stage != ConstructionStage.FINISHED }
+
+        // Le décor : pas de jardin autour d'une maison en chantier ; des piquets autour des terrains libres.
+        val sitePlot = site?.takeIf { it.stage != null }?.let { it.street to it.plot }
+        val freePlots = streets.flatMap { street ->
+            street.plots.filter { (street.index to it.index) !in occupant && (street.index to it.index) != sitePlot }.map { it.area }
+        }
         val decorations = VillageDecorator(decor, config.seed).decorate(
-            DecorPlan(map, frame, streets, houses, avenue, trail, water),
+            DecorPlan(map, frame, streets, houses.filter { it != building }, avenue, trail, water, freePlots),
         )
 
         val worldHouses = houses.map { it.inWorld(frame) }
         val worldDecor = decorations.map { it.inWorld(frame) }
-        val objects = (worldHouses.map { it.placed } + worldDecor.map { it.placed })
+        val sitePlaced = site?.stage?.takeIf { it != ConstructionStage.FINISHED }?.let { stage ->
+            Placed(decor.sites[stage.ordinal], frame.world(site.footprint).bottomLeft, site.house?.roof)
+        }
+        val housePlaced = worldHouses.filter { it.session.id != building?.session?.id }.map { it.placed }
+        val objects = (housePlaced + listOfNotNull(sitePlaced) + worldDecor.map { it.placed })
             .sortedWith(compareBy<Placed>({ it.anchor.y }, { it.anchor.x }))
         return Village(
             world = World(map, objects),
@@ -138,12 +151,69 @@ internal class VillageBuilder(
                             area = frame.world(plot.area),
                             entry = frame.world(plot.entry),
                             sessionId = occupant[street.index to plot.index]?.id,
+                            reserved = (street.index to plot.index) == sitePlot && site.house == null,
                         )
                     },
                 )
             },
             houses = worldHouses,
             decorations = worldDecor,
+            site = site?.let {
+                Site(
+                    project = it.project,
+                    street = it.street,
+                    plot = it.plot,
+                    area = frame.world(it.area),
+                    footprint = frame.world(it.footprint),
+                    entry = frame.world(it.entry),
+                    stage = it.stage,
+                    session = it.house?.session?.id ?: layout.reservation?.session ?: construction?.session,
+                    opensStreet = layout.reservation?.opensStreet ?: construction?.newProject ?: false,
+                    failed = construction?.failed == true,
+                    placed = sitePlaced,
+                )
+            },
+        )
+    }
+
+    /** Où se tient le chantier, en coordonnées logiques ; [house] est la maison déjà placée de la session. */
+    private class SiteGeometry(
+        val project: String,
+        val street: Int,
+        val plot: Int,
+        val area: TileRect,
+        val footprint: TileRect,
+        val entry: TilePos,
+        val stage: ConstructionStage?,
+        val house: House?,
+    )
+
+    private fun site(layout: VillageLayout, construction: Construction?, streets: List<StreetGeometry>, houses: List<House>): SiteGeometry? {
+        val reservation = layout.reservation
+        val house = construction?.session?.let { id -> houses.firstOrNull { it.session.id == id } }
+        val (street, plot, stage) = when {
+            house != null -> Triple(streets[house.street], house.plot, construction.stage ?: ConstructionStage.FOUNDATIONS)
+            reservation != null -> {
+                val street = streets.firstOrNull { it.project == reservation.project } ?: return null
+                // Sans chantier suivi (l'app a redémarré), l'étape se déduit de la réservation.
+                val stage = if (construction != null) construction.stage else if (reservation.session != null) ConstructionStage.FOUNDATIONS else ConstructionStage.PLOT
+                Triple(street, reservation.plot, stage)
+            }
+            else -> return null
+        }
+        val geometry = street.plots.getOrNull(plot) ?: return null
+        val size = decor.sizeOf(decor.sites.first())
+        val left = geometry.area.left + (VillageGeometry.PLOT_WIDTH - size.width) / 2
+        val bottom = street.roadTop - VillageGeometry.YARD - 1
+        return SiteGeometry(
+            project = street.project,
+            street = street.index,
+            plot = plot,
+            area = geometry.area,
+            footprint = TileRect(left, bottom - size.height + 1, size.width, size.height),
+            entry = geometry.entry,
+            stage = stage,
+            house = house,
         )
     }
 

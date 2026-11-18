@@ -46,7 +46,8 @@ object HouseMarks {
     /** La pointe du panneau entre un peu dans la tuile d'entrée, sous les pieds du coursier. */
     private const val DOORSTEP_INSET = 3
 
-    fun of(village: Village, assets: GameAssets): List<HouseMark> = village.houses.map { of(it, assets) }
+    /** Une maison encore en chantier (ticket 48) n'a ni bulle ni panneau : le chantier a les siens. */
+    fun of(village: Village, assets: GameAssets): List<HouseMark> = village.houses.filterNot(village::isUnderConstruction).map { of(it, assets) }
 
     fun of(house: House, assets: GameAssets): HouseMark {
         val tile = GroundPainter.TILE
@@ -101,7 +102,7 @@ fun VillageOverlay(
 ) {
     val marks = remember(village, assets) { HouseMarks.of(village, assets) }
     val bubbles = remember(assets) { StateBubbles.of(assets) }
-    val states = remember(village) { village.houses.map { TagState.of(it.session.status) }.toTypedArray() }
+    val states = remember(marks) { marks.map { TagState.of(it.house.session.status) }.toTypedArray() }
     Canvas(modifier.fillMaxSize()) {
         if (bubbles == null) return@Canvas
         val scale = projection.scale

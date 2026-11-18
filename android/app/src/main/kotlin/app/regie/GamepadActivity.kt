@@ -210,8 +210,16 @@ abstract class GamepadActivity : ComponentActivity() {
                             callbacks = app.regie.game.ui.console.CommandCallbacks({ button(Button.A) }, { button(Button.B) },
                                 { container.touchTrigger(Trigger.R2, it) }, container::openVoiceSettings))
                     } else if (newSession.visible) {
-                        app.regie.ui.screens.NewSessionScreen(newSession, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single,
-                            button, held, container::selectNewSessionField, container::editNewInstruction, container::editNewBranch, container.newSessionVelocity, container::editNewProjectName)
+                        // Vue jeu (ticket 48) : la fiche en bas ; en haut, le coursier va au terrain et le chantier montre ses étapes.
+                        val build = app.regie.ui.game.buildCallbacks(button, held, container::selectNewSessionField,
+                            container::editNewInstruction, container::editNewBranch, container::editNewProjectName)
+                        if (this@GamepadActivity is BottomActivity || mode == ScreenMode.Single) {
+                            app.regie.ui.game.GameNewSessionBottom(newSession, build, compact = mode == ScreenMode.Single)
+                        } else {
+                            val scene by container.village.scene.collectAsStateWithLifecycle()
+                            val construction by container.village.construction.collectAsStateWithLifecycle()
+                            app.regie.ui.game.GameNewSessionTop(scene, construction, container::enterHouse)
+                        }
                     } else if (dictation.visible && this@GamepadActivity is BottomActivity) {
                         // Deux écrans : la dictée et sa transcription en direct sont en bas ; le haut ne change pas.
                         app.regie.ui.game.GameDictation(dictation, current.sessions.firstOrNull { it.id == dictation.target?.sessionId },

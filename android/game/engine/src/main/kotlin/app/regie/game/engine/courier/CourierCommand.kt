@@ -20,6 +20,12 @@ sealed interface CourierCommand {
      */
     data class GoTo(val sessionId: SessionId, val enter: Boolean = true) : CourierCommand
 
+    /**
+     * Marcher seul jusqu'au chantier ([app.regie.game.engine.village.Village.site]), devant son terrain,
+     * puis le regarder ([CourierEvent.ArrivedAtSite]). X, l'ordre R2 « lance … » ou « Nouvelle session ».
+     */
+    data object GoToSite : CourierCommand
+
     /** R1 : la validation en attente d'abord, sinon la maison suivante. */
     data object Next : CourierCommand
 
@@ -37,6 +43,9 @@ sealed interface CourierEvent {
 
     /** Le coursier s'est arrêté devant la porte de [sessionId], sans entrer (L1, R1). */
     data class ArrivedAtDoor(val sessionId: SessionId) : CourierEvent
+
+    /** Le coursier est devant le chantier et le regarde. */
+    data object ArrivedAtSite : CourierEvent
 }
 
 /** L'animation du coursier : debout, en marche ou en train de parler, toujours selon sa direction. */

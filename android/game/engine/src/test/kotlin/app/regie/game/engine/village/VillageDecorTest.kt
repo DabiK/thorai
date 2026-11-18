@@ -44,6 +44,7 @@ class VillageDecorTest {
 
     @Test
     fun `le decor ne touche ni route, ni allee, ni porte, ni terrain libre, ni la place d'un toit libre`() {
+        val stakes = decor.plotFence.all.toSet()
         villages.forEach { village ->
             val map = village.world.map
             val doors = village.houses.flatMap { listOf(it.door, it.entry) }.toSet()
@@ -54,7 +55,13 @@ class VillageDecorTest {
                     assertTrue(map.ground(tile) == Ground.GRASS || map.ground(tile) == Ground.PLAZA, "$id sur ${map.ground(tile)} en $tile")
                     assertFalse(tile in doors, "$id sur une porte en $tile")
                 }
-                freeZones.forEach { zone -> assertFalse(decoration.footprint.intersects(zone), "$id sur un terrain libre $zone") }
+                // Sur un terrain libre, seule sa clôture de piquets (ticket 48), dans le terrain.
+                freeZones.forEach { zone ->
+                    if (decoration.footprint.intersects(zone)) {
+                        assertTrue(id in stakes, "$id sur un terrain libre $zone")
+                        assertTrue(village.freePlots.any { decoration.footprint.within(it.area) }, "$id hors de son terrain")
+                    }
+                }
             }
             // Devant chaque terrain libre, l'entrée reste praticable.
             village.freePlots.forEach { assertFalse(map.isBlocked(it.entry)) }
@@ -138,9 +145,6 @@ class VillageDecorTest {
     }
 
     private fun TileRect.grownUp(rows: Int) = TileRect(left, top - rows, width, height + rows)
-
-    private fun TileRect.within(other: TileRect) =
-        left >= other.left && right <= other.right && top >= other.top && bottom <= other.bottom
 
     private companion object {
         const val ROOF_ROWS = 2

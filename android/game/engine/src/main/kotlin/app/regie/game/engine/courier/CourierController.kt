@@ -21,8 +21,8 @@ import kotlin.math.abs
  *   entre-temps ; A pendant un pas est joué à son arrivée ;
  * - une tuile bloquée (ou hors de la carte) tourne le coursier sans le déplacer.
  *
- * Marche automatique ([CourierCommand.GoTo], L1, R1) : le plus court chemin jusqu'à l'entrée de la
- * maison, depuis la fin du pas en cours ; puis le coursier regarde la porte et entre, ou s'arrête
+ * Marche automatique ([CourierCommand.GoTo], L1, R1, [CourierCommand.GoToSite]) : le plus court chemin
+ * jusqu'à l'entrée de la maison (ou le devant du chantier), depuis la fin du pas en cours ; puis le coursier regarde la porte et entre, ou s'arrête
  * devant. Toute entrée manuelle (direction, A) l'interrompt, après le pas commencé.
  *
  * À chaque régénération du hameau, [setVillage] reporte la position avec [Village.relocate] et
@@ -77,6 +77,12 @@ class CourierController(
     private var pathIndex = 0
     private var enterOnArrival = false
 
+    /** La marche automatique va au chantier, pas à une maison. */
+    private var toSite = false
+
+    /** Le coursier marche seul jusqu'au chantier. */
+    val walkingToSite: Boolean get() = toSite
+
     init {
         require(!village.world.map.isBlocked(start)) { "Le coursier ne peut pas partir de $start, bloquée" }
     }
@@ -89,6 +95,7 @@ class CourierController(
                 if (moving) pendingInteract = true else interact()
             }
             is CourierCommand.GoTo -> goTo(command.sessionId, command.enter)
+            CourierCommand.GoToSite -> goToSite()
             CourierCommand.Next -> next()
             CourierCommand.Previous -> cycle(-1)
             is CourierCommand.Talk -> {
@@ -159,6 +166,7 @@ class CourierController(
         destination?.let { id ->
             if (!planPath(id, enterOnArrival)) cancelAutoWalk()
         }
+        if (toSite && !planSitePath()) cancelAutoWalk()
         if (!moving) continueWalking()
         refreshAction()
     }
@@ -186,6 +194,19 @@ class CourierController(
 
     /** À l'arrêt sur une tuile : suivre le chemin, jouer A ou la réserve, ou marcher selon la direction tenue. */
     private fun continueWalking() {
+        if (toSite) {
+            if (pathIndex < path.size) {
+                val direction = Direction.between(tile, path[pathIndex])
+                if (direction != null && startStep(direction)) {
+                    pathIndex++
+                    return
+                }
+                if (planSitePath()) continueWalking() else cancelAutoWalk()
+                return
+            }
+            arriveAtSite()
+            return
+        }
         val target = destination
         if (target != null) {
             if (pathIndex < path.size) {
@@ -239,6 +260,34 @@ class CourierController(
         if (!moving) continueWalking()
     }
 
+    private fun goToSite() {
+        buffered = null
+        pendingInteract = false
+        if (!planSitePath()) return
+        if (!moving) continueWalking()
+    }
+
+    /** Le chemin vers le devant du chantier, depuis la fin du pas en cours. Faux sans chantier ou sans chemin. */
+    private fun planSitePath(): Boolean {
+        val site = village.site ?: return false
+        val from = stepDirection?.next(tile) ?: tile
+        val route = findPath(village.world.map, from, site.entry) ?: return false
+        path.clear()
+        path.addAll(route)
+        pathIndex = 1
+        destination = null
+        enterOnArrival = false
+        toSite = true
+        return true
+    }
+
+    private fun arriveAtSite() {
+        cancelAutoWalk()
+        facing = Direction.UP
+        refreshAction()
+        onEvent(CourierEvent.ArrivedAtSite)
+    }
+
     /** Le chemin vers l'entrée de la maison de [id], depuis la fin du pas en cours. Faux s'il n'y en a pas. */
     private fun planPath(id: SessionId, enter: Boolean): Boolean {
         val house = village.houseOf(id) ?: return false
@@ -249,6 +298,7 @@ class CourierController(
         pathIndex = 1 // route[0] est le point de départ.
         destination = id
         enterOnArrival = enter
+        toSite = false
         return true
     }
 
@@ -263,6 +313,7 @@ class CourierController(
 
     private fun cancelAutoWalk() {
         destination = null
+        toSite = false
         path.clear()
         pathIndex = 0
         enterOnArrival = false

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Bâtir et agrandir (ticket 48, maquettes 10 et 11). -->
+    <string name="batir_title">Nouvelle session</string>
+    <string name="batir_from_voice">Remplie depuis ton ordre vocal</string>
+    <string name="batir_launch">Bâtir</string>
+    <string name="batir_sending">Lancement…</string>
+    <string name="batir_cancel">Annuler</string>
+    <string name="batir_fields">Champs</string>
+    <string name="batir_dictate_instruction">Dicter la consigne</string>
+    <string name="batir_dictate_name">Dicter le nom du projet</string>
+    <string name="batir_new_project">Nouveau projet : créer un dépôt vide</string>
+    <string name="batir_new_project_how">Sur Projet, ← → jusqu’au bout</string>
+    <string name="batir_instruction_empty">Aucune · L2 pour dicter</string>
+    <string name="batir_project_name_hint">Nom du projet · L2 pour dicter</string>
+    <string name="batir_branch_name_hint">Nom facultatif, choisi sinon par l’agent</string>
+    <string name="batir_listening">Écoute…</string>
+    <string name="batir_transcribing">Transcription…</string>
+    <string name="batir_level">L2 · %1$d %%</string>
+
+    <!-- Le chantier, en haut. -->
+    <string name="chantier_title">Bâtir une maison</string>
+    <string name="chantier_stage_plot">Fiche</string>
+    <string name="chantier_stage_foundations">Session créée</string>
+    <string name="chantier_stage_frame">Agent lancé</string>
+    <string name="chantier_stage_finished">Première réponse</string>
+    <string name="chantier_stage_ready">Attend ta consigne</string>
+    <string name="chantier_failed">Échec</string>
+    <string name="chantier_failed_silent">Aucun message du pont ni de l’agent.</string>
+    <string name="chantier_choose_project">Choisis un projet : le terrain suivra.</string>
+    <string name="chantier_street">Rue %1$s</string>
+    <string name="chantier_new_street">Nouvelle rue : %1$s</string>
+    <string name="chantier_new_project">Nouveau projet</string>
+    <string name="chantier_sign">Chantier</string>
+    <string name="chantier_target">Terrain choisi</string>
+
+    <!-- La carte du hameau, en bas. -->
+    <string name="carte_title">Carte du hameau</string>
+    <plurals name="carte_streets">
+        <item quantity="one">%1$d rue</item>
+        <item quantity="many">%1$d rues</item>
+        <item quantity="other">%1$d rues</item>
+    </plurals>
+    <plurals name="carte_houses">
+        <item quantity="one">%1$d maison</item>
+        <item quantity="many">%1$d maisons</item>
+        <item quantity="other">%1$d maisons</item>
+    </plurals>
+    <string name="carte_next">Projet suivant</string>
+    <string name="carte_next_hint">Une nouvelle rue s’ouvre à sa création.</string>
+    <string name="carte_rule">Un projet, une rue. Une session, une maison. Rue pleine : elle s’allonge.</string>
+    <string name="carte_go">Y aller</string>
+    <string name="carte_streets_key">Rues</string>
+    <string name="carte_close">Fermer</string>
+    <string name="carte_free">Terrain libre</string>
+</resources>
