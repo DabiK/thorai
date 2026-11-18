@@ -25,7 +25,7 @@ object Blink {
     fun bobUp(timeMillis: Long): Boolean = Math.floorMod(timeMillis, 1000L) >= 500L
 }
 
-enum class ArrowDirection { DOWN, RIGHT, LEFT }
+enum class ArrowDirection { DOWN, RIGHT, LEFT, UP }
 
 /**
  * Une flèche en escalier de [rows] pixels de profondeur : pointe de la bulle, du panneau,
@@ -43,7 +43,7 @@ fun PixelArrow(
     val clock = Game.clock
     val long = metrics.art(2 * rows)
     val short = metrics.art(rows)
-    val sized = if (direction == ArrowDirection.DOWN) modifier.size(long, short) else modifier.size(short, long)
+    val sized = if (direction == ArrowDirection.DOWN || direction == ArrowDirection.UP) modifier.size(long, short) else modifier.size(short, long)
     Canvas(if (blink) sized.graphicsLayer { alpha = Blink.pulse(clock.value) } else sized) {
         val p = metrics.pixelPx.toFloat()
         for (i in 0 until rows) {
@@ -53,6 +53,7 @@ fun PixelArrow(
                 ArrowDirection.DOWN -> drawRect(color, Offset(i * p, i * p), Size(span, p))
                 ArrowDirection.RIGHT -> drawRect(color, Offset(i * p, i * p), Size(p, span))
                 ArrowDirection.LEFT -> drawRect(color, Offset((rows - 1 - i) * p, i * p), Size(p, span))
+                ArrowDirection.UP -> drawRect(color, Offset(i * p, (rows - 1 - i) * p), Size(span, p))
             }
         }
     }

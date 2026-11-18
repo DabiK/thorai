@@ -29,6 +29,8 @@ import app.regie.game.ui.demo.DemoScene
 import app.regie.game.ui.demo.DemoTopScreen
 import app.regie.game.ui.fixtureAssets
 import app.regie.game.ui.theme.GameTheme
+import app.regie.game.ui.village.VillageOverlay
+import app.regie.game.ui.village.houseStates
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -241,22 +243,27 @@ class PixelWorldTest {
     }
 
     @Test
-    @Config(qualifiers = "w2300dp-h1500dp-land-mdpi")
-    fun `the whole village of 8 sessions fits a map view at scale 2`() {
+    @Config(qualifiers = "w3600dp-h2400dp-land-mdpi")
+    fun `the whole village of 8 and 20 sessions fits a map view at scale 2, houses alive`() {
         val assets = GameAssetLoader.load(RuntimeEnvironment.getApplication().assets)
-        val village = DemoScene.village(8, assets)
-        GroundCache.prepare(GroundKey.of(village.world.map), assets.palette)
-        val width = village.world.map.width * GroundPainter.TILE
-        val height = village.world.map.height * GroundPainter.TILE
-        Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
-            host.setup().get().setContent {
-                GameTheme {
-                    PixelWorld(village.world, assets, { ArtPoint(width / 2, height / 2) }, Modifier.fillMaxSize(), scale = 2)
+        for (count in listOf(8, 20)) {
+            val village = DemoScene.village(count, assets)
+            GroundCache.prepare(GroundKey.of(village.world.map), assets.palette)
+            val width = village.world.map.width * GroundPainter.TILE
+            val height = village.world.map.height * GroundPainter.TILE
+            val states = village.houseStates()
+            Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
+                host.setup().get().setContent {
+                    GameTheme(clock = mutableLongStateOf(900)) {
+                        PixelWorld(village.world, assets, { ArtPoint(width / 2, height / 2) }, Modifier.fillMaxSize(), scale = 2, states = states) {
+                            VillageOverlay(village, assets, it)
+                        }
+                    }
                 }
+                val map = snapshot(host.get())
+                assertTrue(map.width >= width * 2 && map.height >= height * 2, "carte ${width}×$height dans ${map.width}×${map.height}")
+                save(map, "hameau-$count-carte.png")
             }
-            val map = snapshot(host.get())
-            assertTrue(map.width >= width * 2 && map.height >= height * 2, "carte ${width}×$height dans ${map.width}×${map.height}")
-            save(map, "hameau-8-carte.png")
         }
     }
 

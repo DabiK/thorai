@@ -22,8 +22,9 @@ import app.regie.game.ui.theme.Game
 import app.regie.game.ui.theme.GameText
 
 /**
- * Panneau planté au-dessus d'une maison : le projet, la session et l'état, avec une pointe vers
- * la maison. Une validation en attente le passe en ambre et le fait sautiller.
+ * Panneau d'une maison : le projet, la session et l'état, avec une pointe vers la maison (sous le
+ * panneau ; [pointer] faux pour la poser soi-même, comme [app.regie.game.ui.village.VillageOverlay]).
+ * Une validation en attente le passe en ambre et le fait sautiller.
  */
 @Composable
 fun SignPanel(
@@ -34,6 +35,7 @@ fun SignPanel(
     stateLabel: String? = state?.let { tagLabel(it) },
     colors: FrameColors = if (state == TagState.WAITING) FrameDefaults.filled(Game.colors.wait) else FrameDefaults.panel(),
     bob: Boolean = state == TagState.WAITING,
+    pointer: Boolean = true,
 ) {
     val metrics = Game.metrics
     val palette = Game.colors
@@ -68,7 +70,7 @@ fun SignPanel(
                 }
             }
         }
-        PixelArrow(ArrowDirection.DOWN, rows = 2)
+        if (pointer) PixelArrow(ArrowDirection.DOWN, rows = 2)
     }
 }
 
