@@ -1,7 +1,6 @@
 package app.regie.console
 
 import android.app.Application
-import android.content.pm.PackageManager
 import android.content.pm.PackageInfo
 import android.content.pm.ApplicationInfo
 import androidx.test.core.app.ApplicationProvider
@@ -45,7 +44,6 @@ class BridgePairingTest {
         assertEquals(listOf("regie-pair-fixture"), intent.getStringArrayExtra("com.termux.RUN_COMMAND_ARGUMENTS")?.toList())
         assertNull(intent.getStringExtra("com.termux.RUN_COMMAND_STDIN"))
         assertTrue(intent.extras.toString().contains(token).not())
-        assertEquals(PackageManager.PERMISSION_DENIED, app.checkSelfPermission("irrelevant.permission"))
         tokenFile.delete()
         assertNotEquals(token, BridgeTokenFile(tokenFile).readOrCreate())
     }

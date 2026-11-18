@@ -6,6 +6,7 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 cat > "$tmp/adb" <<'EOF'
 #!/usr/bin/env bash
+[[ "${FAKE_ADB_FAILURE:-0}" == 0 ]] || exit 1
 printf '%s\n' 'List of devices attached' "$FAKE_DEVICES"
 EOF
 chmod +x "$tmp/adb"
@@ -17,7 +18,12 @@ export FAKE_DEVICES=$'one\tdevice\ntwo\tdevice'
 if (source "$root/scripts/device.sh"; select_adb_device) >"$tmp/out" 2>"$tmp/error"; then exit 1; fi
 grep -q THOR_SERIAL "$tmp/error"
 [[ $(export THOR_SERIAL=two; source "$root/scripts/device.sh"; select_adb_device) == two ]]
+export FAKE_DEVICES=$'one\tdevice\ntwo\tunauthorized'
+if (source "$root/scripts/device.sh"; select_adb_device) >"$tmp/out" 2>"$tmp/error"; then exit 1; fi
 export FAKE_DEVICES=$'one\tunauthorized'
 if (source "$root/scripts/device.sh"; select_adb_device) >"$tmp/out" 2>"$tmp/error"; then exit 1; fi
 if (export THOR_SERIAL=missing; source "$root/scripts/device.sh"; select_adb_device) >"$tmp/out" 2>"$tmp/error"; then exit 1; fi
+export FAKE_DEVICES=$'one\tdevice'
+export FAKE_ADB_FAILURE=1
+if (source "$root/scripts/device.sh"; select_adb_device) >"$tmp/out" 2>"$tmp/error"; then exit 1; fi
 echo 'device selection: OK'

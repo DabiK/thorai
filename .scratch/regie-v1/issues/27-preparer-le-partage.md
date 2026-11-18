@@ -47,9 +47,9 @@ CRITÈRES:
 - [ ] Parcours complet sur Thor vierge → aucun effacement de Termux ; association et comptes à éprouver avec l'utilisateur.
 PORTE DE QUALITÉ: Android 441 tests + lint, voix 127 + lint, pont 320 + typage/lint ; check-sharing et 13 tests scripts émulateur verts.
 THOR: debug puis release signée ; désinstallation app.regie nécessaire et effectuée, préférences/modèles réinitialisés, permissions antérieures restituées ; jeton changé, 0600, 49 sessions retrouvées, aucun agent lancé. Après disparition USB, dernier code debug installé sur émulateur deux écrans avec pont Mac, connecté sans démo.
-REVIEW: lecture du ticket et des frontières ; transfert par provider retiré après refus Android, contrôle UID testé par mutation ; chemin Claude rendu indépendant du PATH préexistant.
+REVIEW: diff main...HEAD relu après 9500704 ; sélection adb avec second appareil non autorisé corrigée, erreur adb propagée ; transfert par provider retiré après refus Android, contrôle UID testé par mutation ; chemin Claude rendu indépendant du PATH préexistant.
 DÉCISIONS PRISES: socket Unix éphémère et contrôle UID pour éviter les logs de Termux ; scripts partagés entre Mac et local ; versionCode déterministe, clé externe sauvegardable ; ADR 06/18/20.
 POUR L'UTILISATEUR: 1. Réactiver Mode console dans Accessibilité. 2. Reconfigurer la voix et télécharger le modèle local. 3. Réinstaller le dernier APK à reconnexion USB. 4. Suivre le pas à pas Thor vierge dans artifacts/screenshots/27/essai-thor.md. 5. Sauvegarder la clé externe avant publication.
 QUESTIONS: aucune décision produit en attente.
-CAPTURES: artifacts/screenshots/27/04-release-visible-{haut,bas}.png (Thor), 07-emulator-ready-{haut,bas}.png ; preuves et vérifications dans essai-thor.md.
+CAPTURES: artifacts/screenshots/27/04-release-visible-{haut,bas}.png (Thor), 07-emulator-ready-{haut,bas}.png ; preuves dans essai-thor.md, relecture dans relecture.md.
 HORS PÉRIMÈTRE: deux avertissements Biome préexistants dans bridge.test.ts ; aucun problème fonctionnel hors périmètre traité.

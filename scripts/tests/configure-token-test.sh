@@ -23,7 +23,8 @@ printf '%s\n' "$token" > "$HOME/token-source"
 bash "$root/thor/bridge/configure.sh" regie-pair-fixture > "$tmp/output" 2>&1
 file="$PREFIX/var/lib/proot-distro/containers/debian/rootfs/home/dev/.config/regie/bridge-token"
 [[ $(cat "$file") == "$token" ]]
-[[ $(stat -f '%Lp' "$file" 2>/dev/null || stat -c '%a' "$file") == 600 ]]
+mode=$(stat -c '%a' "$file" 2>/dev/null) || mode=$(stat -f '%Lp' "$file")
+[[ "$mode" == 600 ]]
 [[ $(cat "$HOME/calls") == $'stop\nstart' ]]
 ! grep -qF "$token" "$tmp/output"
 printf '%s\n' "$token" > "$HOME/token-source"

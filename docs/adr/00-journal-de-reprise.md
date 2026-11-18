@@ -171,6 +171,8 @@ physiques différés restent requis même lorsqu’un ticket est marqué fait.
 
 - **18 novembre, ticket 27 à fusionner (solo Codex)** : sélection adb sans console par défaut, projets neutres, MIT, connexion Claude dans Debian, jeton release transmis par RUN_COMMAND/socket Unix contrôlée par UID, installeur Termux autonome et script de release signé (ADR 06/18/20). Android 441 tests + lint, voix 127 + lint, pont 320 + typage/lint, scripts hors console verts. Release signée vérifiée et installée sur Thor après désinstallation du debug (signatures différentes), jeton renouvelé 0600 et 49 sessions retrouvées ; aucun agent lancé. Thor disparue d'adb au dernier remplacement : release éprouvée laissée en place, dernier APK à réinstaller à son retour. Préférences/modèles de Régie réinitialisés, Accessibilité à réactiver ; installation vierge à éprouver. Aucune publication. Preuves et pas à pas : `artifacts/screenshots/27/essai-thor.md`.
 
+- **18 novembre, ticket 27, relecture après 9500704 (solo Codex)** : sélection adb corrigée pour exiger THOR_SERIAL aussi avec un second appareil non autorisé ; erreur adb non masquée, tests rouges puis verts. Protection de stdin de l'installeur, test de droits portable, assertion sans rapport et espaces des traces nettoyés. Android 441 + lint, pont 320 + typage/lint et scripts repassés verts ; dernier code debug réinstallé sur le banc deux écrans, sans agent. Release Thor éprouvée laissée intacte après disparition USB ; dernier APK physique et installation vierge restent à vérifier. Statut à fusionner maintenu ; détail `artifacts/screenshots/27/relecture.md`.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

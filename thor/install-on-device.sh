@@ -19,6 +19,7 @@ if [[ ! -f "$rootfs/etc/debian_version" ]]; then
   proot-distro install --name debian debian:13
 fi
 proot-distro login debian -- /bin/bash -s <<'DEBIAN'
+{
 set -euo pipefail
 apt-get update -qq
 DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ca-certificates curl xz-utils git jq procps python3 ripgrep
@@ -39,10 +40,12 @@ if [[ $(/usr/local/bin/codex --version 2>/dev/null || true) != 'codex-cli 0.167.
   npm install --global --prefix /opt/codex-cli @openai/codex@0.167.2
   ln -sf /opt/codex-cli/bin/codex /usr/local/bin/codex
 fi
+}
 DEBIAN
 proot-distro login debian --user dev \
   --bind "$HOME/projects:/home/dev/projects" --bind "$HOME/.codex:/home/dev/.codex" \
   --work-dir /home/dev -- /bin/bash -s <<'DEV'
+{
 set -euo pipefail
 export PATH="$HOME/.local/bin:$PATH"
 if [[ $(claude --version 2>/dev/null || true) != '2.1.322 (Claude Code)' ]]; then
@@ -54,6 +57,7 @@ fi
 profile_line='export PATH="$HOME/.local/bin:/usr/local/bin:$PATH"'
 touch "$HOME/.profile"
 grep -Fxq "$profile_line" "$HOME/.profile" || printf '\n%s\n' "$profile_line" >> "$HOME/.profile"
+}
 DEV
 proot-distro login debian --user dev \
   --bind "$HOME/.codex:/home/dev/.codex" -- python3 - /home/dev/.codex/config.toml < "$here/configure-codex.py"
