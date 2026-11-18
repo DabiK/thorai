@@ -1,0 +1,6 @@
+WHAT TO DRAW
+A sprite sheet of nature props for the attached hamlet, in the same top-down oblique RPG view. Each prop stands alone on the magenta background: no ground, no grass under it, no cast shadow.
+Row 1: three big trees, each about 48 art pixels wide and 64 tall: a round leafy oak, a tall pine tree, a blossoming pale pink cherry tree; then a small young tree about 32 wide and 44 tall.
+Row 2: a round green bush (about 24 x 20 art pixels), a green bush with small white flowers (24 x 20), a clump of tall grass (16 x 12), a tree stump (20 x 16), a fallen log (32 x 14).
+Row 3: three small flower patches, each about 16 x 12 art pixels (yellow flowers, white flowers, pink and coral flowers), a big grey boulder (28 x 22), a small grey rock (14 x 10), a mossy rock (20 x 16).
+No people, no animals, no text, letters, numbers or watermark.

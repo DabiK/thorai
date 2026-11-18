@@ -1,0 +1,6 @@
+WHAT TO DRAW
+A sprite sheet of village props for the attached hamlet, in the same top-down oblique RPG view. Each prop stands alone on the magenta background: no ground, no grass under it, no cast shadow.
+Row 1: a round stone fountain with turquoise water and a small spout (about 64 art pixels wide and 56 tall); a stone well with a small wooden roof and a bucket (40 x 52); a wooden footbridge seen from above whose planks run from left to right, with a rail along its top and bottom edges (64 wide, 40 tall); the same kind of footbridge turned to run from top to bottom, with rails along its left and right edges (40 wide, 64 tall).
+Row 2: a wooden bench seen from the front (32 x 20); a wooden bench seen from the side (14 x 28); a lamp post with a lit lantern (12 x 40); a small lantern on a short stake (10 x 20); a signpost with one blank wooden board (28 x 36); a signpost with two blank arrow-shaped boards (28 x 40).
+Row 3: a wooden barrel (16 x 20), a wooden crate (16 x 16), a long flower planter box (32 x 16), a stack of firewood (24 x 16), a wheelbarrow (24 x 16), a pile of planks (28 x 12).
+All boards and signs are blank. No people, no text, letters, numbers or watermark.

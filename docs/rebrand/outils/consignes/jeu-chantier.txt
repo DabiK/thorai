@@ -1,0 +1,7 @@
+WHAT TO DRAW
+Four stages of building the same small cottage of the attached hamlet, side by side from left to right on the same baseline, in the same top-down oblique RPG view. Each stage stands alone on the magenta background: no grass around it, no cast shadow.
+(1) an empty building plot: a rectangle of bare brown earth about 96 art pixels wide and 64 tall, four wooden stakes at its corners joined by a string, two planks lying on the earth;
+(2) the same plot with low grey stone foundations, a pile of planks and a wheelbarrow;
+(3) the same plot with the wooden timber frame of the cottage, scaffolding and a ladder, about 96 art pixels wide and 88 tall;
+(4) the finished cottage, about 96 art pixels wide and 88 tall: one storey, cream walls, timber frame, the door in the middle, two lit windows, a grey stone chimney, a roof painted in a vivid pure cobalt blue in exactly three flat tones (light, mid, dark; nothing else is blue), with small colourful confetti floating above the roof.
+No people, no text, letters, numbers or watermark.
