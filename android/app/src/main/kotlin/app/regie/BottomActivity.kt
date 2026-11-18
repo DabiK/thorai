@@ -8,7 +8,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import app.regie.display.ScreenMode
 import app.regie.input.GamepadInput
-import app.regie.ui.screens.ApprovalBottomScreen
 import app.regie.ui.screens.OverviewBottomScreen
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -27,7 +26,10 @@ class BottomActivity : GamepadActivity() {
         setScreen(
             approval = {
                 val review by container.approvalReview.collectAsStateWithLifecycle()
-                ApprovalBottomScreen(review, { container.handleInput(GamepadInput.Pressed(it)) })
+                val overview by container.overview.collectAsStateWithLifecycle()
+                // Le menu de choix de la validation (ticket 47).
+                app.regie.ui.game.GameApprovalBottom(review, overview, { container.handleInput(GamepadInput.Pressed(it)) },
+                    { container.touchTrigger(app.regie.input.Trigger.L2, it) }, container::selectApproval)
             },
             overview = { overview, control -> OverviewBottomScreen(overview, control, callbacks) },
             session = { shown, overview ->
@@ -45,10 +47,10 @@ class BottomActivity : GamepadActivity() {
                 // en-tête ; le carnet du 46 reste dessous, avec son fil, ses avis et son brouillon.
                 if (!topVisible && session?.project == app.regie.domain.usecase.ConsoleSession.PROJECT) {
                     app.regie.ui.game.ConsoleSessionBottom(session, live, gone = neighbours == null, neighbours, control, draft, settings, threadScroll,
-                        sessionCallbacks, approval, container::answerInline, container::nextInlineApproval, container::dismissInlineApproval,
+                        sessionCallbacks, approval, container::answerInline, container::dismissInlineApproval,
                         container::selectSessionSetting)
                 } else app.regie.ui.game.GameSessionBottom(live, gone = neighbours == null, neighbours, control, draft, settings, threadScroll, sessionCallbacks,
-                    approval, container::answerInline, container::nextInlineApproval, container::dismissInlineApproval, container::selectSessionSetting,
+                    approval, container::answerInline, container::dismissInlineApproval, container::selectSessionSetting,
                     console = !topVisible)
             },
         )
