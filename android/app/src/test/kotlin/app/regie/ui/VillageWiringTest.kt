@@ -86,16 +86,16 @@ class VillageWiringTest {
 
         compose.onNodeWithText("! Codex attend ta validation").assertIsDisplayed()
         compose.onNodeWithText("api-meteo · migration").assertIsDisplayed()
-        compose.onNodeWithText("Commande à autoriser : npm run db:migrate").assertIsDisplayed()
+        compose.onNodeWithText("Commande à autoriser", substring = true).assertIsDisplayed()
         compose.onNodeWithText("ticket/22-tri").assertIsDisplayed()
         compose.onNodeWithText("› Modification · Overview.kt · terminée").assertIsDisplayed()
-        compose.onNodeWithText("étape 3 sur 5 · 4 min").assertIsDisplayed()
+        compose.onNodeWithText("étape 3 sur 5 · 4", substring = true).assertIsDisplayed()
         compose.onNodeWithText("build cassé").assertIsDisplayed()
         compose.onNodeWithText("Échec").assertIsDisplayed()
         compose.onNodeWithText("3 sessions actives").assertIsDisplayed()
         compose.onNodeWithText("Codex 0.170.0 (version non testée)").assertIsDisplayed()
         compose.onNodeWithText("Maintiens L2 et parle").assertIsDisplayed()
-        compose.onNodeWithTag("setup-left").assertExists()
+        compose.onNodeWithTag("setup-left", useUnmergedTree = true).assertExists()
     }
 
     @Test

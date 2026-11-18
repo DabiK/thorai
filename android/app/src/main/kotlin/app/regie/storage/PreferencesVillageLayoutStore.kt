@@ -2,6 +2,7 @@ package app.regie.storage
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import app.regie.domain.model.SessionId
 import app.regie.game.engine.village.HouseLayout
 import app.regie.game.engine.village.StreetLayout
@@ -31,7 +32,7 @@ class PreferencesVillageLayoutStore(private val preferences: SharedPreferences) 
     }
 
     override fun save(layout: VillageLayout) {
-        preferences.edit().putString(KEY, encode(layout).toString()).apply()
+        preferences.edit { putString(KEY, encode(layout).toString()) }
     }
 
     companion object {

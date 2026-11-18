@@ -185,17 +185,18 @@ class VillageScreensTest {
 
     @Test
     @Config(sdk = [33], application = Application::class, qualifiers = THOR_TOP)
-    fun `the village shows each house state and the panel of the nearest house`() {
+    fun `the village shows the panel of the nearest house only`() {
         val village = village(5)
         val scene = VillageSceneState(village)
         val nearest = assertNotNull(nearestHouse(village, scene.courierTile))
         show(village) { VillageTopScreen(scene, assets, onEnterHouse = {}) }
 
         val house = village.houseOf(nearest)!!.session
-        compose.onNodeWithTag("house-panel").assertIsDisplayed()
+        // Seule la maison choisie a son panneau (ticket 52) ; les autres n'ont que leur bulle, dessinée.
         compose.onNodeWithText(house.project).assertIsDisplayed()
+        compose.onNodeWithText(house.title!!).assertIsDisplayed()
         village.houses.filter { it.session.id != nearest }.forEach {
-            compose.onNodeWithTag("house-state-${it.session.id.value}").assertExists()
+            compose.onNodeWithText(it.session.title!!).assertDoesNotExist()
         }
         compose.onNodeWithTag("enter-hint").assertDoesNotExist()
         save(snapshot(), "45-hameau.png")
@@ -231,7 +232,8 @@ class VillageScreensTest {
             })
         }
         val approval = compose.onNodeWithTag("carnet-approval").assertIsDisplayed().getUnclippedBoundsInRoot()
-        val world = compose.onNodeWithTag("house-panel").getUnclippedBoundsInRoot()
+        val nearest = village.houseOf(nearestHouse(village, scene.courierTile)!!)!!.session
+        val world = compose.onNodeWithText(nearest.title!!).assertIsDisplayed().getUnclippedBoundsInRoot()
         assertTrue(world.bottom <= approval.top, "le hameau au-dessus du carnet")
         compose.onNodeWithText("Bâtir").assertIsDisplayed()
         compose.onNodeWithText("Dicter").assertIsDisplayed()

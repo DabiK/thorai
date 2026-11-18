@@ -3,10 +3,10 @@ package app.regie.game.ui.village
 import app.regie.domain.model.SessionId
 import app.regie.game.engine.courier.CourierAction
 import app.regie.game.engine.village.Village
+import app.regie.game.engine.village.nearestHouse
 import app.regie.game.engine.world.TilePos
 import app.regie.game.ui.render.GroundPainter
 import app.regie.game.ui.scene.VillageSceneState
-import kotlin.math.abs
 
 /**
  * La maison sur laquelle porte la vue d'ensemble (ticket 45) : celle où le coursier se rend, sinon
@@ -22,8 +22,7 @@ val VillageSceneState.courierTile: TilePos get() = TilePos(foot.x / GroundPainte
 val VillageSceneState.walkingByHand: Boolean get() = action == CourierAction.WALK && destination == null
 
 /**
- * La maison dont l'entrée est la plus proche de [tile], en pas sur la grille (la même mesure que le
- * coursier pour L1 et R1) ; à égalité, la première dans l'ordre du hameau. `null` sans maison.
+ * La maison dont l'entrée est la plus proche de [tile] ([Village.nearestHouse], la même mesure que le
+ * coursier pour L1 et R1), sans limite de distance : le carnet a toujours une ligne choisie. `null` sans maison.
  */
-fun nearestHouse(village: Village, tile: TilePos): SessionId? =
-    village.houses.minByOrNull { abs(it.entry.x - tile.x) + abs(it.entry.y - tile.y) }?.session?.id
+fun nearestHouse(village: Village, tile: TilePos): SessionId? = village.nearestHouse(tile)?.session?.id
