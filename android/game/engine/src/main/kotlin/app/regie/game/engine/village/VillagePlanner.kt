@@ -112,13 +112,28 @@ internal class VillagePlanner(
         return layout.plotCount
     }
 
+    /**
+     * Les maisons qu'on voit à côté de ([street], [plot]) : [Neighbours.adjacent] sur la même rue, aux
+     * terrains voisins ; [Neighbours.beside] en face, de l'autre côté de la place, ou juste au-dessus et
+     * au-dessous ; [Neighbours.near] tout autour, diagonales comprises (voir [PlotCell]).
+     */
     private fun neighbours(
         street: Int,
         plot: Int,
         houses: Map<SessionId, HouseLayout>,
         occupant: Map<Pair<Int, Int>, SessionId>,
-    ): List<HouseLayout> =
-        listOf(plot - 1, plot + 1).mapNotNull { occupant[street to it] }.mapNotNull { houses[it] }
+    ): Neighbours {
+        val cell = PlotCell.of(street, plot)
+        val adjacent = listOf(plot - 1, plot + 1).mapNotNull { occupant[street to it] }.mapNotNull { houses[it] }
+        val around = occupant.entries
+            .filter { (where, _) -> cell.isNear(PlotCell.of(where.first, where.second)) }
+            .sortedWith(compareBy({ it.key.first }, { it.key.second }))
+        fun houses(cells: List<Map.Entry<Pair<Int, Int>, SessionId>>) = cells.mapNotNull { houses[it.value] }
+        val beside = around.filter { (where, _) -> cell.isBeside(PlotCell.of(where.first, where.second)) }
+        return Neighbours(adjacent, houses(beside), houses(around))
+    }
+
+    private class Neighbours(val adjacent: List<HouseLayout>, val beside: List<HouseLayout>, val near: List<HouseLayout>)
 
     private fun pickModel(
         id: SessionId,
@@ -127,10 +142,10 @@ internal class VillagePlanner(
         houses: Map<SessionId, HouseLayout>,
         occupant: Map<Pair<Int, Int>, SessionId>,
     ): String {
-        val avoid = neighbours(street, plot, houses, occupant).mapTo(HashSet()) { it.modelId }
-        val models = catalog.models
+        val around = neighbours(street, plot, houses, occupant)
+        val models = catalog.models.map { it.id }
         val start = StableHash.pick(models.size, config.seed, "maison", id.value)
-        return models.indices.map { models[(start + it) % models.size].id }.firstOrNull { it !in avoid } ?: models[start].id
+        return pickAvoiding(models, start, around) { it.modelId }
     }
 
     private fun pickRoof(
@@ -140,8 +155,29 @@ internal class VillagePlanner(
         houses: Map<SessionId, HouseLayout>,
         occupant: Map<Pair<Int, Int>, SessionId>,
     ): RoofColors {
-        val avoid = neighbours(street, plot, houses, occupant).mapTo(HashSet()) { it.roof }
+        val around = neighbours(street, plot, houses, occupant)
         val start = StableHash.pick(roofs.size, config.seed, "toit", id.value)
-        return roofs.indices.map { roofs[(start + it) % roofs.size] }.firstOrNull { it !in avoid } ?: roofs[start]
+        return pickAvoiding(roofs, start, around) { it.roof }
+    }
+
+    /**
+     * Le choix le moins répété autour : jamais celui d'une voisine de la même rue s'il en reste un autre,
+     * puis jamais celui d'une voisine franche (en face, au-dessus, au-dessous), puis le moins vu en
+     * diagonale. À égalité, l'ordre part de [start], tiré de la session : stable.
+     */
+    private fun <T> pickAvoiding(options: List<T>, start: Int, around: Neighbours, value: (HouseLayout) -> T): T {
+        val adjacent = around.adjacent.map(value)
+        val beside = around.beside.map(value)
+        val near = around.near.map(value)
+        return options.indices.map { options[(start + it) % options.size] }.minBy { option ->
+            ADJACENT_WEIGHT * adjacent.count { it == option } + BESIDE_WEIGHT * beside.count { it == option } +
+                near.count { it == option }
+        }
+    }
+
+    private companion object {
+        /** Une voisine de la même rue pèse plus que tout le reste du voisinage réuni ; une voisine franche, plus que les diagonales. */
+        const val ADJACENT_WEIGHT = 1000
+        const val BESIDE_WEIGHT = 20
     }
 }
