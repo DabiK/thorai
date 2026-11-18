@@ -13,7 +13,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import app.regie.console.TermuxBridgeLauncher
 import app.regie.display.ScreenMode
 import app.regie.input.GamepadInput
-import app.regie.ui.screens.OverviewTopScreen
 import kotlinx.coroutines.launch
 
 /** Écran du haut (display 0). Il lance l'écran du bas quand celui-ci est allumé. */
@@ -78,7 +77,10 @@ class TopActivity : GamepadActivity() {
             },
             overview = { overview, control ->
                 val mode by container.displays.mode.collectAsStateWithLifecycle()
-                OverviewTopScreen(overview, control, singleScreen = mode == ScreenMode.Single, callbacks = callbacks,
+                val scene by container.village.scene.collectAsStateWithLifecycle()
+                // Le hameau (ticket 45) : le coursier entre dans une maison, l'iris fermé ouvre la session.
+                app.regie.ui.game.GameOverviewTop(scene, overview, control, singleScreen = mode == ScreenMode.Single,
+                    setupLeft = setupLeft(overview), callbacks = carnetCallbacks, onEnterHouse = container::enterHouse,
                     scrollVelocity = container.controller.scrollVelocity)
             },
             session = { shown, overview ->

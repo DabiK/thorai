@@ -8,7 +8,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import app.regie.display.ScreenMode
 import app.regie.input.GamepadInput
-import app.regie.ui.screens.OverviewBottomScreen
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
@@ -31,7 +30,13 @@ class BottomActivity : GamepadActivity() {
                 app.regie.ui.game.GameApprovalBottom(review, overview, { container.handleInput(GamepadInput.Pressed(it)) },
                     { container.touchTrigger(app.regie.input.Trigger.L2, it) }, container::selectApproval)
             },
-            overview = { overview, control -> OverviewBottomScreen(overview, control, callbacks) },
+            overview = { overview, control ->
+                // Le carnet du hameau (ticket 45) : la ligne choisie suit le coursier quand le haut le montre.
+                val scene by container.village.scene.collectAsStateWithLifecycle()
+                val topVisible by container.topStarted.collectAsStateWithLifecycle()
+                app.regie.ui.game.GameOverviewBottom(scene, villageShown = topVisible, overview, control, setupLeft(overview), carnetCallbacks,
+                    scrollVelocity = container.controller.scrollVelocity)
+            },
             session = { shown, overview ->
                 val live by container.live.collectAsStateWithLifecycle()
                 val control by container.sessionController.state.collectAsStateWithLifecycle()

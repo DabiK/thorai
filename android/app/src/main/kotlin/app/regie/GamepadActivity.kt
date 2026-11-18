@@ -34,6 +34,7 @@ import app.regie.input.Trigger
 import app.regie.input.TriggerAxes
 import app.regie.overview.ControlState
 import app.regie.domain.model.Overview
+import app.regie.ui.game.carnet
 import app.regie.domain.model.SetupPermission
 import app.regie.session.Screen
 import app.regie.session.SessionNotice
@@ -81,6 +82,18 @@ abstract class GamepadActivity : ComponentActivity() {
         override fun onSend() = container.sessionController.send()
 
         override fun onNoticeSeen(notice: SessionNotice) = container.sessionController.dismissNotice(notice)
+    }
+
+    /** Les rappels du carnet du hameau (ticket 45) : une ligne touchée y envoie le coursier. */
+    protected val carnetCallbacks by lazy {
+        callbacks.carnet(container::goToHouse, container::openSetup, container::openVoiceSettings)
+    }
+
+    /** Une étape facultative du parcours d'accueil reste à faire : un point la signale (ticket 30). */
+    @Composable
+    protected fun setupLeft(overview: Overview): Boolean {
+        val console by container.consoleService.collectAsStateWithLifecycle()
+        return (!console && !container.replaying) || overview.androidAccessMissing
     }
 
     protected val threadScroll by lazy {
@@ -209,12 +222,7 @@ abstract class GamepadActivity : ComponentActivity() {
                         // Vue jeu (ticket 49) : l'écran titre au lancement, le menu de pause avec Start.
                         GameMenuScreen(gameMenu, current, assets, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single)
                     } else Column(Modifier.fillMaxSize()) {
-                        // Sur l'accueil seulement : la session règle la voix depuis sa dictée, le diff aussi.
-                        if (controlsHere && screen == Screen.Overview) {
-                            val console by container.consoleService.collectAsStateWithLifecycle()
-                            app.regie.ui.screens.OverviewShortcuts(setupLeft = (!console && !container.replaying) || current.androidAccessMissing,
-                                onAgents = container::openAgentAuthentication, onSetup = container::openSetup, onVoice = container::openVoiceSettings)
-                        }
+                        // Sur le hameau, les raccourcis (agents, parcours d'accueil, voix) sont dans le carnet (ticket 45).
                         Box(Modifier.weight(1f)) {
                     when (val shown = screen) {
                         is Screen.Diff -> {
@@ -322,7 +330,8 @@ private class GamepadWindowCallback(
             KeyEvent.ACTION_UP -> false
             else -> return wrapped.dispatchKeyEvent(event)
         }
-        return router.onKey(event.keyCode, isDown, event.repeatCount) || wrapped.dispatchKeyEvent(event)
+        val fallback = (event.flags and KeyEvent.FLAG_FALLBACK) != 0
+        return router.onKey(event.keyCode, isDown, event.repeatCount, fallback) || wrapped.dispatchKeyEvent(event)
     }
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
@@ -332,6 +341,10 @@ private class GamepadWindowCallback(
                     leftTrigger = max(event.getAxisValue(MotionEvent.AXIS_LTRIGGER), event.getAxisValue(MotionEvent.AXIS_BRAKE)),
                     rightTrigger = max(event.getAxisValue(MotionEvent.AXIS_RTRIGGER), event.getAxisValue(MotionEvent.AXIS_GAS)),
                     rightStickY = event.getAxisValue(MotionEvent.AXIS_RZ),
+                    leftStickX = event.getAxisValue(MotionEvent.AXIS_X),
+                    leftStickY = event.getAxisValue(MotionEvent.AXIS_Y),
+                    hatX = event.getAxisValue(MotionEvent.AXIS_HAT_X),
+                    hatY = event.getAxisValue(MotionEvent.AXIS_HAT_Y),
                 ),
             )
         }
