@@ -35,12 +35,12 @@ class OverviewControllerTest {
         pendingApproval = approval,
     )
 
-    private val approval = Approval(ApprovalId("approval-atelier-meubles-1"), SessionId("atelier-meubles"), ApprovalKind.COMMAND, "pip install open_clip_torch")
+    private val approval = Approval(ApprovalId("approval-notes-1"), SessionId("notes"), ApprovalKind.COMMAND, "pip install open_clip_torch")
 
     /** Quatre sessions, dans l'ordre de la vue d'ensemble (la plus récemment changée d'abord). */
     private val sessions = listOf(
         session("atelier", SessionStatus.WORKING, minutesAgo = 1),
-        session("atelier-meubles", SessionStatus.AWAITING_APPROVAL, minutesAgo = 2, approval),
+        session("notes", SessionStatus.AWAITING_APPROVAL, minutesAgo = 2, approval),
         session("montage", SessionStatus.IDLE, minutesAgo = 3),
         session("thor-dev", SessionStatus.STOPPED, minutesAgo = 4),
     )
@@ -94,7 +94,7 @@ class OverviewControllerTest {
         controller.handle(GamepadInput.TriggerUp(Trigger.L2))
         assertEquals(emptySet(), controller.state.value.heldTriggers)
         assertEquals(
-            listOf(OverviewAction.StartDictation(SessionId("atelier-meubles")), OverviewAction.StopDictation),
+            listOf(OverviewAction.StartDictation(SessionId("notes")), OverviewAction.StopDictation),
             actions,
         )
     }
@@ -121,7 +121,7 @@ class OverviewControllerTest {
     fun `R1 opens the first pending approval`() {
         press(Button.R1)
 
-        assertEquals(listOf<OverviewAction>(OverviewAction.OpenApproval(ApprovalId("approval-atelier-meubles-1"))), actions)
+        assertEquals(listOf<OverviewAction>(OverviewAction.OpenApproval(ApprovalId("approval-notes-1"))), actions)
         assertEquals(0, focus)
     }
 
@@ -174,14 +174,14 @@ class OverviewControllerTest {
     fun `the focus follows its session when the lines change order`() {
         controller.syncFocus()
         press(Button.DOWN)
-        assertEquals(SessionId("atelier-meubles"), controller.state.value.focusedId)
+        assertEquals(SessionId("notes"), controller.state.value.focusedId)
 
         // « montage » change de statut : elle passe en tête, les autres reculent d'une ligne.
         publish(sessions.map { if (it.id == SessionId("montage")) it.copy(updatedAt = t0) else it })
 
         assertEquals(2, focus)
         press(Button.A)
-        assertEquals(listOf<OverviewAction>(OverviewAction.OpenSession(SessionId("atelier-meubles"))), actions)
+        assertEquals(listOf<OverviewAction>(OverviewAction.OpenSession(SessionId("notes"))), actions)
     }
 
     @Test

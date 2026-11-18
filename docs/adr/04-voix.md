@@ -232,17 +232,17 @@ La comparaison cloud ci-dessous est facultative et historique.
 
 ### Banc comparatif facultatif du laboratoire (hors installation de Régie)
 
-1. **Saisir la clé**, sur l'écran du bas, qui est tactile : `adb -s THOR0000000001 shell am force-stop app.regie.voicelab`, puis `adb -s THOR0000000001 shell am start --display 4 -n app.regie.voicelab/.MainActivity`. Toucher « ElevenLabs » dans « Fournisseur » (pas celui de « Lecture guidée du corpus », plus bas), coller la clé dans « Clé ElevenLabs », toucher « Enregistrer la clé » : « Clé enregistrée (chiffrée) » s'affiche. Toucher « Charger les voix » et en choisir une, française de préférence.
+1. **Saisir la clé**, sur l'écran du bas, qui est tactile : `adb -s $THOR_SERIAL shell am force-stop app.regie.voicelab`, puis `adb -s $THOR_SERIAL shell am start --display 4 -n app.regie.voicelab/.MainActivity`. Toucher « ElevenLabs » dans « Fournisseur » (pas celui de « Lecture guidée du corpus », plus bas), coller la clé dans « Clé ElevenLabs », toucher « Enregistrer la clé » : « Clé enregistrée (chiffrée) » s'affiche. Toucher « Charger les voix » et en choisir une, française de préférence.
 2. **Vérifier la synthèse** : toucher « Lire » ; « Couper (L2/R2) » ou L2 coupe la voix.
 3. **Lire les 20 consignes avec ElevenLabs**, sur l'écran du haut. L'appli est restée ouverte sur l'écran du bas à l'étape 1 : la fermer d'abord, puis la relancer en haut avec la lecture guidée.
 
    ```bash
-   adb -s THOR0000000001 shell am force-stop app.regie.voicelab
-   adb -s THOR0000000001 shell am start --display 0 -n app.regie.voicelab/.Adb --es scribe scribe_v3_live --es guided elevenlabs
+   adb -s $THOR_SERIAL shell am force-stop app.regie.voicelab
+   adb -s $THOR_SERIAL shell am start --display 0 -n app.regie.voicelab/.Adb --es scribe scribe_v3_live --es guided elevenlabs
    ```
 
    Pour chaque consigne affichée en haut : maintenir L2, la lire normalement, relâcher. B fait recommencer la consigne. Le micro est enregistré dans `files/corpus/user/`. Après la dernière, « Fini : guided-elevenlabs-….json » s'affiche.
-4. **Rejouer la même voix dans les autres fournisseurs**, sans relire. Chaque commande commence par `adb -s THOR0000000001 shell am start --display 0 -n app.regie.voicelab/.Adb` et porte ses réglages. Avant la suivante, attendre « fini : bench-… » à l'écran (ou dans `adb logcat -s VoiceLab`) : une commande envoyée pendant un banc est refusée en entier, avec un message rouge à l'écran.
+4. **Rejouer la même voix dans les autres fournisseurs**, sans relire. Chaque commande commence par `adb -s $THOR_SERIAL shell am start --display 0 -n app.regie.voicelab/.Adb` et porte ses réglages. Avant la suivante, attendre « fini : bench-… » à l'écran (ou dans `adb logcat -s VoiceLab`) : une commande envoyée pendant un banc est refusée en entier, avec un message rouge à l'écran.
    - `… .Adb --es guided stop` : quitte la lecture guidée, sinon les commandes suivantes sont refusées ;
    - `… .Adb --ez hotwords false --es bench local --es corpus user` ;
    - `… .Adb --ez hotwords true --es bench local --es corpus user` ;
@@ -251,7 +251,7 @@ La comparaison cloud ci-dessous est facultative et historique.
 
    Une fois le dernier banc fini, remettre les réglages par défaut (Scribe v3 Live, ElevenLabs, termes favorisés pour le repli local) : `… .Adb --es scribe scribe_v3_live --es provider elevenlabs --ez hotwords true`.
 5. **Vérifier le passage à chaud** : dicter une phrase avec L2, passer au local avec `… .Adb --es provider local` (l'écran du haut n'est pas tactile ; la commande arrive à l'appli ouverte, sans la relancer), dicter une autre phrase. Revenir ensuite avec `… .Adb --es provider elevenlabs`.
-6. **Récupérer les rapports** : `adb -s THOR0000000001 pull /sdcard/Android/data/app.regie.voicelab/files/ bench/` (fichiers `guided-*` et `bench-*-user-*`), puis remplir le tableau ci-dessus et trancher la recommandation.
+6. **Récupérer les rapports** : `adb -s $THOR_SERIAL pull /sdcard/Android/data/app.regie.voicelab/files/ bench/` (fichiers `guided-*` et `bench-*-user-*`), puis remplir le tableau ci-dessus et trancher la recommandation.
 
 ## Conséquences
 

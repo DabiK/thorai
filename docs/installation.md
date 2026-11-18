@@ -7,7 +7,7 @@ Les commandes reprennent celles des scripts du dépôt, relues une à une. La s�
 ## Ce qu’il faut
 
 - **Une AYN Thor** sous Android 13, reliée au Wi-Fi, avec plusieurs gigaoctets libres : Debian, Node et les agents, plus 1,2 Go pour le modèle de voix.
-- **Un Mac** avec un câble USB-C. Il construit l’app et pousse les scripts sur la console. Les scripts sont écrits pour macOS ; un Linux avec bash devrait convenir, mais n’a pas été essayé.
+- **Pour le parcours USB seulement, un Mac** avec un câble USB-C. Il construit l’app et pousse les scripts sur la console. Les scripts sont écrits pour macOS ; un Linux avec bash devrait convenir, mais n’a pas été essayé.
 - **Un compte pour chaque agent utilisé** : un abonnement Claude qui inclut Claude Code, un compte ChatGPT pour Codex. Un seul des deux suffit pour commencer.
 - **Un téléphone**, pour valider la connexion des agents.
 
@@ -18,6 +18,40 @@ Les commandes se tapent dans trois terminaux. Chaque bloc indique le sien :
 | **Mac** | Le terminal du Mac, à la racine du dépôt cloné. |
 | **Termux** | L’appli Termux, sur la console. |
 | **Debian** | La Debian, ouverte depuis Termux, en `root` ou en `dev` selon l’étape. |
+
+## Sans Mac : installation sur la console
+
+Ce parcours remplace les étapes 1 à 5 ci-dessous. Il ne demande aucun ordinateur.
+
+1. Installer Termux depuis ses [releases officielles](https://github.com/termux/termux-app/releases), puis l'ouvrir. Le parcours local fonctionne sans `run-as` ; la variante GitHub debug reste nécessaire pour utiliser ensuite les scripts USB du Mac. Garder la même provenance de Termux lors des mises à jour.
+2. Dans Termux, préparer le dépôt puis lancer l'installeur :
+
+   ```sh
+   pkg update && pkg install git
+   git clone https://github.com/DabiK/regie.git
+   cd regie
+   bash thor/install-on-device.sh
+   ```
+
+   Le dépôt doit être accessible au téléchargement (public, ou avec votre propre accès). L'installeur prépare Debian 13, Node et les deux agents aux versions éprouvées, le pont et l'accès Android. Il peut être relancé après une interruption ou une mise à jour ; projets, connexions, clé adb et consignes hors des blocs Régie sont gardés. Il ne lance aucun agent et ne démarre rien au boot.
+3. Télécharger l'APK et son fichier `.sha256` dans les [releases de Régie](https://github.com/DabiK/regie/releases). Pour vérifier le téléchargement dans Termux, autoriser une fois `termux-setup-storage`, puis lancer `cd ~/storage/downloads && sha256sum -c regie-<version>.apk.sha256`. Ouvrir l'APK depuis le gestionnaire de fichiers Android et autoriser cette source si Android le demande. **Un ancien debug doit être désinstallé si sa signature diffère** : les préférences et modèles privés de Régie seront perdus, les projets et comptes dans Termux sont conservés.
+4. Ouvrir Régie et accepter **exécuter des commandes Termux** et les notifications. L'app crée son jeton et le transmet à la commande de configuration Termux par RUN_COMMAND ; aucune copie `run-as app.regie` n'est nécessaire. Attendre l'accueil et les versions des agents.
+5. Activer **Options pour les développeurs › Débogage sans fil › Associer avec un code**. Garder la boîte de dialogue ouverte. Dans Termux, entrer dans la Debian :
+
+   ```sh
+   proot-distro login debian --user dev \
+     --bind "$HOME/projects:/home/dev/projects" --bind "$HOME/.codex:/home/dev/.codex" \
+     --work-dir /home/dev -- bash -l
+   /opt/thor-android/pair.sh <port> <code>
+   adb shell pm grant app.regie android.permission.WRITE_SECURE_SETTINGS
+   adb shell settings put global settings_enable_monitor_phantom_procs false
+   exit
+   ```
+
+   `port` vient de la boîte de dialogue d'association, pas de la page principale. Le script doit annoncer `THOR_ANDROID=ok`. Ni le code ni une clé ne se saisissent dans Régie.
+6. Retirer Termux de l'optimisation de batterie. Suivre les étapes 7 (microphone et Accessibilité), 8 (comptes) et 9 (première session) ci-dessous. Si le pont a démarré avant l'association, quitter puis rouvrir Régie.
+
+**Mise à jour locale** : quitter Régie, faire `git pull` dans le dépôt Termux, puis `bash thor/install-on-device.sh`, installer l'APK signé par la même clé et rouvrir Régie. Une nouvelle association n'est pas nécessaire.
 
 ## 1. Préparer le Mac
 
@@ -40,7 +74,7 @@ adb devices
 export THOR_SERIAL=XXXXXXXX  # remplacer par la série affichée par adb devices
 ```
 
-**Exporter `THOR_SERIAL` dans chaque nouveau terminal.** Tous les scripts du dépôt visent sinon la console de l’auteur.
+**Les scripts sélectionnent l’unique appareil adb autorisé.** Avec plusieurs appareils, exporter `THOR_SERIAL` dans chaque terminal. Les commandes adb écrites ci-dessous utilisent cette variable.
 
 **Vérification** : `adb -s "$THOR_SERIAL" get-state` répond `device`.
 
@@ -183,7 +217,7 @@ thor/computer-use/install.sh
 1. il copie le pont dans la Debian (`/home/dev/.local/share/regie/bridge`) et installe ses dépendances ;
 2. il crée un jeton aléatoire, qui protège la connexion entre l’app et le pont ;
 3. il passe `allow-external-apps=true` dans Termux, pour que Régie puisse démarrer le pont ;
-4. il pose `regie-bridge-start`, `regie-bridge-stop`, `regie-bridge-supervise` et `regie-android-access` dans le `~/bin` de Termux.
+4. il pose `regie-bridge-configure`, `regie-bridge-start`, `regie-bridge-stop`, `regie-bridge-supervise` et `regie-android-access` dans le `~/bin` de Termux.
 
 À ce stade, il signale que l’app `app.regie` n’est pas installée : c’est normal, son jeton sera copié à l’étape suivante. Rien ne démarre au boot.
 
@@ -328,8 +362,8 @@ Le premier retire l’accès Android, ses déclarations et ses consignes ; il g
 
 | Message | Que faire |
 | --- | --- |
-| « Clé du pont absente » ou « refusée » | **Mac** : `thor/bridge/install.sh token-app`, puis **Quitter** et rouvrir Régie. |
-| « Termux ne répond pas » | **Mac** : `thor/bridge/install.sh`, puis rouvrir Régie. Vérifier que Termux a été ouvert au moins une fois. |
+| « Clé du pont absente » ou « refusée » | Vérifier les commandes Termux et relancer Régie : elle reconfigure le pont. En debug USB, `thor/bridge/install.sh token-app` reste disponible. |
+| « Termux ne répond pas » | Dans Termux : relancer `bash thor/install-on-device.sh` depuis le dépôt ; ou **Mac** : `thor/bridge/install.sh`, puis rouvrir Régie. Vérifier que Termux a été ouvert au moins une fois. |
 | « Autorise les commandes Termux » | Sur la console : **Infos sur l’appli Régie › Autorisations › Autorisations supplémentaires**, activer « Run commands in Termux environment ». |
 | « Autorise la reconnexion Android depuis le Mac » | **Mac** : la commande `pm grant` de l’[étape 7](#7-les-autres-autorisations). |
 | « version non testée » sur l’accueil | Claude Code s’est mis à jour seul. Cela peut marcher ; pour revenir à la version éprouvée, relancer son installeur avec `2.1.322` ([mises à jour de Claude Code](https://code.claude.com/docs/en/setup#disable-auto-updates)). |

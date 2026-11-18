@@ -79,14 +79,14 @@ flowchart LR
 
 ## Installer
 
-La [notice d’installation](docs/installation.md) part d’une Thor neuve : Termux, Debian, agents, pont, app, permissions et connexion des comptes. Il faut un Mac pour construire l’app et lancer les scripts par USB.
+La [notice d’installation](docs/installation.md) part d’une Thor neuve : Termux, Debian, agents, pont, app, permissions et connexion des comptes. Un APK signé se télécharge dans les [releases GitHub](https://github.com/DabiK/regie/releases). La préparation peut se faire directement dans Termux avec `thor/install-on-device.sh`, ou depuis un Mac par USB.
 
 Matériel visé : AYN Thor sous Android 13, ARM64, écran du haut 1920 × 1080 non tactile, écran du bas 1240 × 1080 tactile. Un mode à un écran rassemble tout en haut quand celui du bas est éteint. Versions éprouvées : Claude Code 2.1.322, Codex 0.167.2, Node 24.22.3, mobile-mcp 1.0.17 ; les adaptateurs ACP sont figés par `bridge/package-lock.json`. Une autre version d’agent est signalée « non testée » sur l’accueil.
 
 ## Limites connues
 
 - **Ce n’est pas une frontière de sécurité.** Les agents pilotent tout Android sans validation, Régie comprise : ils peuvent toucher ses boutons. Le sandbox de Codex est désactivé dans la Debian, et le mode Tout autoriser ne demande rien. Une consigne cachée dans une page ou un dépôt peut donc agir sur la console.
-- **Un prototype personnel.** L’app s’installe en debug, avec ses scripts, sur une console préparée. Elle n’est sur aucun store.
+- **Une installation manuelle.** L’APK signé s’installe depuis une release GitHub, après préparation de Termux et de la Debian. L’app n’est sur aucun store.
 - **L’installation complète n’a pas été rejouée sur une Thor neuve.** Chaque commande de la notice suit les scripts du dépôt, mais la séquence entière reste à valider de bout en bout.
 - **Le mode console reste à éprouver sur la Thor.** L2 au-dessus d’une autre appli, la carte et la bulle sont couverts par des tests d’intégration ; leur essai sur la console, service d’accessibilité activé, reste à faire.
 - **Claude se connecte dans Termux.** Son CLI n’offre pas de code d’appareil. Un changement de compte demande de quitter Régie avant.
@@ -99,3 +99,7 @@ Matériel visé : AYN Thor sous Android 13, ARM64, écran du haut 1920 × 1080 
 ## Développer
 
 La [documentation de développement](docs/developpement.md) décrit l’architecture, les tests, le banc d’essai sur émulateur et la façon de travailler. Le [PRD](docs/PRD.md) fixe le produit, les [ADR](docs/adr/README.md) les décisions techniques, et le [protocole du pont](docs/protocole-pont.md) le contrat entre l’app et le pont.
+
+## Licence
+
+[MIT](LICENSE), © 2026 DabiK. Les dépendances gardent leurs licences respectives.

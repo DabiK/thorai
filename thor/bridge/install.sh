@@ -18,9 +18,14 @@ source "$here/lib.sh"
 need_device
 
 copy_token_to_app() {
+  if [[ "${REGIE_ON_DEVICE:-0}" == 1 ]]; then
+    echo "Régie établira son jeton à l'ouverture, par RUN_COMMAND."
+    return 0
+  fi
   if ! adb -s "$SERIAL" shell "run-as $APP_ID true" > /dev/null 2>&1; then
     cat >&2 << EOF
-L'app $APP_ID n'est pas installée (ou pas en build debug) : son jeton n'est pas copié.
+L'app $APP_ID n'est pas installée (ou est en release) : copie debug ignorée.
+Une app de release établit son jeton elle-même à l'ouverture.
 Une fois l'app installée, relancer seulement cette étape :
   thor/bridge/install.sh token-app
 EOF
@@ -78,12 +83,12 @@ install_script() { # install_script <source in thor/bridge> <name in ~/bin>
   termux_sh "set -e; mkdir -p \"\$HOME/bin\"; f=\"\$HOME/bin/$2\"; \
 cat > \"\$f.tmp\"; chmod 700 \"\$f.tmp\"; mv -f \"\$f.tmp\" \"\$f\"" < "$here/$1"
 }
-for name in start stop supervise; do
+for name in start stop supervise configure; do
   install_script "$name.sh" "regie-bridge-$name"
 done
 # The agents' access to Android after a restart (ticket 03), run by regie-bridge-start.
 install_script android-access.sh regie-android-access
-echo "   ~/bin/regie-bridge-start, regie-bridge-stop, regie-bridge-supervise, regie-android-access"
+echo "   ~/bin/regie-bridge-configure, regie-bridge-start, regie-bridge-stop, regie-bridge-supervise, regie-android-access"
 
 cat << EOF
 

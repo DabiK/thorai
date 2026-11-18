@@ -638,7 +638,7 @@ class AppContainer(
         val reports: StateFlow<StartUpReport?> = if (replay) {
             MutableStateFlow(null)
         } else {
-            StartUp(chosen, androidAccess, launcher).also { startUp = it }.report
+            StartUp(chosen, androidAccess, launcher, pairing = launcher as? app.regie.domain.port.BridgePairing).also { startUp = it }.report
         }
         gateway = chosen
         authenticationReview = ReviewAgentAuthentication(chosen, scope).also { review ->
@@ -743,7 +743,7 @@ class AppContainer(
         }
     }
 
-    /** Le jeton du pont, copié par `thor/bridge/install.sh` dans le stockage privé de l'app. Jamais journalisé. */
+    /** Le jeton du pont, créé par Régie ou copié en debug par `thor/bridge/install.sh` dans le stockage privé de l'app. Jamais journalisé. */
     private fun readToken(): String? =
         File(app.filesDir, TOKEN_FILE).takeIf { it.canRead() }?.readText()?.trim()?.ifEmpty { null }
 

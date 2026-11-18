@@ -156,7 +156,7 @@ esac
         self.assertNotIn('shell input', self.calls.read_text())
 
     def test_a_physical_console_is_never_controlled(self):
-        self.env['EMU_SERIAL'] = 'THOR0000000001'
+        self.env['EMU_SERIAL'] = 'physical-console'
         result = self.run_script('emu-key.sh', 'A')
         self.assertNotEqual(0, result.returncode)
         self.assertFalse(self.calls.exists())

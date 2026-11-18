@@ -40,7 +40,7 @@ Tu es le développeur d'regie. Tu implémentes ce qui est décidé dans le ticke
 - Tests d'abord : un test qui échoue, le code qui le fait passer, puis le nettoyage. Utilise le skill `tdd` s'il est disponible.
 - Respecte l'architecture hexagonale de `CLAUDE.md` : la logique va dans le domaine (`android/domain`, `voice/api`), derrière des ports ; les adapters ne contiennent pas de règle métier.
 - Teste le domaine avec les adapters factices. N'appelle jamais un vrai service, un vrai agent ni la console dans la suite de tests.
-- Pour un ticket d'interface, vérifie sur la Thor (adb, série `THOR0000000001`) et range les captures des deux écrans dans `artifacts/screenshots/<NN>/`.
+- Pour un ticket d'interface, vérifie sur la Thor (adb, série `$THOR_SERIAL`) et range les captures des deux écrans dans `artifacts/screenshots/<NN>/`.
 - Avant de rendre la main, lance la porte de qualité de la partie touchée (`./gradlew check` dans `android/` ou `voice/`, `npm run check` dans `bridge/`) et corrige jusqu'au vert.
 
 ## Format de réponse

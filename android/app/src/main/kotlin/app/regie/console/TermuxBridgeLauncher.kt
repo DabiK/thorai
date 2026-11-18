@@ -5,24 +5,47 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import app.regie.domain.model.LaunchResult
+import app.regie.domain.port.BridgePairing
 import app.regie.domain.port.BridgeLauncher
+import java.io.File
 
 /**
  * Démarre et arrête le pont par l'intent RUN_COMMAND de Termux (docs/protocole-pont.md,
  * « Démarrage et arrêt »). Les scripts sont installés par `thor/bridge/install.sh`.
  */
-class TermuxBridgeLauncher(private val context: Context) : BridgeLauncher {
+class TermuxBridgeLauncher(
+    private val context: Context,
+    private val transfer: (String, Int) -> String = BridgeTokenTransfer()::open,
+) : BridgeLauncher, BridgePairing {
 
     override fun start() = run("regie-bridge-start")
 
     override fun stop() = run("regie-bridge-stop")
 
-    private fun run(script: String): LaunchResult {
+    override fun configure(): LaunchResult {
+        if (context.checkSelfPermission(PERMISSION) != PackageManager.PERMISSION_GRANTED) return LaunchResult.PERMISSION_MISSING
+        val uid = try {
+            context.packageManager.getPackageUid(TERMUX, PackageManager.PackageInfoFlags.of(0))
+        } catch (_: PackageManager.NameNotFoundException) {
+            return LaunchResult.TERMUX_MISSING
+        }
+        return try {
+            val token = BridgeTokenFile(File(context.filesDir, "bridge-token")).readOrCreate()
+            run("regie-bridge-configure", arrayOf(transfer(token, uid)))
+        } catch (_: java.io.IOException) {
+            LaunchResult.TERMUX_MISSING
+        } catch (_: android.system.ErrnoException) {
+            LaunchResult.TERMUX_MISSING
+        }
+    }
+
+    private fun run(script: String, arguments: Array<String>? = null): LaunchResult {
         if (context.checkSelfPermission(PERMISSION) != PackageManager.PERMISSION_GRANTED) return LaunchResult.PERMISSION_MISSING
         val intent = Intent(ACTION)
             .setClassName(TERMUX, SERVICE)
             .putExtra(EXTRA_PATH, "$TERMUX_HOME/bin/$script")
             .putExtra(EXTRA_BACKGROUND, true)
+            .putExtra("com.termux.RUN_COMMAND_ARGUMENTS", arguments)
         return try {
             val component = try {
                 context.startService(intent)

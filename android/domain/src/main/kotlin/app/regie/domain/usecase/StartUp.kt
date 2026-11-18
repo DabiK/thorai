@@ -1,5 +1,7 @@
 package app.regie.domain.usecase
 
+import app.regie.domain.model.BridgeConnection
+import app.regie.domain.port.BridgePairing
 import app.regie.domain.model.LaunchResult
 import app.regie.domain.model.WirelessDebugging
 import app.regie.domain.port.AgentGateway
@@ -43,6 +45,7 @@ class StartUp(
     private val launcher: BridgeLauncher,
     val restartInterval: Duration = 30.seconds,
     private val timeSource: TimeSource = TimeSource.Monotonic,
+    private val pairing: BridgePairing? = null,
 ) {
     private val mutex = Mutex()
     /** Dernier démarrage effectivement envoyé. */
@@ -54,8 +57,13 @@ class StartUp(
         val wireless = access.restoreWirelessDebugging()
         val up = gateway.isBridgeUp()
         val wait = lastStart?.let { restartInterval - it.elapsedNow() }?.takeIf { it.isPositive() }
+        val mustPair = pairing != null && gateway.connection.value != BridgeConnection.Connected && wait == null
         val mustStart = wireless == WirelessDebugging.TURNED_ON || (!up && wait == null)
-        val launch = if (mustStart) launcher.start().also { if (it == LaunchResult.SENT) lastStart = timeSource.markNow() } else null
+        val launch = when {
+            mustPair -> pairing.configure()
+            mustStart -> launcher.start()
+            else -> null
+        }?.also { if (it == LaunchResult.SENT) lastStart = timeSource.markNow() }
         StartUpReport(wireless, up, launch, retryIn = wait.takeIf { !up && launch == null })
             .also { _report.value = it }
     }

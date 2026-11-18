@@ -169,6 +169,8 @@ physiques différés restent requis même lorsqu’un ticket est marqué fait.
 
 - **18 novembre, documentation** : README réécrit en vitrine (captures des tickets 22 à 26, commandes, schéma, limites), notice d’installation `docs/installation.md` vérifiée contre les scripts, `docs/developpement.md` créé. PRD, `CLAUDE.md`, fiche de la console et index des ADR remis en cohérence avec les tickets 22 à 26. Aucun code changé, rien installé sur la console.
 
+- **18 novembre, ticket 27 à fusionner (solo Codex)** : sélection adb sans console par défaut, projets neutres, MIT, connexion Claude dans Debian, jeton release transmis par RUN_COMMAND/socket Unix contrôlée par UID, installeur Termux autonome et script de release signé (ADR 06/18/20). Android 441 tests + lint, voix 127 + lint, pont 320 + typage/lint, scripts hors console verts. Release signée vérifiée et installée sur Thor après désinstallation du debug (signatures différentes), jeton renouvelé 0600 et 49 sessions retrouvées ; aucun agent lancé. Thor disparue d'adb au dernier remplacement : release éprouvée laissée en place, dernier APK à réinstaller à son retour. Préférences/modèles de Régie réinitialisés, Accessibilité à réactiver ; installation vierge à éprouver. Aucune publication. Preuves et pas à pas : `artifacts/screenshots/27/essai-thor.md`.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |
@@ -227,6 +229,6 @@ Les tickets qui touchent `android/` passent **un par un**. Ils installent tous l
 ## Questions en attente
 
 - Nom définitif de l'app (« Régie » est un nom de travail).
-- Licence du dépôt : aucune n'est choisie, à trancher avant un partage public.
+- Licence du dépôt : MIT, © 2026 DabiK (choix explicite du ticket 27).
 - Lecture à voix haute : question close par la décision du 14 novembre ; tout se lit à l'écran, sans point écrit depuis le ticket 22.
 - Ticket 14 : question close. `uninstall.sh` conserve la clé adb ; `--oublier-association` l’efface explicitement (script et guide computer-use).

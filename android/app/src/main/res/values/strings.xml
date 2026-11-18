@@ -41,9 +41,9 @@
     <string name="bridge_connecting">Connexion au pont…</string>
     <string name="bridge_unreachable">Pont injoignable</string>
     <string name="bridge_hint_grant_run_command">Autorise les commandes Termux dans les permissions Android.</string>
-    <string name="bridge_hint_termux_missing">Termux ne répond pas. Réinstalle le pont depuis le Mac.</string>
-    <string name="bridge_hint_token_missing">Clé du pont absente. Synchronise-la depuis le Mac.</string>
-    <string name="bridge_hint_token_refused">Clé du pont refusée. Synchronise-la depuis le Mac.</string>
+    <string name="bridge_hint_termux_missing">Termux ne répond pas. Relance l’installation du pont dans Termux.</string>
+    <string name="bridge_hint_token_missing">Clé du pont absente. Autorise les commandes Termux puis rouvre Régie.</string>
+    <string name="bridge_hint_token_refused">Clé du pont refusée. Autorise les commandes Termux puis rouvre Régie.</string>
     <string name="bridge_hint_restarting">Régie relance le pont et se reconnecte seule.</string>
     <string name="android_access_title">Accès des agents à Android</string>
     <string name="android_access_hint">Autorise la reconnexion Android depuis le Mac.</string>

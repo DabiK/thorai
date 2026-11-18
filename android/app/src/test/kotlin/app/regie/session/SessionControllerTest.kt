@@ -45,7 +45,7 @@ class SessionControllerTest {
     /** Cinq sessions, dans l'ordre de la vue d'ensemble : la cinquième n'est pas dans les cartes. */
     private val sessions = listOf(
         session("atelier", SessionStatus.WORKING, 1),
-        session("atelier-meubles", SessionStatus.AWAITING_APPROVAL, 2),
+        session("notes", SessionStatus.AWAITING_APPROVAL, 2),
         session("montage", SessionStatus.IDLE, 3),
         session("thor-dev", SessionStatus.STOPPED, 4),
         session("ancienne", SessionStatus.STOPPED, 5),
@@ -104,7 +104,7 @@ class SessionControllerTest {
         press(Button.R1)
 
         assertEquals(
-            listOf<SessionAction>(SessionAction.Open(SessionId("atelier-meubles")), SessionAction.Open(SessionId("ancienne"))),
+            listOf<SessionAction>(SessionAction.Open(SessionId("notes")), SessionAction.Open(SessionId("ancienne"))),
             actions,
         )
     }
@@ -118,7 +118,7 @@ class SessionControllerTest {
 
         press(Button.R1)
 
-        assertEquals(listOf<SessionAction>(SessionAction.Open(SessionId("atelier-meubles"))), actions)
+        assertEquals(listOf<SessionAction>(SessionAction.Open(SessionId("notes"))), actions)
     }
 
     @Test
@@ -135,12 +135,12 @@ class SessionControllerTest {
         press(Button.START)
         assertTrue(actions.isEmpty())
 
-        show("atelier-meubles")
+        show("notes")
         press(Button.START)
-        assertEquals(listOf<SessionAction>(SessionAction.Interrupt(SessionId("atelier-meubles"))), actions)
+        assertEquals(listOf<SessionAction>(SessionAction.Interrupt(SessionId("notes"))), actions)
         assertEquals(SessionNotice.Interrupting, controller.state.value.notice)
 
-        controller.onInterrupted(SessionId("atelier-meubles"), heard = true)
+        controller.onInterrupted(SessionId("notes"), heard = true)
         assertEquals(SessionNotice.Interrupted(heard = true), controller.state.value.notice)
     }
 

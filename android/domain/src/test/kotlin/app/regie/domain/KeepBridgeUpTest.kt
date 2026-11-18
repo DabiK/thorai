@@ -22,6 +22,27 @@ class KeepBridgeUpTest {
     private val silent = BridgeConnection.Unreachable(UnreachableReason.NOT_RESPONDING)
 
     @Test
+    fun `a refused token retries provisioning without a foreground transition`() = runTest {
+        gateway.bridgeUp = true
+        var configured = 0
+        val start = StartUp(gateway, StubAccess(), launcher, timeSource = testTimeSource,
+            pairing = app.regie.domain.port.BridgePairing { configured++; app.regie.domain.model.LaunchResult.SENT })
+        gateway.connection.value = BridgeConnection.Unreachable(UnreachableReason.TOKEN_REFUSED)
+        val job = launch { KeepBridgeUp(gateway, start, canStart = { true }).run() }
+        runCurrent()
+        assertEquals(1, configured)
+        advanceTimeBy(30.seconds)
+        runCurrent()
+        assertEquals(2, configured)
+        gateway.connection.value = BridgeConnection.Connected
+        runCurrent()
+        advanceTimeBy(60.seconds)
+        runCurrent()
+        assertEquals(2, configured)
+        job.cancel()
+    }
+
+    @Test
     fun `a bridge falling soon after a start is restarted when the interval is over`() = runTest {
         val startUp = StartUp(gateway, StubAccess(), launcher, restartInterval = 30.seconds, timeSource = testTimeSource)
         startUp()

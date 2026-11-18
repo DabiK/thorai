@@ -11,7 +11,8 @@
 # SurfaceFlinger (premier écran en haut, second en bas).
 set -euo pipefail
 
-SERIAL="${THOR_SERIAL:-THOR0000000001}"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/device.sh"
+SERIAL="$(select_adb_device)"
 TOP_DISPLAY="${TOP_DISPLAY:-0}"
 BOTTOM_DISPLAY="${BOTTOM_DISPLAY:-4}"
 

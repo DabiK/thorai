@@ -60,6 +60,12 @@ it('manual Claude login needs no task and tells the user where to paste the OAut
   const state = await auth.start('claude');
   expect(state.phase).toBe('manual');
   expect(state.message).toContain('claude auth login');
+  expect(state.message).toContain('proot-distro login debian --user dev');
+  expect(state.message).toContain('--work-dir /home/dev -- bash -l');
+  expect(state.message).toContain('--bind "$HOME/.codex:/home/dev/.codex"');
+  expect(state.message?.indexOf('proot-distro')).toBeLessThan(
+    state.message?.indexOf('claude auth login') ?? 0,
+  );
   expect(state.message).toContain('Termux');
   expect(state.url).toBeNull();
   expect(driver.starts).toBe(0);

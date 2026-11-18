@@ -6,7 +6,8 @@
 #   ex. : scripts/thor-install.sh --ez force_single_screen true
 set -euo pipefail
 
-SERIAL="${THOR_SERIAL:-THOR0000000001}"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/device.sh"
+SERIAL="$(select_adb_device)"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ANDROID="$ROOT/android"
 APK="$ANDROID/app/build/outputs/apk/debug/app-debug.apk"

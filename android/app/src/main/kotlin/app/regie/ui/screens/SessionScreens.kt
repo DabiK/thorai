@@ -448,7 +448,7 @@ private fun SessionHeader(session: Session?, live: LiveSession?, now: Instant, c
     }
 }
 
-/** « L1 Codex · atelier-meubles   1 / 4   Claude · montage R1 », sans boucler aux bouts. */
+/** « L1 Codex · notes   1 / 4   Claude · montage R1 », sans boucler aux bouts. */
 @Composable
 private fun NeighbourBar(neighbours: Neighbours?, callbacks: SessionCallbacks, approval: ApprovalReview) {
     Row(

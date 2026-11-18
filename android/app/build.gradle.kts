@@ -1,6 +1,14 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+}
+
+val releasePropertiesFile = providers.environmentVariable("REGIE_RELEASE_CONFIG")
+    .map { file(it) }.getOrElse(File(System.getProperty("user.home"), ".config/regie/release.properties"))
+val releaseProperties = Properties().apply {
+    if (releasePropertiesFile.isFile) releasePropertiesFile.inputStream().use { load(it) }
 }
 
 android {
@@ -12,12 +20,24 @@ android {
         minSdk = 33
         ndk { abiFilters += setOf("arm64-v8a", "x86_64") }
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = providers.gradleProperty("regieVersionCode").getOrElse("1001").toInt()
+        versionName = providers.gradleProperty("regieVersionName").getOrElse("0.1.0")
+    }
+
+    signingConfigs {
+        create("release") {
+            if (releasePropertiesFile.isFile) {
+                storeFile = file(releaseProperties.getProperty("storeFile"))
+                storePassword = releaseProperties.getProperty("storePassword")
+                keyAlias = releaseProperties.getProperty("keyAlias")
+                keyPassword = releaseProperties.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
         }
     }
