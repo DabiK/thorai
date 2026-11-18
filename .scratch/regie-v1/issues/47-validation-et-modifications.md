@@ -1,6 +1,6 @@
 # 47 — Validation et modifications
 
-Statut : à fusionner
+Statut : fusionné dans ticket/40-vue-jeu
 Possède : les écrans de validation et de diff dans `:game-ui`, et leur branchement
 Dépend de : 46
 
