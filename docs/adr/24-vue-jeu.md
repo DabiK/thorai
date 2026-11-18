@@ -287,6 +287,24 @@ garder le routeur d'entrées de la manette (ADR 05) et se tester sans console.
   - pendant ces réglages, « Voir la suivante » touché montre la validation suivante ; la touche R1 reste aux réglages.
 - Le lien du carnet s'appelle « Préparer la console », comme l'entrée du menu de pause.
 
+### La reprise et le clavier (ticket 54)
+
+- **Retour par le lanceur de l'écran du bas.** Rouverte depuis Cocoon Shell (écran du bas) alors
+  qu'elle vivait, `TopActivity` (`singleTask`) était déplacée par Android sur l'écran du bas, derrière
+  `BottomActivity`, sans être recréée (elle gère `density` et `screenSize`). Le haut montrait l'accueil
+  d'Android et l'app passait en mode console : pas de hameau, Start n'y ramenait pas, B ouvrait les
+  agents. Le déplacement arrive par `onConfigurationChanged` : hors du display par défaut
+  (`DisplayPolicy.topScreenTarget`), elle redemande ce display (`returnTopScreenTo`, `setLaunchDisplayId`),
+  qu'Android lui rend sans la recréer. Même contrôle à `onStart`. Le chemin de `onCreate` (lancement à
+  froid sur le mauvais écran) ne change pas.
+- **Le clavier passe d'abord.** Un champ de texte actif (message de secours, clé d'agent, fiche,
+  réglages de la voix) a ouvert le clavier : B le ferme et rend l'écran, sans autre effet ; le B suivant
+  fait « retour ». A garde son action (envoyer, valider la clé, bâtir) puis ferme le clavier, pour que le
+  fil se voie à nouveau. `GamepadActivity` le sait par `onFocusChanged` sur la racine de l'écran
+  (`hasFocus` : seuls les champs de texte prennent le focus, la manette passe par le routeur) et le fait
+  avant le routeur, dans le `Window.Callback`.
+- « Continuer » du titre mène à la vue d'ensemble (`openOverview`), même si un autre écran s'était
+  ouvert entre-temps.
 
 ## Conséquences
 
