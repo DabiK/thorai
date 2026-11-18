@@ -1,6 +1,6 @@
 # 25 — Mode console : parler à l'agent depuis n'importe quelle appli et le suivre
 
-Statut : en attente (après 22)
+Statut : prêt
 Possède : `android/`
 
 ## Retour de l'utilisateur, 18 novembre
