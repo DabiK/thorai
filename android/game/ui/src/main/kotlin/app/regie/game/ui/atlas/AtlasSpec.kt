@@ -1,5 +1,7 @@
 package app.regie.game.ui.atlas
 
+import app.regie.game.engine.village.PixelPoint
+import app.regie.game.engine.village.PixelRect
 import app.regie.game.engine.world.RoofColors
 import app.regie.game.engine.world.TilePos
 import app.regie.game.ui.render.GroundPalette
@@ -28,12 +30,16 @@ data class Footprint(val w: Int, val h: Int)
 /**
  * Un objet posable : son image, son empreinte, sa porte (tuile relative au coin haut gauche de
  * l'empreinte) et les trois couleurs clés de son toit, du clair au sombre, en ARGB.
+ * Pour une maison (ticket 42), [chimney] est la sortie de la fumée et [windows] les rectangles à
+ * éclairer, en pixels depuis le coin haut gauche de son image.
  */
 data class AtlasObject(
     val frame: String,
     val footprint: Footprint = Footprint(1, 1),
     val door: TilePos? = null,
     val roofKeys: List<Int> = emptyList(),
+    val chimney: PixelPoint? = null,
+    val windows: List<PixelRect> = emptyList(),
 )
 
 /** Le contenu d'un `<atlas>.json` (contrat de `docs/rebrand/plan-dev-jeu.md`). */
@@ -76,7 +82,14 @@ object AssetJson {
             val door = o["door"]?.jsonObject?.let { TilePos(it.int("tx"), it.int("ty")) }
             val keys = (o["roofKeys"] as? JsonArray)?.map { color(it.jsonPrimitive.content) }.orEmpty()
             require(keys.isEmpty() || keys.size == 3) { "Objet $id : trois couleurs clés attendues" }
-            AtlasObject(frame, footprint, door, keys)
+            val chimney = o["chimney"]?.jsonObject?.let { PixelPoint(it.int("x"), it.int("y")) }
+            val windows = (o["windows"] as? JsonArray)?.map { window ->
+                val w = window.jsonObject
+                PixelRect(w.int("x"), w.int("y"), w.int("w"), w.int("h")).also { rect ->
+                    require(rect.width > 0 && rect.height > 0) { "Objet $id : fenêtre vide" }
+                }
+            }.orEmpty()
+            AtlasObject(frame, footprint, door, keys, chimney, windows)
         }
         return AtlasSpec(pixel, frames, anims, objects)
     }

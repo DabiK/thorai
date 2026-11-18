@@ -43,6 +43,7 @@ object GroundPainter {
         val grassMask = GroundEdges.maskWhere(map, p) { it == Ground.GRASS }
         val pathMask = if (ground == Ground.PLAZA) GroundEdges.maskWhere(map, p) { it == Ground.PATH } else 0
         val landMask = if (ground == Ground.WATER) GroundEdges.mask(map, p) else 0
+        val bridgeMask = if (ground == Ground.WATER) GroundEdges.maskWhere(map, p) { it == Ground.BRIDGE } else 0
         val waterMask = if (ground == Ground.BRIDGE) GroundEdges.maskWhere(map, p) { it == Ground.WATER } else 0
         val eastWest = ground == Ground.BRIDGE && GroundEdges.bridgeRunsEastWest(map, p)
         for (ly in 0 until TILE) {
@@ -60,7 +61,14 @@ object GroundPainter {
                             paved(GroundEdges.distance(grassMask, lx, ly, TILE, CORNER), gx, gy, palette) { cobble(gx, gy, palette) }
                         }
                     }
-                    Ground.WATER -> water(GroundEdges.distance(landMask, lx, ly, TILE, CORNER), gx, gy, palette)
+                    Ground.WATER -> {
+                        // L'ombre du pont sur l'eau, de part et d'autre.
+                        if (GroundEdges.distance(bridgeMask and (GroundEdges.E or GroundEdges.W), lx, ly, TILE, 0f) < 2f) {
+                            palette.water.dark
+                        } else {
+                            water(GroundEdges.distance(landMask, lx, ly, TILE, CORNER), gx, gy, palette)
+                        }
+                    }
                     Ground.BRIDGE -> bridge(GroundEdges.distance(waterMask, lx, ly, TILE, 0f), gx, gy, eastWest, palette)
                 }
             }
@@ -240,6 +248,10 @@ object GroundPainter {
             if (distance < lip + 5f) return palette.water.dark
             if (distance < lip + 6f) return palette.waterMid
         }
+        if (distance > 9f) {
+            val pad = lilyPad(gx, gy, palette)
+            if (pad != NONE) return pad
+        }
         val cx = Math.floorDiv(gx, 11)
         val cy = Math.floorDiv(gy, 5)
         val h = hash(cx, cy, 37)
@@ -254,18 +266,56 @@ object GroundPainter {
         return if (n > 0.66f) palette.waterMid else palette.water.base
     }
 
-    /** Le pont : planches de 4 pixels perpendiculaires au passage, garde-corps contre l'eau. */
+    /**
+     * Les nénuphars : une feuille ronde échancrée par cellule de 29 × 13, une fois sur quatre, cernée de
+     * vert profond, parfois une fleur rose ; [NONE] ailleurs.
+     */
+    private fun lilyPad(gx: Int, gy: Int, palette: GroundPalette): Int {
+        val cx = Math.floorDiv(gx, 29)
+        val cy = Math.floorDiv(gy, 13)
+        val h = hash(cx, cy, 53)
+        if (h % 4 != 0) return NONE
+        val px = cx * 29 + 6 + (h ushr 4) % 17
+        val py = cy * 13 + 4 + (h ushr 9) % 5
+        val dx = gx - px
+        val dy = gy - py
+        val d = dx * dx * 4 + dy * dy * 9
+        return when {
+            d > 40 -> NONE
+            dx > 0 && dy == 0 -> palette.water.dark
+            (h ushr 13) % 3 == 0 && dx == -1 && dy == -1 -> palette.flowers[1]
+            d > 24 -> palette.outline
+            dx < 0 && dy < 0 -> palette.grass.base
+            else -> palette.grassDeep
+        }
+    }
+
+    /**
+     * Le pont : des planches de 5 pixels en travers du passage, joints sombres, bord éclairé en haut et
+     * veines ; contre l'eau, un garde-corps cerné de sombre, avec un poteau tous les 10 pixels.
+     */
     private fun bridge(distance: Float, gx: Int, gy: Int, eastWest: Boolean, palette: GroundPalette): Int {
-        if (distance < 1f) return palette.bridge.dark
-        if (distance < 2f) return palette.path.light
-        if (distance < 3f) return palette.bridge.base
         val along = if (eastWest) gx else gy
         val across = if (eastWest) gy else gx
-        val plank = Math.floorDiv(along, 4)
-        return when (Math.floorMod(along, 4)) {
-            3 -> palette.bridge.base
-            0 -> palette.path.light
-            else -> if (Math.floorMod(across + hash(plank, 0, 43) % 9, 9) == 0) palette.bridge.base else palette.bridge.light
+        if (distance < 1f) return palette.outline
+        if (distance < 4f) {
+            if (Math.floorMod(along, 10) < 2) return if (distance < 2f) palette.bridge.dark else palette.bridge.base
+            return when {
+                distance < 2f -> palette.bridge.base
+                distance < 3f -> palette.bridge.light
+                else -> palette.bridge.dark
+            }
+        }
+        val plank = Math.floorDiv(along, 5)
+        val h = hash(plank, 0, 43)
+        return when (Math.floorMod(along, 5)) {
+            0 -> palette.bridge.dark
+            1 -> palette.bridge.light
+            else -> {
+                // Les veines du bois, et un clou au bout de chaque planche.
+                if (distance < 6f && Math.floorMod(along, 5) == 2) return palette.bridge.dark
+                if (Math.floorMod(across + h % 13, 13) < 3 && (h ushr 5) % 2 == 0) palette.bridge.base else palette.bridge.light
+            }
         }
     }
 
