@@ -44,15 +44,15 @@ L'écran du bas affiche toujours les boutons utiles à cet instant.
 ## Parcours (les 6 écrans de la maquette)
 
 1. **Vue d'ensemble.**
-   - En haut : une carte par session (agent, projet, branche, statut, étape x sur y, dernière action, ancienneté).
+   - En haut : une liste dense, une ligne par session (agent, projet, branche, statut, étape x sur y, dernière action, ancienneté), défilable (ticket 22).
    - En bas : la première validation en attente et le micro.
 2. **Dictée.**
-   - En haut : le texte transcrit en direct, avec les noms de fichiers et de fonctions du dépôt reconnus.
-   - En bas : le niveau du micro et la durée.
-   - Une fois L2 relâché : A envoie, B efface, Y complète, X corrige un mot.
+   - En haut : rien ne change, le fil (ou l'écran affiché) reste visible (ticket 22).
+   - En bas : le texte transcrit en direct, avec les noms de fichiers et de fonctions du dépôt reconnus, le niveau du micro et la durée.
+   - Une fois L2 relâché : A envoie, B efface, Y complète, X corrige un mot. Un message reçu par l'agent ramène seul à l'écran précédent.
 3. **Session en direct.**
-   - En haut : le fil (message dicté, réponses, actions résumées en une ligne, texte en cours), le plan de l'agent et les fichiers modifiés.
-   - En bas : parler à l'agent sans l'arrêter, voir le diff, faire le point (résumé écrit), interrompre.
+   - En haut : le fil brut de l'agent (message envoyé, réponses, actions résumées en une ligne, texte en cours), son plan et les fichiers modifiés s'il en expose. Aucun point ni bilan ajouté par Régie (ticket 22).
+   - En bas : la table des réglages exposés par l'agent (mode, modèle, réflexion, mode rapide…), modifiables sur place ; parler à l'agent sans l'arrêter, voir le diff, interrompre.
 4. **Validation.**
    - En haut : la commande ou le fichier, pourquoi, et ce que ça touche.
    - En bas : autoriser une fois, toujours dans cette session, refuser ; ou refuser en dictant une consigne.

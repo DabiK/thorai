@@ -2,7 +2,20 @@ package app.regie.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,14 +56,13 @@ import app.regie.domain.model.Overview
 import app.regie.input.Button
 import app.regie.input.Trigger
 import app.regie.overview.ControlState
-import app.regie.overview.OverviewGrid
 import app.regie.overview.QuitStep
 import app.regie.ui.components.ApprovalBanner
 import app.regie.ui.components.BarAction
 import app.regie.ui.components.MicButton
 import app.regie.ui.components.Notice
 import app.regie.ui.components.StateMessage
-import app.regie.ui.components.SessionCard
+import app.regie.ui.components.SessionRow
 import app.regie.ui.components.bottomDivider
 import app.regie.ui.components.topDivider
 import app.regie.ui.theme.Palette
@@ -73,14 +85,23 @@ interface ControlCallbacks {
     fun onCancelQuit()
 }
 
-/** Écran du haut : la vue d'ensemble. En mode un seul écran, la zone du bas devient un panneau en bas. */
+/**
+ * Écran du haut : la vue d'ensemble, une liste dense d'une ligne par session. En mode un seul écran,
+ * la zone du bas devient un panneau en bas. [scrollVelocity] : le stick droit fait défiler la liste.
+ */
 @Composable
-fun OverviewTopScreen(overview: Overview, control: ControlState, singleScreen: Boolean, callbacks: ControlCallbacks) {
+fun OverviewTopScreen(
+    overview: Overview,
+    control: ControlState,
+    singleScreen: Boolean,
+    callbacks: ControlCallbacks,
+    scrollVelocity: StateFlow<Float> = MutableStateFlow(0f),
+) {
     val now by rememberNow()
     Box(Modifier.fillMaxSize().background(Palette.background)) {
         Column(Modifier.fillMaxSize()) {
             OverviewHeader(overview)
-            SessionGrid(overview, control, now, compact = singleScreen, modifier = Modifier.weight(1f))
+            SessionList(overview, control, now, compact = singleScreen, scrollVelocity, modifier = Modifier.weight(1f))
             if (singleScreen) {
                 Notices(overview, Modifier.padding(start = 20.dp, end = 20.dp, bottom = 10.dp).fillMaxWidth())
                 CompactControlPanel(overview, control, callbacks)
@@ -251,39 +272,55 @@ internal fun rememberNow(): State<Instant> = produceState(Clock.System.now()) {
     }
 }
 
+/**
+ * La liste des sessions, dans l'ordre de la vue d'ensemble. La ligne qui a le focus reste visible :
+ * la liste ne défile que si elle sort de l'écran, d'une ligne à la fois quand la croix descend.
+ */
 @Composable
-private fun SessionGrid(overview: Overview, control: ControlState, now: Instant, compact: Boolean, modifier: Modifier) {
+private fun SessionList(overview: Overview, control: ControlState, now: Instant, compact: Boolean, velocity: StateFlow<Float>, modifier: Modifier) {
     val sessions = overview.sessions
     if (sessions.isEmpty() && overview.bridge == BridgeStatus.Connected) {
         StateMessage("Aucune session. Crée une session avec X.", modifier)
         return
     }
-    val focus = control.focusIn(sessions.take(OverviewGrid.VISIBLE_CARDS).map { it.id })
-    Column(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = if (compact) 12.dp else 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        repeat(OverviewGrid.ROWS) { row ->
-            Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                repeat(OverviewGrid.COLUMNS) { column ->
-                    val index = row * OverviewGrid.COLUMNS + column
-                    val session = sessions.getOrNull(index)
-                    if (session == null) {
-                        Spacer(Modifier.weight(1f))
-                    } else {
-                        SessionCard(
-                            session = session,
-                            now = now,
-                            focused = index == focus,
-                            compact = compact,
-                            modifier = Modifier.weight(1f).fillMaxSize(),
-                        )
-                    }
-                }
+    val focus = control.focusIn(sessions.map { it.id })
+    val list = rememberLazyListState()
+    val speed = with(LocalDensity.current) { STICK_SPEED.toPx() }
+    LaunchedEffect(focus, sessions.size) {
+        if (sessions.isEmpty()) return@LaunchedEffect
+        val layout = list.layoutInfo
+        val item = layout.visibleItemsInfo.firstOrNull { it.index == focus }
+        when {
+            item == null -> list.animateScrollToItem(focus)
+            item.offset < layout.viewportStartOffset -> list.animateScrollBy((item.offset - layout.viewportStartOffset).toFloat())
+            item.offset + item.size > layout.viewportEndOffset - layout.afterContentPadding ->
+                list.animateScrollBy((item.offset + item.size - layout.viewportEndOffset + layout.afterContentPadding).toFloat())
+        }
+    }
+    LaunchedEffect(list) {
+        velocity.collectLatest { value ->
+            if (value == 0f) return@collectLatest
+            var last = withFrameNanos { it }
+            while (true) {
+                val frame = withFrameNanos { it }
+                list.scrollBy(value * speed * (frame - last) / 1e9f)
+                last = frame
             }
         }
     }
+    LazyColumn(
+        state = list,
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = if (compact) 6.dp else 10.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+        modifier = modifier.fillMaxWidth().testTag("session-list"),
+    ) {
+        itemsIndexed(sessions, key = { _, session -> session.id.value }) { index, session ->
+            SessionRow(session = session, now = now, focused = index == focus, compact = compact)
+        }
+    }
 }
+
+private val STICK_SPEED = 900.dp
 
 /** Panneau du mode un seul écran : micro, validation en attente et boutons, sur une ligne. */
 @Composable
@@ -325,7 +362,6 @@ private fun ButtonBar(callbacks: ControlCallbacks, modifier: Modifier, withQuitS
     ) {
         BarAction("A", stringResource(R.string.action_open)) { callbacks.onButton(Button.A) }
         BarAction("X", stringResource(R.string.action_new_session)) { callbacks.onButton(Button.X) }
-        BarAction("Y", stringResource(R.string.action_speak_summary)) { callbacks.onButton(Button.Y) }
         if (withQuitSpacer) Spacer(Modifier.weight(1f))
         QuitAction(callbacks::onQuit)
     }

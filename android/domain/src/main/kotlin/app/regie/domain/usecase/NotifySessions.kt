@@ -55,7 +55,10 @@ class NotifySessions(
                                 val text = when (kind) {
                                     SessionNoticeKind.FAILED -> session.lastError ?: "Consulte le fil"
                                     SessionNoticeKind.QUESTION -> summary.question.orEmpty()
-                                    SessionNoticeKind.FINISHED -> summary.lines.first()
+                                    // The agent's own last sentence: Régie adds no report (ticket 22).
+                                    SessionNoticeKind.FINISHED -> thread.entries.drop(thread.entries.indexOfLast { it is ThreadEntry.UserMessage } + 1)
+                                        .filterIsInstance<ThreadEntry.AgentText>().lastOrNull()
+                                        ?.let { LiveSession.lastSentence(RegieReport.strip(it.text)) } ?: "Consulte le fil."
                                 }
                                 if (notifications.show(SessionNotice(session.id, kind, title, "${session.project} · $text"))) pending = false
                             }

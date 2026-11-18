@@ -11,7 +11,6 @@ import {
 } from '../adapters/fake/memory.ts';
 import { Bridge, branchInstruction } from './bridge.ts';
 import type { BridgeEvent, SessionRecord } from './model.ts';
-import { withSummaryRequest } from './written-summary.ts';
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -224,9 +223,7 @@ describe('creating a session', () => {
       prompt: 'Lis notes.md',
     });
 
-    expect(world.claude.callsOf('prompt')).toEqual([
-      [session.sessionId, withSummaryRequest('Lis notes.md')],
-    ]);
+    expect(world.claude.callsOf('prompt')).toEqual([[session.sessionId, 'Lis notes.md']]);
     expect(world.bridge.listSessions()[0]).toEqual({
       configOptions: [],
       sessionId: session.sessionId,
@@ -692,7 +689,7 @@ describe('a session goes live only once loaded and in its mode', () => {
     await expect(first).resolves.toBe('cancelled');
     await expect(second).resolves.toBe('cancelled');
     await expect(after).resolves.toBe('prompt');
-    expect(world.claude.callsOf('prompt')).toEqual([[sessionId, withSummaryRequest('après')]]);
+    expect(world.claude.callsOf('prompt')).toEqual([[sessionId, 'après']]);
   });
 
   it('does not take a resumed session for live while it loads', async () => {
@@ -891,9 +888,7 @@ describe('written summaries (ticket 12)', () => {
       approvalMode: 'ask',
       prompt: 'Lis notes.md',
     });
-    expect(world.codex.callsOf('prompt')).toEqual([
-      [sessionId, withSummaryRequest('Lis notes.md')],
-    ]);
+    expect(world.codex.callsOf('prompt')).toEqual([[sessionId, 'Lis notes.md']]);
     expect(world.ofType('user_message').at(-1)?.data).toEqual({
       text: 'Lis notes.md',
       delivery: 'prompt',
@@ -925,8 +920,8 @@ describe('branches, left to the agent (ticket 13)', () => {
       'Travaille sur la branche essai, crée-la depuis main si elle n’existe pas.',
     );
     expect(world.codex.callsOf('prompt')).toEqual([
-      [sessionId, withSummaryRequest(`${prefix}\n\nLis notes.md`)],
-      [sessionId, withSummaryRequest('Continue')],
+      [sessionId, `${prefix}\n\nLis notes.md`],
+      [sessionId, 'Continue'],
     ]);
     expect(userMessages()).toEqual([
       { text: 'Lis notes.md', delivery: 'prompt', prefix },
@@ -951,7 +946,7 @@ describe('branches, left to the agent (ticket 13)', () => {
     await world.bridge.prompt(sessionId, 'Go');
 
     expect(world.claude.callsOf('prompt')).toEqual([
-      [sessionId, withSummaryRequest(`${branchInstruction('feature/x')}\n\nGo`)],
+      [sessionId, `${branchInstruction('feature/x')}\n\nGo`],
     ]);
   });
 
@@ -967,7 +962,7 @@ describe('branches, left to the agent (ticket 13)', () => {
     await world.bridge.prompt(sessionId, 'Deux');
 
     expect(world.codex.callsOf('prompt')).toEqual([
-      [sessionId, withSummaryRequest(`${branchInstruction('essai')}\n\nUn`)],
+      [sessionId, `${branchInstruction('essai')}\n\nUn`],
     ]);
     expect(world.codex.callsOf('steer')).toEqual([[sessionId, 'Deux']]);
   });
@@ -1447,9 +1442,7 @@ describe('agent provided choices', () => {
       expect(resumed).toMatchObject({ active: true, status: 'idle', lastError: null });
       expect(resumed.configOptions?.map((o) => o.currentValue)).toEqual([replacement, 'high']);
       await expect(world.bridge.prompt(session.sessionId, 'Continue')).resolves.toBe('prompt');
-      expect(world.codex.callsOf('prompt')).toEqual([
-        [session.sessionId, withSummaryRequest('Continue')],
-      ]);
+      expect(world.codex.callsOf('prompt')).toEqual([[session.sessionId, 'Continue']]);
       world.codex.endTurn(session.sessionId);
       await world.bridge.shutdown();
       world.restart();
@@ -1559,9 +1552,7 @@ describe('agent provided choices', () => {
     await expect(world.bridge.prompt(session.sessionId, 'Continue jointly')).resolves.toBe(
       'prompt',
     );
-    expect(world.codex.callsOf('prompt')).toEqual([
-      [session.sessionId, withSummaryRequest('Continue jointly')],
-    ]);
+    expect(world.codex.callsOf('prompt')).toEqual([[session.sessionId, 'Continue jointly']]);
     world.codex.endTurn(session.sessionId);
     await world.bridge.shutdown();
     world.restart();

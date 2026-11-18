@@ -2,16 +2,17 @@
 
 **Régie transforme l’AYN Thor en poste de pilotage à la voix et à la manette pour Claude Code et Codex, avec le travail en haut et les commandes en bas.**
 
-| Écran du haut : suivre la session | Écran du bas : parler et agir |
+| Écran du haut : suivre la session | Écran du bas : régler et agir |
 | --- | --- |
-| ![Fil de la session Codex](artifacts/screenshots/21/after-session-haut.png) | ![Micro, consigne, modifications et point écrit](artifacts/screenshots/21/after-session-bas.png) |
+| ![Fil brut de la session Codex](artifacts/screenshots/22/apres-session-haut.png) | ![Réglages de Codex, message et touches](artifacts/screenshots/22/apres-session-bas.png) |
 
-Captures réelles du banc à deux écrans, le 14 novembre 2026 : Codex travaille sur `regie-demo`, un projet de démonstration. Le pont tourne sur le Mac pour cet essai ; sur la Thor, il tourne dans sa Debian.
+Captures réelles de la Thor, le 18 novembre 2026 : Codex vient de répondre sur `hello-world`, un projet d’essai. Le pont tourne dans la Debian de la console.
 
 ## Ce qu’on fait avec
 
-- **Suivre plusieurs sessions** : avancement, fil en direct, plan quand l’agent en fournit un, fichiers modifiés, points écrits et notifications.
-- **Parler à l’agent** : maintenir L2, relire la transcription, corriger ou compléter, puis envoyer avec A. La transcription est **locale par défaut** ; aucun texte n’est lu à voix haute.
+- **Suivre plusieurs sessions** : une liste dense des sessions, puis le fil brut de l’agent, son plan et ses fichiers modifiés quand il en fournit, et des notifications.
+- **Régler la session sur place** : en bas, le mode et toutes les options que l’agent expose (modèle, réflexion, mode rapide…), appliqués après l’accord de l’agent.
+- **Parler à l’agent** : maintenir L2, relire la transcription sur l’écran du bas, corriger ou compléter, puis envoyer avec A ; le fil reste en haut. La transcription est **locale par défaut** ; aucun texte n’est lu à voix haute.
 - **Donner un ordre** : maintenir R2, dire par exemple « ouvre cette session » ou « mets tout en pause », puis confirmer. Les règles courantes marchent sans clé de modèle distant.
 - **Choisir les validations** : Plan d’abord, Modifications auto, Je valide chaque action ou Tout autoriser. Une demande se lit dans le fil ; A autorise une fois, B refuse, X autorise pour la session quand l’agent le permet. Les lectures reconnues sont automatiques.
 - **Relire un diff** : parcourir les éditions exposées par l’agent, commenter une ligne avec L2 ou demander une explication écrite avec Y puis A.
@@ -195,13 +196,13 @@ Pour mettre à jour, quitter Régie puis relancer les scripts de déploiement co
 | A | Ouvrir, confirmer, envoyer ; dans une validation, autoriser une fois |
 | B | Retour ou annulation ; **dans une validation, refuser** |
 | X | Nouvelle session depuis la régie ; diff depuis la session ; correction d’un mot en relecture de dictée |
-| Y | Point écrit ; compléter une dictée ; dans le diff, préparer une explication |
+| Y | Compléter une dictée ; dans le diff, préparer une explication |
 | L1 / R1 | Session précédente / suivante ; R1 donne priorité aux validations, limitées à la session dans son fil |
-| Croix | Cartes, champs, lignes ; Droite ouvre les options de session, Gauche ferme une validation résolue ou rejoint la fin du fil |
+| Croix | Lignes de la régie, champs, lignes du diff ; Droite passe la table des réglages en modification, Gauche ferme une validation résolue ou rejoint la fin du fil |
 | Stick droit | Faire défiler |
 | Start | Interrompre le tour ; depuis la régie, interrompre toutes les sessions occupées |
 
-Les boutons affichés en bas précisent l’action courante. Dans les options, A applique et B ferme : les validations gardent leurs boutons tactiles, sans détourner ces raccourcis. **Quitter** se touche en bas de la régie.
+Les boutons affichés en bas précisent l’action courante. Dans la table des réglages en modification, A applique et B la referme : les validations gardent leurs boutons tactiles, sans détourner ces raccourcis. **Quitter** se touche en bas de la régie.
 
 ## Comprendre un message de connexion
 

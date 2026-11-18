@@ -56,7 +56,7 @@ import app.regie.gateway.bridge.ReplayAgentGateway
 import app.regie.input.InputRouter
 import app.regie.overview.OverviewAction
 import app.regie.overview.OverviewController
-import app.regie.overview.OverviewGrid
+import app.regie.overview.OverviewList
 import app.regie.session.Screen
 import app.regie.domain.usecase.ReviewSessionSettings
 import app.regie.domain.model.SessionSettingsReview
@@ -75,6 +75,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.File
+import kotlin.time.Duration.Companion.milliseconds
 
 class RegieApplication : Application() {
     lateinit var container: AppContainer
@@ -123,20 +124,48 @@ class AppContainer(
     private var settingsReview: ReviewSessionSettings? = null
     val sessionSettings = MutableStateFlow(SessionSettingsReview())
     fun selectSessionSetting(index: Int) { settingsReview?.select(index) }
-    fun openSessionSettings() { (screen.value as? Screen.Session)?.let { settingsReview?.open(it.id) } }
+
+    /**
+     * Droite, ou un toucher sur une ligne de la table du bas ([row]) : la table passe en modification.
+     * Jamais pendant une dictée ou un ordre : la table, cachée, capterait leurs touches.
+     */
+    fun openSessionSettings(row: String? = null) {
+        if (dictation.state.value.visible || voiceCommand.state.value.visible) return
+        (screen.value as? Screen.Session)?.let { settingsReview?.open(it.id, row) }
+    }
     val settingsOpen = MutableStateFlow(false)
     private val localVoice = LocalVoiceProvider(File(app.filesDir, "voice-models"), LocalConfig(hotwords = { true }))
     private val cloudVoice = ElevenLabsVoiceProvider(ElevenLabsConfig(apiKey = voicePreferences::apiKey))
-    /** Debug-only WAV replay uses the real provider and the same review/delivery path. */
+    /**
+     * Debug-only WAV replay uses the real provider and the same review/delivery path. Single use:
+     * the next capture takes it, and every later one listens to the microphone again.
+     */
     var debugVoiceWav: File? = null
     private val capture: DictationCapture = captureOverride ?: VoiceCapture(
         { if (voiceSettings.value.provider == DictationProvider.LOCAL) localVoice.speechToText else cloudVoice.speechToText },
-        { debugVoiceWav?.let { WavAudioSource.fromFile(it, realtime = true) } ?: ForegroundMicrophone(app) }, scope,
+        { takeDebugVoiceWav()?.let { WavAudioSource.fromFile(it, realtime = true) } ?: ForegroundMicrophone(app) }, scope,
     )
     private var deliverDictation: DeliverDictation? = null
+    internal fun takeDebugVoiceWav(): File? = debugVoiceWav.also { debugVoiceWav = null }
+
+    // A message the agent received closes the dictation by itself; the session shows its receipt.
     val dictation = ReviewDictation(capture, { target, text ->
         deliverDictation?.invoke(target, text) ?: DictationDelivery("Pont indisponible", target)
-    }, scope)
+    }, scope, shown = { id -> _screen.value == Screen.Session(id) }) { target, delivery ->
+        // Same cleanup as B: the overview noted L2 held, and its release went to the dictation.
+        releaseDictationInputs()
+        closedByDelivery = kotlin.time.TimeSource.Monotonic.markNow()
+        sessionController.onDictated(target.sessionId, delivery)
+    }
+
+    /** The dictation closed by itself: an A pressed twice must not reach a validation behind it. */
+    private var closedByDelivery: kotlin.time.TimeSource.Monotonic.ValueTimeMark? = null
+
+    private fun releaseDictationInputs() {
+        dictationVelocity.value = 0f
+        controller.releaseTriggers()
+        sessionController.releaseTriggers()
+    }
     private var executeVoiceCommand: ExecuteVoiceCommand? = null
     private var projects: List<String> = emptyList()
     val voiceCommand = ReviewVoiceCommand(capture, InterpretVoiceCommand(MistralCommandModel(voicePreferences::commandKey)),
@@ -191,6 +220,7 @@ class AppContainer(
         // A release belongs to the physical stick even while an overlay owns the inputs.
         if (input is GamepadInput.Scroll && input.velocity == 0f) {
             sessionController.handle(input)
+            controller.handle(input)
             diffVelocity.value = 0f
             newSessionVelocity.value = 0f
         }
@@ -235,7 +265,7 @@ class AppContainer(
                 is GamepadInput.TriggerUp -> if (input.trigger == Trigger.L2) dictation.finish()
                 is GamepadInput.Pressed -> when (input.button) {
                     Button.A -> dictation.send()
-                    Button.B -> { dictation.discard(); dictationVelocity.value = 0f; controller.releaseTriggers(); sessionController.releaseTriggers() }
+                    Button.B -> { dictation.discard(); releaseDictationInputs() }
                     Button.Y -> dictation.append()
                     Button.X -> dictation.correct()
                     Button.LEFT -> dictation.moveWord(-1)
@@ -248,6 +278,7 @@ class AppContainer(
             }
             return
         }
+        if (input == GamepadInput.Pressed(Button.A) && closedByDelivery?.let { it.elapsedNow() < SECOND_A_IGNORED } == true) return
         if (input is GamepadInput.TriggerDown && input.trigger == Trigger.R2) { startVoiceCommand(); return }
         if (input is GamepadInput.TriggerUp && input.trigger == Trigger.R2) { stopVoiceCommand(); return }
         if (input is GamepadInput.TriggerDown && input.trigger == Trigger.L2) {
@@ -339,9 +370,8 @@ class AppContainer(
 
     fun openOverview() { navigate(Screen.Overview) }
 
-    fun openSession(id: SessionId, summary: Boolean = false) {
+    fun openSession(id: SessionId) {
         navigate(Screen.Session(id))
-        if (summary) sessionController.openSummary()
     }
 
     fun selectApproval(id: ApprovalId) { reviewApprovals?.open(id) }
@@ -422,7 +452,7 @@ class AppContainer(
         } else {
             BridgeAgentGateway(
                 token = ::readToken,
-                historyCount = OverviewGrid.VISIBLE_CARDS,
+                historyCount = OverviewList.PRELOADED,
                 // Trace de connexion : jamais le jeton ni le contenu des messages.
                 log = { Log.i(TAG, it) },
             )
@@ -521,7 +551,7 @@ class AppContainer(
         // Jamais le texte d'un message dans le journal.
         Log.i(TAG, "action : ${if (action is SessionAction.Send) "Send(${action.id})" else action}")
         when (action) {
-            is SessionAction.OpenSettings -> settingsReview?.open(action.id)
+            is SessionAction.OpenSettings -> settingsReview?.open(action.id, action.row)
             is SessionAction.OpenDiff -> navigate(Screen.Diff(action.id))
             is SessionAction.Open -> navigate(Screen.Session(action.id))
             SessionAction.Back -> navigate(Screen.Overview)
@@ -537,7 +567,6 @@ class AppContainer(
                 Log.i(TAG, "interruption : ${if (heard) "envoyée" else "refusée"}")
                 sessionController.onInterrupted(action.id, heard)
             }
-            is SessionAction.ShowSummary -> sessionController.openSummary()
             is SessionAction.StartDictation -> startDictation(action.id)
             SessionAction.StopDictation -> stopDictation()
             SessionAction.StartVoiceCommand -> startVoiceCommand()
@@ -567,7 +596,6 @@ class AppContainer(
         is OverviewAction.OpenSession -> navigate(Screen.Session(action.id))
         is OverviewAction.OpenApproval -> openApproval(action.id)
         OverviewAction.NewSession -> openNewSession()
-        is OverviewAction.ShowSummary -> action.target?.let { openSession(it, summary = true) }
         OverviewAction.PauseAll -> { scope.launch { executeVoiceCommand?.invoke(VoiceCommand.Pause(overview.value.sessions.map { it.id })) }; Unit }
         OverviewAction.Quit -> quitNow()
     }
@@ -591,5 +619,6 @@ class AppContainer(
         const val TAG = "Regie"
         const val TOKEN_FILE = "bridge-token"
         const val CLOSE_DELAY_MS = 400L
+        val SECOND_A_IGNORED = 500.milliseconds
     }
 }

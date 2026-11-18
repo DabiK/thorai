@@ -34,7 +34,6 @@ import type {
 import { projectFolderName } from './project-name.ts';
 import { ReadOnlyCommands } from './read-only-command.ts';
 import { editableOptions, type SessionOption, sessionOptions } from './session-options.ts';
-import { withSummaryRequest } from './written-summary.ts';
 
 export interface BridgeDeps {
   /** Native sandbox blocks writes until approval; PRoot needs the Thor workaround. */
@@ -589,7 +588,8 @@ export class Bridge {
       lastError: null,
     });
     const sent = prefix === null ? text : `${prefix}\n\n${text}`;
-    const turn = connection.prompt(sessionId, withSummaryRequest(sent)).then(
+    // The agent receives the user's words only: no report request added by Régie (ticket 22).
+    const turn = connection.prompt(sessionId, sent).then(
       (result) => {
         if (this.live.get(sessionId) !== live) return;
         live.inFlight -= 1;

@@ -20,19 +20,19 @@ sealed interface QuitStep {
 }
 
 /**
- * État de la manette partagé par les deux écrans : carte qui a le focus, gâchettes maintenues,
+ * État de la manette partagé par les deux écrans : ligne qui a le focus, gâchettes maintenues,
  * et « Quitter » en cours.
  */
 data class ControlState(
     val focusedIndex: Int = 0,
-    /** La session qui a le focus : il la suit quand les cartes changent d'ordre. */
+    /** La session qui a le focus : il la suit quand les lignes changent d'ordre. */
     val focusedId: SessionId? = null,
     val heldTriggers: Set<Trigger> = emptySet(),
     val quit: QuitStep? = null,
 ) {
     /**
-     * La case qui a le focus parmi les cartes affichées ([visible], dans l'ordre) : celle de la
-     * session suivie, sinon l'index ramené dans la liste (session disparue des cartes affichées).
+     * La ligne qui a le focus parmi les sessions ([visible], dans l'ordre) : celle de la session
+     * suivie, sinon l'index ramené dans la liste (session disparue).
      */
     fun focusIn(visible: List<SessionId>): Int =
         focusedId?.let(visible::indexOf)?.takeIf { it >= 0 }
@@ -47,20 +47,25 @@ class OverviewController(
     private val overview: StateFlow<Overview>,
     private val dispatch: (OverviewAction) -> Unit,
 ) {
-    private val grid = FocusGrid(columns = OverviewGrid.COLUMNS)
+    private val list = FocusList()
     private val _state = MutableStateFlow(ControlState())
     val state: StateFlow<ControlState> = _state.asStateFlow()
 
+    private val _scrollVelocity = MutableStateFlow(0f)
+
+    /** Stick droit : la liste défile sans déplacer le focus ; la croix l'y ramène. */
+    val scrollVelocity: StateFlow<Float> = _scrollVelocity.asStateFlow()
+
     private val sessions get() = overview.value.sessions
 
-    /** Seules les cartes affichées peuvent recevoir le focus. */
-    private val visibleIds get() = sessions.take(OverviewGrid.VISIBLE_CARDS).map { it.id }
+    /** Toutes les lignes de la liste peuvent recevoir le focus. */
+    private val visibleIds get() = sessions.map { it.id }
     private val visibleCount get() = visibleIds.size
     private val focused get() = sessions.getOrNull(currentFocus())
 
     /**
      * À chaque nouvelle vue d'ensemble : le focus suit sa session si elle a changé de place ; si
-     * elle a quitté les cartes affichées, l'index est gardé, borné, et la carte qui s'y trouve est suivie.
+     * elle a disparu, l'index est gardé, borné, et la ligne qui s'y trouve est suivie.
      */
     fun syncFocus() {
         val visible = visibleIds
@@ -76,8 +81,7 @@ class OverviewController(
             is GamepadInput.Pressed -> onPressed(input.button)
             is GamepadInput.TriggerDown -> onTrigger(input.trigger, held = true)
             is GamepadInput.TriggerUp -> onTrigger(input.trigger, held = false)
-            // Rien à faire défiler sur la vue d'ensemble : 4 cartes tiennent à l'écran.
-            is GamepadInput.Scroll -> Unit
+            is GamepadInput.Scroll -> _scrollVelocity.value = input.velocity
         }
     }
 
@@ -111,9 +115,13 @@ class OverviewController(
         if (_state.value.quit is QuitStep.Confirm) _state.update { it.copy(quit = null) }
     }
 
-    /** Pendant la confirmation : A confirme, B annule, le reste attend. Une gâchette relâchée l'est toujours. */
+    /**
+     * Pendant la confirmation : A confirme, B annule, le reste attend. Une gâchette relâchée l'est
+     * toujours ; la liste cesse de défiler.
+     */
     private fun handleWhileQuitting(input: GamepadInput) {
         when {
+            input is GamepadInput.Scroll -> _scrollVelocity.value = 0f
             input == GamepadInput.Pressed(Button.A) && _state.value.quit is QuitStep.Confirm -> confirmQuit()
             input == GamepadInput.Pressed(Button.B) -> cancelQuit()
             input is GamepadInput.TriggerUp -> onTrigger(input.trigger, held = false)
@@ -122,20 +130,21 @@ class OverviewController(
 
     private fun onPressed(button: Button) {
         when (button) {
-            Button.UP -> moveFocus(Direction.UP)
-            Button.DOWN -> moveFocus(Direction.DOWN)
-            Button.LEFT -> moveFocus(Direction.LEFT)
-            Button.RIGHT -> moveFocus(Direction.RIGHT)
-            Button.L1 -> setFocus(grid.previous(currentFocus(), visibleCount))
+            Button.UP -> setFocus(list.move(currentFocus(), -1, visibleCount))
+            Button.DOWN -> setFocus(list.move(currentFocus(), 1, visibleCount))
+            // Une seule colonne : gauche et droite n'ont rien à atteindre.
+            Button.LEFT, Button.RIGHT -> Unit
+            Button.L1 -> setFocus(list.previous(currentFocus(), visibleCount))
             Button.R1 ->
                 if (overview.value.firstPendingApproval != null) {
                     openPendingApproval()
                 } else {
-                    setFocus(grid.next(currentFocus(), visibleCount))
+                    setFocus(list.next(currentFocus(), visibleCount))
                 }
             Button.A -> focused?.let { dispatch(OverviewAction.OpenSession(it.id)) }
             Button.X -> dispatch(OverviewAction.NewSession)
-            Button.Y -> dispatch(OverviewAction.ShowSummary(focused?.id))
+            // Le point Régie est retiré (ticket 22) : Y n'a plus d'action sur la vue d'ensemble.
+            Button.Y -> Unit
             Button.START -> dispatch(OverviewAction.PauseAll)
             // La vue d'ensemble est le premier écran : B n'a rien à annuler.
             Button.B -> Unit
@@ -155,8 +164,6 @@ class OverviewController(
     }
 
     private fun currentFocus() = _state.value.focusIn(visibleIds)
-
-    private fun moveFocus(direction: Direction) = setFocus(grid.move(currentFocus(), direction, visibleCount))
 
     private fun setFocus(index: Int) = _state.update { it.copy(focusedIndex = index, focusedId = visibleIds.getOrNull(index)) }
 }

@@ -42,7 +42,7 @@ class TopActivity : GamepadActivity() {
     }
 
     private fun openNotification(intent: Intent) {
-        intent.getStringExtra(EXTRA_SESSION)?.let { container.openSession(app.regie.domain.model.SessionId(it), summary = true) }
+        intent.getStringExtra(EXTRA_SESSION)?.let { container.openSession(app.regie.domain.model.SessionId(it)) }
         intent.getStringExtra(EXTRA_APPROVAL)?.let { container.openApproval(app.regie.domain.model.ApprovalId(it)) }
     }
 
@@ -71,7 +71,8 @@ class TopActivity : GamepadActivity() {
             },
             overview = { overview, control ->
                 val mode by container.displays.mode.collectAsStateWithLifecycle()
-                OverviewTopScreen(overview, control, singleScreen = mode == ScreenMode.Single, callbacks = callbacks)
+                OverviewTopScreen(overview, control, singleScreen = mode == ScreenMode.Single, callbacks = callbacks,
+                    scrollVelocity = container.controller.scrollVelocity)
             },
             session = { shown, overview ->
                 val mode by container.displays.mode.collectAsStateWithLifecycle()
@@ -80,10 +81,17 @@ class TopActivity : GamepadActivity() {
                 val draft by container.sessionController.draft
                 val approval by container.inlineApproval.collectAsStateWithLifecycle()
                 val options by container.sessionSettings.collectAsStateWithLifecycle()
+                val dictation by container.dictation.state.collectAsStateWithLifecycle()
                 val panel: (@androidx.compose.runtime.Composable () -> Unit)? = if (options.visible) ({
                     app.regie.ui.screens.SessionSettingsScreen(options, { container.handleInput(GamepadInput.Pressed(it)) }, container::selectSessionSetting, compact = true)
                 }) else null
-                SessionTopScreen(live, gone = overview.neighboursOf(shown.id) == null, control, draft, singleScreen = mode == ScreenMode.Single, scroll = threadScroll, callbacks = sessionCallbacks, approval = approval, onDecision = container::answerInline, onNextApproval = container::nextInlineApproval, onDismissApproval = container::dismissInlineApproval, options = panel)
+                // Un seul écran : la dictée prend le panneau du bas, le fil reste au-dessus.
+                val dictationPanel: (@androidx.compose.runtime.Composable () -> Unit)? = if (mode == ScreenMode.Single && dictation.visible) ({
+                    app.regie.ui.screens.DictationBottomScreen(dictation, { container.handleInput(GamepadInput.Pressed(it)) },
+                        { container.touchTrigger(app.regie.input.Trigger.L2, it) }, container::openVoiceSettings, compact = true,
+                        session = overview.sessions.firstOrNull { it.id == dictation.target?.sessionId }, transcript = dictationScroll)
+                }) else null
+                SessionTopScreen(live, gone = overview.neighboursOf(shown.id) == null, control, draft, singleScreen = mode == ScreenMode.Single, scroll = threadScroll, callbacks = sessionCallbacks, approval = approval, onDecision = container::answerInline, onNextApproval = container::nextInlineApproval, onDismissApproval = container::dismissInlineApproval, options = panel, dictation = dictationPanel, dictating = dictation.visible)
             },
         )
 

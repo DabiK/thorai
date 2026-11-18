@@ -60,6 +60,22 @@ class InlineSessionScreenTest {
         }
     }
 
+    @Test fun `during a dictation the thread card keeps its touch decisions without A B X chips`() {
+        val request = Approval(ApprovalId("a"), session.id, ApprovalKind.COMMAND, "touch proof",
+            options = listOf(ApprovalOption("yes", ApprovalOptionKind.ALLOW_ONCE, "Yes"), ApprovalOption("no", ApprovalOptionKind.REJECT_ONCE, "No")))
+        val decisions = mutableListOf<ApprovalDecision>()
+        Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
+            host.setup().get().setContent { RegieTheme {
+                SessionTopScreen(LiveSession.of(session, SessionThread(loaded = true)), false, SessionControlState(), "", false, scroll, callbacks,
+                    approval = ApprovalReview(request, listOf(request), pending = true), onDecision = { _, d -> decisions += d }, dictating = true)
+            } }
+            compose.onNode(hasText("A") and hasText("Autoriser une fois")).assertDoesNotExist()
+            compose.onNode(hasText("B") and hasText("Refuser")).assertDoesNotExist()
+            compose.onNodeWithText("Autoriser une fois").performClick()
+            assertEquals(listOf(ApprovalDecision.ONCE), decisions)
+        }
+    }
+
     @Test fun `resolved approval keeps its close action on the bottom instead of advertising an intercepted X`() {
         val request = Approval(ApprovalId("a"), session.id, ApprovalKind.COMMAND, "touch proof")
         val review = ApprovalReview(request = request, answer = ApprovalAnswer(ApprovalReply.ACCEPTED))

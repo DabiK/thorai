@@ -43,7 +43,8 @@ class InterfaceCopyTest {
         assertEquals("Créer une session", resources.getString(R.string.action_new_session))
         assertEquals("Voir les modifications", resources.getString(R.string.action_see_diff))
         assertEquals(resources.getString(R.string.action_back_to_overview), resources.getString(R.string.action_back_short))
-        assertEquals(resources.getString(R.string.action_speak_summary), resources.getString(R.string.action_speak_summary_short))
+        assertEquals("Parler", resources.getString(R.string.action_speak))
+        assertEquals("Réglages de Codex", resources.getString(R.string.settings_title, "Codex"))
     }
 
     @Test fun `session authorization scope is entirely readable in a narrow button`() {
@@ -61,7 +62,7 @@ class InterfaceCopyTest {
         }
     }
 
-    @Test fun `session action grid has one action per key in reading order`() {
+    @Test fun `session keys follow B X L2 Start in reading order and no longer offer a report`() {
         val callbacks = object : app.regie.ui.screens.SessionCallbacks {
             override fun onButton(button: Button) {}
             override fun onTrigger(trigger: app.regie.input.Trigger, held: Boolean) {}
@@ -69,15 +70,17 @@ class InterfaceCopyTest {
             override fun onSend() {}
             override fun onNoticeSeen(notice: app.regie.session.SessionNotice) {}
         }
+        val session = Session(SessionId("s"), Agent.CODEX, "demo", null, null, SessionStatus.WORKING, true,
+            kotlin.time.Instant.fromEpochMilliseconds(0), kotlin.time.Instant.fromEpochMilliseconds(0), approvalMode = "ask")
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
             host.setup().get().setContent { RegieTheme {
-                app.regie.ui.screens.SessionBottomScreen(null, null, app.regie.session.SessionControlState(), "", callbacks)
+                app.regie.ui.screens.SessionBottomScreen(LiveSession.of(session, SessionThread(loaded = true)), null,
+                    app.regie.session.SessionControlState(), "", callbacks)
             } }
-            val labels = listOf("Revenir", "Voir les modifications", "Faire le point", "Interrompre")
+            val labels = listOf("Revenir", "Voir les modifications", "Parler", "Interrompre")
             val bounds = labels.map { compose.onNodeWithText(it).assertIsDisplayed().getUnclippedBoundsInRoot() }
-            assertTrue(bounds[0].left < bounds[1].left)
-            assertTrue(bounds[0].top < bounds[2].top)
-            assertTrue(bounds[2].left < bounds[3].left)
+            assertTrue(bounds.zipWithNext().all { (a, b) -> a.left < b.left && a.top == b.top }, "B X L2 Start, sur une ligne")
+            compose.onNodeWithText("Faire le point").assertDoesNotExist()
         }
     }
 

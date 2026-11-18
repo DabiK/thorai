@@ -13,6 +13,7 @@ import app.regie.domain.port.AgentGateway
 import app.regie.domain.port.DictationCapture
 import app.regie.domain.port.CaptureState
 import app.regie.input.*
+import app.regie.session.Screen
 import app.regie.session.SessionNotice
 import app.regie.ui.screens.*
 import app.regie.ui.theme.RegieTheme
@@ -184,6 +185,90 @@ class SessionActionsIntegrationTest {
         assertTrue(gateway.sent.isEmpty())
     }
 
+    @Test fun `a dictated message goes on A and the bottom returns to the settings table by itself`() = runTest {
+        val gateway = ActionsGateway()
+        val capture = ActionsCapture()
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        val container = AppContainer(app, app.getSystemService(DisplayManager::class.java), backgroundScope, capture) { gateway }
+        container.start(replay = true); container.openSession(gateway.target); runCurrent()
+        container.handleInput(GamepadInput.TriggerDown(Trigger.L2)); runCurrent()
+        assertTrue(container.dictation.state.value.visible)
+        assertEquals(Screen.Session(gateway.target), container.screen.value)
+        capture.state.value = CaptureState(text = "Lance les tests", complete = true); runCurrent()
+        container.handleInput(GamepadInput.TriggerUp(Trigger.L2)); runCurrent()
+        container.handleInput(GamepadInput.Pressed(Button.A)); runCurrent()
+        assertEquals(listOf(gateway.target to "Lance les tests"), gateway.sent)
+        assertFalse(container.dictation.state.value.visible)
+        // A new turn shows in the thread: no « Message envoyé » screen or notice to dismiss.
+        assertNull(container.sessionController.state.value.notice)
+        assertEquals(Screen.Session(gateway.target), container.screen.value)
+        Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
+            host.setup().get().setContent { SessionSurface(container) }
+            compose.onNodeWithText("Réglages de Codex").assertIsDisplayed()
+            compose.onNodeWithText("Je valide chaque action").assertIsDisplayed()
+        }
+    }
+
+    @Test fun `a message dictated from the overview leaves L2 free for the next dictation`() = runTest {
+        val gateway = ActionsGateway()
+        val capture = ActionsCapture()
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        val container = AppContainer(app, app.getSystemService(DisplayManager::class.java), backgroundScope, capture) { gateway }
+        container.start(replay = true); runCurrent()
+        repeat(2) { round ->
+            container.handleInput(GamepadInput.TriggerDown(Trigger.L2)); runCurrent()
+            assertTrue(container.dictation.state.value.visible, "dictée $round")
+            capture.state.value = CaptureState(text = "Message $round", complete = true); runCurrent()
+            container.handleInput(GamepadInput.TriggerUp(Trigger.L2))
+            container.handleInput(GamepadInput.Scroll(0.7f)); runCurrent()
+            container.handleInput(GamepadInput.Pressed(Button.A)); runCurrent()
+            assertFalse(container.dictation.state.value.visible)
+            assertEquals(emptySet(), container.controller.state.value.heldTriggers)
+            assertEquals(0f, container.dictationVelocity.value)
+        }
+        assertEquals(listOf(gateway.target to "Message 0", gateway.target to "Message 1"), gateway.sent)
+        assertEquals(Screen.Overview, container.screen.value)
+    }
+
+    @Test fun `a second A right after a dictation closes itself does not answer the validation behind it`() = runTest {
+        val gateway = ActionsGateway()
+        val capture = ActionsCapture()
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        val container = AppContainer(app, app.getSystemService(DisplayManager::class.java), backgroundScope, capture) { gateway }
+        container.start(replay = true); container.openSession(gateway.target); runCurrent()
+        container.handleInput(GamepadInput.TriggerDown(Trigger.L2)); runCurrent()
+        capture.state.value = CaptureState(text = "Continue", complete = true); runCurrent()
+        container.handleInput(GamepadInput.TriggerUp(Trigger.L2)); runCurrent()
+        // The agent asks for a validation while the user reviews the dictation.
+        gateway.approvals.value = listOf(gateway.request); runCurrent()
+        container.handleInput(GamepadInput.Pressed(Button.A)); runCurrent()
+        assertEquals(listOf(gateway.target to "Continue"), gateway.sent)
+        container.handleInput(GamepadInput.Pressed(Button.A)); runCurrent()
+        assertTrue(gateway.answers.isEmpty())
+        Thread.sleep(600)
+        container.handleInput(GamepadInput.Pressed(Button.A)); runCurrent()
+        assertEquals(listOf(gateway.request.id to "once"), gateway.answers)
+    }
+
+    @Test fun `settings cannot open under a dictation, and a debug replay serves one capture only`() = runTest {
+        val gateway = ActionsGateway()
+        val capture = ActionsCapture()
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        val container = AppContainer(app, app.getSystemService(DisplayManager::class.java), backgroundScope, capture) { gateway }
+        container.start(replay = true); container.openSession(gateway.target); runCurrent()
+        container.handleInput(GamepadInput.TriggerDown(Trigger.L2)); runCurrent()
+        container.openSessionSettings("model"); runCurrent()
+        assertFalse(container.sessionSettings.value.visible)
+        container.handleInput(GamepadInput.Pressed(Button.B)); runCurrent()
+        container.openSessionSettings(); runCurrent()
+        assertTrue(container.sessionSettings.value.visible)
+        val wav = java.io.File.createTempFile("replay", ".wav")
+        container.debugVoiceWav = wav
+        assertEquals(wav, container.takeDebugVoiceWav())
+        assertNull(container.takeDebugVoiceWav())
+        wav.delete()
+    }
+
     @Composable private fun SessionSurface(container: AppContainer, top: Boolean = false, singleScreen: Boolean = false) {
         val live by container.live.collectAsState()
         val approval by container.inlineApproval.collectAsState()
@@ -205,7 +290,8 @@ class SessionActionsIntegrationTest {
                 ThreadScroll(container.sessionController.scrollSteps, container.sessionController.scrollVelocity), callbacks,
                 approval = approval, onDecision = container::answerInline, onNextApproval = container::nextInlineApproval,
                 onDismissApproval = container::dismissInlineApproval, options = options)
-            else SessionBottomScreen(live, null, control, draft, callbacks, approval = approval, options = options)
+            else SessionBottomScreen(live, null, control, draft, callbacks, approval = approval,
+                settings = settings, onSelectSetting = container::selectSessionSetting)
         }
     }
 }

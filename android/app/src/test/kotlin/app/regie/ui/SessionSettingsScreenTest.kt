@@ -40,7 +40,7 @@ class SessionSettingsScreenTest {
             host.setup().get().setContent { RegieTheme {
                 app.regie.ui.screens.SessionBottomScreen(LiveSession.of(session, SessionThread(loaded = true)),
                     Neighbours(null, null, 1, 1), app.regie.session.SessionControlState(), "draft kept", callbacks,
-                    options = { SessionSettingsScreen(settings, { buttons += it }, {}, compact = true) })
+                    settings = settings)
             } }
             compose.onNodeWithText("1 / 1").assertIsDisplayed()
             compose.onNodeWithText("draft kept").assertIsDisplayed()
@@ -48,6 +48,41 @@ class SessionSettingsScreenTest {
             compose.onNodeWithText("Appliquer").assertIsDisplayed().performClick()
             assertEquals(listOf(Button.A), buttons)
             compose.onNodeWithText("Fermer").assertIsDisplayed()
+        }
+    }
+
+    @Test fun `the bottom table lists every option the agent exposes and a touch edits that row`() {
+        val session = Session(SessionId("s"), Agent.CODEX, "demo", null, null, SessionStatus.IDLE, true,
+            Instant.fromEpochMilliseconds(0), Instant.fromEpochMilliseconds(0), approvalMode = "allow-all",
+            configOptions = listOf(
+                SessionOption("mode", "Mode", "mode", "agent", listOf(OptionValue("agent", "Agent"))),
+                SessionOption("model", "Model", "model", "luna", listOf(OptionValue("luna", "5.6 Luna"), OptionValue("sol", "5.6 Sol"))),
+                SessionOption("reasoning_effort", "Reasoning effort", "thought_level", "high", listOf(OptionValue("low", "Low"), OptionValue("high", "High"))),
+                SessionOption("fast-mode", "Fast mode", null, "off", listOf(OptionValue("off", "Off"), OptionValue("on", "On")))))
+        val rows = mutableListOf<String>()
+        val callbacks = object : app.regie.ui.screens.SessionCallbacks {
+            override fun onButton(button: Button) {}
+            override fun onSettingRow(row: String) { rows += row }
+            override fun onTrigger(trigger: app.regie.input.Trigger, held: Boolean) {}
+            override fun onDraftChange(text: String) {}
+            override fun onSend() {}
+            override fun onNoticeSeen(notice: app.regie.session.SessionNotice) {}
+        }
+        Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
+            host.setup().get().setContent { RegieTheme {
+                app.regie.ui.screens.SessionBottomScreen(LiveSession.of(session, SessionThread(loaded = true)),
+                    Neighbours(null, null, 1, 1), app.regie.session.SessionControlState(), "", callbacks)
+            } }
+            compose.onNodeWithText("Réglages de Codex").assertIsDisplayed()
+            listOf("Mode" to "Tout autoriser", "Modèle" to "5.6 Luna", "Réflexion" to "High", "Fast mode" to "Off").forEach { (label, value) ->
+                compose.onNodeWithText(label).assertIsDisplayed()
+                compose.onNodeWithText(value).assertIsDisplayed()
+            }
+            // The agent's own mode selector stays behind Régie's approval mode, as in ticket 17.
+            compose.onNodeWithText("Agent").assertDoesNotExist()
+            compose.onNodeWithText("Appliquer").assertDoesNotExist()
+            compose.onNodeWithText("Réflexion").performClick()
+            assertEquals(listOf("reasoning_effort"), rows)
         }
     }
 

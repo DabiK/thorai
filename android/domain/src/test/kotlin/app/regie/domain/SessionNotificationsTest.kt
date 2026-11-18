@@ -42,6 +42,24 @@ class SessionNotificationsTest {
         runCurrent()
         assertEquals(1, port.shown.size)
     }
+    @Test fun `a finished session notice quotes the agent last sentence, never a Régie report`() = runTest {
+        val gateway = StubGateway()
+        val port = RecordingNotifications()
+        gateway.sessions.value = listOf(session("live"), session("quiet"))
+        gateway.threadOf(SessionId("live")).value = SessionThread(listOf(ThreadEntry.UserMessage(1, "Corrige"),
+            ThreadEntry.AgentText(2, "Le seuil est corrigé.\n\n[Point Régie]\nFait : x\nTests : y\nSuite : rien\nQuestion : aucune\n[/Point Régie]")), loaded = true)
+        // A turn made only of tools must not quote the previous turn.
+        gateway.threadOf(SessionId("quiet")).value = SessionThread(listOf(ThreadEntry.UserMessage(1, "Lis"),
+            ThreadEntry.AgentText(2, "Tour précédent terminé."), ThreadEntry.UserMessage(3, "Relis"),
+            ThreadEntry.ToolCall(4, ToolKind.READ, "Read", path = "a.kt", status = ActionStatus.COMPLETED)), loaded = true)
+        NotifySessions(gateway, MutableStateFlow(false), port, backgroundScope)
+        runCurrent()
+        gateway.sessions.value = listOf(session("live", SessionStatus.IDLE), session("quiet", SessionStatus.IDLE))
+        runCurrent()
+        assertEquals(listOf("projet-live · Le seuil est corrigé.", "projet-quiet · Consulte le fil."), port.shown.map { it.text })
+        assertTrue(port.shown.none { it.text.contains("Fait") || it.text.contains("bilan") })
+    }
+
     @Test fun `question and failure alert only after ending and never for progress`() = runTest {
         val gateway = StubGateway()
         val foreground = MutableStateFlow(false)

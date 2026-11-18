@@ -12,7 +12,6 @@ sealed interface OverviewAction {
     data class OpenSession(val id: SessionId) : OverviewAction
     data class OpenApproval(val id: ApprovalId) : OverviewAction
     data object NewSession : OverviewAction
-    data class ShowSummary(val target: SessionId?) : OverviewAction
     data object PauseAll : OverviewAction
 
     /** Arrêter les sessions et le pont, puis fermer Régie. */

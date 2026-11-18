@@ -1,6 +1,9 @@
 # ADR 10 — Points écrits et notifications
 
-Statut : accepté, 14 novembre 2026 (ticket 12).
+Statut : accepté, 14 novembre 2026 (ticket 12). **Points écrits remplacés par l'ADR 17**
+(ticket 22, 18 novembre) : le pont ne demande plus de bilan, le fil masque l'ancien bloc,
+Y et le panneau « Point de session » sont retirés. Les notifications restent ; une fin
+de session cite la dernière phrase de l'agent.
 
 ## Résumés, sans synthèse vocale
 

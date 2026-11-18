@@ -22,8 +22,8 @@ invisible, comme maintenir L2 ou faire défiler au stick.
 | Dépôt choisi | Projet |
 | Politique de validation | Mode |
 | Choix natifs | Modèle, Réflexion |
+| Table du bas d’une session | Réglages de Codex, Réglages de Claude |
 | Éditions exposées par l’agent | Modifications |
-| Bilan écrit | Point de session / Faire le point |
 
 Les noms de modèles et les autres options natives viennent de l’agent.
 Les consignes, réponses, chemins, commandes, extraits et erreurs externes
