@@ -7,18 +7,25 @@ import app.regie.game.ui.atlas.rememberGameAssets
 import app.regie.game.ui.theme.GameTheme
 
 /**
- * Bac à sable de la vue jeu, en debug seulement, pour le banc : la scène de démonstration avec
- * les atlas présents dans `assets/game/`. L'extra `screen=bottom` montre le kit pixel.
+ * Bac à sable de la vue jeu, en debug seulement, pour le banc : le hameau généré avec les atlas
+ * de `assets/game/`. Extras : `screen` (`top`, `bottom` ou `kit`) et `sessions` (3 par défaut en
+ * haut, 8 en bas).
  *
- * `adb shell am start -n app.regie/app.regie.game.ui.demo.GameSandboxActivity [--display N --es screen bottom]`
+ * `adb shell am start -n app.regie/app.regie.game.ui.demo.GameSandboxActivity --display N --es screen bottom --ei sessions 8`
  */
 class GameSandboxActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val bottom = intent.getStringExtra("screen") == "bottom"
+        val screen = intent.getStringExtra("screen") ?: "top"
+        val sessions = intent.getIntExtra("sessions", if (screen == "bottom") 8 else 3)
         setContent {
             GameTheme {
-                if (bottom) DemoBottomScreen() else DemoTopScreen(rememberGameAssets())
+                val assets = rememberGameAssets()
+                when (screen) {
+                    "kit" -> DemoKitScreen()
+                    "bottom" -> DemoBottomScreen(assets, sessions = sessions)
+                    else -> DemoTopScreen(assets, sessions = sessions)
+                }
             }
         }
     }
