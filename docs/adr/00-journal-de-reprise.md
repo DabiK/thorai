@@ -185,6 +185,8 @@ physiques différés restent requis même lorsqu’un ticket est marqué fait.
 
 - **18 novembre, ticket 31, correction de revue indépendante (solo Codex)** : notifications `config_option_update`/`current_mode_update` opencode exclues de la conversion en permissions dans le domaine ; deux régressions rouges puis vertes, Tout autoriser + Plan et Plan d'abord + Build couverts. Pont 338 tests + typage/lint, Android check vert (452 tests sans échec, résultats réutilisés), partage et consignes verts. Release signée et pont corrigé réinstallés sur Thor sans désinstallation ; 49 sessions conservées et inactives, comptes Claude/Codex inchangés, Go déconnecté et champ vide (revision-24). Aucun nouvel agent, sous-agent, clé ou reverse ; pont Debian disponible. Exécution Go autonome toujours à faire après saisie de l'utilisateur. Limite device-code Codex conservée avant ajout futur d'un autre fournisseur ; statut à fusionner.
 
+- **18 novembre, ticket 31, relecture après 573dd25 (solo Codex)** : diff complet contre main relu sur les axes architecture/ticket ; retrait temporaire de la garde détecté par les deux tests, puis sources restaurées. Traces nettoyées, portes finales vertes (338 pont, Android 452 sans échec/résultats réutilisés), audit sans signalement. Aucun autre blocage ; statut à fusionner, clé utilisateur toujours requise pour l'essai autonome. Détail `artifacts/screenshots/31/relecture.md`.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |
