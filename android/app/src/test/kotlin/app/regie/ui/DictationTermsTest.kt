@@ -1,6 +1,5 @@
 package app.regie.ui
 
-import app.regie.ui.screens.recognizedTerms
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

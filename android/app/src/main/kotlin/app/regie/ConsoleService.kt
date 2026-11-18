@@ -8,7 +8,7 @@ import app.regie.input.Button
 import app.regie.input.GamepadInput
 import app.regie.overlay.OverlayWindow
 import app.regie.ui.game.GameConsoleOverlay
-import app.regie.ui.screens.ThreadScroll
+import app.regie.ui.ThreadScroll
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel

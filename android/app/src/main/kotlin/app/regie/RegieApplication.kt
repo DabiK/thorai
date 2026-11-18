@@ -334,7 +334,7 @@ class AppContainer(
         followSetup()
     }
 
-    /** « Configurer », depuis l'accueil : la première étape qui n'est pas faite. */
+    /** « Préparer la console », du carnet ou du menu de pause : la première étape qui n'est pas faite. */
     fun openSetup() {
         if (dictation.state.value.visible || voiceCommand.state.value.visible || newSession.value.visible || controller.state.value.quit != null) return
         controller.releaseTriggers(); sessionController.releaseTriggers()

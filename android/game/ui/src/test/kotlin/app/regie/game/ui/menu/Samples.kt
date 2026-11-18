@@ -85,14 +85,17 @@ object Samples {
 object Captures {
     private val directory: File? = System.getProperty("game.captures")?.let(::File)
 
-    /** Dessine la fenêtre de l'activité, telle quelle, au pixel de l'écran de la Thor. */
-    fun save(compose: ComposeTestRule, activity: Activity, name: String) {
+    /**
+     * Dessine la fenêtre de l'activité, telle quelle, au pixel de l'écran de la Thor, sous le nom
+     * `<ticket>-<name>.png` (les écrans finals du ticket 51 réutilisent ce rangement).
+     */
+    fun save(compose: ComposeTestRule, activity: Activity, name: String, ticket: String = "49") {
         val dir = directory ?: return
         compose.waitForIdle()
         dir.mkdirs()
         val view = activity.window.decorView
         val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
         view.draw(Canvas(bitmap))
-        File(dir, "49-$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        File(dir, "$ticket-$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 }

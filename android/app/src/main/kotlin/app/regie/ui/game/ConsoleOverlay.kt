@@ -25,7 +25,7 @@ import app.regie.game.ui.theme.GameTheme
 import app.regie.game.ui.theme.GameText
 import app.regie.input.Button
 import app.regie.overlay.OverlayContent
-import app.regie.ui.screens.ThreadScroll
+import app.regie.ui.ThreadScroll
 
 /**
  * Ce que ThorAI pose par-dessus l'écran du haut quand une autre appli l'occupe (ADR 19), dans le

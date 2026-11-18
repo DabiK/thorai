@@ -40,16 +40,16 @@ import app.regie.session.SessionNotice
 import app.regie.ui.formatAge
 import app.regie.ui.markdown.Markdown
 import app.regie.ui.markdown.MdBlock
-import app.regie.ui.screens.SessionCallbacks
-import app.regie.ui.screens.ThreadScroll
-import app.regie.ui.screens.recognizedTerms
-import app.regie.ui.screens.rememberNow
-import app.regie.ui.screens.settingsHint
+import app.regie.ui.SessionCallbacks
+import app.regie.ui.ThreadScroll
+import app.regie.ui.recognizedTerms
+import app.regie.ui.rememberNow
+import app.regie.ui.settingsHint
 
 /*
  * Branchement de la maison (ticket 46) : les écrans du jeu reçoivent l'état existant et les rappels
- * des contrôleurs, sans règle nouvelle. Ils remplacent SessionScreens, ThreadLayout,
- * SessionSettingsScreen et DictationScreens aux points d'appel ; ces fichiers partent au ticket 51.
+ * des contrôleurs, sans règle nouvelle. Les écrans classiques de la session, des réglages et de la
+ * dictée sont retirés depuis le ticket 51.
  */
 
 /** Le markdown des agents, analysé comme dans l'app (ADR 07), pour la vue jeu. */
@@ -185,7 +185,8 @@ private fun SessionCarnet(
         format = MarkdownFormat,
         // Le menu de choix prend la place des touches ; R1 vers la suivante passe par la barre des voisines.
         approval = if (request != null) ({
-            ApprovalMenu(approval, standalone = false, onChoose = { onDecision(request.id, it.decision) }, onDismiss = onDismissApproval)
+            ApprovalMenu(approval, standalone = false, onChoose = { onDecision(request.id, it.decision) }, onDismiss = onDismissApproval,
+                shortcuts = !settings.visible)
         }) else null,
         approvalQueued = approval.queue.any { it.id != request?.id },
         // Le parchemin entier finit le fil : la croix et le stick le lisent jusqu'au bout, l'écran du haut n'étant pas tactile.

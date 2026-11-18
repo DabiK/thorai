@@ -18,6 +18,7 @@ import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -120,7 +121,7 @@ class BuildScreensTest {
         show { NewSessionBottomScreen(form, callbacks) }
 
         compose.onNodeWithText("Remplie depuis ton ordre vocal").assertIsDisplayed()
-        // Les champs de NewSessionScreen, avec les valeurs du domaine.
+        // Les champs de la fiche classique, avec les valeurs du domaine.
         listOf("Agent", "Projet", "Branche", "Mode", "Modèle", "Réflexion", "Consigne").forEach { compose.onNodeWithText(it).assertIsDisplayed() }
         compose.onNodeWithText("Claude").assertIsDisplayed()
         compose.onNodeWithText("api-meteo").assertIsDisplayed()
@@ -161,6 +162,34 @@ class BuildScreensTest {
         compose.onNodeWithTag("project-name").performTextReplacement("meteo du jour")
         // Un champ qui disparaît peut renvoyer un texte vide : seules les saisies comptent.
         assertEquals(listOf("branche:cache-previsions", "projet:meteo du jour"), texts.filterNot { it.endsWith(":") })
+    }
+
+    // Repris de la fiche classique (ticket 51) : le catalogue du pont, le projet qui charge ou attend le pont, la création incertaine.
+    @Test
+    @Config(sdk = [33], application = Application::class, qualifiers = THOR_BOTTOM)
+    fun `agents come from the catalogue only, the project says what it waits for, an uncertain creation does not build`() {
+        val future = Agent("fourth", "Quatrième agent")
+        val state = mutableStateOf(form.copy(agent = future, agents = listOf(future)))
+        show { NewSessionBottomScreen(state.value, callbacks) }
+        compose.onNodeWithText("Quatrième agent").assertIsDisplayed()
+        compose.onNodeWithText("Claude").assertDoesNotExist()
+        compose.onNodeWithText("Codex").assertDoesNotExist()
+
+        compose.runOnIdle { state.value = form.copy(newProject = true, project = "meteo", projectName = "meteo", field = NewSessionField.PROJECT,
+            instruction = "Lis le dossier", capturing = true, partial = "Météo du matin") }
+        compose.onNodeWithText("Météo du matin").assertIsDisplayed()
+        compose.onNodeWithText("Lis le dossier").assertIsDisplayed()
+
+        compose.runOnIdle { state.value = form.copy(loading = true) }
+        compose.onAllNodes(hasText("Chargement des projets…")).onFirst().assertIsDisplayed()
+        compose.runOnIdle { state.value = form.copy(catalogAvailable = false) }
+        compose.onNodeWithText("Pont injoignable · reconnexion…").assertIsDisplayed()
+        compose.onNodeWithTag("batir-lancer").assert(selected(false))
+
+        compose.runOnIdle { state.value = form.copy(uncertain = true) }
+        compose.onNodeWithTag("batir-lancer").assert(selected(false))
+        compose.onNodeWithText("Bâtir").performClick()
+        assertEquals(emptyList(), keys, "A n'est pas proposé")
     }
 
     @Test

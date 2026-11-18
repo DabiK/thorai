@@ -2,7 +2,6 @@ package app.regie.game.ui.village
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -29,13 +28,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.selected
@@ -46,9 +43,10 @@ import app.regie.domain.model.SessionId
 import app.regie.game.engine.village.InhabitantKind
 import app.regie.game.ui.R
 import app.regie.game.ui.atlas.GameAssets
+import app.regie.game.ui.house.PadAction
+import app.regie.game.ui.house.PadActionHint
 import app.regie.game.ui.kit.ArrowDirection
 import app.regie.game.ui.kit.FrameDefaults
-import app.regie.game.ui.kit.KeyChip
 import app.regie.game.ui.kit.KeyChipColors
 import app.regie.game.ui.kit.KeyOrder
 import app.regie.game.ui.kit.PixelArrow
@@ -169,7 +167,7 @@ private fun CarnetHead(carnet: Carnet, callbacks: CarnetCallbacks, modifier: Mod
     }
 }
 
-/** « Configurer » (un point s'il reste une étape) et « Régler la voix », au doigt. */
+/** « Préparer la console » (un point s'il reste une étape) et « Régler la voix », au doigt. */
 @Composable
 private fun Shortcuts(carnet: Carnet, callbacks: CarnetCallbacks, textSizePx: Int) {
     val metrics = Game.metrics
@@ -226,7 +224,7 @@ private fun ApprovalCard(approval: CarnetApproval, assets: GameAssets, callbacks
                     BasicText(it, style = GameText.code(32, colors.waitInk), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
-            CarnetHint(listOf("R1"), stringResource(R.string.hameau_see), onTap = { callbacks.onKey(CarnetKey.R1) })
+            PadActionHint(PadAction("R1", stringResource(R.string.hameau_see)) { callbacks.onKey(CarnetKey.R1) })
         }
     }
 }
@@ -383,7 +381,7 @@ private fun MicRow(carnet: Carnet, callbacks: CarnetCallbacks, modifier: Modifie
         )
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(metrics.dp(30))) {
             MicHints(carnet, callbacks, textSizePx = 26)
-            CarnetHint(listOf("L1", "R1"), stringResource(R.string.hameau_change_house), textSizePx = 26)
+            PadActionHint(PadAction(listOf("L1", "R1"), stringResource(R.string.hameau_change_house)), textSizePx = 26)
             Spacer(Modifier.weight(1f))
             QuitLink(callbacks, textSizePx = 26)
         }
@@ -405,13 +403,13 @@ private fun QuitLink(callbacks: CarnetCallbacks, textSizePx: Int) {
 @Composable
 private fun MicHints(carnet: Carnet, callbacks: CarnetCallbacks, textSizePx: Int) {
     val held = carnet.mic.held
-    CarnetHint(
-        listOf("L2"), stringResource(R.string.hameau_dictate), textSizePx = textSizePx, active = CarnetTrigger.L2 in held,
-        onHold = { callbacks.onTrigger(CarnetTrigger.L2, it) },
+    PadActionHint(
+        PadAction(listOf("L2"), stringResource(R.string.hameau_dictate), onHold = { callbacks.onTrigger(CarnetTrigger.L2, it) }),
+        textSizePx = textSizePx, active = CarnetTrigger.L2 in held,
     )
-    CarnetHint(
-        listOf("R2"), stringResource(R.string.hameau_order), textSizePx = textSizePx, active = CarnetTrigger.R2 in held,
-        onHold = { callbacks.onTrigger(CarnetTrigger.R2, it) },
+    PadActionHint(
+        PadAction(listOf("R2"), stringResource(R.string.hameau_order), onHold = { callbacks.onTrigger(CarnetTrigger.R2, it) }),
+        textSizePx = textSizePx, active = CarnetTrigger.R2 in held,
     )
 }
 
@@ -434,7 +432,7 @@ private fun ActionBar(atDoor: Boolean, callbacks: CarnetCallbacks, compact: Bool
         horizontalArrangement = Arrangement.spacedBy(metrics.dp(if (compact) 40 else 30)),
     ) {
         actions.forEach { (hint, key) ->
-            CarnetHint(listOf(hint.first), hint.second, chip = chip, ink = colors.barInk, textSizePx = 26, onTap = { callbacks.onKey(key) })
+            PadActionHint(PadAction(hint.first, hint.second) { callbacks.onKey(key) }, chip = chip, ink = colors.barInk, textSizePx = 26)
         }
     }
 }
@@ -446,49 +444,6 @@ private fun EmptyText(text: String, modifier: Modifier) {
         style = GameText.body(28, Game.colors.muted).copy(textAlign = TextAlign.Center),
         modifier = modifier.testTag("carnet-empty"),
     )
-}
-
-/**
- * Une aide touchable : ses touches, puis son libellé. [onHold] remplace [onTap] pour une gâchette
- * tenue au doigt ; [active] la montre tenue.
- */
-@Composable
-fun CarnetHint(
-    keys: List<String>,
-    label: String,
-    modifier: Modifier = Modifier,
-    chip: KeyChipColors? = null,
-    ink: Color = Game.colors.ink,
-    textSizePx: Int = 28,
-    active: Boolean = false,
-    onTap: (() -> Unit)? = null,
-    onHold: ((Boolean) -> Unit)? = null,
-) {
-    val metrics = Game.metrics
-    val hold by rememberUpdatedState(onHold)
-    val touch = when {
-        onHold != null -> Modifier.pointerInput(Unit) {
-            detectTapGestures(onPress = {
-                hold?.invoke(true)
-                try {
-                    tryAwaitRelease()
-                } finally {
-                    hold?.invoke(false)
-                }
-            })
-        }
-        onTap != null -> Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onTap)
-        else -> Modifier
-    }
-    val colors = if (active) KeyChipColors(Game.colors.focus, Game.colors.workInk) else chip
-    Row(
-        modifier.then(touch),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(metrics.dp(12)),
-    ) {
-        keys.forEach { KeyChip(it, colors = colors) }
-        BasicText(label, style = GameText.body(textSizePx, if (active) Game.colors.focus else ink), maxLines = 1)
-    }
 }
 
 /** La confirmation de « Quitter » (A confirme, B annule, au doigt aussi), puis l'arrêt en cours. */
@@ -508,8 +463,8 @@ fun CarnetQuitPrompt(quit: CarnetQuit, callbacks: CarnetCallbacks) {
                 is CarnetQuit.Confirm -> Column(verticalArrangement = Arrangement.spacedBy(metrics.dp(28))) {
                     BasicText(quit.question, style = GameText.body(32, weight = 600))
                     Row(horizontalArrangement = Arrangement.spacedBy(metrics.dp(44))) {
-                        CarnetHint(listOf("A"), quit.confirm, onTap = callbacks::onConfirmQuit)
-                        CarnetHint(listOf("B"), quit.cancel, onTap = callbacks::onCancelQuit)
+                        PadActionHint(PadAction("A", quit.confirm, onTap = callbacks::onConfirmQuit))
+                        PadActionHint(PadAction("B", quit.cancel, onTap = callbacks::onCancelQuit))
                     }
                 }
                 is CarnetQuit.Stopping -> BasicText(quit.text, style = GameText.body(32, weight = 600))

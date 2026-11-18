@@ -26,8 +26,8 @@ import kotlinx.coroutines.flow.emptyFlow
 /*
  * Branchement de la validation et des modifications (ticket 47) : le parchemin, le menu de choix et le
  * tableau de liège reçoivent l'état existant (`approvalReview`, `diffReview`) et rendent la main aux
- * contrôleurs, sans règle nouvelle. Ils remplacent ApprovalScreens et DiffScreens aux points d'appel ;
- * ces fichiers partent au ticket 51.
+ * contrôleurs, sans règle nouvelle. Les écrans classiques qu'ils remplaçaient sont retirés depuis le
+ * ticket 51.
  */
 
 /** Les rappels de l'écran des validations : les touches vont au routeur, comme la manette. */

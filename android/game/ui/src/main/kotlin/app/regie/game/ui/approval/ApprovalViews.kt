@@ -172,6 +172,11 @@ fun ApprovalMenu(
     modifier: Modifier = Modifier,
     onSpeak: ((Boolean) -> Unit)? = null,
     onDismiss: (() -> Unit)? = null,
+    /**
+     * Les touches répondent aussi (A, B, X, ←). Faux pendant les réglages de la session, qui prennent
+     * A et B (ADR 15) : les choix restent au doigt, sans touche affichée ni curseur.
+     */
+    shortcuts: Boolean = true,
 ) {
     val metrics = Game.metrics
     val colors = Game.colors
@@ -189,7 +194,7 @@ fun ApprovalMenu(
                     else -> R.string.game_approval_reject
                 },
             ),
-            choice.key,
+            choice.key.takeIf { shortcuts },
             detail = holdHint.takeIf { choice.dictate },
             enabled = choice.enabled,
         )
@@ -211,7 +216,7 @@ fun ApprovalMenu(
             else -> Modifier.clickable { choose(choice) }
         }
     }
-    val cursor = ApprovalMenuModel.cursor(choices)
+    val cursor = if (shortcuts) ApprovalMenuModel.cursor(choices) else -1
     Column(modifier.testTag("approval-menu"), verticalArrangement = Arrangement.spacedBy(metrics.dp(12))) {
         StatusLine(ApprovalMenuModel.status(review))
         if (standalone) ChoiceMenu(labels, cursor, Modifier.fillMaxWidth(), touch)
@@ -220,7 +225,7 @@ fun ApprovalMenu(
             BasicText(stringResource(R.string.game_approval_no_session), style = GameText.body(24, colors.muted))
         }
         if (onDismiss != null && !review.pending && !review.sending && review.queue.isEmpty()) {
-            PadActionHint(PadAction("←", stringResource(R.string.game_approval_close), onTap = onDismiss))
+            PadActionHint(PadAction(listOfNotNull("←".takeIf { shortcuts }), stringResource(R.string.game_approval_close), onTap = onDismiss))
         }
     }
 }

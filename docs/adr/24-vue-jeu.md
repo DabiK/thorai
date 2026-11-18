@@ -255,6 +255,37 @@ garder le routeur d'entrées de la manette (ADR 05) et se tester sans console.
   dit « Terminer » (on arrive au titre ou au hameau, plus à l'accueil), et la note de fin renvoie à
   « Start › Préparer la console ».
 
+### Le retrait du classique et le plein écran (ticket 51)
+
+- **Plus aucun écran classique.** `ui/screens`, `ui/components`, `ui/theme` (Palette, Geist) et la
+  coloration du code de l'ancien fil sont retirés, avec les polices Geist et les textes qu'ils étaient
+  seuls à utiliser. Restent dans `android/app`, parce que les écrans du jeu s'en servent :
+  `ControlCallbacks`, `SessionCallbacks` et `ThreadScroll` (`ui/Callbacks.kt`), `formatAge` et
+  `rememberNow` (`ui/Formats.kt`), `recognizedTerms` (`ui/DictationTerms.kt`), `settingsHint`
+  (`ui/SettingsHint.kt`) et l'analyse du markdown (`ui/markdown/Markdown.kt`, ADR 07). Les
+  contrôleurs, l'état et le domaine ne changent pas : ils sont le moteur.
+- **Racine** : `GamepadActivity.setScreen` pose `GameTheme` à la racine ; chaque branche rend un écran
+  du jeu. La table des réglages hors d'une session (impossible : `navigate` la ferme) n'a plus d'écran.
+- **Repli de la manette** : `VillageController` passe encore la main à `OverviewController` avant le
+  premier hameau, pendant la confirmation de « Quitter » et en mode console ; l'écran reste celui du
+  jeu (herbe nue, carnet, confirmation par-dessus).
+- **Plein écran** : les deux activités cachent la barre d'état et la barre de navigation
+  (`WindowInsetsControllerCompat.hide(systemBars())`), avec
+  `BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE` : un glissement depuis le bord les montre un instant
+  par-dessus le jeu, sans le déplacer, puis elles se recachent. Elles sont recachées au retour du
+  focus (clavier, autre appli, boîte système). `safeDrawingPadding` reste pour le clavier et une
+  éventuelle découpe. Le mode console n'est pas touché : la carte volante et la bulle vivent dans la
+  fenêtre du service d'accessibilité, et l'appli qui occupe l'écran du haut garde ses barres.
+- **Une seule aide touchable** : `PadActionHint` (touches, libellé, toucher ou gâchette tenue, état
+  tenu) remplace `CarnetHint` du ticket 45. Dans une barre, une aide garde son identité quand les
+  autres disparaissent (L2 tenu au doigt pendant la relecture d'une dictée n'est plus relâché).
+- **Repris du classique, au passage des tests** :
+  - la fiche de nouvelle session défile au stick droit et montre toute la consigne choisie : une longue
+    consigne se relit jusqu'au bout avant A (ADR 13) ;
+  - pendant les réglages d'une session, la validation garde ses choix au doigt, sans touche ni curseur,
+    au-dessus des touches des réglages (ADR 15).
+- Le lien du carnet s'appelle « Préparer la console », comme l'entrée du menu de pause.
+
 
 ## Conséquences
 

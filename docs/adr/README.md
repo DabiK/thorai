@@ -30,7 +30,7 @@ Un ajout daté ou une décision du journal prime sur le contexte historique d’
 | [21](21-thorai.md) | L’app s’appelle ThorAI, paquet `app.thorai` | 30 |
 | [22](22-plusieurs-apps-sur-le-pont.md) | Version jeu à côté de l'app classique, un jeton par app | 50 |
 | [23](23-parcours-d-accueil.md) | Parcours d’accueil au premier lancement | 28 |
-| [24](24-vue-jeu.md) | Vue jeu : rendu pixel sur un Canvas Compose, atlas, kit, polices | 41 |
+| [24](24-vue-jeu.md) | Vue jeu : rendu pixel sur un Canvas Compose, atlas, kit, polices ; plus d’écran classique, plein écran | 41, complété par 44 à 53 |
 
 Le [journal](00-journal-de-reprise.md) conserve les campagnes successives, leurs
 limites et les décisions produit. Le statut courant se lit dans les fichiers

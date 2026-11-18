@@ -16,7 +16,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.withFrameNanos
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -37,12 +43,13 @@ import app.regie.game.ui.kit.PixelArrow
 import app.regie.game.ui.kit.PixelFrame
 import app.regie.game.ui.theme.Game
 import app.regie.game.ui.theme.GameText
-import app.regie.game.ui.village.CarnetHint
+import app.regie.game.ui.house.PadAction
+import app.regie.game.ui.house.PadActionHint
 
 /** Les touches de la fiche : la manette, ou le doigt sur l'écran du bas. */
 enum class BuildKey { A, B, UP, DOWN, LEFT, RIGHT }
 
-/** Ce que la fiche renvoie à l'app : les mêmes gestes que la fiche classique (`NewSessionScreen`). */
+/** Ce que la fiche renvoie à l'app : les mêmes gestes que la fiche classique. */
 interface BuildCallbacks {
     fun onKey(key: BuildKey)
 
@@ -69,9 +76,28 @@ interface BuildCallbacks {
  * Les libellés et les valeurs viennent du domaine ([NewSessionForm]), comme dans la fiche classique.
  */
 @Composable
-fun NewSessionBottomScreen(form: NewSessionForm, callbacks: BuildCallbacks, modifier: Modifier = Modifier, compact: Boolean = false) {
+fun NewSessionBottomScreen(
+    form: NewSessionForm,
+    callbacks: BuildCallbacks,
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
+    scrollVelocity: StateFlow<Float> = MutableStateFlow(0f),
+) {
     val metrics = Game.metrics
     val colors = Game.colors
+    val scroll = rememberScrollState()
+    // Le stick droit fait défiler la fiche (ADR 13) : une longue consigne se relit jusqu'au bout avant A.
+    LaunchedEffect(scroll, scrollVelocity) {
+        scrollVelocity.collectLatest { velocity ->
+            if (velocity == 0f) return@collectLatest
+            var last = withFrameNanos { it }
+            while (true) {
+                val frame = withFrameNanos { it }
+                scroll.scrollBy(velocity * STICK_PX * (frame - last) / 1e9f)
+                last = frame
+            }
+        }
+    }
     Column(modifier.fillMaxSize().background(colors.paper).testTag("batir-fiche")) {
         Row(
             Modifier.fillMaxWidth().padding(start = metrics.dp(44), end = metrics.dp(44), top = metrics.dp(if (compact) 20 else 32), bottom = metrics.dp(8)),
@@ -82,7 +108,7 @@ fun NewSessionBottomScreen(form: NewSessionForm, callbacks: BuildCallbacks, modi
             if (form.heard.isNotEmpty()) BasicText(stringResource(R.string.batir_from_voice), style = GameText.body(26, colors.muted), maxLines = 1)
         }
         Column(
-            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = metrics.dp(36), vertical = metrics.dp(8)),
+            Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll).padding(horizontal = metrics.dp(36), vertical = metrics.dp(8)),
             verticalArrangement = Arrangement.spacedBy(metrics.dp(14)),
         ) {
             if (form.heard.isNotEmpty()) {
@@ -180,11 +206,16 @@ private fun InstructionBox(form: NewSessionForm, callbacks: BuildCallbacks) {
                     form.instruction,
                     callbacks::onInstruction,
                     Modifier.fillMaxWidth().testTag("instruction"),
+                    // Entière : le stick fait défiler la fiche jusqu'à sa dernière ligne.
                     textStyle = GameText.body(30, lineHeightPercent = 130),
-                    maxLines = 3,
                 )
             } else {
-                BasicText(fieldValue(form, NewSessionField.INSTRUCTION), style = GameText.body(30, lineHeightPercent = 130), maxLines = 3, overflow = TextOverflow.Ellipsis)
+                BasicText(
+                    fieldValue(form, NewSessionField.INSTRUCTION),
+                    style = GameText.body(30, lineHeightPercent = 130),
+                    maxLines = if (on) Int.MAX_VALUE else 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
@@ -261,18 +292,21 @@ private fun HintBar(form: NewSessionForm, callbacks: BuildCallbacks, compact: Bo
         hints.forEach { key ->
             when (key) {
                 // Bâtir n'est proposé que si la fiche est complète ; sinon l'avis dit ce qui manque.
-                "A" -> CarnetHint(
-                    listOf("A"), launch, Modifier.testTag("batir-lancer").semantics { selected = form.canLaunch },
+                "A" -> PadActionHint(
+                    PadAction(listOf("A"), launch, onTap = { callbacks.onKey(BuildKey.A) }.takeIf { form.canLaunch }),
+                    Modifier.testTag("batir-lancer").semantics { selected = form.canLaunch },
                     chip = chip, ink = if (form.canLaunch) colors.barInk else colors.muted, textSizePx = 26,
-                    onTap = { callbacks.onKey(BuildKey.A) }.takeIf { form.canLaunch },
                 )
-                "B" -> if (!form.sending) CarnetHint(listOf("B"), stringResource(R.string.batir_cancel), chip = chip, ink = colors.barInk, textSizePx = 26, onTap = { callbacks.onKey(BuildKey.B) })
-                "L2" -> CarnetHint(
-                    listOf("L2"), dictate, chip = chip, ink = colors.barInk, textSizePx = 26, active = form.capturing,
-                    onHold = { held -> if (!held || form.editable) callbacks.onHold(held) },
+                "B" -> if (!form.sending) PadActionHint(PadAction("B", stringResource(R.string.batir_cancel)) { callbacks.onKey(BuildKey.B) }, chip = chip, ink = colors.barInk, textSizePx = 26)
+                "L2" -> PadActionHint(
+                    PadAction(listOf("L2"), dictate, onHold = { held -> if (!held || form.editable) callbacks.onHold(held) }),
+                    chip = chip, ink = colors.barInk, textSizePx = 26, active = form.capturing,
                 )
-                else -> CarnetHint(listOf("Croix"), stringResource(R.string.batir_fields), chip = chip, ink = colors.barInk, textSizePx = 26, onTap = { callbacks.onKey(BuildKey.DOWN) })
+                else -> PadActionHint(PadAction("Croix", stringResource(R.string.batir_fields)) { callbacks.onKey(BuildKey.DOWN) }, chip = chip, ink = colors.barInk, textSizePx = 26)
             }
         }
     }
 }
+
+/** Vitesse du stick droit à fond, en pixels par seconde, comme le tableau de liège. */
+private const val STICK_PX = 1600f

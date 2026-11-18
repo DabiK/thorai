@@ -38,12 +38,14 @@ import kotlinx.coroutines.flow.asStateFlow
  *   maison de la première ([Overview.firstPendingApproval], comme la vue d'ensemble), et y entre ; devant
  *   sa porte (au retour de la maison, par exemple), il y rentre.
  * - Une ligne du carnet touchée ([goTo]) : il y marche et y entre.
- * - Le reste (X, Y, L2, R2, le stick droit, « Quitter ») suit la vue d'ensemble classique, qui vise
- *   la maison choisie. B (agents), Start (menu de pause) et « R1 Voir » de l'oiseau sont pris avant,
- *   par `AppContainer`.
+ * - Le reste (X, Y, L2, R2, le stick droit, « Quitter ») suit le contrôleur de la vue d'ensemble
+ *   ([classic]), qui vise la maison choisie. B (agents), Start (menu de pause) et « R1 Voir » de
+ *   l'oiseau sont pris avant, par `AppContainer`.
  *
  * Sans hameau, ou quand l'écran du haut n'est pas visible (mode console), tout revient à
- * [classic] : un coursier qu'on ne voit pas ne marche pas pour rien.
+ * [classic] : un coursier qu'on ne voit pas ne marche pas pour rien. Ce repli ne touche que la
+ * manette : l'écran reste celui du jeu (le hameau en herbe nue avant le premier, le carnet, la
+ * confirmation de « Quitter » par-dessus). Aucun écran classique ne subsiste depuis le ticket 51.
  *
  * Bâtir (ticket 48) : pendant la fiche de nouvelle session, le coursier marche jusqu'au terrain visé
  * ([planning]) ; A réserve ce terrain avant la création ([launch]), la session créée le prend

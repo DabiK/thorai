@@ -45,18 +45,17 @@ import app.regie.input.Button
 import app.regie.input.Trigger
 import app.regie.overview.ControlState
 import app.regie.overview.QuitStep
-import app.regie.ui.components.agentName
 import app.regie.ui.formatAge
-import app.regie.ui.screens.ControlCallbacks
-import app.regie.ui.screens.rememberNow
+import app.regie.ui.ControlCallbacks
+import app.regie.ui.rememberNow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlin.time.Instant
 
 /*
  * Branchement du hameau (ticket 45) : les écrans du jeu reçoivent la vue d'ensemble, l'état de la
- * manette et le coursier, et rendent les mêmes informations et actions que OverviewScreens, avec les
- * textes de l'app. OverviewScreens part au ticket 51.
+ * manette et le coursier, et rendent les mêmes informations et actions que la vue d'ensemble classique
+ * (retirée au ticket 51), avec les textes de l'app.
  */
 
 /** Les rappels de la vue d'ensemble, vus par le carnet. */
@@ -160,7 +159,7 @@ fun rememberCarnet(overview: Overview, control: ControlState, setupLeft: Boolean
         CarnetApproval(
             session = pending.session.id,
             inhabitant = InhabitantKind.of(pending.session.agent),
-            title = stringResource(R.string.banner_awaiting, agentName(pending.session.agent)),
+            title = stringResource(R.string.banner_awaiting, pending.session.agent.label),
             where = listOfNotNull(pending.session.project, pending.session.title).joinToString(" · "),
             subject = pending.approval.subject,
         )
@@ -209,7 +208,7 @@ private fun versionOf(entry: AgentVersion, untested: String): CarnetVersion {
     return CarnetVersion(if (entry.isTested) label else "$label ($untested)", entry.isTested)
 }
 
-/** Une ligne : ce que montrait `SessionRow`, avec les mêmes textes. */
+/** Une ligne : ce que montrait la ligne de session classique, avec les mêmes textes. */
 @Composable
 private fun rowOf(session: Session, now: Instant): CarnetRow {
     val approval = session.pendingApproval

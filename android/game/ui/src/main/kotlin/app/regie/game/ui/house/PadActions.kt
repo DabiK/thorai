@@ -12,6 +12,7 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,14 +55,28 @@ fun PadActionBar(actions: List<PadAction>, modifier: Modifier = Modifier, compac
         horizontalArrangement = Arrangement.spacedBy(metrics.dp(if (compact) 24 else 36)),
     ) {
         actions.sortedBy { action -> action.keys.minOf { KeyOrder.rank(it) } }.forEach { action ->
-            PadActionHint(action, KeyChipColors(colors.keyBackground, colors.keyInk), colors.barInk, if (compact) 26 else 28)
+            // Une aide garde son identité quand la barre change (L2 tenu au doigt fait disparaître A, X, Y) :
+            // sans clé, le doigt posé sur L2 se retrouverait sur un autre emplacement et serait relâché.
+            key(action.keys) {
+                PadActionHint(action, chip = KeyChipColors(colors.keyBackground, colors.keyInk), ink = colors.barInk, textSizePx = if (compact) 26 else 28)
+            }
         }
     }
 }
 
-/** Une aide touchable : ses touches puis son libellé ; pâle quand l'action n'est pas possible. */
+/**
+ * Une aide touchable, la seule du jeu : ses touches puis son libellé ; pâle quand l'action n'est pas
+ * possible. [active] la montre tenue (gâchette maintenue, au doigt ou à la manette).
+ */
 @Composable
-fun PadActionHint(action: PadAction, chip: KeyChipColors? = null, ink: androidx.compose.ui.graphics.Color = Game.colors.ink, textSizePx: Int = 28) {
+fun PadActionHint(
+    action: PadAction,
+    modifier: Modifier = Modifier,
+    chip: KeyChipColors? = null,
+    ink: androidx.compose.ui.graphics.Color = Game.colors.ink,
+    textSizePx: Int = 28,
+    active: Boolean = false,
+) {
     val metrics = Game.metrics
     val hold by rememberUpdatedState(action.onHold)
     val touch = when {
@@ -79,12 +94,13 @@ fun PadActionHint(action: PadAction, chip: KeyChipColors? = null, ink: androidx.
         action.onTap != null -> Modifier.clickable(onClick = action.onTap)
         else -> Modifier
     }
+    val chipColors = if (active) KeyChipColors(Game.colors.focus, Game.colors.workInk) else chip
     Row(
-        touch.alpha(if (action.enabled) 1f else 0.4f),
+        modifier.then(touch).alpha(if (action.enabled) 1f else 0.4f),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(metrics.dp(12)),
     ) {
-        action.keys.forEach { KeyChip(it, colors = chip) }
-        BasicText(action.label, style = GameText.body(textSizePx, ink), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        action.keys.forEach { KeyChip(it, colors = chipColors) }
+        BasicText(action.label, style = GameText.body(textSizePx, if (active) Game.colors.focus else ink), maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }

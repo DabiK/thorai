@@ -39,9 +39,10 @@ injecte jamais dans les identifiants de protocole ou dans le code.
 
 ## Deux écrans, mêmes repères
 
-Conserver Geist/Geist Mono, les couleurs et le focus de l’ADR 05.
-Les touches utilisent toutes `KeyChip` : hauteur 22 dp, lettres A/B/X/Y
-rondes, autres touches rectangulaires. Dans chaque groupe d’actions,
+Version jeu (ADR 24) : polices Jersey 10, Pixelify Sans et VT323, palette
+Aube et cadres pixel du kit ; Geist n’est plus embarquée depuis le ticket 51.
+Une aide touchable passe toujours par `PadActionHint`.
+Les touches utilisent toutes `KeyChip` du kit. Dans chaque groupe d’actions,
 ordre de lecture A, B, X, Y, L1, R1, L2, R2, Start ; omettre les touches
 inutiles. La navigation L1/R1 reste dans son bandeau, les gâchettes près
 du micro. Une touche capturée par les options n’apparaît pas sur la

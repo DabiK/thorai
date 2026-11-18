@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasText
@@ -181,6 +182,28 @@ class MenuScreensTest {
         compose.onNodeWithContentDescription("Clé de connexion").performTextInput("cle-de-test")
         compose.onNodeWithText("Enregistrer la clé").performClick()
         assertEquals(listOf(Samples.OPENCODE to "cle-de-test"), sent)
+        compose.onNodeWithText("Enregistrer la clé").assertDoesNotExist()
+    }
+
+    // Repris du test classique (ticket 51) : un agent futur à clé, champ masqué, A de la manette l'envoie et le vide.
+    @Test
+    fun `a future API key agent gets a masked field that hardware A sends once and empties`() {
+        val future = Agent("future", "Agent futur")
+        val agents = Samples.authentication.take(2) + app.regie.domain.model.AgentAuthentication(future, false,
+            login = app.regie.domain.model.AgentLogin("api_key", "Clé du fournisseur", "Colle ta clé.", provider = "provider"))
+        val sent = mutableListOf<Pair<Agent, String>>()
+        var action: (() -> Unit)? = null
+        val review = AgentAuthenticationReview(visible = true, agents = agents, selected = 2)
+        show {
+            AgentsScreen(review, bottom = true, singleScreen = false, menu = GameMenu.CLOSED, overview = Samples.overview, assets = assets,
+                callbacks = AgentsCallbacks(submitKey = { a, k -> sent += a to k }, bindKeyAction = { action = it }))
+        }
+        compose.onNodeWithText("Colle ta clé.").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Clé de connexion").performTextInput("test-only-key")
+        compose.onNodeWithContentDescription("Clé de connexion").assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Password))
+        compose.runOnIdle { action!!.invoke() }
+        compose.waitForIdle()
+        assertEquals(listOf(future to "test-only-key"), sent)
         compose.onNodeWithText("Enregistrer la clé").assertDoesNotExist()
     }
 

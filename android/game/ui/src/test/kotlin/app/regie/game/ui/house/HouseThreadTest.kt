@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
@@ -24,6 +25,7 @@ import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -109,6 +111,22 @@ class HouseThreadTest {
         compose.runOnIdle { state.value = live(42) }
         compose.waitForIdle()
         assertFalse(visible("Message 41"), "plus haut, la lecture n'est pas déplacée")
+        assertTrue(visible(follow))
+    }
+
+    // Repris du fil classique (ticket 51) : une réponse qui s'écrit en bas ne déplace pas la ligne qu'on lit plus haut.
+    @Test
+    fun `while reading higher up, a reply that grows does not move the line being read`() {
+        val state = show(40)
+        cross(-1, times = 4)
+        val reading = (0 until 40).map { "Message $it" }.last { visible(it) }
+        val before = compose.onNodeWithText(reading).getUnclippedBoundsInRoot()
+        repeat(3) { round ->
+            val reply = ThreadLine.AgentText(40, "Réponse\n".repeat(10 * (round + 1)), streaming = true)
+            compose.runOnIdle { state.value = state.value.copy(lines = state.value.lines.filterNot { it.key == 40L } + reply) }
+            compose.waitForIdle()
+            assertEquals(before, compose.onNodeWithText(reading).getUnclippedBoundsInRoot(), "tour $round")
+        }
         assertTrue(visible(follow))
     }
 }

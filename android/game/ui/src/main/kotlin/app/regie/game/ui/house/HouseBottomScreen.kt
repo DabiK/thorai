@@ -136,7 +136,11 @@ fun HouseBottomScreen(
         )
         if (!keyboardOpen) {
             when {
-                editing -> PadActionBar(settingsActions(settings, callbacks), compact = compact)
+                editing -> {
+                    // Les réglages prennent A et B ; la validation garde ses choix au doigt (ADR 15).
+                    if (approval != null) Box(Modifier.padding(start = metrics.dp(24), end = metrics.dp(24), bottom = metrics.dp(12))) { approval() }
+                    PadActionBar(settingsActions(settings, callbacks), compact = compact)
+                }
                 approval != null -> Box(Modifier.padding(start = metrics.dp(24), end = metrics.dp(24), bottom = metrics.dp(20))) { approval() }
                 else -> PadActionBar(sessionActions(live, callbacks), compact = compact)
             }
@@ -349,7 +353,7 @@ private fun NoFullscreenKeyboard(content: @Composable () -> Unit) {
                 object : PlatformTextInputMethodRequest {
                     override fun createInputConnection(outAttributes: EditorInfo): InputConnection =
                         request.createInputConnection(outAttributes).also {
-                            outAttributes.imeOptions = outAttributes.imeOptions or EditorInfo.IME_FLAG_NO_EXTRACT_UI or EditorInfo.IME_FLAG_NO_FULLSCREEN
+                            outAttributes.imeOptions = withoutFullscreen(outAttributes.imeOptions)
                         }
                 },
             )
@@ -357,6 +361,10 @@ private fun NoFullscreenKeyboard(content: @Composable () -> Unit) {
         content = content,
     )
 }
+
+/** Les options du clavier, sans plein écran ni mode « extract » ; l'action demandée est gardée. */
+internal fun withoutFullscreen(imeOptions: Int): Int =
+    imeOptions or EditorInfo.IME_FLAG_NO_EXTRACT_UI or EditorInfo.IME_FLAG_NO_FULLSCREEN
 
 private const val NOTICE_MS = 6_000L
 
