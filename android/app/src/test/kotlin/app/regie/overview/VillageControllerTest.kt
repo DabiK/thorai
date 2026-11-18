@@ -225,12 +225,21 @@ class VillageControllerTest {
     }
 
     @Test
-    fun `X, Y and Start keep their overview actions`() {
+    fun `X and Y keep their overview actions`() {
         publish(overview.value)
         press(Button.X)
         press(Button.Y)
-        press(Button.START)
-        assertEquals(listOf(OverviewAction.NewSession, OverviewAction.ConsoleSession, OverviewAction.PauseAll), actions)
+        assertEquals(listOf(OverviewAction.NewSession, OverviewAction.ConsoleSession), actions)
+    }
+
+    @Test
+    fun `walking to a house answers whether the courier could go`() {
+        publish(overview.value)
+        assertTrue(village.walkTo(SessionId("notes")))
+        assertEquals(SessionId("notes"), scene.destination)
+        assertEquals(false, village.walkTo(SessionId("absente")))
+        shown = false
+        assertEquals(false, village.walkTo(SessionId("montage")))
     }
 
     @Test

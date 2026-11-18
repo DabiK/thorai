@@ -207,14 +207,15 @@ class AppContainer(
 
     /**
      * La validation que l'oiseau apporte en ce moment ([CourierTiming.SHOWN] après son arrivée), si elle
-     * attend encore : R1 l'ouvre. Quand le hameau sera branché (ticket 45), le coursier y marchera.
+     * attend encore : R1 y mène. Sur le hameau, le coursier marche jusqu'à sa maison et y entre, où la
+     * validation s'affiche (ticket 45) ; sans hameau à l'écran, la validation s'ouvre directement.
      */
     private fun openArrivingLetter(): Boolean {
         val letter = courier.value.latest ?: return false
         val pending = letter.approval?.takeIf { id -> gateway?.approvals?.value.orEmpty().any { it.id == id } } ?: return false
         if (kotlin.time.Clock.System.now() - letter.receivedAt >= CourierTiming.SHOWN) return false
         courier.update { it.read(letter.key) }
-        openApproval(pending)
+        if (!village.walkTo(letter.sessionId)) openApproval(pending)
         return true
     }
 
@@ -751,7 +752,7 @@ class AppContainer(
 
     /** Une direction tenue ou relâchée (croix, stick gauche) : le coursier, si la vue d'ensemble a la manette. */
     private fun handleDirection(button: Button, held: Boolean) {
-        val free = _screen.value == Screen.Overview && !agentAuthentication.value.visible && !setup.state.value.visible &&
+        val free = _screen.value == Screen.Overview && !gameMenu.value.open && !agentAuthentication.value.visible && !setup.state.value.visible &&
             !sessionSettings.value.visible && !settingsOpen.value && !voiceCommand.state.value.visible &&
             !newSession.value.visible && !dictation.state.value.visible
         village.onDirection(button, held, free)

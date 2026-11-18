@@ -405,7 +405,7 @@ private fun MicHints(carnet: Carnet, callbacks: CarnetCallbacks, textSizePx: Int
     )
 }
 
-/** La barre des touches : A va à la maison choisie (ou y entre), B les agents, X bâtir, Y la console, Start. */
+/** La barre des touches : A va à la maison choisie (ou y entre), B les agents, X bâtir, Y la console, Start le menu de pause (ticket 49). */
 @Composable
 private fun ActionBar(atDoor: Boolean, callbacks: CarnetCallbacks, compact: Boolean = false) {
     val colors = Game.colors
@@ -416,7 +416,7 @@ private fun ActionBar(atDoor: Boolean, callbacks: CarnetCallbacks, compact: Bool
         "B" to stringResource(R.string.hameau_agents) to CarnetKey.B,
         "X" to stringResource(R.string.hameau_build) to CarnetKey.X,
         "Y" to stringResource(R.string.hameau_console) to CarnetKey.Y,
-        "Start" to stringResource(R.string.hameau_pause_all) to CarnetKey.START,
+        "Start" to stringResource(R.string.game_menu_title) to CarnetKey.START,
     ).sortedBy { (hint, _) -> KeyOrder.rank(hint.first) }
     Row(
         Modifier.fillMaxWidth().height(metrics.dp(96)).background(colors.bar).padding(horizontal = metrics.dp(if (compact) 28 else 40)),

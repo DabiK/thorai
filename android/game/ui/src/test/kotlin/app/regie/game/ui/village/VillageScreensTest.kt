@@ -148,7 +148,7 @@ class VillageScreensTest {
         compose.onNodeWithText("étape 3 sur 5 · 6 min").assertIsDisplayed()
         compose.onNodeWithTag("carnet-row-demo-2").assert(SemanticsMatcher.expectValue(SemanticsProperties.Selected, true))
         compose.onNodeWithTag("carnet-row-demo-0").assert(SemanticsMatcher.expectValue(SemanticsProperties.Selected, false))
-        listOf("Y aller", "Agents", "Bâtir", "Console", "Tout mettre en pause", "Dicter", "Donner un ordre", "Changer de maison", "Configurer", "Régler la voix", "Quitter")
+        listOf("Y aller", "Agents", "Bâtir", "Console", "Menu", "Dicter", "Donner un ordre", "Changer de maison", "Configurer", "Régler la voix", "Quitter")
             .forEach { compose.onNodeWithText(it).assertIsDisplayed() }
         save(snapshot(), "45-carnet.png")
     }
@@ -160,7 +160,7 @@ class VillageScreensTest {
 
         compose.onNodeWithTag("carnet-row-demo-2").performClick()
         compose.onNodeWithTag("carnet-approval").performClick()
-        listOf("Entrer", "Agents", "Bâtir", "Console", "Tout mettre en pause").forEach { compose.onNodeWithText(it).performClick() }
+        listOf("Entrer", "Agents", "Bâtir", "Console", "Menu").forEach { compose.onNodeWithText(it).performClick() }
         compose.onNodeWithText("Dicter").performTouchInput { down(center); up() }
 
         assertEquals(listOf(SessionId("demo-2")), goTo)

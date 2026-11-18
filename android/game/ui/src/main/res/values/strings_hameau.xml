@@ -8,7 +8,6 @@
     <string name="hameau_build">Bâtir</string>
     <string name="hameau_console">Console</string>
     <string name="hameau_agents">Agents</string>
-    <string name="hameau_pause_all">Tout mettre en pause</string>
     <string name="hameau_see">Voir</string>
     <string name="hameau_dictate">Dicter</string>
     <string name="hameau_order">Donner un ordre</string>

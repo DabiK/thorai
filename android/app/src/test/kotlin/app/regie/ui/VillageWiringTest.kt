@@ -102,7 +102,7 @@ class VillageWiringTest {
     fun `the actions reach the same buttons, a touched line walks there`() {
         show(Overview.of(sessions, emptyList(), BridgeStatus.Connected))
 
-        listOf("Y aller", "Agents", "Bâtir", "Console", "Tout mettre en pause").forEach { compose.onNodeWithText(it).performClick() }
+        listOf("Y aller", "Agents", "Bâtir", "Console", "Menu").forEach { compose.onNodeWithText(it).performClick() }
         compose.onNodeWithTag("carnet-approval").performClick()
         compose.onNodeWithTag("carnet-row-site").performClick()
         compose.onNodeWithTag("carnet-quit").performClick()

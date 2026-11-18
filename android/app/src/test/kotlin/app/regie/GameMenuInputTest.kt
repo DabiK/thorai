@@ -165,6 +165,89 @@ class GameMenuInputTest {
         assertEquals(gateway.approval.id, container.approvalReview.value.request?.id)
     }
 
+    // --- Avec le hameau à l'écran (ticket 45) ---
+
+    /** Des images de 16 ms pour le coursier, jusqu'à ce que [done] soit vrai. */
+    private fun AppContainer.walk(done: (app.regie.game.ui.scene.VillageSceneState) -> Boolean) {
+        val scene = assertNotNull(village.scene.value, "le hameau est généré")
+        var t = 0L
+        scene.onFrame(t)
+        repeat(3_000) {
+            if (done(scene)) return
+            t += 16
+            scene.onFrame(t)
+        }
+        fail("le coursier marche encore")
+    }
+
+    @Test fun `with the hamlet on screen, R1 under the bird walks the courier to that house, then the session opens`() = runTest {
+        val first = Approval(ApprovalId("p0"), gateway.other, ApprovalKind.COMMAND, "rm -rf build",
+            options = listOf(ApprovalOption("once", ApprovalOptionKind.ALLOW_ONCE, "Oui")))
+        gateway.sessions.value = gateway.sessions.value.map {
+            if (it.id == gateway.other) it.copy(pendingApproval = first) else it.copy(pendingApproval = gateway.approval)
+        }
+        val container = container()
+        container.topStarted.value = true
+        gateway.approvals.value = listOf(first, gateway.approval); runCurrent()
+        assertEquals(gateway.approval.id, container.courier.value.latest?.approval)
+
+        press(container, Button.R1)
+
+        assertEquals(Screen.Overview, container.screen.value, "le coursier y va d'abord")
+        assertEquals(gateway.working, container.village.scene.value?.destination, "la maison de la lettre, pas la première validation")
+        container.walk { it.entering != null }
+        // L'iris fermé, l'écran appelle enterHouse : la session s'ouvre, sa validation y attend.
+        container.enterHouse(gateway.working); runCurrent()
+        assertEquals(Screen.Session(gateway.working), container.screen.value)
+        container.openOverview(); runCurrent()
+        assertNull(container.village.scene.value?.entering, "ressorti devant la porte")
+    }
+
+    @Test fun `the pause menu and the setup take the d-pad before the courier`() = runTest {
+        val container = container()
+        container.topStarted.value = true
+        val scene = assertNotNull(container.village.scene.value)
+        val start = scene.foot
+
+        press(container, Button.START)
+        container.inputRouter.onKey(android.view.KeyEvent.KEYCODE_DPAD_DOWN, isDown = true, repeatCount = 0); runCurrent()
+        container.inputRouter.onKey(android.view.KeyEvent.KEYCODE_DPAD_DOWN, isDown = false, repeatCount = 0); runCurrent()
+        assertEquals(1, container.gameMenu.value.selected, "la croix choisit dans le menu")
+        scene.onFrame(0); scene.onFrame(1_000)
+        assertEquals(start, scene.foot, "le coursier n'a pas bougé sous le menu")
+        press(container, Button.B)
+
+        container.openSetup(); runCurrent()
+        assertTrue(container.setup.state.value.visible)
+        container.inputRouter.onKey(android.view.KeyEvent.KEYCODE_DPAD_LEFT, isDown = true, repeatCount = 0); runCurrent()
+        container.inputRouter.onKey(android.view.KeyEvent.KEYCODE_DPAD_LEFT, isDown = false, repeatCount = 0); runCurrent()
+        scene.onFrame(2_000); scene.onFrame(3_000)
+        assertEquals(start, scene.foot, "ni sous le parcours d'accueil")
+        container.setup.close(); runCurrent()
+
+        container.inputRouter.onKey(android.view.KeyEvent.KEYCODE_DPAD_LEFT, isDown = true, repeatCount = 0); runCurrent()
+        scene.onFrame(4_000); scene.onFrame(4_100)
+        container.inputRouter.onKey(android.view.KeyEvent.KEYCODE_DPAD_LEFT, isDown = false, repeatCount = 0); runCurrent()
+        assertNotEquals(start, scene.foot, "sur le hameau, il marche")
+    }
+
+    @Test fun `on the hamlet, L2 dictates to the house the courier stands before, R2 still orders`() = runTest {
+        val container = container()
+        container.topStarted.value = true
+        val scene = assertNotNull(container.village.scene.value)
+        scene.send(app.regie.game.engine.courier.CourierCommand.GoTo(gateway.working, enter = false))
+        container.walk { it.facingDoor != null }
+
+        container.handleInput(GamepadInput.TriggerDown(Trigger.L2)); runCurrent()
+        assertEquals(gateway.working, container.dictation.state.value.target?.sessionId)
+        assertEquals(app.regie.game.engine.courier.CourierAction.TALK, scene.action, "le coursier parle")
+        container.handleInput(GamepadInput.TriggerUp(Trigger.L2)); runCurrent()
+        press(container, Button.B)
+        container.handleInput(GamepadInput.TriggerDown(Trigger.R2)); runCurrent()
+        assertTrue(container.voiceCommand.state.value.visible)
+        container.handleInput(GamepadInput.TriggerUp(Trigger.R2)); runCurrent()
+    }
+
     @Test fun `a validation becomes a letter, and opening it shows the validation`() = runTest {
         val container = container()
         gateway.approvals.value = listOf(gateway.approval); runCurrent()

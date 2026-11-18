@@ -26,8 +26,9 @@ import kotlinx.coroutines.flow.asStateFlow
  *   ([focusedHouse]) et y entrer, comme A ouvrait la ligne qui avait le focus.
  * - L1, R1 : maison précédente ou suivante ; R1 va d'abord à la validation en attente, et y entre.
  * - Une ligne du carnet touchée ([goTo]) : il y marche et y entre.
- * - Le reste (X, Y, B, Start, L2, R2, le stick droit, « Quitter ») suit la vue d'ensemble classique,
- *   qui vise la maison choisie.
+ * - Le reste (X, Y, L2, R2, le stick droit, « Quitter ») suit la vue d'ensemble classique, qui vise
+ *   la maison choisie. B (agents), Start (menu de pause) et « R1 Voir » de l'oiseau sont pris avant,
+ *   par `AppContainer`.
  *
  * Sans hameau, ou quand l'écran du haut n'est pas visible (mode console), tout revient à
  * [classic] : un coursier qu'on ne voit pas ne marche pas pour rien.
@@ -121,8 +122,18 @@ class VillageController(
 
     /** Une ligne du carnet touchée : le coursier marche jusqu'à la maison et y entre. */
     fun goTo(id: SessionId) {
+        if (!walkTo(id)) open(id)
+    }
+
+    /**
+     * Le coursier marche jusqu'à la maison de [id] et y entre, si le hameau est à l'écran et que la
+     * maison y est. Faux sinon : à l'appelant d'ouvrir directement.
+     */
+    fun walkTo(id: SessionId): Boolean {
         val scene = _scene.value
-        if (scene == null || !shown() || scene.village.houseOf(id) == null) open(id) else scene.send(CourierCommand.GoTo(id))
+        if (scene == null || !shown() || scene.village.houseOf(id) == null) return false
+        scene.send(CourierCommand.GoTo(id))
+        return true
     }
 
     /** L2 tenu sur le hameau : le coursier parle tant que la dictée est ouverte. */
