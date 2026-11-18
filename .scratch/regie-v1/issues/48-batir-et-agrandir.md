@@ -1,6 +1,6 @@
 # 48 — Bâtir et agrandir
 
-Statut : à fusionner
+Statut : fusionné dans ticket/40-vue-jeu
 Possède : la nouvelle session, le chantier, la carte du hameau
 Dépend de : 43, 45
 

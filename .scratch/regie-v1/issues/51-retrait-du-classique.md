@@ -1,6 +1,6 @@
 # 51 — Retrait de la vue classique
 
-Statut : bloqué par 44 à 49
+Statut : prêt
 Possède : la suppression des écrans classiques, `InterfaceCopyTest`, les captures
 Dépend de : 44, 45, 46, 47, 48, 49
 
