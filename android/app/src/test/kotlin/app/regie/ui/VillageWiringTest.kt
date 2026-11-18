@@ -28,7 +28,6 @@ import app.regie.overview.ControlState
 import app.regie.overview.QuitStep
 import app.regie.ui.game.GameOverviewBottom
 import app.regie.ui.game.carnet
-import app.regie.ui.screens.ControlCallbacks
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -56,7 +55,6 @@ class VillageWiringTest {
     private val callbacks = object : ControlCallbacks {
         override fun onButton(button: Button) { buttons += button }
         override fun onTrigger(trigger: Trigger, held: Boolean) { triggers += trigger to held }
-        override fun onOpenApproval() {}
         override fun onQuit() { quit++ }
         override fun onConfirmQuit() {}
         override fun onCancelQuit() {}
@@ -122,6 +120,24 @@ class VillageWiringTest {
     fun `an unreachable bridge is a notice with its hint`() {
         show(Overview.of(sessions, emptyList(), BridgeStatus.Unreachable(BridgeHint.START_EXTERNAL)))
         compose.onNodeWithText("Démarre le pont sur le Mac.").assertIsDisplayed()
+    }
+
+    // Repris de la liste classique (ticket 51) : sans hameau visible, la ligne choisie reste à l'écran.
+    @Test
+    fun `without the village on top, the carnet keeps the focused line in view`() {
+        val many = (0 until 20).map { i ->
+            Session(SessionId("s$i"), Agent.CODEX, "projet-$i", null, "titre $i", SessionStatus.IDLE, true, now, now)
+        }
+        val control = androidx.compose.runtime.mutableStateOf(ControlState())
+        Robolectric.buildActivity(ComponentActivity::class.java).setup().get().setContent {
+            GameOverviewBottom(scene = null, villageShown = false, Overview.of(many, emptyList(), BridgeStatus.Connected), control.value, setupLeft = false, callbacks)
+        }
+        compose.onNodeWithTag("carnet-row-s0").assertIsDisplayed()
+        compose.onNodeWithTag("carnet-row-s19").assertDoesNotExist()
+        compose.runOnIdle { control.value = ControlState(focusedIndex = 19, focusedId = SessionId("s19")) }
+        compose.onNodeWithTag("carnet-row-s19").assertIsDisplayed()
+        compose.runOnIdle { control.value = ControlState(focusedIndex = 0, focusedId = SessionId("s0")) }
+        compose.onNodeWithTag("carnet-row-s0").assertIsDisplayed()
     }
 
     @Test

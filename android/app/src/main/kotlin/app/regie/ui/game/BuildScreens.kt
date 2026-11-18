@@ -29,13 +29,13 @@ import app.regie.game.ui.village.VillageTopScreen
 import app.regie.input.Button
 
 /*
- * Branchement de « Bâtir et agrandir » (ticket 48) : la fiche de nouvelle session en jeu à la place de
- * NewSessionScreen, le chantier sur le hameau, et la carte du hameau en bas pendant le chantier. Les
- * écrans du jeu reçoivent l'état du domaine (NewSessionForm) et le chantier du hameau, et renvoient les
- * mêmes gestes que la fiche classique. NewSessionScreen part au ticket 51.
+ * Branchement de « Bâtir et agrandir » (ticket 48) : la fiche de nouvelle session en jeu, le chantier
+ * sur le hameau, et la carte du hameau en bas pendant le chantier. Les écrans du jeu reçoivent l'état du
+ * domaine (NewSessionForm) et le chantier du hameau, et renvoient les gestes de la fiche classique,
+ * retirée au ticket 51.
  */
 
-/** Les gestes de la fiche, vus par l'app : les mêmes rappels que `NewSessionScreen`. */
+/** Les gestes de la fiche, vus par l'app : les mêmes rappels que la fiche classique. */
 fun buildCallbacks(
     onButton: (Button) -> Unit,
     onHeld: (Boolean) -> Unit,
@@ -52,10 +52,18 @@ fun buildCallbacks(
     override fun onProjectName(text: String) = onProjectName(text)
 }
 
-/** La fiche, sur l'écran du bas ; seule sur l'écran en mode un seul écran ([compact]). */
+/**
+ * La fiche, sur l'écran du bas ; seule sur l'écran en mode un seul écran ([compact]). Le stick droit
+ * ([scrollVelocity]) la fait défiler : une longue consigne se relit jusqu'au bout avant A (ADR 13).
+ */
 @Composable
-fun GameNewSessionBottom(form: NewSessionForm, callbacks: BuildCallbacks, compact: Boolean = false) {
-    GameTheme { NewSessionBottomScreen(form, callbacks, compact = compact) }
+fun GameNewSessionBottom(
+    form: NewSessionForm,
+    callbacks: BuildCallbacks,
+    compact: Boolean = false,
+    scrollVelocity: kotlinx.coroutines.flow.StateFlow<Float> = kotlinx.coroutines.flow.MutableStateFlow(0f),
+) {
+    GameTheme { NewSessionBottomScreen(form, callbacks, compact = compact, scrollVelocity = scrollVelocity) }
 }
 
 /**

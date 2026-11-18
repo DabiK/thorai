@@ -9,14 +9,6 @@
         <item quantity="other">%d sessions actives</item>
     </plurals>
 
-
-    <!-- Statuts du pont (docs/protocole-pont.md, « Statuts »). -->
-    <string name="status_working">En cours</string>
-    <string name="status_awaiting_approval">Attend ta validation</string>
-    <string name="status_idle">En attente de consigne</string>
-    <string name="status_stopped">Arrêtée</string>
-    <string name="status_failed">Échec</string>
-
     <!-- « Étape 3 sur 5 » : rien ne s'accorde en nombre, d'où PluralsCandidate ignoré. -->
     <string name="card_step_short" tools:ignore="PluralsCandidate">étape %1$d sur %2$d</string>
     <string name="card_wants_command">Commande à autoriser :</string>
@@ -46,14 +38,9 @@
     <string name="bridge_hint_token_refused">Clé du pont refusée. Autorise les commandes Termux puis rouvre ThorAI.</string>
     <string name="bridge_hint_restarting">ThorAI relance le pont et se reconnecte seule.</string>
 
-    <string name="mic_description">Maintenir pour dicter</string>
     <string name="mic_hold_l2">Maintiens L2 et parle</string>
     <string name="mic_l2_held">L2 maintenu</string>
     <string name="mic_r2_held">R2 maintenu</string>
-
-    <string name="action_open">Ouvrir</string>
-    <string name="action_new_session">Créer une session</string>
-    <string name="action_quit">Quitter</string>
 
     <plurals name="quit_busy">
         <item quantity="one">%d session travaille encore. Quitter l\'arrête.</item>
@@ -63,55 +50,6 @@
     <string name="quit_confirm">Quitter</string>
     <string name="quit_cancel">Annuler</string>
     <string name="quit_stopping">Arrêt des sessions et du pont…</string>
-    <!-- Session en direct (écran 3 de la maquette). -->
-    <string name="session_breadcrumb">ThorAI ›</string>
-    <string name="session_status_since">%1$s · %2$s</string>
-    <string name="session_context">contexte %d %%</string>
-    <string name="thread_opening">Ouverture de la session…</string>
-    <string name="session_gone">Session indisponible.</string>
-    <string name="thread_loading">Chargement du fil…</string>
-    <string name="thread_empty">Aucun message.</string>
-    <string name="thread_read">lu</string>
-    <string name="thread_reading">lit</string>
-    <string name="thread_edited">modifié</string>
-    <string name="thread_editing">modifie</string>
-    <string name="thread_ran">lancé</string>
-    <string name="thread_running">lance</string>
-    <string name="thread_action">action</string>
-    <plurals name="thread_files">
-        <item quantity="one">%d fichier</item>
-        <item quantity="many">%d fichiers</item>
-        <item quantity="other">%d fichiers</item>
-    </plurals>
-    <string name="run_pending">en attente</string>
-    <string name="run_in_progress">en cours</string>
-    <string name="run_succeeded">réussi</string>
-    <string name="run_failed">échoué</string>
-    <string name="run_interrupted">interrompu</string>
-    <string name="thread_turn_failed">La réponse a échoué.</string>
-    <string name="thread_turn_failed_with">La réponse a échoué : %s</string>
-    <string name="thread_interrupted">Interrompue</string>
-    <string name="thread_awaiting">attend ta validation : %s</string>
-    <string name="thread_awaiting_no_subject">attend ta validation</string>
-    <string name="plan_title">Plan</string>
-    <string name="files_title">Fichiers modifiés</string>
-
-    <string name="message_placeholder">Écrire un message</string>
-    <string name="message_send">Envoyer</string>
-    <string name="action_see_diff">Voir les modifications</string>
-    <plurals name="diff_files">
-        <item quantity="one">%d fichier</item>
-        <item quantity="many">%d fichiers</item>
-        <item quantity="other">%d fichiers</item>
-    </plurals>
-    <string name="action_interrupt">Interrompre</string>
-    <string name="action_back_to_overview">Revenir</string>
-    <string name="action_back_short">Revenir</string>
-    <string name="action_speak">Parler</string>
-
-    <!-- Table des réglages, sur l'écran du bas d'une session (ticket 22). -->
-    <string name="settings_title">Réglages de %s</string>
-    <string name="settings_edit">Modifier</string>
 
     <!-- Avis brefs, à la place de la phrase sous le micro. -->
     <string name="notice_sending">Envoi…</string>
@@ -127,15 +65,8 @@
     <string name="bridge_hint_start_external">Démarre le pont sur le Mac.</string>
 
     <!-- Mode console (ticket 25). -->
-    <string name="action_console_session">Piloter la console</string>
     <string name="console_service_label">ThorAI, mode console</string>
     <string name="console_service_description">Parle à l’agent depuis toute appli, L2 maintenu. Ses messages passent par-dessus l’écran du haut. ThorAI lit seulement la manette, jamais l’écran.</string>
-    <string name="card_awaiting_answer">Attend ta réponse</string>
-    <string name="card_allow_once">Autoriser une fois</string>
-    <string name="card_close">Fermer</string>
-    <string name="card_refuse_dictating">Refuser en dictant</string>
-    <string name="card_answer">Répondre</string>
     <string name="card_replying_to">En réponse à</string>
     <string name="notice_nothing_heard">Rien entendu. Aucun message envoyé.</string>
-    <string name="action_session_settings">Régler la session</string>
 </resources>

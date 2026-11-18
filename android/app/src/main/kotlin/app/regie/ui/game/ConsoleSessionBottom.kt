@@ -17,8 +17,8 @@ import app.regie.game.ui.atlas.rememberGameAssets
 import app.regie.game.ui.console.ConsoleTowerHeader
 import app.regie.game.ui.theme.GameTheme
 import app.regie.session.SessionControlState
-import app.regie.ui.screens.SessionCallbacks
-import app.regie.ui.screens.ThreadScroll
+import app.regie.ui.SessionCallbacks
+import app.regie.ui.ThreadScroll
 
 /**
  * La session console quand une autre appli occupe le haut (ticket 49, maquette 12) : la tour en

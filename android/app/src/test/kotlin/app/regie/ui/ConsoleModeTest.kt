@@ -15,13 +15,9 @@ import app.regie.session.SessionControlState
 import app.regie.ui.game.ConsoleSessionBottom
 import app.regie.ui.game.GameConsoleOverlay
 import androidx.compose.runtime.mutableStateOf
-import app.regie.ui.screens.ControlCallbacks
-import app.regie.ui.screens.OverviewBottomScreen
 import app.regie.ui.game.GameSessionBottom
-import app.regie.ui.screens.OverviewShortcuts
-import app.regie.ui.screens.SessionCallbacks
-import app.regie.ui.screens.ThreadScroll
-import app.regie.ui.theme.RegieTheme
+import app.regie.ui.game.GameOverviewBottom
+import app.regie.ui.game.carnet
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
@@ -59,7 +55,7 @@ class ConsoleModeTest {
     @Test @Config(qualifiers = "w538dp-h468dp-land-369dpi")
     fun `another app on top keeps the thread on the bottom, names the session, settings one gesture away`() {
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
-            host.setup().get().setContent { RegieTheme {
+            host.setup().get().setContent { run {
                 ConsoleSessionBottom(session, LiveSession.of(session, thread), false, Neighbours(null, null, 1, 1), SessionControlState(), "",
                     SessionSettingsReview(), scroll, sessionCallbacks, ApprovalReview(), { _, _ -> }, {}, {})
             } }
@@ -88,7 +84,7 @@ class ConsoleModeTest {
         val control = mutableStateOf(SessionControlState())
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
             val activity = host.setup().get().also { it.actionBar?.hide() }
-            activity.setContent { RegieTheme {
+            activity.setContent { run {
                 ConsoleSessionBottom(session, LiveSession.of(session, thread), false, Neighbours(null, null, 1, 1), control.value, "Brouillon tapé",
                     SessionSettingsReview(), scroll, sessionCallbacks, ApprovalReview(), { _, _ -> }, {}, {})
             } }
@@ -105,7 +101,7 @@ class ConsoleModeTest {
     @Test @Config(qualifiers = "w538dp-h468dp-land-369dpi")
     fun `with Régie on top the bottom keeps its thread and settings table, without the session name`() {
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
-            host.setup().get().setContent { RegieTheme {
+            host.setup().get().setContent { run {
                 GameSessionBottom(LiveSession.of(session, thread), false, Neighbours(null, null, 1, 1), SessionControlState(), "", SessionSettingsReview(),
                     scroll, sessionCallbacks, ApprovalReview(), { _, _ -> }, {}, {})
             } }
@@ -166,29 +162,29 @@ class ConsoleModeTest {
         }
     }
 
-    @Test fun `the overview offers the console session, and Configurer replaces the permanent console notice`() {
+    // Le carnet du hameau (tickets 45 et 51) : Y prépare la session console, « Préparer la console » rouvre le parcours.
+    @Test @Config(qualifiers = "w538dp-h468dp-land-369dpi")
+    fun `the carnet offers the console session, and Préparer la console replaces the permanent console notice`() {
         val pressed = mutableListOf<Button>()
+        var setup = 0
         val callbacks = object : ControlCallbacks {
             override fun onButton(button: Button) { pressed += button }
             override fun onTrigger(trigger: Trigger, held: Boolean) {}
-            override fun onOpenApproval() {}
             override fun onQuit() {}
             override fun onConfirmQuit() {}
             override fun onCancelQuit() {}
-        }
-        var setup = 0
+        }.carnet(onGoTo = {}, onSetup = { setup++ }, onVoice = {})
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
-            host.setup().get().setContent { RegieTheme {
-                androidx.compose.foundation.layout.Column {
-                    OverviewShortcuts(setupLeft = true, onAgents = {}, onSetup = { setup++ }, onVoice = {})
-                    OverviewBottomScreen(Overview.EMPTY, ControlState(), callbacks)
-                }
-            } }
-            compose.onNodeWithText("Piloter la console").performClick()
+            host.setup().get().setContent {
+                GameOverviewBottom(scene = null, villageShown = false, Overview.EMPTY, ControlState(), setupLeft = true, callbacks)
+            }
+            compose.onNodeWithText("Console").performClick()
             assertEquals(listOf(Button.Y), pressed)
             compose.onNodeWithText("Mode console").assertDoesNotExist()
             compose.onNodeWithText("Maintiens R2", substring = true).assertDoesNotExist()
             compose.onNodeWithTag("setup-left", useUnmergedTree = true).assertExists()
+            compose.onNodeWithText("Préparer la console", useUnmergedTree = true).assertIsDisplayed()
+            compose.onNodeWithText("Configurer").assertDoesNotExist()
             compose.onNodeWithTag("open-setup").performClick()
             assertEquals(1, setup)
         }

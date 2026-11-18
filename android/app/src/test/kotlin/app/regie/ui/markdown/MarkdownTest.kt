@@ -1,20 +1,9 @@
 package app.regie.ui.markdown
 
 import kotlin.test.Test
-import kotlin.test.assertTrue
 import kotlin.test.assertEquals
 
 class MarkdownTest {
-    @Test fun `code highlighting preserves source and distinguishes tokens including unfinished strings`() {
-        val code = "val count = 42 // count\nprintln(\"hello"
-        val highlighted = highlightCode(code)
-        assertEquals(code, highlighted.text)
-        assertTrue(highlighted.spanStyles.size >= 4)
-        assertTrue(highlighted.spanStyles.map { it.item.color }.distinct().size >= 3)
-        for (end in code.indices) assertEquals(code.take(end), highlightCode(code.take(end)).text)
-    }
-
-
     @Test
     fun `bold, italic, inline code and links become styled text`() {
         assertEquals(

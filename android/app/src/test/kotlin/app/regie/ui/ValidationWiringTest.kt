@@ -22,8 +22,6 @@ import app.regie.ui.game.GameApprovalTop
 import app.regie.ui.game.GameDiff
 import app.regie.ui.game.GameSessionBottom
 import app.regie.ui.game.GameSessionTop
-import app.regie.ui.screens.SessionCallbacks
-import app.regie.ui.screens.ThreadScroll
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
@@ -65,7 +63,7 @@ class ValidationWiringTest {
     }
 
     private fun host(content: @androidx.compose.runtime.Composable () -> Unit) {
-        Robolectric.buildActivity(ComponentActivity::class.java).setup().get().setContent { app.regie.ui.theme.RegieTheme { content() } }
+        Robolectric.buildActivity(ComponentActivity::class.java).setup().get().setContent { content() }
     }
 
     @Test fun `on two screens the whole request is read with the cross in the bottom thread`() {
