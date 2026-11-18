@@ -173,3 +173,54 @@ it('never spreads unexpected credential fields from a driver into the public res
   expect(status.account).toBe('person@example.org');
   expect(JSON.stringify(status)).not.toContain('secret');
 });
+
+it('accepts a Go key only through an exclusive ephemeral operation, never in public state', async () => {
+  const driver = new FakeAuthentication();
+  const saved: unknown[] = [];
+  const saveKey = async (...args: string[]) => {
+    saved.push(args);
+    driver.connected = true;
+  };
+  const auth = new Authentication({
+    status: () => driver.status(),
+    start: (f) => driver.start(f),
+    logout: () => driver.logout(),
+    saveKey,
+  });
+  expect(await auth.start('opencode')).toMatchObject({
+    phase: 'key',
+    login: { method: 'api_key', provider: 'opencode-go' },
+  });
+  await expect(auth.submitKey('opencode', 'other-provider', 'test-only-key')).rejects.toThrow();
+  await expect(auth.submitKey('codex', 'opencode-go', 'test-only-key')).rejects.toThrow();
+  expect(saved).toEqual([]);
+  const result = await auth.submitKey('opencode', 'opencode-go', 'test-only-key');
+  expect(result.connected).toBe(true);
+  expect(saved).toEqual([['opencode', 'opencode-go', 'test-only-key']]);
+  expect(JSON.stringify(await auth.list())).not.toContain('test-only-key');
+});
+
+it('never relays a credential-bearing driver exception and releases its lease', async () => {
+  let leases = 0;
+  const driver = new FakeAuthentication();
+  const auth = new Authentication(
+    {
+      status: () => driver.status(),
+      start: (f) => driver.start(f),
+      logout: () => driver.logout(),
+      saveKey: async () => {
+        throw new Error('test-only-key');
+      },
+    },
+    () => {
+      leases++;
+      return () => {
+        leases--;
+      };
+    },
+  );
+  const state = await auth.submitKey('opencode', 'opencode-go', 'test-only-key');
+  expect(state.phase).toBe('failed');
+  expect(JSON.stringify(state)).not.toContain('test-only-key');
+  expect(leases).toBe(0);
+});

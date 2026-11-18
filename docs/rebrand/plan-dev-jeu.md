@@ -1,11 +1,12 @@
 # Plan de développement de la vue jeu
 
-Référence visuelle :
+Référence visuelle, comme point de départ et non comme modèle à copier :
 - `docs/rebrand/da-jeu.md` ;
 - le canvas https://claude.ai/artifact/M6dsMX8171h3WhpyDvq6Zh, page 3, avec les écrans 01 à 13. Chaque écran se lit avec l'outil Artifact, action `read`, chemin `project/E01Titre.dc.html` … `project/E13Notifs.dc.html`.
 
 ## Décisions de l'utilisateur (18 novembre)
 
+- **Les maquettes sont un point de départ, pas une spécification à reproduire à l'identique.** La priorité est la cohérence. Il faut un seul système visuel et de jeu sur tous les écrans : mêmes composants, échelle ×4, palette et comportements de la manette. Il faut aussi rester fidèle à ce que l'app expose vraiment, les données et les actions du domaine. Quand une maquette ne colle pas, on adapte et on note l'écart dans le rapport du ticket.
 - Le livrable final est **uniquement le jeu**. La vue classique sert de support pendant le travail, puis elle est retirée écran par écran.
 - Tout est **interactif** : même un raccourci (liste du bas, L1/R1, R1 vers une validation) fait marcher le coursier jusqu'à la porte.
 - Le travail se fait sur **une branche longue**, `ticket/40-vue-jeu`, partie de main le 18 novembre et **jamais fusionnée dans main**. Chaque lot a sa branche, `ticket/4N-…`, partie de `ticket/40-vue-jeu`. L'orchestrateur du jeu la fusionne dans `ticket/40-vue-jeu`, et refond main dans `ticket/40-vue-jeu` après chaque fusion de l'orchestrateur principal, surtout après le ticket 30, qui renomme l'app en `app.thorai`.

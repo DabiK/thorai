@@ -54,12 +54,7 @@ fun Modifier.focusOutline(visible: Boolean, cornerRadius: Dp): Modifier =
     }
 
 @Composable
-fun agentName(agent: Agent): String = stringResource(
-    when (agent) {
-        Agent.CLAUDE -> R.string.agent_claude
-        Agent.CODEX -> R.string.agent_codex
-    },
-)
+fun agentName(agent: Agent): String = agent.label
 
 /** Étiquette d'agent : « CLAUDE », « CODEX ». */
 @Composable

@@ -147,6 +147,19 @@ function serve(ws: WebSocket, options: WsServerOptions): void {
     return options.authentication;
   };
   const handlers: { [M in Method]: (params: Params<M>) => unknown } = {
+    'agents.list': async () => ({
+      agents: await Promise.all(
+        (await bridge.versions()).map(async (entry) => ({
+          ...entry,
+          authentication: options.authentication
+            ? await options.authentication.status(entry.agent)
+            : null,
+        })),
+      ),
+    }),
+    'auth.key': async (params) => ({
+      authentication: await authentication().submitKey(params.agent, params.provider, params.key),
+    }),
     'auth.status': async () => ({ agents: await authentication().list() }),
     'auth.start': async (params) => ({
       authentication: await authentication().start(params.agent),
@@ -247,7 +260,7 @@ function serve(ws: WebSocket, options: WsServerOptions): void {
       }
     } catch (error) {
       const failure = toError(error);
-      if (failure.code === 'internal') logger.error(`request failed: ${String(error)}`);
+      if (failure.code === 'internal') logger.error('request failed');
       send({ id, error: failure });
     }
   });
@@ -266,7 +279,7 @@ function toError(error: unknown): { code: string; message: string } {
   if (error instanceof BridgeError) return { code: error.code, message: error.message };
   if (error instanceof SyntaxError) return { code: 'bad_request', message: 'JSON invalide.' };
   if (typeof error === 'object' && error !== null && 'issues' in error) {
-    return { code: 'bad_request', message: `Paramètres invalides : ${String(error)}` };
+    return { code: 'bad_request', message: 'Paramètres invalides.' };
   }
   return { code: 'internal', message: 'Erreur interne du pont.' };
 }

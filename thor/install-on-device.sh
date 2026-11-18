@@ -47,14 +47,14 @@ proot-distro login debian --user dev \
   --work-dir /home/dev -- /bin/bash -s <<'DEV'
 {
 set -euo pipefail
-export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/.local/bin:$HOME/.opencode/bin:$PATH"
 if [[ $(claude --version 2>/dev/null || true) != '2.1.322 (Claude Code)' ]]; then
   installer=$(mktemp)
   trap 'rm -f "$installer"' EXIT
   curl -fsSL https://claude.ai/install.sh -o "$installer"
   bash "$installer" 2.1.322
 fi
-profile_line='export PATH="$HOME/.local/bin:/usr/local/bin:$PATH"'
+profile_line='export PATH="$HOME/.local/bin:$HOME/.opencode/bin:/usr/local/bin:$PATH"'
 touch "$HOME/.profile"
 grep -Fxq "$profile_line" "$HOME/.profile" || printf '\n%s\n' "$profile_line" >> "$HOME/.profile"
 }

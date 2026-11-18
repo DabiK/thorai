@@ -12,6 +12,7 @@ data class NewSessionForm(
     val newProject: Boolean = false, val projectName: String = "",
     val branchChoice: BranchChoice = BranchChoice.CURRENT, val branch: String = "", val base: String = "",
     val approvalMode: String = "plan", val instruction: String = "",
+    val agents: List<Agent> = emptyList(),
     val projects: List<ProjectChoice> = emptyList(), val field: NewSessionField = NewSessionField.AGENT,
     val catalogAvailable: Boolean = true, val loading: Boolean = false, val sending: Boolean = false, val uncertain: Boolean = false,
     val capturing: Boolean = false, val finalizing: Boolean = false, val partial: String = "", val level: Float = 0f,

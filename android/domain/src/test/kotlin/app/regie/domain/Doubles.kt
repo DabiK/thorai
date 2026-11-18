@@ -55,7 +55,7 @@ class StubGateway(
         return approvalResult
     }
     override val sessions = MutableStateFlow<List<Session>>(emptyList())
-    override val agents = MutableStateFlow<List<AgentVersion>>(emptyList())
+    override val agents = MutableStateFlow(listOf(AgentVersion(Agent.CLAUDE, "test", true), AgentVersion(Agent.CODEX, "test", true)))
     override val connection = MutableStateFlow<BridgeConnection>(BridgeConnection.Connecting)
     var shutdowns = 0
     var healthChecks = 0

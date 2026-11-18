@@ -109,3 +109,14 @@ somme joints à GitHub, notes prises dans le README. Ce mode publie réellement.
 Les versions sont `major.minor.patch`, composantes 0 à 999 (ADR 20).
 Une installation debug avec une autre signature doit être désinstallée avant
 la release : préférences et modèles de l'app perdus, Termux conservé.
+
+### Essai opencode avec les identifiants du Mac
+
+`scripts/bridge-mac.sh --device` utilise l'appareil adb unique (ou `THOR_SERIAL`),
+au lieu d'exiger l'émulateur. Choisir un `REGIE_BENCH_DIR` isolé ; le pont garde ses
+projets et son journal sur le Mac. Un `adb reverse tcp:47600 tcp:47600` relie l'app
+physique au pont Mac. Le pont Debian occupant déjà ce port doit être arrêté avant
+l'essai, seulement après vérification qu'aucune session ne travaille. Conserver
+le jeton de l'app sans l'afficher, puis retirer le reverse et remettre le pont
+Debian à la fin. Ne jamais transférer de credentials opencode. La configuration
+native du Mac est utilisée directement par son exécutable `opencode acp`.

@@ -23,8 +23,18 @@ import kotlinx.coroutines.flow.MutableStateFlow
 @Config(sdk = [33], application = Application::class, qualifiers = "w832dp-h468dp-land-mdpi")
 class NewSessionScreenTest {
     @get:Rule val compose = createEmptyComposeRule()
-    private val form = NewSessionForm(visible = true, agent = Agent.CODEX, project = "demo", projects = listOf(ProjectChoice("demo", "main", listOf("main"))),
+    private val form = NewSessionForm(visible = true, agent = Agent.CODEX, agents = listOf(Agent.CLAUDE, Agent.CODEX), project = "demo", projects = listOf(ProjectChoice("demo", "main", listOf("main"))),
         branchChoice = BranchChoice.NEW, branch = "essai", base = "main", instruction = "Corrige le scan", approvalMode = "auto-edit")
+
+    @Test fun `agent choices come entirely from the advertised catalogue`() {
+        val future = Agent("fourth", "Quatrième agent")
+        Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
+            host.setup().get().setContent { RegieTheme { NewSessionScreen(form.copy(agent = future, agents = listOf(future)), false, true, {}, {}, {}, {}, {}, MutableStateFlow(0f)) } }
+            compose.onNodeWithText("Quatrième agent").assertIsDisplayed()
+            compose.onNodeWithText("Claude").assertDoesNotExist()
+            compose.onNodeWithText("Codex").assertDoesNotExist()
+        }
+    }
 
     @Test fun `dictating the project name leaves the instruction visible`() {
         val state = mutableStateOf(NewSessionForm(visible = true, agent = Agent.CODEX, newProject = true,

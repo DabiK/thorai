@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 import { Readable, Writable } from 'node:stream';
 import { promisify } from 'node:util';
 import * as acp from '@agentclientprotocol/sdk/unstable';
-import { modeIdFor, TESTED_VERSIONS } from '../../domain/agents.ts';
+import { modeIdFor, OPENCODE_BRIDGE_CONFIGURATION, TESTED_VERSIONS } from '../../domain/agents.ts';
 import type { AgentKind } from '../../domain/model.ts';
 import type { AgentConnector, Logger } from '../../domain/ports.ts';
 import { redact } from '../../domain/redact.ts';
@@ -29,10 +29,12 @@ export interface AgentBinaries {
   readonly claude: string;
   /** Codex of the console, not the one embedded in the adapter. */
   readonly codex: string;
+  readonly opencode?: string;
 }
 
 interface AdapterSpec {
-  readonly packageName: string;
+  readonly packageName: string | null;
+  readonly args?: readonly string[];
   readonly binary: string;
   readonly env: Readonly<Record<string, string>>;
 }
@@ -42,6 +44,18 @@ export function adapterSpec(
   binaries: AgentBinaries,
   platform: NodeJS.Platform = process.platform,
 ): AdapterSpec {
+  if (agent === 'opencode')
+    return {
+      packageName: null,
+      binary: binaries.opencode ?? 'opencode',
+      args: ['acp'],
+      env: {
+        NO_COLOR: '1',
+        OPENCODE_CONFIG_CONTENT: JSON.stringify(OPENCODE_BRIDGE_CONFIGURATION),
+      },
+    };
+  if (agent !== 'claude' && agent !== 'codex')
+    throw new Error('No executable registered for agent');
   if (agent === 'claude') {
     return {
       packageName: '@agentclientprotocol/claude-agent-acp',
@@ -71,17 +85,29 @@ export function processConnector(
   options: { readonly cwd: string; readonly logger: Logger },
 ): AgentConnector {
   const spec = adapterSpec(agent, binaries);
-  const packageJson = require.resolve(`${spec.packageName}/package.json`);
-  const manifest = JSON.parse(readFileSync(packageJson, 'utf8')) as {
-    version: string;
-    bin: Record<string, string>;
-  };
-  const entry = join(dirname(packageJson), Object.values(manifest.bin)[0] ?? 'dist/index.js');
+  const packageJson = spec.packageName ? require.resolve(`${spec.packageName}/package.json`) : null;
+  const manifest = packageJson
+    ? (JSON.parse(readFileSync(packageJson, 'utf8')) as {
+        version: string;
+        bin: Record<string, string>;
+      })
+    : null;
+  const entry =
+    packageJson && manifest
+      ? join(dirname(packageJson), Object.values(manifest.bin)[0] ?? 'dist/index.js')
+      : spec.binary;
   let binaryVersion: Promise<string | null> | null = null;
   return new AcpConnector({
     agent,
     logger: options.logger,
-    open: () => spawnAdapter(agent, entry, spec.env, options),
+    open: () =>
+      spawnAdapter(
+        agent,
+        spec.packageName ? process.execPath : entry,
+        spec.packageName ? [entry] : [...(spec.args ?? [])],
+        spec.env,
+        options,
+      ),
     versions: async () => {
       binaryVersion ??= run(spec.binary, ['--version'], { timeout: 30_000 }).then(
         ({ stdout }) => stdout.trim(),
@@ -91,9 +117,12 @@ export function processConnector(
       if (binary === null) binaryVersion = null;
       return {
         agent,
-        adapter: { name: spec.packageName, version: manifest.version },
+        adapter: {
+          name: spec.packageName ?? 'opencode-acp',
+          version: manifest?.version ?? binary?.match(/\d+\.\d+\.\d+/)?.[0] ?? 'unknown',
+        },
         binary,
-        tested: TESTED_VERSIONS[agent],
+        tested: TESTED_VERSIONS[agent] ?? { adapter: 'unknown', binary: 'unknown' },
         isTested: false,
       };
     },
@@ -102,12 +131,13 @@ export function processConnector(
 
 function spawnAdapter(
   agent: AgentKind,
-  entry: string,
+  executable: string,
+  args: string[],
   env: Readonly<Record<string, string>>,
   options: { readonly cwd: string; readonly logger: Logger },
 ): AcpTransport {
   const { logger } = options;
-  const child = spawn(process.execPath, [entry], {
+  const child = spawn(executable, args, {
     cwd: options.cwd,
     env: { ...process.env, ...env },
     stdio: ['pipe', 'pipe', 'pipe'],
@@ -118,7 +148,8 @@ function spawnAdapter(
     pending += chunk;
     const lines = pending.split('\n');
     pending = lines.pop() ?? '';
-    for (const line of lines) if (line.trim()) logger.info(`${agent} stderr: ${redact(line)}`);
+    for (const line of lines)
+      if (line.trim() && agent !== 'opencode') logger.info(`${agent} stderr: ${redact(line)}`);
   });
   const exited = new Promise<Exit>((resolve) => {
     child.once('exit', (code, signal) => resolve({ code, signal }));

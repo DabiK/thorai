@@ -115,6 +115,24 @@ class BridgeAgentGatewayTest {
         }
     }
 
+    @Test fun `future agent key is sent once without being echoed in connection logs`() {
+        val bridge = FakeBridge(); upgrade(bridge); val gateway = gateway()
+        withGateway(gateway) {
+            val ws = bridge.socket(); val hello = bridge.next("hello")
+            ws.send(helloResult(hello.long("id")!!, "j", 0, ""))
+            gateway.connection.first { it == BridgeConnection.Connected }
+            val saving = async { gateway.submitAgentKey(Agent("future"), "future-provider", "test-only-key") }
+            val request = bridge.next("auth.key")
+            assertEquals("future", request.obj("params")?.string("agent"))
+            assertEquals("future-provider", request.obj("params")?.string("provider"))
+            assertEquals("test-only-key", request.obj("params")?.string("key"))
+            ws.send("""{"id":${request.long("id")},"result":{"authentication":{"agent":"future","connected":true,"phase":"connected"}}}""")
+            assertEquals(Agent("future"), saving.await().agent)
+            assertTrue(saving.await().connected == true)
+            assertFalse(lines.joinToString().contains("test-only-key"))
+        }
+    }
+
     @Test fun `authentication commands carry only agent identifiers and decode the public challenge`() {
         val bridge = FakeBridge(); upgrade(bridge); val gateway = gateway()
         withGateway(gateway) {
@@ -322,7 +340,7 @@ class BridgeAgentGatewayTest {
 
             // Le rattrapage ne recharge pas les journaux : rien n'est perdu, tout est arrivé par le direct.
             val next = second.requests.receive()
-            assertEquals("agents.versions", next.string("method"))
+            assertEquals("agents.list", next.string("method"))
             socket2.send(versions(next.long("id")!!))
             withTimeout(5.seconds) { gateway.agents.first { it.isNotEmpty() } }
             assertTrue(second.requests.tryReceive().isFailure)
@@ -602,7 +620,7 @@ class BridgeAgentGatewayTest {
             val nextSocket = reconnected.socket()
             nextSocket.send(helloResult(hello.long("id")!!, "j", lastSeq = 11, sessions = sessionJson("s", "working", "2026-11-13T21:00:11Z")))
             val request = reconnected.requests.receive()
-            assertEquals("agents.versions", request.string("method"))
+            assertEquals("agents.list", request.string("method"))
             nextSocket.send(versions(request.long("id")!!))
             withTimeout(5.seconds) { gateway.agents.first { it.isNotEmpty() } }
             assertTrue(reconnected.requests.tryReceive().isFailure, "aucun prompt rejoué après reconnexion")

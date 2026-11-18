@@ -388,3 +388,26 @@ Le premier retire l’accès Android, ses déclarations et ses consignes ; il g
 - **Codex refuse la connexion par code.** Activer l’option dans les réglages de sécurité du compte ChatGPT, puis relancer avec **A**.
 
 Pour aller plus loin : la [fiche de la console](thor.md), le [guide de l’accès Android](../thor/computer-use/README.md) et le [protocole du pont](protocole-pont.md).
+
+## Ajouter opencode et OpenCode Go
+
+Les installeurs Termux et Mac du pont installent aussi **opencode 2.1.2**, build
+Debian glibc arm64 officielle de `@opencode/cli-linux-arm64`, SHA-512 vérifié.
+Pour installer uniquement ce binaire depuis le Mac : `thor/opencode/install.sh`.
+L'accès Android ajoute `~/.config/opencode/AGENTS.md` et le MCP global `thor_android`
+par le CLI natif. Une nouvelle session charge ces consignes.
+
+Aucun compte n'est connecté par les scripts. Dans Régie : accueil, **B**, choisir
+**opencode**, saisir sa clé **OpenCode Go** dans le champ masqué, puis **A** ou
+« Enregistrer la clé ». Régie transmet cette saisie au pont ; opencode seul la
+stocke. Ne jamais coller une clé dans un script, un terminal partagé ou un rapport.
+Si une découverte d'options a déjà démarré opencode, choisir Quitter puis rouvrir
+Régie avant la connexion. Go est facultatif ; les autres fournisseurs se configurent
+par `opencode auth login` dans la Debian, puis sont proposés dans les modèles ACP.
+
+Mise à jour de l'app déjà signée en release depuis le Mac :
+`scripts/thor-install.sh --release`, avec la configuration de signature existante
+hors du dépôt. Ne pas installer le debug par-dessus une release de signature différente.
+Lors d'une désinstallation de l'accès Android, retirer aussi `thor_android` de
+`mcp.servers` dans la configuration globale opencode ; le désinstalleur historique
+Claude/Codex ne modifie pas cette configuration JSONC.

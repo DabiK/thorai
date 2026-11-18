@@ -5,8 +5,8 @@
  * JSON it arrived as: the bridge relays it, it does not re-model it (docs/adr/02).
  */
 
-export const AGENT_KINDS = ['claude', 'codex'] as const;
-export type AgentKind = (typeof AGENT_KINDS)[number];
+export const AGENT_KINDS = ['claude', 'codex', 'opencode'] as const;
+export type AgentKind = string;
 
 /** Product levels (ADR 08). `allow-all` remains compatible with recorded sessions. */
 export const APPROVAL_MODES = ['plan', 'auto-edit', 'ask', 'allow-all'] as const;
@@ -139,6 +139,9 @@ export interface TurnResult {
 }
 
 export interface AgentVersions {
+  readonly name?: string;
+  readonly available?: boolean;
+  readonly configOptions?: readonly import('./session-options.ts').SessionOption[];
   readonly agent: AgentKind;
   /** ACP adapter package and version, `null` when it cannot be read. */
   readonly adapter: { readonly name: string; readonly version: string } | null;

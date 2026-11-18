@@ -89,3 +89,15 @@ L’app a été essayée sur l’émulateur à deux écrans avec un pont Mac iso
 Les captures de résultat/déconnexion sont des simulations explicitement nommées.
 La reconnexion du compte habituel sur la vraie console attend l’utilisateur.
 Preuves et pas à pas : `artifacts/screenshots/23/essai.md`.
+
+## Ticket 31 — clé Go saisie depuis l'app
+
+L'interdiction historique de faire transiter un secret dans l'app connaît une
+exception explicite demandée par l'utilisateur : une clé **saisie par lui** pour
+OpenCode Go. Champ masqué, état Compose éphémère non sauvegardé, effacement dès
+l'envoi et à la fermeture/changement d'agent ; le domaine ne conserve pas la clé.
+`auth.key` ne renvoie que l'état public. Les réponses et erreurs ne citent jamais
+les paramètres reçus. Les comptes déjà présents sur le Mac restent sur le Mac.
+L'ADR 02 décrit le serveur natif privé utilisé pour laisser opencode enregistrer
+la clé ; le catalogue déclare `login.method`, `label`, `help` et `provider` afin que
+l'écran de connexion et le futur onboarding n'aient pas de branche opencode.
