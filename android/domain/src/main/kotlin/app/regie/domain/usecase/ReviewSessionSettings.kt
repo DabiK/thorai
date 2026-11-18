@@ -10,16 +10,19 @@ class ReviewSessionSettings(private val gateway: AgentGateway, private val scope
     private val mutable = MutableStateFlow(SessionSettingsReview())
     val state = mutable.asStateFlow()
     private var observing: Job? = null
-    fun open(id: SessionId) {
+    /** [row] : the row touched in the bottom table, selected as soon as the session is known. */
+    fun open(id: SessionId, row: String? = null) {
         if (state.value.busy) return
         observing?.cancel()
         mutable.value = SessionSettingsReview(visible = true)
+        var wanted = row
         observing = scope.launch {
             gateway.sessions.collect { sessions ->
                 val old = state.value
                 val session = sessions.firstOrNull { it.id == id }
                 val next = old.copy(session = session)
-                val index = next.rows.indexOfFirst { it.id == old.row?.id }.takeIf { it >= 0 } ?: 0
+                val index = next.rows.indexOfFirst { it.id == (wanted ?: old.row?.id) }.takeIf { it >= 0 } ?: 0
+                if (session != null) wanted = null
                 val selected = next.copy(selected = index)
                 val preserve = old.row?.id == selected.row?.id && old.value != old.row?.current && selected.row?.choices?.any { it.value == old.value } == true
                 mutable.value = selected.copy(value = selected.replacements[selected.row?.id] ?: if (preserve) old.value else selected.row?.current)
@@ -40,7 +43,8 @@ class ReviewSessionSettings(private val gateway: AgentGateway, private val scope
         val replacements = if (s.session?.active == false && s.row?.id != "approvalMode") {
             if (value == s.row!!.current) s.replacements - s.row!!.id else s.replacements + (s.row!!.id to value)
         } else s.replacements
-        mutable.value = s.copy(value = value, replacements = replacements, notice = "A pour appliquer · B pour fermer.")
+        // The keys already show A Appliquer and B Fermer: no reminder (docs/textes.md).
+        mutable.value = s.copy(value = value, replacements = replacements, notice = "")
     }
     fun close() { if (!state.value.busy) { observing?.cancel(); mutable.value = SessionSettingsReview() } }
     fun apply() {

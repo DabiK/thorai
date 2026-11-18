@@ -56,7 +56,7 @@ import app.regie.gateway.bridge.ReplayAgentGateway
 import app.regie.input.InputRouter
 import app.regie.overview.OverviewAction
 import app.regie.overview.OverviewController
-import app.regie.overview.OverviewGrid
+import app.regie.overview.OverviewList
 import app.regie.session.Screen
 import app.regie.domain.usecase.ReviewSessionSettings
 import app.regie.domain.model.SessionSettingsReview
@@ -123,7 +123,9 @@ class AppContainer(
     private var settingsReview: ReviewSessionSettings? = null
     val sessionSettings = MutableStateFlow(SessionSettingsReview())
     fun selectSessionSetting(index: Int) { settingsReview?.select(index) }
-    fun openSessionSettings() { (screen.value as? Screen.Session)?.let { settingsReview?.open(it.id) } }
+
+    /** Droite, ou un toucher sur une ligne de la table du bas ([row]) : la table passe en modification. */
+    fun openSessionSettings(row: String? = null) { (screen.value as? Screen.Session)?.let { settingsReview?.open(it.id, row) } }
     val settingsOpen = MutableStateFlow(false)
     private val localVoice = LocalVoiceProvider(File(app.filesDir, "voice-models"), LocalConfig(hotwords = { true }))
     private val cloudVoice = ElevenLabsVoiceProvider(ElevenLabsConfig(apiKey = voicePreferences::apiKey))
@@ -134,9 +136,10 @@ class AppContainer(
         { debugVoiceWav?.let { WavAudioSource.fromFile(it, realtime = true) } ?: ForegroundMicrophone(app) }, scope,
     )
     private var deliverDictation: DeliverDictation? = null
+    // A message the agent received closes the dictation by itself; the session shows its receipt.
     val dictation = ReviewDictation(capture, { target, text ->
         deliverDictation?.invoke(target, text) ?: DictationDelivery("Pont indisponible", target)
-    }, scope)
+    }, scope) { target, delivery -> sessionController.onDictated(target.sessionId, delivery) }
     private var executeVoiceCommand: ExecuteVoiceCommand? = null
     private var projects: List<String> = emptyList()
     val voiceCommand = ReviewVoiceCommand(capture, InterpretVoiceCommand(MistralCommandModel(voicePreferences::commandKey)),
@@ -191,6 +194,7 @@ class AppContainer(
         // A release belongs to the physical stick even while an overlay owns the inputs.
         if (input is GamepadInput.Scroll && input.velocity == 0f) {
             sessionController.handle(input)
+            controller.handle(input)
             diffVelocity.value = 0f
             newSessionVelocity.value = 0f
         }
@@ -339,9 +343,8 @@ class AppContainer(
 
     fun openOverview() { navigate(Screen.Overview) }
 
-    fun openSession(id: SessionId, summary: Boolean = false) {
+    fun openSession(id: SessionId) {
         navigate(Screen.Session(id))
-        if (summary) sessionController.openSummary()
     }
 
     fun selectApproval(id: ApprovalId) { reviewApprovals?.open(id) }
@@ -422,7 +425,7 @@ class AppContainer(
         } else {
             BridgeAgentGateway(
                 token = ::readToken,
-                historyCount = OverviewGrid.VISIBLE_CARDS,
+                historyCount = OverviewList.PRELOADED,
                 // Trace de connexion : jamais le jeton ni le contenu des messages.
                 log = { Log.i(TAG, it) },
             )
@@ -521,7 +524,7 @@ class AppContainer(
         // Jamais le texte d'un message dans le journal.
         Log.i(TAG, "action : ${if (action is SessionAction.Send) "Send(${action.id})" else action}")
         when (action) {
-            is SessionAction.OpenSettings -> settingsReview?.open(action.id)
+            is SessionAction.OpenSettings -> settingsReview?.open(action.id, action.row)
             is SessionAction.OpenDiff -> navigate(Screen.Diff(action.id))
             is SessionAction.Open -> navigate(Screen.Session(action.id))
             SessionAction.Back -> navigate(Screen.Overview)
@@ -537,7 +540,6 @@ class AppContainer(
                 Log.i(TAG, "interruption : ${if (heard) "envoyée" else "refusée"}")
                 sessionController.onInterrupted(action.id, heard)
             }
-            is SessionAction.ShowSummary -> sessionController.openSummary()
             is SessionAction.StartDictation -> startDictation(action.id)
             SessionAction.StopDictation -> stopDictation()
             SessionAction.StartVoiceCommand -> startVoiceCommand()
@@ -567,7 +569,6 @@ class AppContainer(
         is OverviewAction.OpenSession -> navigate(Screen.Session(action.id))
         is OverviewAction.OpenApproval -> openApproval(action.id)
         OverviewAction.NewSession -> openNewSession()
-        is OverviewAction.ShowSummary -> action.target?.let { openSession(it, summary = true) }
         OverviewAction.PauseAll -> { scope.launch { executeVoiceCommand?.invoke(VoiceCommand.Pause(overview.value.sessions.map { it.id })) }; Unit }
         OverviewAction.Quit -> quitNow()
     }

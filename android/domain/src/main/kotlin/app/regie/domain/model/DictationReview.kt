@@ -27,5 +27,11 @@ data class DictationReview(
     val visible: Boolean get() = phase != DictationPhase.CLOSED
 }
 
-/** An uncertain delivery is terminal; only a definite failure can be retried. */
-data class DictationDelivery(val notice: String, val retryTarget: DictationTarget? = null)
+/**
+ * An uncertain delivery is terminal; only a definite failure can be retried. [delivery] is the
+ * bridge receipt of the message, when one was sent.
+ */
+data class DictationDelivery(val notice: String, val retryTarget: DictationTarget? = null, val delivery: Delivery? = null) {
+    /** The agent has the message (new turn, current turn or queue): nothing left to review. */
+    val delivered: Boolean get() = retryTarget == null && delivery in setOf(Delivery.PROMPT, Delivery.STEERING, Delivery.QUEUED)
+}

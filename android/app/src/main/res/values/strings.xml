@@ -20,10 +20,7 @@
     <string name="status_failed">Échec</string>
 
     <!-- « Étape 3 sur 5 » : rien ne s'accorde en nombre, d'où PluralsCandidate ignoré. -->
-    <string name="card_step" tools:ignore="PluralsCandidate">Étape %1$d sur %2$d</string>
-    <string name="card_step_with_label" tools:ignore="PluralsCandidate">Étape %1$d sur %2$d · %3$s</string>
     <string name="card_step_short" tools:ignore="PluralsCandidate">étape %1$d sur %2$d</string>
-    <string name="card_no_plan">Plan non communiqué</string>
     <string name="card_wants_command">Commande à autoriser :</string>
     <string name="card_wants_file_change">Fichier à modifier :</string>
     <string name="card_wants_other">Demande ton accord</string>
@@ -59,7 +56,6 @@
 
     <string name="action_open">Ouvrir</string>
     <string name="action_new_session">Créer une session</string>
-    <string name="action_speak_summary">Faire le point</string>
     <string name="action_quit">Quitter</string>
 
     <plurals name="quit_busy">
@@ -78,8 +74,6 @@
     <string name="session_gone">Session indisponible.</string>
     <string name="thread_loading">Chargement du fil…</string>
     <string name="thread_empty">Aucun message.</string>
-    <string name="thread_you">Toi</string>
-    <string name="thread_you_dictated">Toi, dicté</string>
     <string name="thread_read">lu</string>
     <string name="thread_reading">lit</string>
     <string name="thread_edited">modifié</string>
@@ -104,10 +98,7 @@
     <string name="thread_awaiting_no_subject">attend ta validation</string>
     <string name="plan_title">Plan</string>
     <string name="files_title">Fichiers modifiés</string>
-    <string name="files_none">Aucune modification suivie</string>
-    <string name="files_none_hint">Les écritures par commande peuvent manquer.</string>
 
-    <string name="mic_session_hold_l2">Maintiens L2 pour lui parler</string>
     <string name="message_placeholder">Écrire un message</string>
     <string name="message_send">Envoyer</string>
     <string name="action_see_diff">Voir les modifications</string>
@@ -119,7 +110,11 @@
     <string name="action_interrupt">Interrompre</string>
     <string name="action_back_to_overview">Revenir</string>
     <string name="action_back_short">Revenir</string>
-    <string name="action_speak_summary_short">Faire le point</string>
+    <string name="action_speak">Parler</string>
+
+    <!-- Table des réglages, sur l'écran du bas d'une session (ticket 22). -->
+    <string name="settings_title">Réglages de %s</string>
+    <string name="settings_edit">Modifier</string>
 
     <!-- Avis brefs, à la place de la phrase sous le micro. -->
     <string name="notice_sending">Envoi…</string>
@@ -132,9 +127,5 @@
     <string name="notice_interrupting">Interruption demandée…</string>
     <string name="notice_interrupted">Interruption envoyée.</string>
     <string name="notice_interrupt_failed">Le pont n\'a pas pu l\'interrompre.</string>
-
-    <!-- Point écrit (Y), sans synthèse vocale. -->
-    <string name="summary_title">Point de session</string>
-    <string name="summary_close">Fermer avec B ou Y</string>
     <string name="bridge_hint_start_external">Démarre le pont sur le Mac.</string>
 </resources>

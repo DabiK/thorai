@@ -105,7 +105,9 @@ import app.regie.domain.model.Neighbours
 import app.regie.domain.model.PlanStep
 import app.regie.domain.model.PlanStepStatus
 import app.regie.domain.model.Session
-import app.regie.domain.model.WrittenSummary
+import app.regie.domain.model.SessionSettingsReview
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import app.regie.domain.model.ThreadLine
 import app.regie.input.Button
 import app.regie.input.Trigger
@@ -119,6 +121,7 @@ import app.regie.ui.components.MicButton
 import app.regie.ui.components.StatusDot
 import app.regie.ui.components.agentName
 import app.regie.ui.components.bottomDivider
+import app.regie.ui.components.focusOutline
 import app.regie.ui.components.startDivider
 import app.regie.ui.components.statusColor
 import app.regie.ui.components.statusLabel
@@ -144,6 +147,9 @@ interface SessionCallbacks {
     fun onButton(button: Button)
     fun onOverview() = onButton(Button.B)
     fun onOptions() = onButton(Button.RIGHT)
+
+    /** Toucher une ligne de la table des réglages : la table passe en modification sur cette ligne. */
+    fun onSettingRow(row: String) = onOptions()
     fun onTrigger(trigger: Trigger, held: Boolean)
     fun onDraftChange(text: String)
 
@@ -158,8 +164,10 @@ interface SessionCallbacks {
 class ThreadScroll(val steps: Flow<Int>, val velocity: StateFlow<Float>)
 
 /**
- * Écran du haut d'une session : le fil, le plan et les fichiers modifiés. En mode un seul écran, la
- * zone du bas devient un panneau en bas.
+ * Écran du haut d'une session : le fil brut de l'agent, et son plan et ses fichiers modifiés quand il
+ * en expose. Rien n'y est ajouté par Régie : ni point, ni bilan (ticket 22). Il ne change pas pendant
+ * la dictée. En mode un seul écran, la zone du bas devient un panneau en bas : [options] ou
+ * [dictation] y prennent la place des actions.
  */
 @Composable
 fun SessionTopScreen(
@@ -176,11 +184,13 @@ fun SessionTopScreen(
     onNextApproval: () -> Unit = {},
     onDismissApproval: () -> Unit = {},
     options: (@Composable () -> Unit)? = null,
+    dictation: (@Composable () -> Unit)? = null,
 ) {
     val now by rememberNow()
     Column(Modifier.fillMaxSize().background(Palette.background).imePadding()) {
         SessionHeader(live?.session, live, now, callbacks)
-        live?.session?.let { session ->
+        // Sur deux écrans, les réglages sont dans la table du bas ; seul, l'écran les résume ici.
+        if (singleScreen) live?.session?.let { session ->
             val labels = listOf(app.regie.domain.model.approvalModeLabel(session.approvalMode)) +
                 session.configOptions.filter { it.category in listOf("model", "thought_level") }.map { it.valueLabel } + "→ Régler"
             BasicText(labels.joinToString(" · "), style = sans(12.sp, color = Palette.textMuted), maxLines = 2,
@@ -193,22 +203,28 @@ fun SessionTopScreen(
                     // Une liste par session : passer à la voisine repart de la fin de son fil.
                     else -> key(live.session.id) { ThreadList(live, scroll, approval, onDecision, onNextApproval, onDismissApproval, shortcutsEnabled = options == null) }
                 }
-                if (live != null && approval.request == null && control.showsSummary(live)) SummaryPanel(live.writtenSummary, live.loading)
             }
-            if (live != null) SidePanel(live)
+            // Le plan et les fichiers seulement quand l'agent en expose : pas de cadre vide.
+            if (live != null && (live.plan != null || live.modifiedFiles.isNotEmpty())) SidePanel(live)
         }
         if (singleScreen) {
             control.notice?.let {
                 NoticeText(it, callbacks, Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
             }
-            if (options != null) Box(Modifier.height(260.dp).fillMaxWidth()) { options() }
+            if (dictation != null) Box(Modifier.height(260.dp).fillMaxWidth().topDivider()) { dictation() }
+            else if (options != null) Box(Modifier.height(260.dp).fillMaxWidth()) { options() }
             else if (approval.request != null) InlineApproval(approval, onDecision, onNextApproval, details = false, onDismiss = onDismissApproval)
             else CompactSessionPanel(live, control, draft, callbacks)
         }
     }
 }
 
-/** Écran du bas d'une session : les voisines, le micro, le message de secours et les actions. */
+/**
+ * Écran du bas d'une session : les voisines, la table des réglages exposés par l'agent, le message de
+ * secours et les touches utiles (B, X, L2, Start). Droite ou un toucher sur une ligne fait passer la
+ * table en modification ([settings] visible) : la croix choisit, A applique, B referme.
+ * Une validation en attente prend la place des touches.
+ */
 @Composable
 fun SessionBottomScreen(
     live: LiveSession?,
@@ -220,49 +236,147 @@ fun SessionBottomScreen(
     onDecision: (ApprovalId, ApprovalDecision) -> Unit = { _, _ -> },
     onNextApproval: () -> Unit = {},
     onDismissApproval: () -> Unit = {},
-    options: (@Composable () -> Unit)? = null,
+    settings: SessionSettingsReview = SessionSettingsReview(),
+    onSelectSetting: (Int) -> Unit = {},
 ) {
     // Clavier ouvert, l'écran du bas n'a plus que la moitié de sa hauteur : l'avis passe juste au-dessus
-    // du champ, et les quatre boutons s'effacent le temps de la saisie (la manette les garde).
+    // du champ, la table et les touches s'effacent le temps de la saisie (la manette les garde).
     val keyboardOpen = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    val editing = settings.visible
     Column(Modifier.fillMaxSize().background(Palette.background).imePadding()) {
         NeighbourBar(neighbours, callbacks, approval)
-        if (options != null) {
-            Box(Modifier.weight(1f).fillMaxWidth()) { options() }
-        } else if (keyboardOpen) {
+        if (keyboardOpen) {
             Box(Modifier.weight(1f).fillMaxWidth().clipToBounds().padding(horizontal = 16.dp, vertical = 8.dp), contentAlignment = Alignment.BottomStart) {
                 control.notice?.let { NoticeText(it, callbacks, Modifier) }
             }
         } else {
-            Row(
-                modifier = Modifier.weight(1f).fillMaxWidth().clipToBounds().padding(horizontal = 28.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(20.dp),
-            ) {
-                MicButton(
-                    active = control.heldTriggers.isNotEmpty(),
-                    onPress = { callbacks.onTrigger(Trigger.L2, held = true) },
-                    onRelease = { callbacks.onTrigger(Trigger.L2, held = false) },
-                    size = 88.dp,
-                    halo = 6.dp,
-                )
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    BasicText(micTitle(control.heldTriggers), style = sans(17.sp, weight = 600, color = micTitleColor(control.heldTriggers)))
-                    // Un avis prend la place de la phrase sous le micro, le temps d'être lu.
-                    val notice = control.notice
-                    if (notice != null) {
-                        NoticeText(notice, callbacks, Modifier)
-                    }
+            SettingsTable(live?.session, settings, callbacks, onSelectSetting, Modifier.weight(1f).fillMaxWidth())
+            val hint = if (editing) settingsHint(settings) else null
+            if (hint != null) BasicText(hint, style = sans(12.sp, color = Palette.textMuted, lineHeight = 16.sp), maxLines = 2,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 6.dp))
+            else control.notice?.let { NoticeText(it, callbacks, Modifier.padding(start = 16.dp, end = 16.dp, bottom = 6.dp)) }
+        }
+        MessageField(draft, callbacks, compact = false, modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = if (keyboardOpen) 10.dp else 8.dp),
+            sendWithA = approval.request == null && !editing)
+        if (!keyboardOpen) {
+            when {
+                editing -> SettingsKeys(settings, callbacks)
+                approval.request != null -> Box(Modifier.padding(start = 14.dp, end = 14.dp, bottom = 12.dp)) {
+                    InlineApproval(approval, onDecision, onNextApproval, details = false, onDismiss = onDismissApproval)
+                }
+                else -> SessionKeys(live, callbacks)
+            }
+        }
+    }
+}
+
+/**
+ * Les réglages de la session, présentés de façon générique : le mode de validation, puis chaque
+ * option que l'agent expose (modèle, réflexion, mode rapide…), avec ses noms. Hors modification,
+ * la table montre les valeurs confirmées ; en modification, la ligne choisie porte le focus et une
+ * valeur pas encore appliquée est en ambre.
+ */
+@Composable
+private fun SettingsTable(session: Session?, settings: SessionSettingsReview, callbacks: SessionCallbacks, onSelect: (Int) -> Unit, modifier: Modifier) {
+    val editing = settings.visible && settings.session != null
+    val shown = if (editing) settings else SessionSettingsReview(session = session)
+    val rows = shown.rows
+    val list = rememberLazyListState()
+    LaunchedEffect(editing, settings.selected) {
+        if (!editing || settings.selected !in rows.indices) return@LaunchedEffect
+        val visible = list.layoutInfo.visibleItemsInfo
+        if (visible.none { it.index == settings.selected && it.offset >= 0 && it.offset + it.size <= list.layoutInfo.viewportEndOffset }) {
+            list.animateScrollToItem(settings.selected)
+        }
+    }
+    Column(modifier) {
+        Row(
+            Modifier.fillMaxWidth().height(36.dp).padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            BasicText(
+                session?.let { stringResource(R.string.settings_title, agentName(it.agent)) }.orEmpty(),
+                style = sans(12.sp, color = Palette.textSubtle),
+                modifier = Modifier.weight(1f),
+            )
+            if (!editing && session != null) BarAction("→", stringResource(R.string.settings_edit)) { callbacks.onOptions() }
+        }
+        LazyColumn(state = list, modifier = Modifier.weight(1f).fillMaxWidth().testTag("session-settings"),
+            contentPadding = PaddingValues(horizontal = 14.dp)) {
+            items(count = rows.size, key = { rows[it].id }) { index ->
+                val row = rows[index]
+                val selected = editing && index == settings.selected
+                val value = if (selected) settings.value else settings.replacements[row.id] ?: row.current
+                val pending = editing && value != row.current && row.id != "resume"
+                val label = row.choices.firstOrNull { it.value == value }?.name ?: value
+                    ?: if (row.id == "resume") (if (selected) "A pour reprendre" else "") else "Non communiqué"
+                Row(
+                    Modifier.fillMaxWidth().height(40.dp)
+                        .focusOutline(selected, 8.dp)
+                        .background(if (selected) Palette.surface else Color.Transparent, RoundedCornerShape(8.dp))
+                        .then(if (selected) Modifier else Modifier.bottomDivider())
+                        .then(if (settings.busy) Modifier else Modifier.tappable { if (editing) onSelect(index) else callbacks.onSettingRow(row.id) })
+                        .padding(horizontal = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    BasicText(row.label, style = sans(13.sp, color = Palette.textMuted), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.width(if (row.id == "resume") 200.dp else 128.dp))
+                    BasicText(label, style = sans(14.sp, weight = 600, color = if (pending) Palette.waiting else Palette.text),
+                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    if (selected && row.choices.size > 1) BasicText("‹ ›", style = mono(13.sp, color = Palette.textSubtle))
                 }
             }
         }
-        MessageField(draft, callbacks, compact = false, modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = if (keyboardOpen) 10.dp else 8.dp),
-            sendWithA = approval.request == null && options == null)
-        if (!keyboardOpen && options == null) {
-            if (approval.request != null) InlineApproval(approval, onDecision, onNextApproval, details = false, onDismiss = onDismissApproval)
-            else ActionGrid(live, callbacks)
-        }
     }
+}
+
+/** Touches de la table en modification : A applique, B referme, la croix choisit et change. */
+@Composable
+private fun SettingsKeys(settings: SessionSettingsReview, callbacks: SessionCallbacks) {
+    Row(
+        Modifier.fillMaxWidth().height(48.dp).topDivider().padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        app.regie.ui.components.ButtonChip("A", if (settings.busy) "Application…" else "Appliquer",
+            Modifier.alpha(if (settings.canApply) 1f else 0.4f).then(if (settings.canApply) Modifier.tappable { callbacks.onButton(Button.A) } else Modifier))
+        app.regie.ui.components.ButtonChip("B", "Fermer",
+            Modifier.alpha(if (settings.busy) 0.4f else 1f).then(if (settings.busy) Modifier else Modifier.tappable { callbacks.onButton(Button.B) }))
+        BarAction("↑↓", "Choisir") { callbacks.onButton(Button.DOWN) }
+        BarAction("←→", "Changer") { callbacks.onButton(Button.RIGHT) }
+        if (settings.canInterrupt) BarAction("Start", stringResource(R.string.action_interrupt)) { callbacks.onButton(Button.START) }
+    }
+}
+
+/** Touches d'une session, dans l'ordre B, X, L2, Start ; Start seulement quand il y a un tour à arrêter. */
+@Composable
+private fun SessionKeys(live: LiveSession?, callbacks: SessionCallbacks) {
+    Row(
+        Modifier.fillMaxWidth().height(50.dp).topDivider().padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        BarAction("B", stringResource(R.string.action_back_to_overview)) { callbacks.onButton(Button.B) }
+        BarAction("X", stringResource(R.string.action_see_diff)) { callbacks.onButton(Button.X) }
+        HoldAction("L2", stringResource(R.string.action_speak), onPress = { callbacks.onTrigger(Trigger.L2, held = true) },
+            onRelease = { callbacks.onTrigger(Trigger.L2, held = false) })
+        if (live?.canInterrupt == true) BarAction("Start", stringResource(R.string.action_interrupt)) { callbacks.onButton(Button.START) }
+    }
+}
+
+/** Une touche maintenue au doigt comme à la manette : L2 tant que le doigt reste posé. */
+@Composable
+private fun HoldAction(key: String, label: String, onPress: () -> Unit, onRelease: () -> Unit) {
+    val press by androidx.compose.runtime.rememberUpdatedState(onPress)
+    val release by androidx.compose.runtime.rememberUpdatedState(onRelease)
+    app.regie.ui.components.ButtonChip(key, label, Modifier.pointerInput(Unit) {
+        detectTapGestures(onPress = {
+            press()
+            try { tryAwaitRelease() } finally { release() }
+        })
+    })
 }
 
 // --- En-têtes ---
@@ -389,10 +503,10 @@ private fun ThreadList(live: LiveSession, scroll: ThreadScroll, approval: Approv
                 items(count = lines.size, key = { lines[it].key }) { position ->
                     val line = lines[position]
                     Column(Modifier.padding(top = gapBefore(lines.getOrNull(position - 1), line).dp)) {
-                        live.timestamps[line.key]?.let { time ->
-                            val formatted = remember(time) { java.time.format.DateTimeFormatter.ofPattern("HH:mm")
-                                .withZone(java.time.ZoneId.systemDefault()).format(java.time.Instant.ofEpochMilli(time.toEpochMilliseconds())) }
-                            BasicText(formatted, style = mono(9.sp, color = Palette.textSubtle), modifier = Modifier.padding(bottom = 3.dp))
+                        // Discret : l'heure n'apparaît que lorsqu'elle change d'une ligne à l'autre.
+                        val time = minuteOf(live.timestamps[line.key])
+                        if (time != null && time != minuteOf(lines.getOrNull(position - 1)?.let { live.timestamps[it.key] })) {
+                            BasicText(time, style = mono(9.sp, color = Palette.textSubtle), modifier = Modifier.padding(bottom = 3.dp))
                         }
                         val action = live.actionDetails[line.key]
                         if (action != null) ExpandableAction(line, action) else ThreadLineView(line)
@@ -485,23 +599,10 @@ private fun ThreadLineView(line: ThreadLine) {
 
 private val ActionStatus?.isUnfinished get() = this == ActionStatus.PENDING || this == ActionStatus.IN_PROGRESS
 
+/** Le message envoyé, tel quel, dans une bulle à droite, sans étiquette ajoutée par Régie. */
 @Composable
 private fun UserMessage(line: ThreadLine.UserMessage) {
-    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(5.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-            if (line.dictated) {
-                Image(
-                    painter = painterResource(R.drawable.ic_mic),
-                    contentDescription = null,
-                    colorFilter = ColorFilter.tint(Palette.textSubtle),
-                    modifier = Modifier.size(12.dp),
-                )
-            }
-            BasicText(
-                stringResource(if (line.dictated) R.string.thread_you_dictated else R.string.thread_you),
-                style = sans(11.sp, color = Palette.textSubtle),
-            )
-        }
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.End) {
         BasicText(
             line.text,
             style = sans(13.5.sp, lineHeight = 19.6.sp),
@@ -654,20 +755,14 @@ private fun SidePanel(live: LiveSession) {
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         val heading = sans(12.sp, color = Palette.textSubtle)
-        BasicText(stringResource(R.string.plan_title), style = heading)
-        val plan = live.plan
-        if (plan == null) {
-            BasicText(stringResource(R.string.card_no_plan), style = sans(12.5.sp, color = Palette.textSubtle, lineHeight = 16.9.sp))
-        } else {
+        // Seulement ce que l'agent expose : une section absente n'est pas remplacée par un texte de Régie.
+        live.plan?.let { plan ->
+            BasicText(stringResource(R.string.plan_title), style = heading)
             Column(verticalArrangement = Arrangement.spacedBy(9.dp)) { plan.forEach { PlanRow(it) } }
         }
-        Box(Modifier.padding(vertical = 4.dp).fillMaxWidth().height(1.dp).background(Palette.divider))
-        BasicText(stringResource(R.string.files_title), style = heading)
-        if (live.modifiedFiles.isEmpty()) {
-            // Le pont ne suit que les éditions de l'agent : une écriture par une commande lui échappe.
-            BasicText(stringResource(R.string.files_none), style = sans(12.5.sp, color = Palette.textMuted))
-            BasicText(stringResource(R.string.files_none_hint), style = sans(11.5.sp, color = Palette.textSubtle, lineHeight = 15.5.sp))
-        } else {
+        if (live.plan != null && live.modifiedFiles.isNotEmpty()) Box(Modifier.padding(vertical = 4.dp).fillMaxWidth().height(1.dp).background(Palette.divider))
+        if (live.modifiedFiles.isNotEmpty()) {
+            BasicText(stringResource(R.string.files_title), style = heading)
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) { live.modifiedFiles.forEach { FileRow(it) } }
         }
     }
@@ -726,34 +821,6 @@ private fun FileRow(file: ModifiedFile) {
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         BasicText(file.path.substringAfterLast('/'), style = style, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
         Changes(file.changes, style)
-    }
-}
-
-// --- Point de session écrit (Y) ---
-
-@Composable
-internal fun SummaryPanel(summary: WrittenSummary, loading: Boolean = false) {
-    Column(
-        modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp).fillMaxWidth()
-            .background(Palette.surface, RoundedCornerShape(12.dp))
-            .border(1.dp, Palette.divider, RoundedCornerShape(12.dp))
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(7.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            BasicText(stringResource(R.string.summary_title), style = sans(14.sp, weight = 600), modifier = Modifier.weight(1f))
-            BasicText(stringResource(R.string.summary_close), style = sans(11.sp, color = Palette.textSubtle))
-        }
-        BasicText(if (loading) "Chargement du fil…" else if (summary.fromAgent) "Bilan de l’agent" else "Bilan non communiqué. Consulte le fil.",
-            style = sans(11.sp, color = Palette.textSubtle), maxLines = 1, overflow = TextOverflow.Ellipsis)
-        if (!loading) summary.lines.forEach { line ->
-            BasicText(line, style = sans(13.sp, color = Palette.agentText, lineHeight = 18.sp),
-                maxLines = 2, overflow = TextOverflow.Ellipsis)
-        }
-        if (!loading) summary.question?.let {
-            BasicText("Question : $it", style = sans(13.sp, color = Palette.waiting, lineHeight = 18.sp),
-                maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
     }
 }
 
@@ -859,61 +926,6 @@ private fun NoFullscreenKeyboard(content: @Composable () -> Unit) {
 internal fun withoutFullscreen(imeOptions: Int): Int =
     imeOptions or EditorInfo.IME_FLAG_NO_EXTRACT_UI or EditorInfo.IME_FLAG_NO_FULLSCREEN
 
-/** Les quatre actions de la maquette, au doigt aussi. */
-@Composable
-private fun ActionGrid(live: LiveSession?, callbacks: SessionCallbacks) {
-    Column(Modifier.padding(start = 14.dp, end = 14.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ActionButton({ KeyChip("B") }, stringResource(R.string.action_back_to_overview), onClick = { callbacks.onButton(Button.B) }, modifier = Modifier.weight(1f))
-            val files = live?.modifiedFiles?.size ?: 0
-            ActionButton(
-                key = { KeyChip("X") },
-                label = stringResource(R.string.action_see_diff),
-                // Pas de compteur à zéro : les écritures par commande n'y figurent pas.
-                trailing = files.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.diff_files, it, it) },
-                onClick = { callbacks.onButton(Button.X) },
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ActionButton({ KeyChip("Y") }, stringResource(R.string.action_speak_summary), onClick = { callbacks.onButton(Button.Y) }, modifier = Modifier.weight(1f))
-            ActionButton(
-                key = { KeyChip("Start") },
-                label = stringResource(R.string.action_interrupt),
-                enabled = live?.canInterrupt == true,
-                onClick = { callbacks.onButton(Button.START) },
-                modifier = Modifier.weight(1f),
-            )
-        }
-    }
-}
-
-@Composable
-private fun ActionButton(
-    key: @Composable () -> Unit,
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier,
-    trailing: String? = null,
-    enabled: Boolean = true,
-) {
-    // Inutile à cet instant (Start sur une session au repos) : affiché éteint, sans effet.
-    val alpha = if (enabled) 1f else 0.4f
-    Row(
-        modifier = modifier
-            .height(52.dp)
-            .background(Palette.surface, RoundedCornerShape(12.dp))
-            .then(if (enabled) Modifier.tappable(onClick) else Modifier)
-            .padding(horizontal = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Box(Modifier.alpha(alpha)) { key() }
-        BasicText(label, style = sans(13.5.sp, color = Palette.text.copy(alpha = alpha)), maxLines = 1, modifier = Modifier.weight(1f))
-        trailing?.let { BasicText(it, style = sans(12.sp, color = Palette.textSubtle), maxLines = 1) }
-    }
-}
-
 /** Panneau du mode un seul écran : micro, message de secours (ou gâchette tenue) et actions. */
 @Composable
 private fun CompactSessionPanel(live: LiveSession?, control: SessionControlState, draft: String, callbacks: SessionCallbacks) {
@@ -938,7 +950,6 @@ private fun CompactSessionPanel(live: LiveSession?, control: SessionControlState
         }
         BarAction("B", stringResource(R.string.action_back_short)) { callbacks.onButton(Button.B) }
         BarAction("X", stringResource(R.string.action_see_diff)) { callbacks.onButton(Button.X) }
-        BarAction("Y", stringResource(R.string.action_speak_summary_short)) { callbacks.onButton(Button.Y) }
         if (live?.canInterrupt == true) {
             Row(
                 modifier = Modifier.tappable { callbacks.onButton(Button.START) },
@@ -957,13 +968,19 @@ private fun micTitle(held: Set<Trigger>): String = stringResource(
     when {
         Trigger.L2 in held -> R.string.mic_l2_held
         Trigger.R2 in held -> R.string.mic_r2_held
-        else -> R.string.mic_session_hold_l2
+        else -> R.string.mic_hold_l2
     },
 )
 
 /** Les lignes d'action : Geist Mono 12 sp, sur une hauteur fixe pour que le bloc reste serré. */
 @Composable
 private fun actionStyle(color: Color) = mono(12.sp, color = color, lineHeight = 16.sp)
+
+/** « 15:18 » dans le fuseau de l'appareil ; rien pour un élément sans date. */
+private fun minuteOf(time: Instant?): String? = time?.let {
+    java.time.format.DateTimeFormatter.ofPattern("HH:mm").withZone(java.time.ZoneId.systemDefault())
+        .format(java.time.Instant.ofEpochMilli(it.toEpochMilliseconds()))
+}
 
 private val MD_INDENT: Dp = 16.dp
 private const val CURSOR = "cursor"

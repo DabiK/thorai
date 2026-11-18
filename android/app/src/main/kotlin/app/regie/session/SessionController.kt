@@ -20,7 +20,8 @@ import kotlinx.coroutines.flow.update
 sealed interface SessionAction {
     /** L1 / R1 : passer à une session voisine. */
     data class Open(val id: SessionId) : SessionAction
-    data class OpenSettings(val id: SessionId) : SessionAction
+    /** Droite, ou un toucher sur une ligne de la table du bas ([row]). */
+    data class OpenSettings(val id: SessionId, val row: String? = null) : SessionAction
     data class OpenDiff(val id: SessionId) : SessionAction
 
     /** R1 : ouvrir la validation en attente. */
@@ -31,7 +32,6 @@ sealed interface SessionAction {
 
     data class Send(val id: SessionId, val text: String) : SessionAction
     data class Interrupt(val id: SessionId) : SessionAction
-    data class ShowSummary(val id: SessionId) : SessionAction
     data class StartDictation(val id: SessionId) : SessionAction
     data object StopDictation : SessionAction
     data object StartVoiceCommand : SessionAction
@@ -54,18 +54,13 @@ sealed interface SessionNotice {
 /** État de l'écran d'une session, partagé par les deux écrans de la console. */
 data class SessionControlState(
     val heldTriggers: Set<Trigger> = emptySet(),
-    /** Y : le point écrit est ouvert en haut. */
-    val summaryOpen: Boolean = false,
-    val dismissedSummary: String? = null,
     val notice: SessionNotice? = null,
-) {
-    fun showsSummary(live: LiveSession): Boolean = summaryOpen ||
-        (!live.session.status.isBusy && dismissedSummary != live.summaryTurn)
-}
+)
 
 /**
  * Applique les commandes du PRD à l'écran d'une session : L1 / R1 voisines, B retour, X diff,
- * Y point, Start interrompre, croix et stick droit pour faire défiler le fil, L2 / R2 maintenues.
+ * Start interrompre, Droite réglages, croix et stick droit pour faire défiler le fil, L2 / R2
+ * maintenues. Y n'a plus d'effet : le point Régie est retiré (ticket 22).
  * Le texte de secours ([draft], tapé au doigt) ne part qu'avec A, ou le bouton « Envoyer ».
  */
 class SessionController(
@@ -121,6 +116,15 @@ class SessionController(
         _state.update { it.copy(notice = SessionNotice.Delivered(delivery)) }
     }
 
+    /**
+     * Reçu d'un message dicté : la dictée s'est refermée seule. Un nouveau tour se voit dans le fil,
+     * sans avis ; une consigne prise en cours de tour ou mise en attente le dit brièvement.
+     */
+    fun onDictated(id: SessionId, delivery: Delivery) {
+        if (current() != id || delivery == Delivery.PROMPT) return
+        _state.update { it.copy(notice = SessionNotice.Delivered(delivery)) }
+    }
+
     fun onInterrupted(id: SessionId, heard: Boolean) {
         if (current() == id) _state.update { it.copy(notice = SessionNotice.Interrupted(heard)) }
     }
@@ -144,16 +148,10 @@ class SessionController(
 
     private fun onPressed(button: Button) {
         val id = current() ?: return
-        val summaryOpen = live.value?.let { _state.value.showsSummary(it) } ?: _state.value.summaryOpen
         when (button) {
             Button.A -> send()
-            Button.B -> if (summaryOpen) closeSummary() else dispatch(SessionAction.Back)
-            Button.Y -> if (summaryOpen) {
-                closeSummary()
-            } else {
-                openSummary()
-                dispatch(SessionAction.ShowSummary(id))
-            }
+            Button.B -> dispatch(SessionAction.Back)
+            Button.Y -> Unit
             Button.X -> dispatch(SessionAction.OpenDiff(id))
             Button.START -> if (live.value?.takeIf { it.session.id == id }?.canInterrupt == true) {
                 _state.update { it.copy(notice = SessionNotice.Interrupting) }
@@ -167,12 +165,6 @@ class SessionController(
             Button.RIGHT -> dispatch(SessionAction.OpenSettings(id))
             Button.LEFT -> _scrollSteps.tryEmit(0)
         }
-    }
-
-    fun openSummary() = _state.update { it.copy(summaryOpen = true) }
-
-    private fun closeSummary() = _state.update { state ->
-        state.copy(summaryOpen = false, dismissedSummary = live.value?.summaryTurn)
     }
 
     private fun onTrigger(trigger: Trigger, held: Boolean) {

@@ -141,6 +141,41 @@ class DictationReviewTest {
         assertEquals(DictationPhase.SENT, review.state.value.phase)
     }
 
+    @Test fun `a delivered message closes the review by itself and reports its delivery once`() = runTest {
+        val capture = TestCapture()
+        val delivered = mutableListOf<Pair<DictationTarget, Delivery>>()
+        val target: DictationTarget = DictationTarget.Message(SessionId("one"))
+        for (delivery in listOf(Delivery.PROMPT, Delivery.STEERING, Delivery.QUEUED)) {
+            val review = ReviewDictation(capture, { _, _ -> DictationDelivery("ok", delivery = delivery) }, backgroundScope) { t, d -> delivered += t to d }
+            review.start(target, emptyList())
+            capture.events.value = CaptureState(text = "Lance les tests", complete = true)
+            runCurrent(); review.finish()
+            review.send(); runCurrent()
+            assertFalse(review.state.value.visible, "$delivery")
+            assertEquals(DictationPhase.CLOSED, review.state.value.phase)
+            review.send(); runCurrent()
+        }
+        assertEquals(listOf(target to Delivery.PROMPT, target to Delivery.STEERING, target to Delivery.QUEUED), delivered)
+    }
+
+    @Test fun `uncertain refused and other targets keep their notice until B`() = runTest {
+        val capture = TestCapture()
+        val delivered = mutableListOf<Delivery>()
+        fun sendWith(target: DictationTarget, result: DictationDelivery): DictationReview {
+            val review = ReviewDictation(capture, { _, _ -> result }, backgroundScope) { _, d -> delivered += d }
+            review.start(target, emptyList())
+            capture.events.value = CaptureState(text = "Bonjour", complete = true)
+            testScheduler.runCurrent(); review.finish()
+            review.send(); testScheduler.runCurrent()
+            return review.state.value
+        }
+        val message = DictationTarget.Message(SessionId("one"))
+        assertEquals(DictationPhase.SENT, sendWith(message, DictationDelivery("Envoi non confirmé.", delivery = Delivery.UNKNOWN)).phase)
+        assertEquals(DictationPhase.REVIEW, sendWith(message, DictationDelivery("Non livré.", message, Delivery.NOT_SENT)).phase)
+        val comment = DictationTarget.DiffComment(SessionId("one"), "a.kt", 3)
+        assertEquals("Commentaire envoyé.", sendWith(comment, DictationDelivery("Commentaire envoyé.", delivery = Delivery.PROMPT)).notice)
+        assertTrue(delivered.isEmpty())
+    }
 }
 
 private class TestCapture : DictationCapture {

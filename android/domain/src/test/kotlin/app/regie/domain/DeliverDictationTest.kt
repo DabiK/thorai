@@ -41,4 +41,16 @@ class DeliverDictationTest {
         assertEquals(2, gateway.answers.size)
         assertEquals(listOf(request.sessionId to "Lis seulement", request.sessionId to "Lis seulement"), gateway.sent)
     }
+
+    @Test fun `a message delivery carries the bridge receipt so the session can show it`() = runTest {
+        val gateway = StubGateway()
+        val deliver = DeliverDictation(SendMessage(gateway, DictatedMessages()), AnswerApproval(gateway))
+        val target = DictationTarget.Message(SessionId("s"))
+        for (delivery in Delivery.entries) {
+            gateway.delivery = delivery
+            val result = deliver(target, "Continue")
+            assertEquals(delivery, result.delivery)
+            assertEquals(delivery in setOf(Delivery.PROMPT, Delivery.STEERING, Delivery.QUEUED), result.delivered, delivery.name)
+        }
+    }
 }

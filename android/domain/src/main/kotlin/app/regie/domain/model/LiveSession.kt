@@ -49,7 +49,7 @@ data class SessionSummary(
 
 /**
  * Une session ouverte sur l'écran « session en direct » : la session, son fil mis en lignes, son plan,
- * ses fichiers modifiés et son contexte.
+ * ses fichiers modifiés et son contexte. Le fil reste brut : aucun bilan ni point ajouté par Régie.
  */
 data class LiveSession(
     val session: Session,
@@ -59,9 +59,6 @@ data class LiveSession(
     val context: ContextUsage?,
     /** Le journal de la session n'est pas encore lu et rien n'est arrivé en direct. */
     val loading: Boolean,
-    val writtenSummary: WrittenSummary,
-    /** Identifies a turn even if its title or branch changes after completion. */
-    val summaryTurn: String,
     val timestamps: Map<Long, kotlin.time.Instant> = emptyMap(),
     val actionDetails: Map<Long, ThreadEntry.ToolCall> = emptyMap(),
 ) {
@@ -95,8 +92,6 @@ data class LiveSession(
                 modifiedFiles = modifiedFiles(session.modifiedFiles, thread.entries),
                 context = thread.context,
                 loading = !thread.loaded && thread.entries.isEmpty(),
-                writtenSummary = WrittenSummary.of(session, thread),
-                summaryTurn = "${session.id.value}:${thread.entries.lastOrNull { it is ThreadEntry.UserMessage }?.id}",
             )
         }
 
@@ -105,7 +100,12 @@ data class LiveSession(
             for (entry in entries) {
                 val line = when (entry) {
                     is ThreadEntry.UserMessage -> ThreadLine.UserMessage(entry.id, entry.text, dictated = entry.text in dictated)
-                    is ThreadEntry.AgentText -> ThreadLine.AgentText(entry.id, entry.text, streaming = false)
+                    is ThreadEntry.AgentText -> {
+                        // The thread shows the agent's words only, never the report Régie used to ask for.
+                        val text = RegieReport.strip(entry.text)
+                        if (text.isEmpty() && entry.text.isNotEmpty()) continue
+                        ThreadLine.AgentText(entry.id, text, streaming = false)
+                    }
                     is ThreadEntry.TurnFailed -> ThreadLine.TurnFailed(entry.id, entry.message)
                     is ThreadEntry.Interrupted -> ThreadLine.Interrupted(entry.id)
                     is ThreadEntry.ToolCall -> {

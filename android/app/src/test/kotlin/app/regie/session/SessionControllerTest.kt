@@ -71,28 +71,26 @@ class SessionControllerTest {
     }
 
     @Test
-    fun `a late title update does not reopen a dismissed report but a new turn does`() {
+    fun `the end of a turn adds no report and B goes straight back to the overview`() {
         show("montage")
+        live.value = LiveSession.of(live.value!!.session, SessionThread(listOf(
+            app.regie.domain.model.ThreadEntry.UserMessage(4, "Nouveau tour"),
+            app.regie.domain.model.ThreadEntry.AgentText(5, "Fini.\n\n[Point Régie]\nFait : x\nTests : y\nSuite : rien\n[/Point Régie]"),
+        ), loaded = true))
+        assertEquals(SessionControlState(), controller.state.value)
         press(Button.B)
-        val previous = live.value!!
-        live.value = previous.copy(session = previous.session.copy(title = "Titre tardif", updatedAt = t0))
-        kotlin.test.assertFalse(controller.state.value.showsSummary(live.value!!))
-        live.value = LiveSession.of(previous.session, SessionThread(listOf(app.regie.domain.model.ThreadEntry.UserMessage(4, "Nouveau tour")), loaded = true))
-        assertTrue(controller.state.value.showsSummary(live.value!!))
+        assertEquals(listOf<SessionAction>(SessionAction.Back), actions)
     }
 
     @Test
-    fun `completion opens a short report automatically and B dismisses it before returning`() {
-        show("montage")
-        assertTrue(controller.state.value.showsSummary(live.value!!))
-        press(Button.B)
-        kotlin.test.assertFalse(controller.state.value.showsSummary(live.value!!))
-        assertTrue(actions.isEmpty())
-        press(Button.Y)
-        assertTrue(controller.state.value.showsSummary(live.value!!))
-        press(Button.B)
-        press(Button.B)
-        assertEquals(SessionAction.Back, actions.last())
+    fun `a dictated message that started a turn shows no notice, one taken mid-turn says so`() {
+        show("atelier")
+        controller.onDictated(SessionId("atelier"), Delivery.PROMPT)
+        assertEquals(null, controller.state.value.notice)
+        controller.onDictated(SessionId("atelier"), Delivery.QUEUED)
+        assertEquals(SessionNotice.Delivered(Delivery.QUEUED), controller.state.value.notice)
+        controller.onDictated(SessionId("montage"), Delivery.STEERING)
+        assertEquals(SessionNotice.Delivered(Delivery.QUEUED), controller.state.value.notice)
     }
 
     @Test
@@ -199,20 +197,13 @@ class SessionControllerTest {
     }
 
     @Test
-    fun `Y opens the written summary and asks for the spoken one, Y or B closes it`() {
+    fun `Y does nothing in a session now that the written report is gone`() {
         show("atelier")
         press(Button.Y)
-        assertTrue(controller.state.value.summaryOpen)
         press(Button.Y)
-        assertEquals(false, controller.state.value.summaryOpen)
-        press(Button.Y)
-        press(Button.B)
 
-        assertEquals(false, controller.state.value.summaryOpen)
-        assertEquals(
-            listOf<SessionAction>(SessionAction.ShowSummary(SessionId("atelier")), SessionAction.ShowSummary(SessionId("atelier"))),
-            actions,
-        )
+        assertTrue(actions.isEmpty())
+        assertEquals(SessionControlState(), controller.state.value)
     }
 
     @Test
@@ -251,11 +242,11 @@ class SessionControllerTest {
     }
 
     @Test
-    fun `opening another session forgets the draft, the notice and the summary`() {
+    fun `opening another session forgets the draft and the notice`() {
         show("atelier")
         controller.onDraftChange("brouillon")
+        controller.onDictated(SessionId("atelier"), Delivery.STEERING)
         press(Button.X)
-        press(Button.Y)
 
         controller.reset()
 

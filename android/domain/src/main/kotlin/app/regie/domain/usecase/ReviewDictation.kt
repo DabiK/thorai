@@ -9,11 +9,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/** Holds the destination and the reviewed text until explicit confirmation. */
+/**
+ * Holds the destination and the reviewed text until explicit confirmation. A message the agent
+ * received closes the review by itself, with no screen to dismiss; [onDelivered] receives its
+ * receipt. Uncertain results, failures and other targets keep their notice until B.
+ */
 class ReviewDictation(
     private val capture: DictationCapture,
     private val deliver: suspend (DictationTarget, String) -> DictationDelivery,
     private val scope: CoroutineScope,
+    private val onDelivered: (DictationTarget, Delivery) -> Unit = { _, _ -> },
 ) {
     private val mutable = MutableStateFlow(DictationReview())
     val state = mutable.asStateFlow()
@@ -83,6 +88,12 @@ class ReviewDictation(
         mutable.value = current.copy(phase = DictationPhase.SENDING, notice = "Envoi…")
         scope.launch {
             val result = deliver(target, current.text)
+            if (target is DictationTarget.Message && result.delivered) {
+                watching?.cancel()
+                mutable.value = DictationReview()
+                onDelivered(target, result.delivery!!)
+                return@launch
+            }
             mutable.value = current.copy(
                 target = result.retryTarget ?: target,
                 phase = if (result.retryTarget != null) DictationPhase.REVIEW else DictationPhase.SENT,

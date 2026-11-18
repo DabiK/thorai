@@ -73,6 +73,7 @@ abstract class GamepadActivity : ComponentActivity() {
     protected val sessionCallbacks = object : SessionCallbacks {
         override fun onOverview() = container.openOverview()
         override fun onOptions() = container.openSessionSettings()
+        override fun onSettingRow(row: String) = container.openSessionSettings(row)
         override fun onButton(button: Button) = container.handleInput(GamepadInput.Pressed(button))
 
         override fun onTrigger(trigger: Trigger, held: Boolean) = container.touchTrigger(trigger, held)
@@ -87,6 +88,9 @@ abstract class GamepadActivity : ComponentActivity() {
     protected val threadScroll by lazy {
         ThreadScroll(container.sessionController.scrollSteps, container.sessionController.scrollVelocity)
     }
+
+    /** La transcription de la dictée : la croix et le stick la font défiler. */
+    protected val dictationScroll by lazy { ThreadScroll(container.dictationScroll, container.dictationVelocity) }
 
     private val microphonePermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
@@ -148,15 +152,17 @@ abstract class GamepadActivity : ComponentActivity() {
                     } else if (newSession.visible) {
                         app.regie.ui.screens.NewSessionScreen(newSession, this@GamepadActivity is BottomActivity, mode == ScreenMode.Single,
                             button, held, container::selectNewSessionField, container::editNewInstruction, container::editNewBranch, container.newSessionVelocity, container::editNewProjectName)
-                    } else if (dictation.visible) {
-                        if (this@GamepadActivity is BottomActivity) DictationBottomScreen(dictation, button, held, container::openVoiceSettings)
-                        else DictationTopScreen(dictation, current.sessions.firstOrNull { it.id == dictation.target?.sessionId }, mode == ScreenMode.Single, button, held, container::openVoiceSettings, ThreadScroll(container.dictationScroll, container.dictationVelocity))
+                    } else if (dictation.visible && this@GamepadActivity is BottomActivity) {
+                        // Deux écrans : la dictée et sa transcription en direct sont en bas ; le haut ne change pas.
+                        DictationBottomScreen(dictation, button, held, container::openVoiceSettings,
+                            session = current.sessions.firstOrNull { it.id == dictation.target?.sessionId }, transcript = dictationScroll)
+                    } else if (dictation.visible && mode == ScreenMode.Single && screen !is Screen.Session) {
+                        // Un seul écran, hors session : la dictée occupe l'écran. Dans une session, le fil reste.
+                        DictationTopScreen(dictation, current.sessions.firstOrNull { it.id == dictation.target?.sessionId }, true, button, held, container::openVoiceSettings, dictationScroll)
                     } else Column(Modifier.fillMaxSize()) {
-                        if (controlsHere) Row(Modifier.fillMaxWidth().background(Palette.background).padding(horizontal = 16.dp, vertical = 4.dp)) {
-                            if (screen is Screen.Session) {
-                                app.regie.ui.components.BarAction("→", "Régler la session", container::openSessionSettings)
-                                Spacer(Modifier.weight(1f))
-                            }
+                        // Dans une session, la table du bas règle la session et la dictée règle la voix.
+                        if (controlsHere && screen !is Screen.Session) Row(Modifier.fillMaxWidth().background(Palette.background).padding(horizontal = 16.dp, vertical = 4.dp)) {
+                            Spacer(Modifier.weight(1f))
                             BasicText("Régler la voix", style = sans(11.sp, color = Palette.textSubtle), modifier = Modifier.tappable(container::openVoiceSettings))
                         }
                         Box(Modifier.weight(1f)) {

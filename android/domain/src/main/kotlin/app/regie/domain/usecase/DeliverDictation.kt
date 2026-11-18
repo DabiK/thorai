@@ -19,11 +19,11 @@ class DeliverDictation(private val sendMessage: SendMessage, private val answer:
         val delivery = sendMessage(target.sessionId, content, dictated = true) ?: Delivery.NOT_SENT
         val retry = if (target is DictationTarget.Rejection) DictationTarget.Message(target.sessionId) else target
         return when (delivery) {
-            Delivery.NOT_SENT, Delivery.CANCELLED -> DictationDelivery("Message non livré. A pour réessayer.", retry)
-            Delivery.UNKNOWN -> DictationDelivery("Envoi non confirmé. Vérifie le fil avant de renvoyer.")
-            Delivery.QUEUED -> DictationDelivery("Message mis en attente. B pour revenir.")
-            Delivery.STEERING -> DictationDelivery("Consigne transmise au tour en cours. B pour revenir.")
-            Delivery.PROMPT -> DictationDelivery("Message envoyé. B pour revenir.")
+            Delivery.NOT_SENT, Delivery.CANCELLED -> DictationDelivery("Message non livré. A pour réessayer.", retry, delivery)
+            Delivery.UNKNOWN -> DictationDelivery("Envoi non confirmé. Vérifie le fil avant de renvoyer.", delivery = delivery)
+            Delivery.QUEUED -> DictationDelivery("Message mis en attente. B pour revenir.", delivery = delivery)
+            Delivery.STEERING -> DictationDelivery("Consigne transmise au tour en cours. B pour revenir.", delivery = delivery)
+            Delivery.PROMPT -> DictationDelivery("Message envoyé. B pour revenir.", delivery = delivery)
         }
     }
 }

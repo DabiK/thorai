@@ -13,6 +13,7 @@ import app.regie.domain.port.AgentGateway
 import app.regie.domain.port.DictationCapture
 import app.regie.domain.port.CaptureState
 import app.regie.input.*
+import app.regie.session.Screen
 import app.regie.session.SessionNotice
 import app.regie.ui.screens.*
 import app.regie.ui.theme.RegieTheme
@@ -184,6 +185,30 @@ class SessionActionsIntegrationTest {
         assertTrue(gateway.sent.isEmpty())
     }
 
+    @Test fun `a dictated message goes on A and the bottom returns to the settings table by itself`() = runTest {
+        val gateway = ActionsGateway()
+        val capture = ActionsCapture()
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        val container = AppContainer(app, app.getSystemService(DisplayManager::class.java), backgroundScope, capture) { gateway }
+        container.start(replay = true); container.openSession(gateway.target); runCurrent()
+        container.handleInput(GamepadInput.TriggerDown(Trigger.L2)); runCurrent()
+        assertTrue(container.dictation.state.value.visible)
+        assertEquals(Screen.Session(gateway.target), container.screen.value)
+        capture.state.value = CaptureState(text = "Lance les tests", complete = true); runCurrent()
+        container.handleInput(GamepadInput.TriggerUp(Trigger.L2)); runCurrent()
+        container.handleInput(GamepadInput.Pressed(Button.A)); runCurrent()
+        assertEquals(listOf(gateway.target to "Lance les tests"), gateway.sent)
+        assertFalse(container.dictation.state.value.visible)
+        // A new turn shows in the thread: no « Message envoyé » screen or notice to dismiss.
+        assertNull(container.sessionController.state.value.notice)
+        assertEquals(Screen.Session(gateway.target), container.screen.value)
+        Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
+            host.setup().get().setContent { SessionSurface(container) }
+            compose.onNodeWithText("Réglages de Codex").assertIsDisplayed()
+            compose.onNodeWithText("Je valide chaque action").assertIsDisplayed()
+        }
+    }
+
     @Composable private fun SessionSurface(container: AppContainer, top: Boolean = false, singleScreen: Boolean = false) {
         val live by container.live.collectAsState()
         val approval by container.inlineApproval.collectAsState()
@@ -205,7 +230,8 @@ class SessionActionsIntegrationTest {
                 ThreadScroll(container.sessionController.scrollSteps, container.sessionController.scrollVelocity), callbacks,
                 approval = approval, onDecision = container::answerInline, onNextApproval = container::nextInlineApproval,
                 onDismissApproval = container::dismissInlineApproval, options = options)
-            else SessionBottomScreen(live, null, control, draft, callbacks, approval = approval, options = options)
+            else SessionBottomScreen(live, null, control, draft, callbacks, approval = approval,
+                settings = settings, onSelectSetting = container::selectSessionSetting)
         }
     }
 }

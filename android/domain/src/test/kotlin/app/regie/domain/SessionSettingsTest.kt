@@ -46,6 +46,26 @@ class SessionSettingsTest {
         assertEquals("ask", review.state.value.session?.approvalMode)
     }
 
+    @Test fun `touching a row of the bottom table opens the settings on that row once the session is known`() = runTest {
+        val gateway = StubGateway()
+        val id = SessionId("session")
+        gateway.sessions.value = listOf(session("session").copy(approvalMode = "ask", configOptions = listOf(model, effort)))
+        val review = ReviewSessionSettings(gateway, backgroundScope)
+        review.open(id, row = "remote-effort"); runCurrent()
+        assertTrue(review.state.value.visible)
+        assertEquals("remote-effort", review.state.value.row?.id)
+        assertEquals("low", review.state.value.value)
+        // Later catalogue updates keep the row the user is on, not the tapped one.
+        review.move(-1)
+        gateway.sessions.value = listOf(session("session").copy(approvalMode = "allow-all", configOptions = listOf(model, effort)))
+        runCurrent()
+        assertEquals("remote-model", review.state.value.row?.id)
+        review.close()
+        review.open(id, row = "absent"); runCurrent()
+        assertEquals("approvalMode", review.state.value.row?.id)
+        assertTrue(gateway.configurations.isEmpty())
+    }
+
     @Test fun `unexposed choices cannot be invented and old session can be resumed without prompt`() = runTest {
         val gateway = StubGateway()
         val id = SessionId("old")

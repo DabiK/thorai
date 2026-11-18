@@ -36,10 +36,10 @@ fun SessionSettingsScreen(state: SessionSettingsReview, onButton: (Button) -> Un
                 }
             }
         }
-        if (!compact && state.session?.configOptions.isNullOrEmpty()) BasicText("Modèle et réflexion non communiqués. Reprends la session pour les actualiser.", style = sans(12.sp, color = Palette.textMuted))
+        if (!compact && state.session?.configOptions.isNullOrEmpty()) BasicText(OPTIONS_UNKNOWN, style = sans(12.sp, color = Palette.textMuted))
         if (state.row?.id == "approvalMode") BasicText(approvalModeHelp(state.value.orEmpty()), style = sans(12.sp, color = Palette.textMuted))
-        if (state.replacements.isNotEmpty()) BasicText("${state.replacements.size} choix préparés. Applique-les pour reprendre.", style = sans(12.sp, color = Palette.textMuted))
-        if (state.notice.isNotBlank() || state.session?.active == false) BasicText(state.notice.ifEmpty { "Choisis les remplacements, puis applique-les." }, style = sans(12.sp, color = Palette.textMuted), maxLines = if (compact) 2 else 3)
+        if (state.replacements.isNotEmpty()) BasicText(preparedText(state), style = sans(12.sp, color = Palette.textMuted))
+        if (state.notice.isNotBlank() || state.session?.active == false) BasicText(noticeText(state), style = sans(12.sp, color = Palette.textMuted), maxLines = if (compact) 2 else 3)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             BarAction("↑", "Choisir avant") { onButton(Button.UP) }
             BarAction("↓", "Choisir après") { onButton(Button.DOWN) }
@@ -54,4 +54,21 @@ fun SessionSettingsScreen(state: SessionSettingsReview, onButton: (Button) -> Un
             if (state.canInterrupt) BarAction("Start", "Interrompre") { onButton(Button.START) }
         }
     }
+}
+
+private const val OPTIONS_UNKNOWN = "Modèle et réflexion non communiqués. Reprends la session pour les actualiser."
+private fun preparedText(state: SessionSettingsReview) = "${state.replacements.size} choix préparés. Applique-les pour reprendre."
+private fun noticeText(state: SessionSettingsReview) = state.notice.ifEmpty { "Choisis les remplacements, puis applique-les." }
+
+/**
+ * L'aide de la table du bas en modification, une ligne au plus : l'avis du réglage en cours d'abord,
+ * puis les choix préparés, puis l'effet du mode choisi.
+ */
+fun settingsHint(state: SessionSettingsReview): String? = when {
+    state.notice.isNotBlank() -> state.notice
+    state.replacements.isNotEmpty() -> preparedText(state)
+    state.session?.active == false -> noticeText(state)
+    state.row?.id == "approvalMode" -> approvalModeHelp(state.value.orEmpty()).ifEmpty { null }
+    state.session?.configOptions?.isEmpty() == true -> OPTIONS_UNKNOWN
+    else -> null
 }
