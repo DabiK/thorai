@@ -11,8 +11,10 @@ kotlinxSerialization = "1.12.0"
 javaDiffUtils = "4.18"
 commonmark = "0.32.0"
 robolectric = "4.18"
+zxing = "3.5.4"
 
 [libraries]
+zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
 voice-api = { module = "app.regie.voice:api" }
 voice-local = { module = "app.regie.voice:local" }
 voice-elevenlabs = { module = "app.regie.voice:elevenlabs" }

@@ -133,6 +133,7 @@ export class Bridge {
   private readonly probes = new Map<AgentKind, Promise<string>>();
   private readonly configuring = new Map<string, Promise<unknown>>();
   private stopping: Promise<void> | null = null;
+  private readonly authenticating = new Set<AgentKind>();
 
   constructor(deps: BridgeDeps) {
     this.deps = deps;
@@ -704,7 +705,27 @@ export class Bridge {
     }
   }
 
+  /** Credentials may change only before the ACP process starts, avoiding cached accounts. */
+  acquireAuthentication(agent: AgentKind): () => void {
+    if (
+      this.stopping !== null ||
+      this.authenticating.has(agent) ||
+      this.runtimes.get(agent)?.connection
+    ) {
+      throw new BridgeError(
+        'bad_request',
+        'Connexion indisponible pendant une session. Choisis Quitter, rouvre Régie puis Connexion des agents.',
+      );
+    }
+    this.authenticating.add(agent);
+    return () => {
+      this.authenticating.delete(agent);
+    };
+  }
+
   private connection(agent: AgentKind): Promise<AgentConnection> {
+    if (this.authenticating.has(agent))
+      throw new BridgeError('bad_request', 'Une connexion est en cours pour cet agent.');
     const runtime = this.runtimes.get(agent);
     if (runtime === undefined) {
       throw new BridgeError('bad_request', `Agent non disponible : ${agent}.`);

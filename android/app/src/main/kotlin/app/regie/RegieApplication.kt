@@ -58,6 +58,7 @@ import app.regie.overview.OverviewAction
 import app.regie.overview.OverviewController
 import app.regie.overview.OverviewList
 import app.regie.session.Screen
+import app.regie.domain.usecase.ReviewAgentAuthentication
 import app.regie.domain.usecase.ReviewSessionSettings
 import app.regie.domain.model.SessionSettingsReview
 import app.regie.session.SessionAction
@@ -121,6 +122,15 @@ class AppContainer(
 
     private val voicePreferences = VoicePreferences(app)
     val voiceSettings = voicePreferences.state
+    private var authenticationReview: ReviewAgentAuthentication? = null
+    val agentAuthentication = MutableStateFlow(AgentAuthenticationReview())
+    fun openAgentAuthentication() {
+        if (dictation.state.value.visible || voiceCommand.state.value.visible || newSession.value.visible || controller.state.value.quit != null) return
+        controller.releaseTriggers(); sessionController.releaseTriggers()
+        authenticationReview?.open()
+    }
+    fun selectAuthenticationAgent(index: Int) { authenticationReview?.select(index) }
+    fun refreshAuthentication() { authenticationReview?.refresh() }
     private var settingsReview: ReviewSessionSettings? = null
     val sessionSettings = MutableStateFlow(SessionSettingsReview())
     fun selectSessionSetting(index: Int) { settingsReview?.select(index) }
@@ -224,6 +234,17 @@ class AppContainer(
             diffVelocity.value = 0f
             newSessionVelocity.value = 0f
         }
+        if (agentAuthentication.value.visible) {
+            if (input is GamepadInput.Pressed) when (input.button) {
+                Button.A -> authenticationReview?.confirm()
+                Button.B -> authenticationReview?.close()
+                Button.LEFT, Button.UP -> authenticationReview?.move(-1)
+                Button.RIGHT, Button.DOWN -> authenticationReview?.move(1)
+                Button.Y -> authenticationReview?.refresh()
+                else -> Unit
+            }
+            return
+        }
         if (sessionSettings.value.visible) {
             if (input is GamepadInput.Pressed) when (input.button) {
                 Button.UP -> settingsReview?.move(-1)
@@ -279,6 +300,7 @@ class AppContainer(
             return
         }
         if (input == GamepadInput.Pressed(Button.A) && closedByDelivery?.let { it.elapsedNow() < SECOND_A_IGNORED } == true) return
+        if (_screen.value == Screen.Overview && controller.state.value.quit == null && input == GamepadInput.Pressed(Button.B)) { openAgentAuthentication(); return }
         if (input is GamepadInput.TriggerDown && input.trigger == Trigger.R2) { startVoiceCommand(); return }
         if (input is GamepadInput.TriggerUp && input.trigger == Trigger.R2) { stopVoiceCommand(); return }
         if (input is GamepadInput.TriggerDown && input.trigger == Trigger.L2) {
@@ -463,6 +485,10 @@ class AppContainer(
             StartUp(chosen, androidAccess, launcher).also { startUp = it }.report
         }
         gateway = chosen
+        authenticationReview = ReviewAgentAuthentication(chosen, scope).also { review ->
+            scope.launch { review.state.collect { agentAuthentication.value = it } }
+            scope.launch { chosen.connection.collect { if (it == BridgeConnection.Connected) review.offerOnLaunch() } }
+        }
         settingsReview = ReviewSessionSettings(chosen, scope).also { review -> scope.launch { review.state.collect { sessionSettings.value = it } } }
         reviewNewSession = ReviewNewSession(chosen, capture, scope) { openSession(it) }.also { review ->
             scope.launch { review.state.collect { newSession.value = it } }

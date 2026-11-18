@@ -13,11 +13,13 @@
  *   bridge at start;
  * - CLAUDE_CODE_EXECUTABLE (~/.local/bin/claude), CODEX_PATH (/usr/local/bin/codex).
  */
+
 import { randomUUID } from 'node:crypto';
 import { readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { processConnector } from './adapters/acp/adapter-process.ts';
+import { CliAuthentication } from './adapters/auth/cli-authentication.ts';
 import { FileEventStore, FileSessionStore } from './adapters/files/file-stores.ts';
 import { GitWorkspace } from './adapters/files/git-workspace.ts';
 import { lockStateDir } from './adapters/files/state-lock.ts';
@@ -25,6 +27,7 @@ import { StderrLogger } from './adapters/logging/logger.ts';
 import { runNowThenDaily } from './adapters/schedule/daily.ts';
 import { ShellQuoteParser } from './adapters/shell/shell-quote-parser.ts';
 import { listenWs } from './adapters/ws/ws-server.ts';
+import { Authentication } from './domain/authentication.ts';
 import { Bridge, DEFAULT_RETENTION_DAYS } from './domain/bridge.ts';
 import { AGENT_KINDS } from './domain/model.ts';
 
@@ -99,6 +102,9 @@ async function main(): Promise<void> {
     retentionDays,
   });
   bridge.start();
+  const authentication = new Authentication(new CliAuthentication(binaries), (agent) =>
+    bridge.acquireAuthentication(agent),
+  );
   // The old events are purged at start, then once a day.
   runNowThenDaily('purge', () => bridge.purge(), logger);
 
@@ -108,6 +114,7 @@ async function main(): Promise<void> {
     if (stopping) return;
     stopping = true;
     logger.info(`stopping (${reason})`);
+    await authentication.close();
     await bridge.shutdown();
     await server.close();
     rmSync(pidFile, { force: true });
@@ -115,7 +122,7 @@ async function main(): Promise<void> {
     process.exit(0);
   };
 
-  server.attach({ bridge, onShutdown: () => void stop('bridge.shutdown') });
+  server.attach({ bridge, authentication, onShutdown: () => void stop('bridge.shutdown') });
   writeFileSync(pidFile, `${process.pid}\n`, { mode: 0o600 });
   logger.info(`bridge ${version} ready, pid ${process.pid}, last seq ${bridge.lastSeq}`);
   for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP'] as const) {

@@ -19,6 +19,43 @@ Le pont **relaie** ce que les agents envoient. Il ne réinvente pas leur schéma
 - Le pont envoie un ping WebSocket toutes les 20 s. Un client qui ne répond pas est déconnecté.
 - Messages en texte JSON, 1 Mo au plus. Un message binaire est refusé.
 
+## Connexion aux comptes des agents (ticket 23)
+
+Ces méthodes utilisent le même WebSocket et le même jeton. Elles ne démarrent
+aucune session ACP et n’ajoutent rien au journal. Voir l’ADR 18 pour le repli Claude.
+
+| Méthode | Paramètres | Résultat |
+| --- | --- | --- |
+| `auth.status` | `{}` | `{agents: [état Claude, état Codex]}` |
+| `auth.start` | `{agent: "claude" ou "codex"}` | `{authentication: état}` |
+| `auth.cancel` | mêmes paramètres | `{authentication: état}` |
+| `auth.logout` | mêmes paramètres | `{authentication: état}` |
+
+Un état contient uniquement `agent`, `connected` (booléen ou `null` si inconnu),
+`account` (e-mail public facultatif, sinon `null`), `phase`, `url`, `code`, `message`.
+Les phases sont `unknown`, `disconnected`, `starting`, `waiting`, `connected`,
+`failed`, `manual`. `url` et `code` sont renseignés seulement pendant le challenge
+Codex ; ils disparaissent à sa fin. L’URL est exactement
+`https://auth.openai.com/codex/device`, sans paramètres OAuth. Aucun jeton ni
+sortie brute des CLI ne transite. L’app actualise toutes les deux secondes quand
+l’écran de connexion est ouvert et ne renvoie jamais automatiquement un lancement.
+
+`auth.start` Codex renvoie immédiatement `starting`, puis `auth.status` fournit
+le code. Une seconde demande rejoint la même tentative. Le processus attend au
+plus quinze minutes. `auth.cancel` arrête cette attente locale ; le code déjà
+émis garde la durée de validité décidée par OpenAI. Arrêter le pont annule aussi
+ses processus de connexion. Le succès est confirmé par `login status`.
+
+`auth.start` Claude retourne `manual` avec les étapes à suivre dans Termux.
+La version installée exige un code OAuth de retour quand le navigateur est sur
+un autre appareil ; Régie ne collecte pas ce secret. `auth.logout` appelle le
+CLI natif pour les deux agents puis relit l’état effectif.
+
+Changer de compte est refusé avec `bad_request` si un processus ACP du même
+agent tourne : Quitter puis rouvrir l’app avant la connexion/déconnexion. Une
+connexion Codex en cours bloque réciproquement le démarrage ACP de cet agent.
+Un refus ou un résultat inconnu demande une vérification, jamais un renvoi caché.
+
 ## Le jeton
 
 - 32 octets aléatoires, écrits en hexadécimal (64 caractères).
