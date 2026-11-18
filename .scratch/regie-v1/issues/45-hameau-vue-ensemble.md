@@ -1,6 +1,6 @@
 # 45 — Hameau, vue d'ensemble
 
-Statut : à fusionner
+Statut : fusionné dans ticket/40-vue-jeu
 Possède : les écrans hameau haut et bas dans `:game-ui`, leur branchement à la place d'`OverviewScreens`
 Dépend de : 41, 43, 44
 
