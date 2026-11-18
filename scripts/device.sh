@@ -19,3 +19,22 @@ select_adb_device() {
   fi
   printf '%s\n' "$devices"
 }
+
+# Print the package of the app built by this repository: applicationId, plus the
+# applicationIdSuffix of the build types (ticket 50: the game version installs next to the
+# classic app, never over it). REGIE_APP_ID overrides it, e.g. to target the classic app.
+regie_app_id() {
+  if [[ -n "${REGIE_APP_ID:-}" ]]; then
+    printf '%s\n' "$REGIE_APP_ID"
+    return 0
+  fi
+  local gradle id suffix
+  gradle="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/android/app/build.gradle.kts}"
+  id=$(sed -nE 's/^[[:space:]]*applicationId[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' "$gradle" | head -n 1)
+  suffix=$(sed -nE 's/.*applicationIdSuffix[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' "$gradle" | head -n 1)
+  if [[ -z "$id" ]]; then
+    echo "applicationId introuvable dans $gradle." >&2
+    return 1
+  fi
+  printf '%s%s\n' "$id" "$suffix"
+}

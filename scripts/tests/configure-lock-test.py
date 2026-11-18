@@ -95,12 +95,14 @@ if pid.exists():
             except ProcessLookupError:
                 pass
 
-    def configure(self, token):
+    def configure(self, token, client=None):
         self.run_number += 1
         self.env['FIXTURE_RUN'] = str(self.run_number)
         (self.home / "token-source").write_text(token)
+        target = self.token_file if client is None else self.token_file.parent / "bridge-tokens" / client
         with subprocess.Popen(
-            ["bash", str(ROOT / "thor/bridge/configure.sh"), "regie-pair-fixture"],
+            ["bash", str(ROOT / "thor/bridge/configure.sh"), "regie-pair-fixture",
+             *([] if client is None else [client])],
             env=self.env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True,
         ) as process:
             try:
@@ -111,8 +113,8 @@ if pid.exists():
                 self.fail("A successive configuration is blocked by the detached bridge's lock")
             self.assertEqual(process.returncode, 0, "Configuration failed")
         self.assertNotIn(token.encode(), stdout + stderr)
-        self.assertEqual(self.token_file.read_text(), token)
-        self.assertEqual(self.token_file.stat().st_mode & 0o777, 0o600)
+        self.assertEqual(target.read_text(), token)
+        self.assertEqual(target.stat().st_mode & 0o777, 0o600)
         # start also detaches Android access when a supervisor already runs.
         # Await its handshake so cleanup cannot race a late fixture startup.
         deadline = time.monotonic() + 2
@@ -134,6 +136,18 @@ if pid.exists():
         self.configure("cd" * 32)
         self.configure("ef" * 32)
         self.assertEqual((self.home / "stops").read_text(), "stop\nstop\nstop\n")
+        with (self.state / "regie-bridge-configure.lock").open("w") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+    def test_a_second_app_joins_and_renews_its_token_without_stopping_the_bridge(self):
+        self.configure("ab" * 32)
+        self.configure("cd" * 32, client="app.regie.jeu")
+        self.configure("cd" * 32, client="app.regie.jeu")
+        self.configure("ef" * 32, client="app.regie.jeu")
+        self.configure("ab" * 32)
+        self.assertEqual(self.token_file.read_text(), "ab" * 32)
+        # Only the change of the historical token stops the bridge; the app tokens never do.
+        self.assertEqual((self.home / "stops").read_text(), "stop\n")
         with (self.state / "regie-bridge-configure.lock").open("w") as lock:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
 

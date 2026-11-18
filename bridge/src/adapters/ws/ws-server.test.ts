@@ -16,6 +16,10 @@ import {
 import { HOST, type RunningServer, startWsServer } from './ws-server.ts';
 
 const TOKEN = 'a'.repeat(64);
+const GAME_TOKEN = 'c'.repeat(64);
+
+/** The tokens on disk, read again by the server at each connection. */
+let tokens: string[];
 
 let codex: FakeAgentConnector;
 let bridge: Bridge;
@@ -36,9 +40,10 @@ beforeEach(async () => {
   });
   bridge.start();
   shutdowns = 0;
+  tokens = [TOKEN];
   server = await startWsServer({
     port: 0,
-    token: TOKEN,
+    tokens: () => tokens,
     bridge,
     authentication: new Authentication({
       status: async () => ({ connected: false, account: null }),
@@ -103,6 +108,30 @@ describe('the WebSocket server', () => {
   it('refuses a connection without the token, before any data', async () => {
     await expect(new Client(null).open).rejects.toThrow('HTTP 401');
     await expect(new Client('b'.repeat(64)).open).rejects.toThrow('HTTP 401');
+  });
+
+  it('accepts the token of each app, and only those', async () => {
+    tokens = [TOKEN, GAME_TOKEN];
+    const classic = new Client(TOKEN);
+    const game = new Client(GAME_TOKEN);
+
+    await expect(classic.open).resolves.toBeUndefined();
+    await expect(game.open).resolves.toBeUndefined();
+    await expect(new Client('b'.repeat(64)).open).rejects.toThrow('HTTP 401');
+    await classic.close();
+    await game.close();
+  });
+
+  it('takes a token added or removed while it runs, without a restart', async () => {
+    await expect(new Client(GAME_TOKEN).open).rejects.toThrow('HTTP 401');
+
+    tokens = [TOKEN, GAME_TOKEN];
+    const game = new Client(GAME_TOKEN);
+    await expect(game.open).resolves.toBeUndefined();
+    await game.close();
+
+    tokens = [TOKEN];
+    await expect(new Client(GAME_TOKEN).open).rejects.toThrow('HTTP 401');
   });
 
   it('listens on the loopback only', () => {

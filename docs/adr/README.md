@@ -27,6 +27,7 @@ Un ajout daté ou une décision du journal prime sur le contexte historique d’
 | [18](18-connexion-des-agents.md) | Code d’appareil Codex, connexion et repli Claude | 23 |
 | [19](19-mode-console.md) | L2 depuis toute appli, message volant, session console | 25, complété par 26 |
 | [20](20-partage-et-release.md) | Installation Termux autonome et release signée | 27 |
+| [22](22-plusieurs-apps-sur-le-pont.md) | Version jeu à côté de l'app classique, un jeton par app | 50 |
 
 Le [journal](00-journal-de-reprise.md) conserve les campagnes successives, leurs
 limites et les décisions produit. Le statut courant se lit dans les fichiers

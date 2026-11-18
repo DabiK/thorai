@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ticket 50 (ADR 22) : la version jeu, installée à côté de l'app classique, se nomme autrement. -->
+<resources>
+    <string name="app_name">ThorAI jeu</string>
+    <string name="console_service_label">ThorAI jeu, mode console</string>
+</resources>
