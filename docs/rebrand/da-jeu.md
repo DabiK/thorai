@@ -138,7 +138,7 @@ L'habitant d'une maison est l'agent de la session : le scribe pour Claude, le br
 | A | parler, entrer, valider |
 | B | sortir, revenir, refuser ; sur le hameau, ouvrir les agents |
 | X | sur le hameau, bâtir (nouvelle session) ; dans une maison, voir les modifications |
-| Y | sur le hameau, aller à la tour (console) ; dans une maison, ouvrir les réglages |
+| Y | sur le hameau, aller à la tour (console) ; dans une maison, sans effet (ADR 17) : c’est Droite qui ouvre les réglages, comme dans le PRD |
 | L1, R1 | maison précédente ou suivante. R1 ouvre d'abord la validation en attente |
 | L2 maintenu | le coursier parle à l'habitant (dictée) |
 | R2 maintenu | ordre vocal, valable partout |
