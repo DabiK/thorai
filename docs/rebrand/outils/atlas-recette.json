@@ -1,0 +1,384 @@
+{
+ "palette": ["#222F36", "#203648", "#503835", "#1F583A", "#1B5F53", "#615039", "#605751", "#9E5A37", "#5A718C", "#A16948",
+  "#22944C", "#DB6633", "#DF724A", "#05ACAB", "#718EA0", "#63A53A", "#58A949", "#A19E5C", "#A0A0A0", "#8FB237",
+  "#71C645", "#73C839", "#27D1CB", "#E5A669", "#D8AFA1", "#A0D944", "#A2DA3B", "#53E6DE", "#DDDC2C", "#DCDA5F",
+  "#F1D8A6", "#F0DDD1"],
+ "roofKeys": ["#3C78FF", "#1E50D2", "#0F2D96"],
+ "atlases": {
+  "personnages": {
+   "width": 256,
+   "sources": {
+    "coursier": {
+     "file": "coursier.png",
+     "fit": {"index": 0, "height": 30},
+     "merge": 40,
+     "cell": [24, 32],
+     "align": "head",
+     "names": ["coursier.marche.bas.1", "coursier.marche.bas.0", "coursier.marche.bas.2", "coursier.parle.0",
+      "coursier.marche.haut.1", "coursier.marche.haut.0", "coursier.marche.haut.2", "coursier.marche.gauche.1",
+      "coursier.marche.gauche.0", "coursier.marche.gauche.2", "coursier.marche.droite.1",
+      "coursier.marche.droite.0", "coursier.marche.droite.2"]
+    },
+    "scribe": {
+     "file": "scribe3.png",
+     "fit": {"index": 0, "height": 30},
+     "merge": 16,
+     "satellite": 30,
+     "cell": [36, 34],
+     "align": "feet",
+     "names": ["scribe.repos.0", "scribe.repos.1", "scribe.attente.0", "scribe.attente.1", "scribe.travail.0",
+      "scribe.travail.1", "scribe.travail.2", "scribe.travail.3", "scribe.sommeil.0", "scribe.sommeil.1",
+      "scribe.parle.0", "scribe.joie.0"]
+    },
+    "bricoleur": {
+     "file": "bricoleur3.png",
+     "fit": {"index": 0, "height": 30},
+     "merge": 16,
+     "satellite": 30,
+     "cell": [36, 34],
+     "align": "feet",
+     "names": ["bricoleur.repos.0", "bricoleur.repos.1", "bricoleur.attente.0", "bricoleur.attente.1",
+      "bricoleur.travail.0", "bricoleur.travail.1", "bricoleur.travail.2", "bricoleur.travail.3",
+      "bricoleur.sommeil.0", "bricoleur.sommeil.1", "bricoleur.parle.0", "bricoleur.joie.0"]
+    },
+    "cartographe": {
+     "file": "cartographe3.png",
+     "fit": {"index": 0, "height": 30},
+     "merge": 16,
+     "satellite": 30,
+     "cell": [36, 34],
+     "align": "feet",
+     "names": ["cartographe.repos.0", "cartographe.repos.1", "cartographe.attente.0", "cartographe.attente.1",
+      "cartographe.travail.0", "cartographe.travail.1", "cartographe.travail.2", "cartographe.travail.3",
+      "cartographe.sommeil.0", "cartographe.sommeil.1", "cartographe.parle.0", "cartographe.joie.0"]
+    }
+   },
+   "anims": {
+    "coursier.marche.bas": {
+     "frames": ["coursier.marche.bas.0", "coursier.marche.bas.1", "coursier.marche.bas.2", "coursier.marche.bas.1"],
+     "ms": 140
+    },
+    "coursier.debout.bas": {"frames": ["coursier.marche.bas.1"], "ms": 1000},
+    "coursier.marche.haut": {
+     "frames": ["coursier.marche.haut.0", "coursier.marche.haut.1", "coursier.marche.haut.2", "coursier.marche.haut.1"],
+     "ms": 140
+    },
+    "coursier.debout.haut": {"frames": ["coursier.marche.haut.1"], "ms": 1000},
+    "coursier.marche.gauche": {
+     "frames": ["coursier.marche.gauche.0", "coursier.marche.gauche.1", "coursier.marche.gauche.2",
+      "coursier.marche.gauche.1"],
+     "ms": 140
+    },
+    "coursier.debout.gauche": {"frames": ["coursier.marche.gauche.1"], "ms": 1000},
+    "coursier.marche.droite": {
+     "frames": ["coursier.marche.droite.0", "coursier.marche.droite.1", "coursier.marche.droite.2",
+      "coursier.marche.droite.1"],
+     "ms": 140
+    },
+    "coursier.debout.droite": {"frames": ["coursier.marche.droite.1"], "ms": 1000},
+    "coursier.parle": {"frames": ["coursier.parle.0", "coursier.marche.bas.1"], "ms": 260},
+    "scribe.repos": {"frames": ["scribe.repos.0", "scribe.repos.0", "scribe.repos.0", "scribe.repos.1"], "ms": 450},
+    "scribe.travail": {"frames": ["scribe.travail.0", "scribe.travail.1", "scribe.travail.2", "scribe.travail.3"], "ms": 180},
+    "scribe.attente": {"frames": ["scribe.attente.0", "scribe.attente.1"], "ms": 400},
+    "scribe.sommeil": {"frames": ["scribe.sommeil.0", "scribe.sommeil.1"], "ms": 900},
+    "scribe.parle": {"frames": ["scribe.parle.0", "scribe.repos.0"], "ms": 260},
+    "scribe.joie": {"frames": ["scribe.joie.0", "scribe.repos.0"], "ms": 300},
+    "bricoleur.repos": {
+     "frames": ["bricoleur.repos.0", "bricoleur.repos.0", "bricoleur.repos.0", "bricoleur.repos.1"],
+     "ms": 450
+    },
+    "bricoleur.travail": {
+     "frames": ["bricoleur.travail.0", "bricoleur.travail.1", "bricoleur.travail.2", "bricoleur.travail.3"],
+     "ms": 180
+    },
+    "bricoleur.attente": {"frames": ["bricoleur.attente.0", "bricoleur.attente.1"], "ms": 400},
+    "bricoleur.sommeil": {"frames": ["bricoleur.sommeil.0", "bricoleur.sommeil.1"], "ms": 900},
+    "bricoleur.parle": {"frames": ["bricoleur.parle.0", "bricoleur.repos.0"], "ms": 260},
+    "bricoleur.joie": {"frames": ["bricoleur.joie.0", "bricoleur.repos.0"], "ms": 300},
+    "cartographe.repos": {
+     "frames": ["cartographe.repos.0", "cartographe.repos.0", "cartographe.repos.0", "cartographe.repos.1"],
+     "ms": 450
+    },
+    "cartographe.travail": {
+     "frames": ["cartographe.travail.0", "cartographe.travail.1", "cartographe.travail.2", "cartographe.travail.3"],
+     "ms": 180
+    },
+    "cartographe.attente": {"frames": ["cartographe.attente.0", "cartographe.attente.1"], "ms": 400},
+    "cartographe.sommeil": {"frames": ["cartographe.sommeil.0", "cartographe.sommeil.1"], "ms": 900},
+    "cartographe.parle": {"frames": ["cartographe.parle.0", "cartographe.repos.0"], "ms": 260},
+    "cartographe.joie": {"frames": ["cartographe.joie.0", "cartographe.repos.0"], "ms": 300}
+   },
+   "objects": {}
+  },
+  "maisons": {
+   "width": 512,
+   "sources": {
+    "a": {
+     "file": "maisons-a.png",
+     "factor": 4.5,
+     "merge": 30,
+     "roof": true,
+     "align": "box",
+     "baseline": "own",
+     "names": ["maison.chaumiere", "maison.atelier", "maison.cabane"]
+    },
+    "b": {
+     "file": "maisons-b.png",
+     "factor": 4.5,
+     "merge": 30,
+     "roof": true,
+     "align": "box",
+     "baseline": "own",
+     "names": ["maison.etage", "maison.tour", "maison.boutique"]
+    }
+   },
+   "objects": {
+    "maison.chaumiere": {
+     "frame": "maison.chaumiere",
+     "footprint": {"w": 6, "h": 4},
+     "door": {"tx": 3, "ty": 3},
+     "roofKeys": ["#3C78FF", "#1E50D2", "#0F2D96"],
+     "chimney": {"x": 22, "y": 2},
+     "windows": [
+      {"x": 18, "y": 48, "w": 11, "h": 11},
+      {"x": 65, "y": 48, "w": 11, "h": 11},
+      {"x": 44, "y": 51, "w": 8, "h": 7}
+     ]
+    },
+    "maison.atelier": {
+     "frame": "maison.atelier",
+     "footprint": {"w": 7, "h": 4},
+     "door": {"tx": 2, "ty": 3},
+     "roofKeys": ["#3C78FF", "#1E50D2", "#0F2D96"],
+     "chimney": {"x": 43, "y": 2},
+     "windows": [{"x": 80, "y": 67, "w": 12, "h": 11}]
+    },
+    "maison.cabane": {
+     "frame": "maison.cabane",
+     "footprint": {"w": 5, "h": 4},
+     "door": {"tx": 2, "ty": 3},
+     "roofKeys": ["#3C78FF", "#1E50D2", "#0F2D96"],
+     "chimney": {"x": 54, "y": 2},
+     "windows": [{"x": 29, "y": 31, "w": 14, "h": 13}, {"x": 15, "y": 57, "w": 4, "h": 9}]
+    },
+    "maison.etage": {
+     "frame": "maison.etage",
+     "footprint": {"w": 7, "h": 5},
+     "door": {"tx": 3, "ty": 4},
+     "roofKeys": ["#3C78FF", "#1E50D2", "#0F2D96"],
+     "chimney": {"x": 25, "y": 3},
+     "windows": [
+      {"x": 23, "y": 53, "w": 15, "h": 15},
+      {"x": 74, "y": 53, "w": 11, "h": 13},
+      {"x": 49, "y": 55, "w": 12, "h": 7},
+      {"x": 23, "y": 94, "w": 12, "h": 14},
+      {"x": 74, "y": 94, "w": 12, "h": 14},
+      {"x": 52, "y": 93, "w": 6, "h": 4}
+     ]
+    },
+    "maison.tour": {
+     "frame": "maison.tour",
+     "footprint": {"w": 5, "h": 4},
+     "door": {"tx": 2, "ty": 3},
+     "roofKeys": ["#3C78FF", "#1E50D2", "#0F2D96"],
+     "chimney": {"x": 57, "y": 9},
+     "windows": [{"x": 20, "y": 62, "w": 9, "h": 12}, {"x": 45, "y": 75, "w": 8, "h": 11}]
+    },
+    "maison.boutique": {
+     "frame": "maison.boutique",
+     "footprint": {"w": 7, "h": 4},
+     "door": {"tx": 5, "ty": 3},
+     "roofKeys": ["#3C78FF", "#1E50D2", "#0F2D96"],
+     "chimney": {"x": 81, "y": 3},
+     "windows": [{"x": 76, "y": 66, "w": 10, "h": 9}, {"x": 17, "y": 63, "w": 45, "h": 20}]
+    }
+   }
+  },
+  "decor": {
+   "width": 512,
+   "sources": {
+    "nature": {
+     "file": "nature.png",
+     "factor": 6.5,
+     "merge": 12,
+     "align": "box",
+     "baseline": "own",
+     "names": ["arbre.chene", "arbre.sapin", "arbre.cerisier", "arbre.jeune", "buisson.vert", "buisson.fleuri",
+      "herbe.haute", "souche", "rondin", "fleurs.jaunes", "fleurs.blanches", "fleurs.roses", "rocher.gros",
+      "rocher.petit", "rocher.mousse"]
+    },
+    "village": {
+     "file": "village.png",
+     "factor": 6.4,
+     "merge": 12,
+     "align": "box",
+     "baseline": "own",
+     "names": ["fontaine", "puits", "pont.horizontal", "pont.vertical", "banc.face", "banc.cote", "lanterne.haute",
+      "lanterne.basse", "panneau.simple", "panneau.fleches", "tonneau", "caisse", "jardiniere", "bois",
+      "brouette", "planches"]
+    },
+    "chantier": {
+     "file": "chantier.png",
+     "factor": 4.1,
+     "merge": 20,
+     "satellite": 40,
+     "roof": ["chantier.3"],
+     "align": "box",
+     "baseline": "own",
+     "names": ["chantier.0", "chantier.1", "chantier.2", "chantier.3"]
+    },
+    "clotures": {
+     "native": "clotures.png",
+     "grid": [16, 24],
+     "names": ["cloture.poteau", "cloture.n", "cloture.e", "cloture.ne", "cloture.s", "cloture.ns", "cloture.es",
+      "cloture.nes", "cloture.o", "cloture.no", "cloture.eo", "cloture.neo", "cloture.so", "cloture.nso",
+      "cloture.eso", "cloture.neso"]
+    }
+   },
+   "objects": {
+    "arbre.chene": {"frame": "arbre.chene", "footprint": {"w": 1, "h": 1}},
+    "arbre.cerisier": {"frame": "arbre.cerisier", "footprint": {"w": 1, "h": 1}},
+    "arbre.sapin": {"frame": "arbre.sapin", "footprint": {"w": 1, "h": 1}},
+    "arbre.jeune": {"frame": "arbre.jeune", "footprint": {"w": 1, "h": 1}},
+    "buisson.vert": {"frame": "buisson.vert", "footprint": {"w": 2, "h": 1}},
+    "buisson.fleuri": {"frame": "buisson.fleuri", "footprint": {"w": 2, "h": 1}},
+    "souche": {"frame": "souche", "footprint": {"w": 2, "h": 1}},
+    "rondin": {"frame": "rondin", "footprint": {"w": 2, "h": 1}},
+    "rocher.gros": {"frame": "rocher.gros", "footprint": {"w": 2, "h": 1}},
+    "rocher.mousse": {"frame": "rocher.mousse", "footprint": {"w": 1, "h": 1}},
+    "rocher.petit": {"frame": "rocher.petit", "footprint": {"w": 1, "h": 1}},
+    "fontaine": {"frame": "fontaine", "footprint": {"w": 3, "h": 3}},
+    "puits": {"frame": "puits", "footprint": {"w": 2, "h": 2}},
+    "banc.face": {"frame": "banc.face", "footprint": {"w": 2, "h": 1}},
+    "banc.cote": {"frame": "banc.cote", "footprint": {"w": 1, "h": 2}},
+    "lanterne.haute": {"frame": "lanterne.haute", "footprint": {"w": 1, "h": 1}},
+    "lanterne.basse": {"frame": "lanterne.basse", "footprint": {"w": 1, "h": 1}},
+    "panneau.simple": {"frame": "panneau.simple", "footprint": {"w": 2, "h": 1}},
+    "panneau.fleches": {"frame": "panneau.fleches", "footprint": {"w": 1, "h": 1}},
+    "tonneau": {"frame": "tonneau", "footprint": {"w": 1, "h": 1}},
+    "caisse": {"frame": "caisse", "footprint": {"w": 1, "h": 1}},
+    "jardiniere": {"frame": "jardiniere", "footprint": {"w": 2, "h": 1}},
+    "bois": {"frame": "bois", "footprint": {"w": 2, "h": 1}},
+    "brouette": {"frame": "brouette", "footprint": {"w": 2, "h": 1}},
+    "planches": {"frame": "planches", "footprint": {"w": 2, "h": 1}},
+    "pont.horizontal": {"frame": "pont.horizontal", "footprint": {"w": 3, "h": 2}},
+    "pont.vertical": {"frame": "pont.vertical", "footprint": {"w": 2, "h": 3}},
+    "chantier.0": {"frame": "chantier.0", "footprint": {"w": 6, "h": 4}, "door": {"tx": 3, "ty": 3}},
+    "chantier.1": {"frame": "chantier.1", "footprint": {"w": 6, "h": 4}, "door": {"tx": 3, "ty": 3}},
+    "chantier.2": {"frame": "chantier.2", "footprint": {"w": 6, "h": 4}, "door": {"tx": 3, "ty": 3}},
+    "chantier.3": {
+     "frame": "chantier.3",
+     "footprint": {"w": 6, "h": 4},
+     "door": {"tx": 3, "ty": 3},
+     "roofKeys": ["#3C78FF", "#1E50D2", "#0F2D96"]
+    },
+    "cloture.poteau": {"frame": "cloture.poteau", "footprint": {"w": 1, "h": 1}},
+    "cloture.n": {"frame": "cloture.n", "footprint": {"w": 1, "h": 1}},
+    "cloture.e": {"frame": "cloture.e", "footprint": {"w": 1, "h": 1}},
+    "cloture.ne": {"frame": "cloture.ne", "footprint": {"w": 1, "h": 1}},
+    "cloture.s": {"frame": "cloture.s", "footprint": {"w": 1, "h": 1}},
+    "cloture.ns": {"frame": "cloture.ns", "footprint": {"w": 1, "h": 1}},
+    "cloture.es": {"frame": "cloture.es", "footprint": {"w": 1, "h": 1}},
+    "cloture.nes": {"frame": "cloture.nes", "footprint": {"w": 1, "h": 1}},
+    "cloture.o": {"frame": "cloture.o", "footprint": {"w": 1, "h": 1}},
+    "cloture.no": {"frame": "cloture.no", "footprint": {"w": 1, "h": 1}},
+    "cloture.eo": {"frame": "cloture.eo", "footprint": {"w": 1, "h": 1}},
+    "cloture.neo": {"frame": "cloture.neo", "footprint": {"w": 1, "h": 1}},
+    "cloture.so": {"frame": "cloture.so", "footprint": {"w": 1, "h": 1}},
+    "cloture.nso": {"frame": "cloture.nso", "footprint": {"w": 1, "h": 1}},
+    "cloture.eso": {"frame": "cloture.eso", "footprint": {"w": 1, "h": 1}},
+    "cloture.neso": {"frame": "cloture.neso", "footprint": {"w": 1, "h": 1}},
+    "decor.arbre.0": {"frame": "arbre.chene", "footprint": {"w": 1, "h": 1}},
+    "decor.arbre.1": {"frame": "arbre.sapin", "footprint": {"w": 1, "h": 1}},
+    "decor.arbre.2": {"frame": "arbre.cerisier", "footprint": {"w": 1, "h": 1}},
+    "decor.buisson": {"frame": "buisson.vert", "footprint": {"w": 1, "h": 1}},
+    "decor.fleurs.0": {"frame": "fleurs.jaunes", "footprint": {"w": 1, "h": 1}},
+    "decor.fleurs.1": {"frame": "fleurs.roses", "footprint": {"w": 1, "h": 1}},
+    "decor.rocher": {"frame": "rocher.mousse", "footprint": {"w": 1, "h": 1}},
+    "decor.cloture": {"frame": "cloture.eo", "footprint": {"w": 1, "h": 1}},
+    "decor.fontaine": {"frame": "fontaine", "footprint": {"w": 3, "h": 3}},
+    "decor.banc": {"frame": "banc.face", "footprint": {"w": 1, "h": 1}},
+    "decor.lanterne": {"frame": "lanterne.haute", "footprint": {"w": 1, "h": 1}},
+    "decor.panneau": {"frame": "panneau.simple", "footprint": {"w": 1, "h": 1}}
+   }
+  },
+  "icones": {
+   "width": 256,
+   "sources": {
+    "ui": {
+     "file": "icones.png",
+     "factor": 6,
+     "merge": 10,
+     "align": "box",
+     "baseline": "own",
+     "names": ["ui.lettre", "ui.parchemin", "ui.rouleau", "ui.cloche", "ui.oiseau.0", "ui.oiseau.1", "ui.fumee.0",
+      "ui.fumee.1", "ui.fumee.2", "ui.etincelle.0", "ui.etincelle.1", "ui.coeur", "ui.micro", "ui.plume",
+      "ui.engrenage", "ui.sablier", "ui.cle", "ui.carte"]
+    },
+    "monde": {
+     "file": "icones.png",
+     "factor": 11,
+     "merge": 10,
+     "align": "box",
+     "baseline": "own",
+     "names": ["lettre", "parchemin", "rouleau", "cloche", "oiseau.0", "oiseau.1", "fumee.0", "fumee.1", "fumee.2",
+      "etincelle.0", "etincelle.1", "coeur", null, null, null, null, null, null]
+    },
+    "glyphes": {
+     "native": "glyphes.png",
+     "grid": [16, 16],
+     "trim": true,
+     "names": ["bulle.attente", "bulle.travail.0", "bulle.travail.1", "bulle.travail.2", "sommeil.0", "sommeil.1",
+      "curseur", "fleche.bas", "touche.a", "touche.b", "touche.x", "touche.y", "touche.l1", "touche.r1",
+      "touche.l2", "touche.r2"]
+    }
+   },
+   "anims": {
+    "oiseau.vol": {"frames": ["oiseau.0", "oiseau.1"], "ms": 160},
+    "ui.oiseau.vol": {"frames": ["ui.oiseau.0", "ui.oiseau.1"], "ms": 160},
+    "fumee": {"frames": ["fumee.0", "fumee.1", "fumee.2"], "ms": 400},
+    "etincelle": {"frames": ["etincelle.0", "etincelle.1"], "ms": 250},
+    "bulle.travail": {"frames": ["bulle.travail.0", "bulle.travail.1", "bulle.travail.2"], "ms": 300},
+    "sommeil": {"frames": ["sommeil.0", "sommeil.1"], "ms": 700}
+   }
+  },
+  "fonds": {
+   "width": 964,
+   "sources": {
+    "titre": {"native": "fonds/titre.png", "anchor": [0, 0], "names": ["fond.titre"]},
+    "interieur-scribe": {"native": "fonds/interieur-scribe.png", "anchor": [0, 0], "names": ["fond.interieur.scribe"]},
+    "interieur-bricoleur": {"native": "fonds/interieur-bricoleur.png", "anchor": [0, 0], "names": ["fond.interieur.bricoleur"]},
+    "interieur-cartographe": {"native": "fonds/interieur-cartographe.png", "anchor": [0, 0], "names": ["fond.interieur.cartographe"]},
+    "tour": {"native": "fonds/tour.png", "anchor": [0, 0], "names": ["fond.tour"]}
+   },
+   "extra": {
+    "scenes": {
+     "fond.interieur.scribe": {
+      "piece": {"x": 86, "y": 33, "w": 307, "h": 204},
+      "sol": {"x": 94, "y": 93, "w": 292, "h": 128},
+      "habitant": {"x": 236, "y": 178},
+      "entree": {"x": 238, "y": 218}
+     },
+     "fond.interieur.bricoleur": {
+      "piece": {"x": 86, "y": 33, "w": 307, "h": 204},
+      "sol": {"x": 96, "y": 109, "w": 286, "h": 98},
+      "habitant": {"x": 236, "y": 156},
+      "entree": {"x": 236, "y": 205}
+     },
+     "fond.interieur.cartographe": {
+      "piece": {"x": 86, "y": 33, "w": 307, "h": 204},
+      "sol": {"x": 104, "y": 111, "w": 272, "h": 94},
+      "habitant": {"x": 240, "y": 160},
+      "entree": {"x": 240, "y": 222}
+     },
+     "fond.tour": {
+      "piece": {"x": 86, "y": 33, "w": 307, "h": 204},
+      "sol": {"x": 114, "y": 123, "w": 252, "h": 94},
+      "habitant": {"x": 236, "y": 176},
+      "entree": {"x": 239, "y": 226}
+     }
+    }
+   }
+  }
+ }
+}

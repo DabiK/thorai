@@ -36,7 +36,7 @@ L'univers, les personnages, les tuiles et l'interface sont originaux. On reprend
 | Agrandissement | × 4 sur les deux écrans, au plus proche voisin |
 | Écran du haut | 480 × 270 px natifs, soit 1920 × 1080 |
 | Écran du bas | 310 × 270 px natifs, soit 1240 × 1080 |
-| Personnages | environ 48 × 77 px natifs ; dans le décor, environ 24 px de haut |
+| Personnages | 30 px de haut, partout : dans le hameau, les intérieurs et la tour (atlas `personnages`). Les grands portraits de `assets/aube/` (environ 48 × 77 px) ne servent qu'aux maquettes |
 | Icônes d'interface | × 2, la seule exception à l'échelle × 4 |
 | Contour | vert profond `#1F583A` ou `#222F36`, jamais noir |
 | Lumière | soleil en haut à gauche, trois tons par matière |
@@ -157,15 +157,57 @@ L'habitant d'une maison est l'agent de la session : le scribe pour Claude, le br
 
 Les images retenues sont dans `assets/aube/`.
 
+## Atlas du jeu (ticket 42)
+
+Les atlas de la vue jeu sont dans `android/game/ui/src/main/assets/game/`. `GameAssetLoader` les lit (ADR 21). Planche d'aperçu : `assets/planches/atlas-apercu.png`.
+
+| Fichier | Contenu |
+| --- | --- |
+| `personnages` | Coursier : 4 directions × 3 images de marche, plus parler. Scribe, bricoleur, cartographe : repos (2), travail (4), attente avec le parchemin (2), sommeil (2), parler (1), joie (1). 49 images, 27 animations |
+| `maisons` | 6 modèles d'une même famille : `maison.chaumiere`, `.atelier`, `.cabane`, `.etage`, `.tour`, `.boutique` |
+| `decor` | 4 arbres, buissons, herbe haute, souche, rondin, 3 massifs de fleurs, 3 rochers, fontaine, puits, 2 ponts, 2 bancs, 2 lanternes, 2 panneaux, tonneau, caisse, jardinière, bois, brouette, planches, clôture en 16 morceaux, chantier en 4 étapes |
+| `icones` | Icônes d'interface `ui.*` (à afficher × 2) : lettre, parchemin, rouleau, cloche, oiseau (2), fumée (3), étincelle (2), cœur, micro, plume, engrenage, sablier, clé, carte. En petit, à l'échelle du monde : lettre, parchemin, rouleau, cloche, oiseau, fumée, étincelle, cœur. Glyphes : bulles d'attente et de travail, sommeil, curseur, flèche, touches A, B, X, Y, L1, R1, L2, R2 |
+| `fonds` | `fond.titre`, `fond.interieur.scribe`, `.bricoleur`, `.cartographe`, `fond.tour` : 480 × 270, ancrés en haut à gauche |
+| `palette.json` | les 32 couleurs, les 16 rôles du sol (`grass`, `path`, `plaza`, `water`, `bridge` × `light`, `base`, `dark`, plus `outline`) et les couleurs clés des toits |
+
+Conventions, en pixels natifs (le rendu agrandit × 4) :
+- **Ancrage** (`ax`, `ay`) : les pieds d'un personnage. Pour un objet, le milieu de la rangée du bas de son empreinte, là où `PixelWorld` le pose.
+- **Échelle** : tous les personnages font 30 px de haut, une porte de maison environ 28 px. Les intérieurs sont réduits à la même échelle : la pièce (307 × 204) est centrée sur un fond sombre `#203648`. La tour garde son fond sarcelle `#1B5F53`.
+- **Marche** : `.0` pas A, `.1` debout, `.2` pas B ; l'animation enchaîne 0, 1, 2, 1. `coursier.debout.<direction>` montre l'image debout.
+- **Maisons** : empreinte de 7 × 5 tuiles au plus, porte sur la dernière rangée (règle du moteur). Les toits sont peints avec trois couleurs clés, du clair au sombre : `#3C78FF`, `#1E50D2`, `#0F2D96`. Elles sont hors de la palette et loin du magenta. `chimney` (sortie de la fumée) et `windows` (rectangles à éclairer) sont comptés depuis le coin haut gauche de l'image de la maison. Le chargeur ne les lit pas encore.
+- **Décor** : l'empreinte est la partie qui bloque. Les fleurs et l'herbe ne sont pas des objets : on les traverse. Les ponts se traversent aussi. Une clôture est nommée par ses voisines (`n`, `e`, `s`, `o`) : `cloture.eo` est un morceau droit horizontal, `cloture.ns` vertical, `cloture.es` un coin. Sa tuile est le bas de l'image de 16 × 24. Les clés de `DecorCatalog.DEFAULT` (`decor.arbre.0`, `decor.fontaine` en 3 × 3…) sont des alias vers ces images.
+- **Fonds** : `fonds.json` ajoute `scenes`, que le chargeur ignore : `piece` (la pièce), `sol` (le plancher praticable, approché), `habitant` (les pieds de l'agent, sur son tapis) et `entree` (les pieds du coursier à la porte).
+
+Écart assumé aux maquettes 04 à 08 : l'intérieur y est vu de plus près, avec des personnages de 60 px. Les atlas gardent une seule taille de pixel et de personnage, du hameau à la tour.
+
+Fabrication :
+1. `PX=<taille d'un bloc> outils/gen.sh`, avec le style `consignes/aube-sprites.txt` et les scènes `consignes/jeu-*.txt`. Le hameau est l'image de référence. Les personnages sont demandés sur une grille de 4 × 4 : le générateur les dessine alors à environ 30 px natifs, et la réduction ne brouille pas les visages.
+2. `outils/dessins_code.py <brut>` dessine au pixel près ce qui doit se raccorder : clôtures, bulles, sommeil, curseur, touches.
+3. `outils/fonds.py` réduit les intérieurs (facteur 5) et compose les fonds.
+4. `outils/pack_atlas.py build outils/atlas-recette.json <brut> android/game/ui/src/main/assets/game` découpe les planches sur fond magenta. Chaque pixel prend la couleur de la palette la plus fréquente sous lui, le centre comptant davantage. Les images d'une animation sont alignées sur les pieds, les toits passent en couleurs clés, puis les atlas sont empaquetés.
+5. `outils/verifier_assets.py` contrôle le contrat lu par `GameAssetLoader` et les règles du moteur. `outils/apercu_atlas.py` refait la planche.
+
+Les images brutes ne sont pas versionnées. La recette (`outils/atlas-recette.json`) donne, pour chaque planche, le facteur, l'ordre des sprites et les objets.
+
+Défauts connus :
+- La réduction laisse un peu de bruit dans les cheveux blonds du bricoleur. Les lunettes du scribe sont à peine lisibles à 30 px.
+- La marche du coursier n'a pas de rebond. Les profils gauche et droit sont dessinés séparément, pas en miroir, d'où de légères différences.
+- Les petites icônes à l'échelle du monde (oiseau, rouleau) sont lisibles mais un peu molles.
+- La cabane de la cartographe a un plancher qui va jusqu'au bord de l'image, sans mur extérieur.
+- L'écran titre reprend `assets/aube/titre.png`. C'est une illustration, à une échelle plus grande que le jeu.
+- Les ponts ne font pas un nombre entier de tuiles (55 × 34 et 28 × 54).
+
 ## Sources et licences
 
 | Élément | Source | Licence |
 | --- | --- | --- |
 | Décors, personnages, accessoires (`assets/aube/`) | générés pour ce projet avec Codex (`image_gen`), puis retouchés par `pixelize.py` | produits par l'utilisateur ; sous réserve des conditions d'utilisation d'OpenAI |
+| Atlas et fonds du jeu (`android/game/ui/src/main/assets/game/`) | générés pour ce projet avec Codex (`image_gen`, consignes `outils/consignes/jeu-*.txt`), puis réduits sur la palette par `pack_atlas.py` et `fonds.py`. L'écran titre est `assets/aube/titre.png` | produits par l'utilisateur ; sous réserve des conditions d'utilisation d'OpenAI |
+| Clôtures, bulles, sommeil, curseur, touches | dessinés par le code pour ce projet (`outils/dessins_code.py`) | produits par l'utilisateur |
 | Jersey 10, Pixelify Sans, VT323 | Google Fonts | SIL Open Font License 1.1 |
 | Écran Android générique de la maquette 12 | dessiné en HTML pour la maquette | — |
 
-Aucun asset tiers n'est utilisé, ni Kenney, ni OpenGameArt. Les consignes de génération interdisent de reprendre des personnages, des tuiles ou une interface de jeux existants.
+Aucun asset tiers n'est utilisé, ni Kenney, ni OpenGameArt, ni aucune ressource CC0. Les consignes de génération interdisent de reprendre des personnages, des tuiles ou une interface de jeux existants.
 
 ## Explorations écartées
 
@@ -177,7 +219,6 @@ Elles restent sur le canvas.
 
 ## À faire avant l'intégration
 
-- Un vrai jeu de tuiles 16 × 16 et des sprites animés : marche dans quatre directions, travail, attente. Les images actuelles sont des scènes composées.
-- La génération des maisons à partir des sessions (couleur du toit, panneau) et le placement des rues.
+- Lire la cheminée et les fenêtres des maisons dans le chargeur, pour la fumée et les fenêtres éclairées.
 - Le mode un seul écran, quand celui du bas est éteint.
 - Un essai de lisibilité sur la Thor : taille du texte du fil, contraste des étiquettes.

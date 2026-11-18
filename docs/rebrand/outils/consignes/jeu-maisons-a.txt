@@ -1,0 +1,8 @@
+WHAT TO DRAW
+A sprite sheet of three small houses of the same family as the attached hamlet (timber frames, cream plaster walls, wooden doors, stone steps, flower boxes), each seen in the same top-down oblique RPG view as the attached image: we see the roof from above and the front wall with its door. Each house stands alone on the magenta background with nothing around it: no ground, no grass, no path, no fence, no cast shadow.
+IMPORTANT ROOF COLOUR: every roof is painted in a vivid, pure cobalt blue, shaded in exactly three flat tones (light blue on the lit top-left slopes, mid blue, dark blue in the shade under the eaves). This blue is used only on the roof tiles: nothing else on the houses is blue (windows glow warm yellow, walls are cream, wood is brown, chimneys are grey stone).
+From left to right, all on the same baseline, the front door always on the front wall at ground level, facing the viewer:
+(1) a cosy cottage, one storey, about 96 art pixels wide and 88 tall: the door in the middle, two lit windows, a grey stone chimney on the left of the roof, a flower box.
+(2) a workshop, about 112 art pixels wide and 96 tall: a large brick chimney, a wide double wooden door, a small window, a workbench and a barrel against the front wall.
+(3) a small log cabin, about 80 art pixels wide and 80 tall: walls of round logs, a steep roof, a small stone chimney, a lantern by the door, one round window.
+No people, no text, letters, numbers, signs with writing, or watermark.

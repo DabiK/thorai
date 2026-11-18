@@ -1,0 +1,6 @@
+WHAT TO DRAW
+The inside of the cartographer's cabin, seen from above in the same top-down oblique RPG view and at the same zoom and pixel scale as the attached hamlet: the furniture is small, as if the roof of one of the hamlet's cabins had been lifted, so the room looks spacious. A person would be only about 30 art pixels tall here; the doorway is about 20 art pixels wide.
+One big cosy log cabin room filling the whole image: log walls, wooden floor, a large table covered with an unrolled map and drawing tools, a globe on a stand, barrels full of rolled maps, a brass telescope at a sunny window, maps pinned on the walls, hanging lanterns, a moss-green armchair, potted ferns, a chest.
+IMPORTANT: the room is EMPTY: no people, no animals at all. In the middle of the room, just in front of the map table, a round moss-green rug with a compass rose on which nothing stands: keep this rug completely empty (the resident will be drawn there later). At the bottom centre, the doorway with a door mat, also empty.
+Keep all important content inside the central part of the image: about 8% on every side will be cropped.
+No text, letters, numbers, logos, UI, speech bubbles or watermark anywhere.
