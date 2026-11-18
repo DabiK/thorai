@@ -53,7 +53,7 @@ fun NewSessionScreen(state: NewSessionForm, bottom: Boolean, single: Boolean, on
     }
     Column(Modifier.fillMaxSize().background(Palette.background)) {
         Row(Modifier.fillMaxWidth().bottomDivider().padding(horizontal = 20.dp, vertical = 13.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            BasicText("Régie › Nouvelle session", style = sans(13.sp, 600))
+            BasicText("ThorAI › Nouvelle session", style = sans(13.sp, 600))
         }
         if (!bottom) LazyColumn(Modifier.weight(1f).padding(horizontal = 28.dp), state = list,
             contentPadding = PaddingValues(vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -91,15 +91,18 @@ fun NewSessionScreen(state: NewSessionForm, bottom: Boolean, single: Boolean, on
         }
         if (bottom || single) Column(Modifier.then(if (bottom) Modifier.weight(1f) else Modifier).fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(if (single) 8.dp else 12.dp)) {
             if (bottom) Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                BasicText("Vérifie la session", style = sans(18.sp, 600))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    BarAction("↑", "Choisir avant") { onButton(Button.UP) }
-                    BasicText(state.field.label, style = sans(13.sp, 600))
-                    BarAction("↓", "Choisir après") { onButton(Button.DOWN) }
+                // Le champ choisi d'abord, puis la croix en grille : haut/bas choisit, gauche/droite change.
+                Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    BasicText("Vérifie la session", style = sans(18.sp, 600))
+                    BasicText(state.field.label, style = sans(15.sp, color = Palette.textMuted))
                 }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    BarAction("←", "Changer") { onButton(Button.LEFT) }
-                    BarAction("→", "Changer") { onButton(Button.RIGHT) }
+                Row(Modifier.fillMaxWidth()) {
+                    Box(Modifier.weight(1f)) { BarAction("↑", "Choisir avant") { onButton(Button.UP) } }
+                    Box(Modifier.weight(1f)) { BarAction("↓", "Choisir après") { onButton(Button.DOWN) } }
+                }
+                Row(Modifier.fillMaxWidth()) {
+                    Box(Modifier.weight(1f)) { BarAction("←", "Changer") { onButton(Button.LEFT) } }
+                    Box(Modifier.weight(1f)) { BarAction("→", "Changer") { onButton(Button.RIGHT) } }
                 }
                 if (state.dictatingName) {
                     BasicText("Nom du projet · L2 pour dicter", style = sans(12.sp, color = Palette.textMuted))
@@ -119,14 +122,10 @@ fun NewSessionScreen(state: NewSessionForm, bottom: Boolean, single: Boolean, on
                 if (state.capturing) "L2 · ${(state.level * 100).toInt()} % · ${state.partial.ifBlank { "Écoute…" }}" else "Transcription…",
                 style = sans(13.sp, color = Palette.mic), maxLines = 2)
             if (state.field == NewSessionField.VALIDATION) BasicText(approvalModeHelp(state.approvalMode), style = sans(12.sp, color = Palette.textMuted), maxLines = 2)
-            if (state.feedback.isNotBlank()) BasicText(state.feedback, style = sans(12.sp, color = Palette.textMuted), maxLines = 2)
+            if (state.feedback.isNotBlank()) BasicText(state.feedback, style = sans(14.sp, color = Palette.textMuted), maxLines = 2)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Row(Modifier.weight(1f).background(if (state.canLaunch) Palette.text else Palette.textSubtle, RoundedCornerShape(12.dp))
-                    .clickable(enabled = state.canLaunch) { onButton(Button.A) }.padding(horizontal = 16.dp, vertical = if (single) 12.dp else 18.dp),
-                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    KeyChip("A")
-                    BasicText(if (state.sending) "Lancement…" else "Lancer la session", style = sans(if (single) 14.sp else 17.sp, 600, Palette.background))
-                }
+                PrimaryAction("A", if (state.sending) "Lancement…" else "Lancer la session", Modifier.weight(1f),
+                    enabled = state.canLaunch, compact = single) { onButton(Button.A) }
                 if (single) BarAction("B", "Annuler") { onButton(Button.B) }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {

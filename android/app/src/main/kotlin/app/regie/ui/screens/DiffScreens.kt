@@ -37,7 +37,7 @@ fun DiffScreen(review: DiffReview, bottom: Boolean, single: Boolean, velocity: S
         if (!bottom) {
             Row(Modifier.fillMaxWidth().height(44.dp).bottomDivider().padding(horizontal = 20.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                BasicText("Régie › ${review.project} › Modifications", style = sans(13.sp, color = Palette.textMuted))
+                BasicText("ThorAI › ${review.project} › Modifications", style = sans(13.sp, color = Palette.textMuted))
                 BasicText(review.file?.path.orEmpty(), style = mono(12.sp), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 Counts(review.file?.changes)
                 BasicText(if (review.files.isEmpty()) "0 / 0" else "${review.fileIndex + 1} / ${review.files.size}", style = mono(11.sp, color = Palette.textSubtle))
@@ -52,10 +52,12 @@ fun DiffScreen(review: DiffReview, bottom: Boolean, single: Boolean, velocity: S
             Column(if (bottom) Modifier.weight(1f).padding(16.dp) else Modifier.fillMaxWidth().topDivider().padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (review.explanation == null) {
-                    if (bottom) BasicText("${pluralStringResource(R.plurals.diff_files, review.files.size, review.files.size)} · modifications suivies", style = sans(13.sp, color = Palette.textMuted))
+                    if (bottom) BasicText("${pluralStringResource(R.plurals.diff_files, review.files.size, review.files.size)} · modifications suivies", style = sans(14.sp, color = Palette.textMuted))
                     val list = rememberLazyListState()
                     LaunchedEffect(review.fileIndex) { if (review.files.isNotEmpty()) list.scrollToItem(review.fileIndex) }
-                    if (bottom) LazyColumn(state = list, modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    // Aucun fichier : l'écran dit pourquoi au lieu de laisser un vide (docs/textes.md).
+                    if (bottom && review.files.isEmpty()) StateMessage(if (review.loading) "Chargement des modifications…" else "Aucun fichier modifié.", Modifier.weight(1f))
+                    else if (bottom) LazyColumn(state = list, modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(review.files.size) { index -> FileButton(review, index, Modifier.fillMaxWidth()) { onFile(index) } }
                     } else LazyRow(state = list, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(review.files.size) { index -> FileButton(review, index, Modifier.widthIn(min = 180.dp, max = 320.dp)) { onFile(index) } }
@@ -64,15 +66,15 @@ fun DiffScreen(review: DiffReview, bottom: Boolean, single: Boolean, velocity: S
                         if (review.selected != null) MicButton(false, { onHeld(true) }, { onHeld(false) }, size = 48.dp, halo = 3.dp)
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             BasicText(review.selected?.let { "Ligne ${it.line.number}" + (if (it.line.kind == DiffKind.REMOVED) " supprimée" else "") +
-                                (if (it.block.fileCoordinates) "" else " de l’extrait") } ?: "Aucune ligne à commenter", style = sans(13.sp))
-                            BasicText("L2 : commenter · ↑↓ : ligne · ←→ : fichier", style = sans(11.sp, color = Palette.textMuted))
+                                (if (it.block.fileCoordinates) "" else " de l’extrait") } ?: "Aucune ligne à commenter", style = sans(15.sp, 500))
+                            BasicText("L2 : commenter · ↑↓ : ligne · ←→ : fichier", style = sans(13.sp, color = Palette.textMuted))
                         }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically) {
                         BarAction("B", "Revenir") { onButton(Button.B) }
                         if (review.selected != null) BarAction("Y", "Expliquer le bloc") { onButton(Button.Y) }
                     }
-                    if (bottom) BasicText("Stick droit : défiler · L1/R1 : naviguer", style = sans(12.sp, color = Palette.textSubtle))
+                    if (bottom) BasicText("Stick droit : défiler · L1/R1 : naviguer", style = sans(13.sp, color = Palette.textSubtle))
                 } else {
                     val explanation = requireNotNull(review.explanation)
                     BasicText(explanation.label, style = mono(12.sp))

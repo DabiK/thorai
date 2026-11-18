@@ -25,3 +25,5 @@ models/
 .DS_Store
 .scratch/regie-v1/runs/
 .worktrees/
+# Captures des essais : jamais versionnées (purgées de l’historique, ticket 29).
+artifacts/screenshots/

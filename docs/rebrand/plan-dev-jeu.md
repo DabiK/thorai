@@ -94,7 +94,7 @@ Tickets dans `.scratch/regie-v1/issues/`, numéros 40 à 69. Le 40 est l'épopé
 
 | Lot | Contenu | Dépend de |
 | --- | --- | --- |
-| 41 · Socle | Modules `:game-engine` et `:game-ui`, branchement Gradle, moteur de rendu (carte et sprites, caméra, ×4), chargement des atlas et couleurs clés, kit pixel, polices, `ArchitectureTest`, ADR 21 « Vue jeu » | — |
+| 41 · Socle | Modules `:game-engine` et `:game-ui`, branchement Gradle, moteur de rendu (carte et sprites, caméra, ×4), chargement des atlas et couleurs clés, kit pixel, polices, `ArchitectureTest`, ADR 24 « Vue jeu » | — |
 | 42 · Assets | Génération Codex, outils de pixellisation et d'empaquetage des atlas, `assets/game/` selon le contrat, sources et licences dans `da-jeu.md` | contrat seul |
 | 43 · Hameau procédural | Moteur : `Overview` donne les rues (une par projet), les terrains, les maisons (une par session : modèle et toit stables), les routes reliées à la place, le décor, les collisions. Port `VillageLayoutStore`, agrandissement des rues. Tests : déterminisme, aucune superposition, chaque porte accessible, stabilité quand on ajoute ou retire une session | contrat seul |
 | 44 · Coursier et déplacements | Marche sur la grille avec collisions et animations, caméra qui suit, A pour entrer, marche automatique par A* pour les raccourcis, transition en iris, contrôleur de jeu branché sur `InputRouter` | 1, 3 |

@@ -19,7 +19,7 @@ fi
 (cd "$root/android" && REGIE_RELEASE_CONFIG="$config" ./gradlew :app:assembleRelease "-PregieVersionName=$version" "-PregieVersionCode=$code")
 output="$root/android/app/build/outputs/apk/release"
 "$signer" verify "$output/app-release.apk"
-apk="regie-$version.apk"
+apk="thorai-$version.apk"
 cp "$output/app-release.apk" "$output/$apk"
 (cd "$output" && shasum -a 256 "$apk" > "$apk.sha256")
 printf 'APK signé et SHA-256 : %s/%s\n' "$output" "$apk"
@@ -28,4 +28,4 @@ if [[ "${2:-}" == --build-only ]]; then exit 0; fi
 cd "$root"
 target=$(git rev-parse HEAD)
 gh release create "v$version" "$output/$apk" "$output/$apk.sha256" \
-  --target "$target" --title "Régie $version" --notes-file "$root/README.md"
+  --target "$target" --title "ThorAI $version" --notes-file "$root/README.md"
