@@ -42,7 +42,9 @@ else
         git -C "$demo" add README.md
         git -C "$demo" -c user.name='Regie Bench' -c user.email='bench@regie.invalid' commit --quiet -m 'chore: initialise la démonstration'
     fi
+    # The bench's own tokens only, never the Mac's ~/.config/regie/bridge-tokens (ADR 22).
     export REGIE_BRIDGE_PORT=47600 REGIE_BRIDGE_TOKEN_FILE="$REGIE_BENCH/bridge-token"
+    export REGIE_BRIDGE_TOKEN_DIR="$REGIE_BENCH/bridge-tokens"
     export REGIE_BRIDGE_STATE_DIR="$REGIE_BENCH/state" REGIE_PROJECTS_DIR="$REGIE_BENCH/projects"
     export OPENCODE_PATH="${OPENCODE_PATH:-$(command -v opencode || true)}"
     export CODEX_PATH="${CODEX_PATH:-$(command -v codex)}"
