@@ -103,10 +103,11 @@ data class SetupReview(
     val count: Int get() = SetupStep.entries.size
 
     val keys: SetupKeys get() {
-        val back = SetupAction.BACK.takeIf { step != SetupStep.WELCOME }
+        // Sur la bienvenue, B referme : on reprendra plus tard par « Configurer ».
+        val back = if (step == SetupStep.WELCOME) SetupAction.CLOSE else SetupAction.BACK
         val skip = SetupAction.SKIP.takeIf { step.optional && !done }
         return when (step) {
-            SetupStep.WELCOME -> SetupKeys(a = SetupAction.NEXT)
+            SetupStep.WELCOME -> SetupKeys(a = SetupAction.NEXT, b = back)
             SetupStep.TERMUX -> if (checks.termux || done) {
                 SetupKeys(SetupAction.NEXT, back, y = SetupAction.COPY_INSTALL_COMMANDS)
             } else {
@@ -116,7 +117,8 @@ data class SetupReview(
                 a = when {
                     done -> SetupAction.NEXT
                     !checks.runCommand -> permission(SetupPermission.RUN_COMMAND, SetupAction.GRANT_RUN_COMMAND)
-                    checks.bridge is BridgeStatus.Unreachable -> SetupAction.RETRY_BRIDGE
+                    // Un démarrage vient de partir : le relancer ne ferait rien avant 30 s (StartUp).
+                    checks.bridge is BridgeStatus.Unreachable && checks.bridge.hint != BridgeHint.RESTARTING -> SetupAction.RETRY_BRIDGE
                     else -> null
                 },
                 b = back,

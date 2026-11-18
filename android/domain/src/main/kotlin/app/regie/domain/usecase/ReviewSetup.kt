@@ -48,8 +48,9 @@ class ReviewSetup(
     fun press(action: SetupAction?) {
         val review = state.value
         if (!review.visible || action == null) return
-        // Un toucher sur un libellé périmé ne joue pas l'action d'une autre étape.
-        if (action !in listOfNotNull(review.keys.a, review.keys.b, review.keys.x, review.keys.y)) return
+        // Un toucher sur un libellé périmé ne joue pas l'action d'une autre étape. Refermer reste
+        // toujours possible, au doigt (« Reprendre plus tard »).
+        if (action != SetupAction.CLOSE && action !in listOfNotNull(review.keys.a, review.keys.b, review.keys.x, review.keys.y)) return
         when (action) {
             SetupAction.NEXT, SetupAction.SKIP -> move(1)
             SetupAction.BACK -> move(-1)

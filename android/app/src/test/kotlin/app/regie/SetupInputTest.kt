@@ -48,6 +48,9 @@ class SetupInputTest {
         container.handleInput(GamepadInput.Pressed(Button.B)); runCurrent()
         assertEquals(SetupStep.WELCOME, container.setup.state.value.step)
         assertFalse(container.agentAuthentication.value.visible)
+        // B sur la bienvenue referme : la manette n'est jamais enfermée dans le parcours.
+        container.handleInput(GamepadInput.Pressed(Button.B)); runCurrent()
+        assertFalse(container.setup.state.value.visible)
     }
 
     @Test fun `after the setup, a reconnection of the bridge does not offer the login again`() = runTest {
@@ -72,6 +75,11 @@ class SetupInputTest {
         assertEquals(SetupAction.GRANT_RUN_COMMAND, container.setup.state.value.keys.a)
         container.handleInput(GamepadInput.Pressed(Button.A)); runCurrent()
         assertEquals(listOf(SetupPermission.RUN_COMMAND), asked)
+        // Fenêtre fermée sans réponse : Android redemandera, ce n'est pas un refus définitif.
+        container.onPermissionAnswer(SetupPermission.RUN_COMMAND, granted = false, askAgain = false); runCurrent()
+        assertEquals(SetupAction.GRANT_RUN_COMMAND, container.setup.state.value.keys.a)
+        container.onPermissionAnswer(SetupPermission.RUN_COMMAND, granted = false, askAgain = true); runCurrent()
+        assertEquals(SetupAction.GRANT_RUN_COMMAND, container.setup.state.value.keys.a)
         container.onPermissionAnswer(SetupPermission.RUN_COMMAND, granted = false, askAgain = false); runCurrent()
         assertEquals(SetupAction.OPEN_APP_INFO, container.setup.state.value.keys.a)
         job.cancel()

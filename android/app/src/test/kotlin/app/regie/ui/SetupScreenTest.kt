@@ -40,7 +40,7 @@ class SetupScreenTest {
         compose.onNodeWithText("Revenir").performClick()
         compose.onNodeWithText("Ouvrir les infos de l’appli").performClick()
         assertEquals(listOf<SetupAction?>(SetupAction.OPEN_ACCESSIBILITY, SetupAction.SKIP, SetupAction.BACK, SetupAction.OPEN_APP_INFO), pressed)
-        compose.onNodeWithTag("setup-later").performClick()
+        compose.onNodeWithText("Reprendre plus tard").performClick()
         assertEquals(SetupAction.CLOSE, pressed.last())
     }
 

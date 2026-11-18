@@ -49,7 +49,7 @@ Ce parcours remplace les étapes 1 à 5 ci-dessous. Il ne demande aucun ordinate
    ```
 
    `port` vient de la boîte de dialogue d'association, pas de la page principale. Le script doit annoncer `THOR_ANDROID=ok`. Ni le code ni une clé ne se saisissent dans ThorAI.
-6. Retirer Termux de l'optimisation de batterie. Suivre les étapes 7 (microphone et Accessibilité), 8 (comptes) et 9 (première session) ci-dessous. Si le pont a démarré avant l'association, quitter puis rouvrir ThorAI.
+6. Retirer Termux de l'optimisation de batterie. Suivre les étapes 7 (microphone et Accessibilité), 8 (comptes) et 9 (première session) ci-dessous. Si le pont a démarré avant l'association, le parcours relie les agents à Android dès que l'étape passe au vert ; sinon, quitter puis rouvrir ThorAI.
 
 **Mise à jour locale** : quitter ThorAI, faire `git pull` dans le dépôt Termux, puis `bash thor/install-on-device.sh`, installer l'APK signé par la même clé et rouvrir ThorAI. Une nouvelle association n'est pas nécessaire.
 

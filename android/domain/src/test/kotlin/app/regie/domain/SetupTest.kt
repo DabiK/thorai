@@ -55,7 +55,7 @@ class SetupTest {
     @Test fun `A continues on a step already in place, B goes back, the welcome has no back`() {
         setup.update(everything)
         setup.offerOnLaunch()
-        assertNull(setup.state.value.keys.b)
+        assertEquals(SetupAction.CLOSE, setup.state.value.keys.b)
         setup.press(setup.state.value.keys.a)
         assertEquals(SetupStep.TERMUX, setup.state.value.step)
         assertEquals(SetupAction.NEXT, setup.state.value.keys.a)
@@ -92,6 +92,8 @@ class SetupTest {
         assertNull(setup.state.value.keys.a)
         setup.update(SetupChecks(termux = true, runCommand = true, bridge = BridgeStatus.Unreachable(BridgeHint.TERMUX_MISSING)))
         assertEquals(SetupAction.RETRY_BRIDGE, setup.state.value.keys.a)
+        setup.update(SetupChecks(termux = true, runCommand = true, bridge = BridgeStatus.Unreachable(BridgeHint.RESTARTING)))
+        assertNull(setup.state.value.keys.a, "un démarrage vient de partir : rien à relancer")
         setup.update(SetupChecks(termux = true, runCommand = true, bridge = BridgeStatus.Connected))
         assertTrue(setup.state.value.done)
         assertEquals(SetupAction.NEXT, setup.state.value.keys.a)
@@ -148,6 +150,15 @@ class SetupTest {
         assertEquals(SetupAction.SKIP, notifications.keys.x)
         val bridge = app.regie.domain.model.SetupReview(true, SetupStep.BRIDGE, everything.copy(runCommand = false, bridge = BridgeStatus.Connecting, refused = setOf(SetupPermission.RUN_COMMAND)))
         assertNull(bridge.keys.x)
+    }
+
+    @Test fun `closing stays possible from any step, even without a key for it`() {
+        setup.update(SetupChecks(termux = true))
+        setup.offerOnLaunch(); setup.press(SetupAction.NEXT); setup.press(SetupAction.NEXT)
+        assertEquals(SetupStep.BRIDGE, setup.state.value.step)
+        setup.press(SetupAction.CLOSE)
+        assertFalse(setup.state.value.visible)
+        assertTrue(memory.finished)
     }
 
     @Test fun `opening at a given step shows it, whatever is done`() {

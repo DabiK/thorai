@@ -35,7 +35,14 @@ laissait des avis permanents (mode console, accès des agents à Android) sur l'
   Le téléchargement continue si l'on avance.
 - **Passer** : les étapes facultatives (X). Une étape requise ne se passe que si Android l'a
   refusée pour de bon (micro, notifications) ou si le téléchargement échoue ; jamais le pont.
-  « Plus tard », au doigt, referme le parcours.
+  « Reprendre plus tard », au doigt sur chaque étape, et B sur la bienvenue referment le
+  parcours : la manette n'y est jamais enfermée.
+- **Refus définitif** : Android ne dit pas si sa fenêtre a été fermée ou refusée. Un « non »
+  sans possibilité de redemander ne compte comme définitif qu'après un premier refus.
+- **Association vue pendant que le pont tourne** : à l'apparition de `WRITE_SECURE_SETTINGS`,
+  l'app rappelle `regie-bridge-start`, qui relie les agents à Android à chaque appel.
+- **Mode console** : pendant le parcours, le service ne prend aucune touche aux autres applis
+  (Termux, réglages), et L2 n'y dicte rien.
 - **Une seule ouverture automatique** : au premier lancement, sur la bienvenue. Mené au bout ou
   refermé, il ne revient plus seul (`SetupMemory`, préférences privées). **Configurer**, sur
   l'accueil, le rouvre à la première étape non faite. Un point ambre à côté signale une étape

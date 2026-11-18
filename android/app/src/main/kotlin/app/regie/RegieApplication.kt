@@ -200,6 +200,7 @@ class AppContainer(
     private var setupJob: Job? = null
     private var setupAgents: List<AgentAuthentication>? = null
     private val refusedPermissions = mutableSetOf<SetupPermission>()
+    private val deniedOnce = mutableSetOf<SetupPermission>()
     private var voiceDownload: VoiceModel? = null
     private var voiceDownloadJob: Job? = null
 
@@ -240,12 +241,18 @@ class AppContainer(
         if (setupJob?.isActive == true) return
         setupJob = scope.launch {
             var tick = 0
+            var androidAccess = androidSetup.androidAccess()
             while (setup.state.value.visible) {
                 val chosen = gateway
                 if (tick % 3 == 0 && chosen != null && chosen.connection.value == BridgeConnection.Connected) {
                     setupAgents = try { chosen.authentication() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { setupAgents }
                 }
-                setup.update(readSetup())
+                val checks = readSetup()
+                // Association faite pendant que le pont tourne : regie-bridge-start relie les agents
+                // à Android à chaque appel, même pont déjà démarré (thor/bridge/start.sh).
+                if (checks.androidAccess && !androidAccess) Log.i(TAG, "accès Android : association vue, liaison ${consoleBridge.start()}")
+                androidAccess = checks.androidAccess
+                setup.update(checks)
                 tick++
                 delay(SETUP_POLL)
             }
@@ -299,9 +306,17 @@ class AppContainer(
     /** Les permissions se demandent depuis l'écran tactile, le bas s'il est affiché. */
     fun asksPermissions(bottom: Boolean): Boolean = bottom == (bottomStarted.value && displays.mode.value is ScreenMode.Dual)
 
-    /** Réponse à une demande : refusée sans retour possible, seule la page des infos de l'appli l'accorde. */
+    /**
+     * Réponse à une demande. Refusée sans retour possible, seule la page des infos de l'appli l'accorde.
+     * Un premier « non » laisse Android redemander ([askAgain]) ; une fenêtre fermée sans réponse ne
+     * ressemble à un refus définitif qu'après un premier refus : on ne la confond pas avec lui.
+     */
     fun onPermissionAnswer(permission: SetupPermission, granted: Boolean, askAgain: Boolean) {
-        if (!granted && !askAgain) refusedPermissions += permission
+        when {
+            granted -> deniedOnce -= permission
+            askAgain -> deniedOnce += permission
+            permission in deniedOnce -> refusedPermissions += permission
+        }
         Log.i(TAG, "permission $permission : ${if (granted) "accordée" else "refusée"}")
         if (granted && permission == SetupPermission.RUN_COMMAND) runStartUp()
         setup.update(readSetup())
@@ -668,6 +683,8 @@ class AppContainer(
     private fun consoleCaptured(): Set<Button> {
         val card = floatingCard.value?.takeIf { it.key == cardKeysFor.value }
         return when {
+            // Parcours d'accueil ouvert : rien n'est pris à l'appli où l'on fait le geste (Termux, réglages).
+            setup.state.value.visible -> emptySet()
             dictation.state.value.visible -> DICTATION_KEYS
             voiceCommand.state.value.visible -> setOf(Button.A, Button.B, Button.UP, Button.DOWN)
             // Opened by R2 « lance … » over another app: A launches, B cancels, the cross edits.

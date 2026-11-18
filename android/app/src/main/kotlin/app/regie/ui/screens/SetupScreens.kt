@@ -106,7 +106,7 @@ private fun SetupControls(review: SetupReview, onAction: (SetupAction?) -> Unit)
                 BasicText(stepTitle(review.step), style = sans(21.sp, 650), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             // Refermer sans tout faire : « Configurer », sur l'accueil, reprend où on en est.
-            if (review.step != SetupStep.FINISH) BasicText("Plus tard", style = sans(14.sp, color = Palette.textMuted),
+            if (review.keys.b != SetupAction.CLOSE && review.keys.y != SetupAction.CLOSE) BasicText("Reprendre plus tard", style = sans(14.sp, color = Palette.textMuted),
                 modifier = Modifier.tappable { onAction(SetupAction.CLOSE) }.padding(vertical = 8.dp, horizontal = 4.dp).testTag("setup-later"))
         }
         StepProgress(review, Modifier.padding(horizontal = 20.dp))
@@ -122,7 +122,11 @@ private fun SetupControls(review: SetupReview, onAction: (SetupAction?) -> Unit)
 @Composable
 private fun SingleSetup(review: SetupReview, appId: String, onAction: (SetupAction?) -> Unit) {
     Column(Modifier.fillMaxSize()) {
-        StepProgress(review, Modifier.padding(start = 24.dp, end = 24.dp, top = 12.dp))
+        Row(Modifier.fillMaxWidth().padding(start = 24.dp, end = 16.dp, top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            StepProgress(review, Modifier.weight(1f))
+            if (review.keys.b != SetupAction.CLOSE && review.keys.y != SetupAction.CLOSE) BasicText("Reprendre plus tard", style = sans(13.sp, color = Palette.textMuted),
+                modifier = Modifier.tappable { onAction(SetupAction.CLOSE) }.padding(start = 16.dp, top = 6.dp, bottom = 6.dp))
+        }
         Row(Modifier.weight(1f).fillMaxWidth()) {
             Column(Modifier.weight(1.3f).fillMaxHeight().verticalScroll(rememberScrollState()).padding(start = 24.dp, end = 16.dp, top = 14.dp, bottom = 12.dp)) {
                 StepExplanation(review.step, review.optionalLabel(review.step), appId, large = false)
@@ -361,7 +365,7 @@ private fun permissionText(checks: SetupChecks, permission: SetupPermission, gra
 /** Ce que A affiche quand l'étape attend sans rien demander (le pont démarre). */
 private fun waitingLabel(review: SetupReview) = when (review.step) {
     SetupStep.BRIDGE -> "Connexion au pont…"
-    SetupStep.AGENTS -> "Pont injoignable"
+    SetupStep.AGENTS -> "En attente du pont"
     else -> "En attente"
 }
 
@@ -369,7 +373,7 @@ private fun actionLabel(action: SetupAction, review: SetupReview): String = when
     SetupAction.NEXT -> if (review.step == SetupStep.WELCOME) "Commencer" else "Continuer"
     SetupAction.BACK -> "Revenir"
     SetupAction.SKIP -> "Passer"
-    SetupAction.CLOSE -> "Aller à l’accueil"
+    SetupAction.CLOSE -> if (review.step == SetupStep.FINISH) "Aller à l’accueil" else "Reprendre plus tard"
     SetupAction.OPEN_TERMUX_RELEASES -> "Ouvrir la page de Termux"
     SetupAction.COPY_INSTALL_COMMANDS, SetupAction.COPY_PAIRING_COMMANDS -> if (review.checks.termux) "Copier et ouvrir Termux" else "Copier les commandes"
     SetupAction.GRANT_RUN_COMMAND -> "Autoriser les commandes Termux"
@@ -419,11 +423,11 @@ private fun explanation(step: SetupStep) = when (step) {
     SetupStep.TERMUX -> Explanation(
         listOf("Les agents tournent dans une Debian, sous Termux.", "Une commande installe tout, une seule fois."),
         listOf("Installe Termux depuis ses releases GitHub.", "Ouvre Termux et attends sa préparation.", "Y copie ces commandes : colle-les dans Termux."),
-        note = "Sans Termux, A ouvre sa page sur l’écran du bas.",
+        note = "Sans Termux, A ouvre sa page en bas.",
     )
     SetupStep.BRIDGE -> Explanation(
         listOf("ThorAI parle aux agents par un pont local.", "Termux le démarre quand ThorAI le demande."),
-        listOf("Autorise ThorAI à lancer des commandes Termux.", "ThorAI crée une clé et la confie au pont.", "Le pont répond : l’étape passe au vert."),
+        listOf("Autorise ThorAI à lancer des commandes Termux.", "ThorAI confie une clé au pont.", "Le pont répond : l’étape passe au vert."),
         note = "La clé ne quitte jamais la console.",
     )
     SetupStep.VOICE -> Explanation(
