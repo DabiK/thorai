@@ -29,8 +29,8 @@ On prend la console et on parle. On voit d'un coup d'œil où en sont toutes ses
 
 | Entrée | Action |
 | --- | --- |
-| L2 maintenu | Dicter un message à la session affichée (ou un commentaire sur la ligne de diff sélectionnée) |
-| R2 maintenu | Donner un ordre vocal : « lance Claude sur météo », « où en est Codex ? », « approuve », « mets tout en pause » |
+| L2 maintenu | Dicter un message à la session affichée (ou un commentaire sur la ligne de diff sélectionnée). Avec le mode console, aussi depuis une autre appli (ticket 25) |
+| R2 maintenu | Donner un ordre vocal : « lance Claude sur météo », « où en est Codex ? » (ouvre la session), « approuve », « mets tout en pause » |
 | A | Valider, envoyer, ouvrir |
 | B | Retour, annuler, refuser |
 | X, Y | Actions de l'écran, affichées en bas |
@@ -88,6 +88,7 @@ Chaque lot correspond à un ou plusieurs tickets.
 - **Options natives** : modèle, réflexion et sélecteurs ACP exposés, à la création et en session ; Plan d’abord, Modifs auto, Je valide chaque action et Tout autoriser (ticket 17).
 - **Session tout-en-un** : validations de la session dans son fil, options sur le bas, détails d’actions dépliables, dates et suivi du défilement (ticket 18).
 - **Configuration native** : MCP, consignes et permissions restent résolus par les agents, sans copie par le pont (ticket 19).
+- **Mode console** (ticket 25, ADR 19) : L2 et R2 marchent depuis toute appli grâce au service d'accessibilité de Régie, activé par l'utilisateur ; l'écran du bas suit la session quand une autre appli occupe le haut ; un message terminé, une question ou une validation de l'agent passe en carte volante par-dessus l'écran du haut (B la ferme, L2 y répond) ; Y ouvre la session console.
 - **Points écrits et notifications** :
   - fin de session, validation demandée, ou point d'avancement à la demande (Y), sous forme de résumé écrit ;
   - aucune lecture à voix haute.

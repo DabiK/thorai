@@ -79,6 +79,12 @@ class InputRouter(private val sink: (GamepadInput) -> Unit) {
     }
 
     companion object {
+        /** La gâchette d'une touche, ou null. */
+        fun triggerOf(keyCode: Int): Trigger? = TRIGGER_KEYS[keyCode]
+
+        /** Le bouton d'une touche de la manette, ou null. */
+        fun buttonOf(keyCode: Int): Button? = BUTTON_KEYS[keyCode]
+
         /** Seuils de l'axe des gâchettes, avec hystérésis pour ne pas battre autour d'une valeur. */
         const val AXIS_PRESS = 0.5f
         const val AXIS_RELEASE = 0.25f

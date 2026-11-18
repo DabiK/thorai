@@ -23,22 +23,28 @@ class BottomActivity : GamepadActivity() {
             finish()
             return
         }
+        keepOpenOnSystemBack()
 
         setScreen(
             approval = {
                 val review by container.approvalReview.collectAsStateWithLifecycle()
                 ApprovalBottomScreen(review, { container.handleInput(GamepadInput.Pressed(it)) })
             },
-            overview = { overview, control -> OverviewBottomScreen(overview, control, callbacks) },
+            overview = { overview, control ->
+                val console by container.consoleService.collectAsStateWithLifecycle()
+                OverviewBottomScreen(overview, control, callbacks, consoleOff = !console && !container.replaying)
+            },
             session = { shown, overview ->
                 val live by container.live.collectAsStateWithLifecycle()
                 val control by container.sessionController.state.collectAsStateWithLifecycle()
                 val draft by container.sessionController.draft
                 val approval by container.inlineApproval.collectAsStateWithLifecycle()
                 val settings by container.sessionSettings.collectAsStateWithLifecycle()
+                // Mode console : une autre appli occupe le haut, le fil compact passe en bas (ticket 25).
+                val topVisible by container.topStarted.collectAsStateWithLifecycle()
                 SessionBottomScreen(live, overview.neighboursOf(shown.id), control, draft, sessionCallbacks, approval = approval,
                     onDecision = container::answerInline, onNextApproval = container::nextInlineApproval, onDismissApproval = container::dismissInlineApproval,
-                    settings = settings, onSelectSetting = container::selectSessionSetting)
+                    settings = settings, onSelectSetting = container::selectSessionSetting, console = threadScroll.takeUnless { topVisible })
             },
         )
 

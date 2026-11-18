@@ -138,12 +138,12 @@ class OverviewControllerTest {
     }
 
     @Test
-    fun `X and Start call the overview actions and Y does nothing since the report is gone`() {
+    fun `X, Y and Start call the overview actions, Y the console session`() {
         press(Button.X)
         press(Button.Y)
         press(Button.START)
 
-        assertEquals(listOf(OverviewAction.NewSession, OverviewAction.PauseAll), actions)
+        assertEquals(listOf(OverviewAction.NewSession, OverviewAction.ConsoleSession, OverviewAction.PauseAll), actions)
     }
 
     @Test

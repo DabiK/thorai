@@ -240,6 +240,11 @@ fun SessionBottomScreen(
     onDismissApproval: () -> Unit = {},
     settings: SessionSettingsReview = SessionSettingsReview(),
     onSelectSetting: (Int) -> Unit = {},
+    /**
+     * Mode console (ticket 25) : une autre appli occupe l'écran du haut. Le fil compact de la session
+     * prend la place de la table, qui reste à un geste (Droite, ou toucher « Modifier »).
+     */
+    console: ThreadScroll? = null,
 ) {
     // Clavier ouvert, l'écran du bas n'a plus que la moitié de sa hauteur : l'avis passe juste au-dessus
     // du champ, la table et les touches s'effacent le temps de la saisie (la manette les garde).
@@ -251,6 +256,9 @@ fun SessionBottomScreen(
             Box(Modifier.weight(1f).fillMaxWidth().clipToBounds().padding(horizontal = 16.dp, vertical = 8.dp), contentAlignment = Alignment.BottomStart) {
                 control.notice?.let { NoticeText(it, callbacks, Modifier) }
             }
+        } else if (console != null && !editing) {
+            ConsoleThread(live, console, callbacks, Modifier.weight(1f).fillMaxWidth())
+            control.notice?.let { NoticeText(it, callbacks, Modifier.padding(start = 16.dp, end = 16.dp, bottom = 6.dp)) }
         } else {
             SettingsTable(live?.session, settings, callbacks, onSelectSetting, Modifier.weight(1f).fillMaxWidth())
             val hint = if (editing) settingsHint(settings) else null
@@ -330,6 +338,34 @@ private fun SettingsTable(session: Session?, settings: SessionSettingsReview, ca
                     if (selected && row.choices.size > 1) BasicText("‹ ›", style = mono(13.sp, color = Palette.textSubtle))
                 }
             }
+        }
+    }
+}
+
+/**
+ * Le fil de la session en version compacte, sur l'écran du bas, quand une autre appli occupe le haut :
+ * les derniers messages et actions défilent seuls ; la validation en attente reste dans les touches.
+ */
+@Composable
+private fun ConsoleThread(live: LiveSession?, scroll: ThreadScroll, callbacks: SessionCallbacks, modifier: Modifier) {
+    Column(modifier) {
+        Row(
+            Modifier.fillMaxWidth().height(32.dp).padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            BasicText(
+                live?.session?.let { sessionName(it) }.orEmpty(),
+                style = sans(12.sp, color = Palette.textSubtle),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            if (live != null) BarAction("→", stringResource(R.string.action_session_settings)) { callbacks.onOptions() }
+        }
+        Box(Modifier.weight(1f).fillMaxWidth().testTag("console-thread")) {
+            if (live == null) StateMessage(stringResource(R.string.thread_opening))
+            else key(live.session.id) { ThreadList(live, scroll, ApprovalReview(), { _, _ -> }, {}, {}, shortcutsEnabled = false) }
         }
     }
 }
@@ -845,6 +881,7 @@ private fun NoticeText(notice: SessionNotice, callbacks: SessionCallbacks, modif
 private fun noticeText(notice: SessionNotice): Pair<String, Color> = when (notice) {
     SessionNotice.Sending -> stringResource(R.string.notice_sending) to Palette.textMuted
     SessionNotice.Interrupting -> stringResource(R.string.notice_interrupting) to Palette.textMuted
+    SessionNotice.NothingHeard -> stringResource(R.string.notice_nothing_heard) to Palette.waiting
     is SessionNotice.Interrupted ->
         if (notice.heard) stringResource(R.string.notice_interrupted) to Palette.text else stringResource(R.string.notice_interrupt_failed) to Palette.failed
     is SessionNotice.Delivered -> when (notice.delivery) {

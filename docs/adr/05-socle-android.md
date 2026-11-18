@@ -66,7 +66,7 @@ par la racine de composition. Le dernier vestige vide a été retiré au ticket 
 - croix : focus dans la grille 2×2, arrêté aux bords et limité aux 4 cartes affichées ; depuis le ticket 22 (ADR 17), une liste : haut et bas d'une ligne, toutes les sessions, gauche et droite sans effet ;
 - A : ouvrir la session qui a le focus ;
 - X : nouvelle session ;
-- Y : point écrit depuis le ticket 12 (ADR 10), retiré au ticket 22 (ADR 17) : Y n'a plus d'effet ;
+- Y : point écrit depuis le ticket 12 (ADR 10), retiré au ticket 22 (ADR 17) ; depuis le ticket 25 (ADR 19), Y reprend ou prépare la session console ;
 - Start : tout mettre en pause ;
 - L2 et R2 maintenues : dictée et ordre vocal ;
 - R1 : ouvrir la première validation en attente (maquette, ticket 05), ou session suivante s'il n'y en a pas ;

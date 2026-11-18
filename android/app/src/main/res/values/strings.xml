@@ -128,4 +128,19 @@
     <string name="notice_interrupted">Interruption envoyée.</string>
     <string name="notice_interrupt_failed">Le pont n\'a pas pu l\'interrompre.</string>
     <string name="bridge_hint_start_external">Démarre le pont sur le Mac.</string>
+
+    <!-- Mode console (ticket 25). -->
+    <string name="action_console_session">Piloter la console</string>
+    <string name="console_notice_title">Mode console</string>
+    <string name="console_notice_hint">L2 depuis toute appli : active Régie dans Accessibilité.</string>
+    <string name="console_service_label">Régie, mode console</string>
+    <string name="console_service_description">Parle à l’agent depuis toute appli, L2 maintenu. Ses messages passent par-dessus l’écran du haut. Régie lit seulement la manette, jamais l’écran.</string>
+    <string name="card_awaiting_answer">Attend ta réponse</string>
+    <string name="card_allow_once">Autoriser une fois</string>
+    <string name="card_close">Fermer</string>
+    <string name="card_refuse_dictating">Refuser en dictant</string>
+    <string name="card_answer">Répondre</string>
+    <string name="card_replying_to">En réponse à</string>
+    <string name="notice_nothing_heard">Rien entendu. Aucun message envoyé.</string>
+    <string name="action_session_settings">Régler la session</string>
 </resources>

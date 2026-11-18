@@ -68,6 +68,12 @@ abstract class GamepadActivity : ComponentActivity() {
         override fun onConfirmQuit() = container.controller.confirmQuit()
 
         override fun onCancelQuit() = container.controller.cancelQuit()
+
+        // Accessibilité s'ouvre sur l'écran qui l'a demandée : celui du bas est tactile.
+        override fun onEnableConsole() = startActivity(
+            android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+            android.app.ActivityOptions.makeBasic().setLaunchDisplayId(display.displayId).toBundle(),
+        )
     }
 
     protected val sessionCallbacks = object : SessionCallbacks {
@@ -107,6 +113,20 @@ abstract class GamepadActivity : ComponentActivity() {
                 container.closing.collect { if (it) finishAndRemoveTask() }
             }
         }
+    }
+
+    /**
+     * L'activité au premier plan du système reçoit la manette. Tant qu'une des nôtres l'est, sa
+     * fenêtre lit la manette ; sinon, le service d'accessibilité prend L2 et R2 (ticket 25).
+     */
+    override fun onTopResumedActivityChanged(isTopResumedActivity: Boolean) {
+        super.onTopResumedActivityChanged(isTopResumedActivity)
+        container.gamepadFocus(this, isTopResumedActivity)
+    }
+
+    override fun onDestroy() {
+        container.gamepadFocus(this, false)
+        super.onDestroy()
     }
 
     override fun onStop() {
@@ -238,4 +258,16 @@ private class GamepadWindowCallback(
         // La croix peut aussi arriver en axe (HAT) : on laisse Android la convertir en touches.
         return wrapped.dispatchGenericMotionEvent(event)
     }
+}
+
+/**
+ * Retour système de l'écran du bas (sa barre de navigation, souvent juste après avoir fermé le
+ * clavier) : il fermait l'écran du bas pour de bon, et Régie ne le relançait pas (ticket 25). Seul
+ * « Quitter » le ferme (PRD) ; B et les boutons de Régie gardent la navigation. Le clavier, lui,
+ * se ferme toujours d'abord : il passe avant l'activité.
+ */
+internal fun ComponentActivity.keepOpenOnSystemBack() {
+    onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() = Unit
+    })
 }

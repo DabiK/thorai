@@ -15,7 +15,8 @@ data class SessionCreation(val id: SessionId? = null, val uncertain: Boolean = f
 sealed interface VoiceCommand {
     data class Reply(val approval: Approval, val decision: ApprovalDecision) : VoiceCommand
     data class Pause(val ids: List<SessionId>) : VoiceCommand
-    data class Summary(val ids: List<SessionId>) : VoiceCommand
+    /** « Où en sont toutes les sessions ? » : la vue d'ensemble, sans point écrit (ticket 25). */
+    data object ShowOverview : VoiceCommand
     data class Navigate(val id: SessionId) : VoiceCommand
     data class Launch(val draft: NewSessionDraft) : VoiceCommand
 }

@@ -143,8 +143,8 @@ class OverviewController(
                 }
             Button.A -> focused?.let { dispatch(OverviewAction.OpenSession(it.id)) }
             Button.X -> dispatch(OverviewAction.NewSession)
-            // Le point Régie est retiré (ticket 22) : Y n'a plus d'action sur la vue d'ensemble.
-            Button.Y -> Unit
+            // Le point Régie est retiré (ticket 22) ; Y reprend la session console (ticket 25).
+            Button.Y -> dispatch(OverviewAction.ConsoleSession)
             Button.START -> dispatch(OverviewAction.PauseAll)
             // La vue d'ensemble est le premier écran : B n'a rien à annuler.
             Button.B -> Unit

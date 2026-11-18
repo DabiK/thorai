@@ -65,6 +65,7 @@ import app.regie.ui.components.StateMessage
 import app.regie.ui.components.SessionRow
 import app.regie.ui.components.bottomDivider
 import app.regie.ui.components.topDivider
+import app.regie.ui.components.tappable
 import app.regie.ui.theme.Palette
 import app.regie.ui.theme.mono
 import app.regie.ui.theme.sans
@@ -83,6 +84,9 @@ interface ControlCallbacks {
     fun onQuit()
     fun onConfirmQuit()
     fun onCancelQuit()
+
+    /** Ouvrir les réglages d'accessibilité, où l'utilisateur active le mode console (ticket 25). */
+    fun onEnableConsole() {}
 }
 
 /**
@@ -113,15 +117,15 @@ fun OverviewTopScreen(
 
 /** Écran du bas : la première validation en attente, le micro et les boutons utiles. */
 @Composable
-fun OverviewBottomScreen(overview: Overview, control: ControlState, callbacks: ControlCallbacks) {
+fun OverviewBottomScreen(overview: Overview, control: ControlState, callbacks: ControlCallbacks, consoleOff: Boolean = false) {
     Box(Modifier.fillMaxSize().background(Palette.background)) {
-        BottomContent(overview, control, callbacks)
+        BottomContent(overview, control, callbacks, consoleOff)
         control.quit?.let { QuitPrompt(it, callbacks) }
     }
 }
 
 @Composable
-private fun BottomContent(overview: Overview, control: ControlState, callbacks: ControlCallbacks) {
+private fun BottomContent(overview: Overview, control: ControlState, callbacks: ControlCallbacks, consoleOff: Boolean) {
     Column(Modifier.fillMaxSize()) {
         // La première validation en attente d'abord, en haut de l'écran (PRD, parcours 1).
         overview.firstPendingApproval?.let {
@@ -132,6 +136,10 @@ private fun BottomContent(overview: Overview, control: ControlState, callbacks: 
             )
         }
         Notices(overview, Modifier.padding(start = 16.dp, top = 14.dp, end = 16.dp).fillMaxWidth())
+        // La permission spéciale est un geste de l'utilisateur : l'avis explique et ouvre les réglages.
+        if (consoleOff) Box(Modifier.padding(start = 16.dp, top = 8.dp, end = 16.dp).fillMaxWidth().testTag("console-notice").tappable(callbacks::onEnableConsole)) {
+            Notice(stringResource(R.string.console_notice_title), stringResource(R.string.console_notice_hint), Palette.textMuted)
+        }
         Column(
             modifier = Modifier.weight(1f).fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -362,6 +370,7 @@ private fun ButtonBar(callbacks: ControlCallbacks, modifier: Modifier, withQuitS
     ) {
         BarAction("A", stringResource(R.string.action_open)) { callbacks.onButton(Button.A) }
         BarAction("X", stringResource(R.string.action_new_session)) { callbacks.onButton(Button.X) }
+        BarAction("Y", stringResource(R.string.action_console_session)) { callbacks.onButton(Button.Y) }
         if (withQuitSpacer) Spacer(Modifier.weight(1f))
         QuitAction(callbacks::onQuit)
     }

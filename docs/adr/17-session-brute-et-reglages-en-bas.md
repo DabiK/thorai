@@ -45,7 +45,8 @@ décision (validation, fin, échec) restent, sans ajouter de résumé au fil.
   La détection de question garde son repli sur la dernière phrase en « ? ».
 - **Gardé hors du fil** : l'ordre vocal R2 « où en est … » (ADR 11) affiche
   toujours `WrittenSummary` dans l'écran des ordres. Sans bloc, il retombe sur
-  l'état observé. À trancher avec l'utilisateur (voir le ticket).
+  l'état observé. Tranché le 18 novembre (ticket 25, ADR 19) : il ouvre la session
+  visée, sans point écrit.
 
 ### Écran du bas d'une session : la table des réglages
 
