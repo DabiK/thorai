@@ -143,6 +143,8 @@ physiques différés restent requis même lorsqu’un ticket est marqué fait.
 
 - **18 novembre, ticket 23, relecture après b2d74c2 (solo Codex)** : diff main...HEAD relu ; test d’expiration renforcé par le marqueur ready du vrai processus Node synthétique, retour immédiat erroné détecté par mutation puis restauré. Aucun changement de production ; Android 371 tests + lint et pont 321 + typage/lint repassés verts. Traces nettoyées, app/pont Mac/AVD arrêtés, forward Thor conservé. Détail artifacts/screenshots/23/relecture.md ; statut à fusionner maintenu.
 
+- **18 novembre, ticket 25 à fusionner** : mode console (ADR 19). Le service d'accessibilité de Régie prend L2/R2 à toute appli ; le bas suit la session en fil compact ; la carte volante ne passe que si aucun écran de Régie n'est visible ; Y ouvre la session console ; « où en est … » ouvre la session (décision de l'utilisateur). Bogue « l'écran du bas crash » : le retour système du bas fermait `BottomActivity`, corrigé avec test ; une dictée vide se referme avec un avis. Android check vert après fusion de main (ticket 23). Thor : session console, Codex ouvre YouTube dans Chrome, bas suivi. **Le service reste à activer par l'utilisateur** (pas à pas dans le ticket). Relecture indépendante : remarques corrigées. Questions : mode de la session console, A pour « où en est ».
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |
@@ -189,6 +191,8 @@ Les tickets qui touchent `android/` passent **un par un**. Ils installent tous l
 - 14 novembre : **pas de lecture à voix haute**. Les points et les résumés sont écrits. Le ticket 12 devient « Points écrits et notifications ».
 
 - 18 novembre (ticket 22) : **plus de point Régie**. Le fil montre ce que l'agent produit, sans résumé de fin, sans Y ni carte de synthèse ; les notifications de validation, fin et échec restent. L'écran du bas d'une session est une table de réglages ; la dictée s'affiche en bas, le haut ne change pas ; l'accueil est une liste.
+
+- 18 novembre (ticket 25) : **« où en est … » ouvre la session** visée (ou active), comme L1/R1, sans point écrit ; l'heure du fil reste. **La carte volante ne s'affiche que si la conversation n'est visible nulle part** (écran du bas éteint ou occupé).
 
 ## Questions en attente
 
