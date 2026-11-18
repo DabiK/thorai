@@ -25,6 +25,7 @@ import app.regie.game.engine.village.HouseCatalog
 import app.regie.game.engine.village.InMemoryVillageLayoutStore
 import app.regie.game.engine.village.Village
 import app.regie.game.engine.village.VillageGenerator
+import app.regie.game.engine.village.nearestHouse
 import app.regie.game.engine.world.TilePos
 import app.regie.game.ui.atlas.GameAssets
 import app.regie.game.ui.atlas.houseCatalog
@@ -35,15 +36,15 @@ import app.regie.game.ui.kit.DialogText
 import app.regie.game.ui.kit.KeyHintBar
 import app.regie.game.ui.kit.KeyHintSpec
 import app.regie.game.ui.kit.PixelDiffLine
-import app.regie.game.ui.kit.SignPanel
 import app.regie.game.ui.kit.StateTag
 import app.regie.game.ui.kit.TagState
 import app.regie.game.ui.render.Camera
 import app.regie.game.ui.render.PixelWorld
-import app.regie.game.ui.render.anchorBottomCenter
 import app.regie.game.ui.render.fallbacks
 import app.regie.game.ui.theme.Game
 import app.regie.game.ui.theme.GameTheme
+import app.regie.game.ui.village.VillageOverlay
+import app.regie.game.ui.village.houseStates
 import kotlin.time.Instant
 
 /**
@@ -65,7 +66,17 @@ object DemoScene {
         Triple("carnet", "recherche", SessionStatus.WORKING),
     )
 
-    fun sessions(count: Int): List<Session> = SAMPLES.take(count).mapIndexed { i, (project, title, status) ->
+    /** Au-delà des huit exemples : d'autres projets, des tâches numérotées et tous les états à tour de rôle. */
+    private val MORE_PROJECTS = listOf("regie", "carnet", "jardin", "api-meteo", "atelier", "site-perso")
+    private val MORE_STATES = listOf(
+        SessionStatus.WORKING, SessionStatus.IDLE, SessionStatus.AWAITING_APPROVAL,
+        SessionStatus.WORKING, SessionStatus.STOPPED, SessionStatus.FAILED,
+    )
+
+    private fun sample(i: Int): Triple<String, String, SessionStatus> =
+        SAMPLES.getOrNull(i) ?: Triple(MORE_PROJECTS[i % MORE_PROJECTS.size], "tâche $i", MORE_STATES[i % MORE_STATES.size])
+
+    fun sessions(count: Int): List<Session> = (0 until count).map { sample(it) }.mapIndexed { i, (project, title, status) ->
         Session(
             id = SessionId("demo-$i"),
             agent = listOf(Agent.CLAUDE, Agent.CODEX, Agent("opencode", "opencode"))[i % 3],
@@ -87,28 +98,26 @@ object DemoScene {
     }
 }
 
-/** Le hameau généré, ses panneaux de maison, la caméra sur [focus] (par défaut l'arrivée du coursier). */
+/**
+ * Le hameau généré, la vie des maisons et l'overlay du ticket 52 (une bulle d'état par maison, le panneau
+ * de la maison la plus proche de [focus]) ; la caméra sur [focus] (par défaut l'arrivée du coursier).
+ */
 @Composable
 fun DemoVillage(village: Village, assets: GameAssets, modifier: Modifier = Modifier, focus: TilePos = village.spawn) {
     val fallbacks = remember(village) { village.fallbacks() }
+    val states = remember(village) { village.houseStates() }
+    val selected = remember(village, focus) { village.nearestHouse(focus)?.session?.id }
     val center = Camera.center(focus)
-    PixelWorld(village.world, assets, { center }, modifier.fillMaxSize(), fallbacks = fallbacks) { projection ->
-        village.houses.forEach { house ->
-            SignPanel(
-                house.session.project,
-                Modifier.anchorBottomCenter { projection.tileTop(house.labelAnchor) },
-                subtitle = house.session.title,
-                state = TagState.of(house.session.status),
-            )
-        }
+    PixelWorld(village.world, assets, { center }, modifier.fillMaxSize(), fallbacks = fallbacks, states = states) { projection ->
+        VillageOverlay(village, assets, projection, selected = selected)
     }
 }
 
-/** L'écran du haut de la démonstration : le hameau autour de la place. */
+/** L'écran du haut de la démonstration : le hameau autour de la place, la rivière et son pont en haut. */
 @Composable
 fun DemoTopScreen(assets: GameAssets, modifier: Modifier = Modifier, sessions: Int = 3) {
     val village = remember(assets, sessions) { DemoScene.village(sessions, assets) }
-    DemoVillage(village, assets, modifier)
+    DemoVillage(village, assets, modifier, focus = village.origin.offset(0, -1))
 }
 
 /** L'écran du bas de la démonstration : la suite du hameau, sous la place, et la barre des touches. */
