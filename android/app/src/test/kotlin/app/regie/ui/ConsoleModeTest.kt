@@ -16,6 +16,7 @@ import app.regie.ui.screens.ConsoleOverlayScreen
 import app.regie.ui.screens.ControlCallbacks
 import app.regie.ui.screens.OverviewBottomScreen
 import app.regie.ui.game.GameSessionBottom
+import app.regie.ui.screens.OverviewShortcuts
 import app.regie.ui.screens.SessionCallbacks
 import app.regie.ui.screens.ThreadScroll
 import app.regie.ui.theme.RegieTheme
@@ -120,9 +121,8 @@ class ConsoleModeTest {
         }
     }
 
-    @Test fun `the overview offers the console session and explains the special permission`() {
+    @Test fun `the overview offers the console session, and Configurer replaces the permanent console notice`() {
         val pressed = mutableListOf<Button>()
-        var opened = 0
         val callbacks = object : ControlCallbacks {
             override fun onButton(button: Button) { pressed += button }
             override fun onTrigger(trigger: Trigger, held: Boolean) {}
@@ -130,15 +130,22 @@ class ConsoleModeTest {
             override fun onQuit() {}
             override fun onConfirmQuit() {}
             override fun onCancelQuit() {}
-            override fun onEnableConsole() { opened++ }
         }
+        var setup = 0
         Robolectric.buildActivity(ComponentActivity::class.java).use { host ->
-            host.setup().get().setContent { RegieTheme { OverviewBottomScreen(Overview.EMPTY, ControlState(), callbacks, consoleOff = true) } }
+            host.setup().get().setContent { RegieTheme {
+                androidx.compose.foundation.layout.Column {
+                    OverviewShortcuts(setupLeft = true, onAgents = {}, onSetup = { setup++ }, onVoice = {})
+                    OverviewBottomScreen(Overview.EMPTY, ControlState(), callbacks)
+                }
+            } }
             compose.onNodeWithText("Piloter la console").performClick()
             assertEquals(listOf(Button.Y), pressed)
-            compose.onNodeWithText("Mode console").assertIsDisplayed()
-            compose.onNodeWithTag("console-notice").performClick()
-            assertEquals(1, opened)
+            compose.onNodeWithText("Mode console").assertDoesNotExist()
+            compose.onNodeWithText("Maintiens R2", substring = true).assertDoesNotExist()
+            compose.onNodeWithTag("setup-left", useUnmergedTree = true).assertExists()
+            compose.onNodeWithTag("open-setup").performClick()
+            assertEquals(1, setup)
         }
     }
 

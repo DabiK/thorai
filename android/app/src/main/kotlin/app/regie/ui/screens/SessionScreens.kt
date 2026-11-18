@@ -307,7 +307,7 @@ private fun SettingsTable(session: Session?, settings: SessionSettingsReview, ca
         ) {
             BasicText(
                 session?.let { stringResource(R.string.settings_title, agentName(it.agent)) }.orEmpty(),
-                style = sans(12.sp, color = Palette.textSubtle),
+                style = sans(13.sp, color = Palette.textSubtle),
                 modifier = Modifier.weight(1f),
             )
             if (!editing && session != null) BarAction("→", stringResource(R.string.settings_edit)) { callbacks.onOptions() }
@@ -322,7 +322,7 @@ private fun SettingsTable(session: Session?, settings: SessionSettingsReview, ca
                 val label = row.choices.firstOrNull { it.value == value }?.name ?: value
                     ?: if (row.id == "resume") (if (selected) "A pour reprendre" else "") else "Non communiqué"
                 Row(
-                    Modifier.fillMaxWidth().height(40.dp)
+                    Modifier.fillMaxWidth().height(42.dp)
                         .focusOutline(selected, 8.dp)
                         .background(if (selected) Palette.surface else Color.Transparent, RoundedCornerShape(8.dp))
                         .then(if (selected) Modifier else Modifier.bottomDivider())
@@ -331,9 +331,9 @@ private fun SettingsTable(session: Session?, settings: SessionSettingsReview, ca
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    BasicText(row.label, style = sans(13.sp, color = Palette.textMuted), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    BasicText(row.label, style = sans(14.sp, color = Palette.textMuted), maxLines = 1, overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.width(if (row.id == "resume") 200.dp else 128.dp))
-                    BasicText(label, style = sans(14.sp, weight = 600, color = if (pending) Palette.waiting else Palette.text),
+                    BasicText(label, style = sans(15.sp, weight = 600, color = if (pending) Palette.waiting else Palette.text),
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                     if (selected && row.choices.size > 1) BasicText("‹ ›", style = mono(13.sp, color = Palette.textSubtle))
                 }
@@ -374,9 +374,9 @@ private fun ConsoleThread(live: LiveSession?, scroll: ThreadScroll, callbacks: S
 @Composable
 private fun SettingsKeys(settings: SessionSettingsReview, callbacks: SessionCallbacks) {
     Row(
-        Modifier.fillMaxWidth().height(48.dp).topDivider().padding(horizontal = 16.dp),
+        Modifier.fillMaxWidth().height(52.dp).topDivider().padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         app.regie.ui.components.ButtonChip("A", if (settings.busy) "Application…" else "Appliquer",
             Modifier.alpha(if (settings.canApply) 1f else 0.4f).then(if (settings.canApply) Modifier.tappable { callbacks.onButton(Button.A) } else Modifier))
@@ -392,9 +392,9 @@ private fun SettingsKeys(settings: SessionSettingsReview, callbacks: SessionCall
 @Composable
 private fun SessionKeys(live: LiveSession?, callbacks: SessionCallbacks) {
     Row(
-        Modifier.fillMaxWidth().height(50.dp).topDivider().padding(horizontal = 16.dp),
+        Modifier.fillMaxWidth().height(52.dp).topDivider().padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         BarAction("B", stringResource(R.string.action_back_to_overview)) { callbacks.onButton(Button.B) }
         BarAction("X", stringResource(R.string.action_see_diff)) { callbacks.onButton(Button.X) }
@@ -456,7 +456,7 @@ private fun NeighbourBar(neighbours: Neighbours?, callbacks: SessionCallbacks, a
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        val label = sans(12.sp, color = Palette.textMuted)
+        val label = sans(13.sp, color = Palette.textMuted)
         Row(
             modifier = Modifier.weight(1f).tappable { callbacks.onButton(Button.L1) },
             verticalAlignment = Alignment.CenterVertically,
@@ -467,7 +467,7 @@ private fun NeighbourBar(neighbours: Neighbours?, callbacks: SessionCallbacks, a
                 BasicText(sessionName(it), style = label, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
-        neighbours?.let { BasicText("${it.position} / ${it.count}", style = mono(11.sp, color = Palette.textSubtle)) }
+        neighbours?.let { BasicText("${it.position} / ${it.count}", style = mono(12.sp, color = Palette.textSubtle)) }
         Row(
             modifier = Modifier.weight(1f).tappable { callbacks.onButton(Button.R1) },
             verticalAlignment = Alignment.CenterVertically,
@@ -931,7 +931,7 @@ private fun MessageField(draft: String, callbacks: SessionCallbacks, compact: Bo
                 callbacks.onSend()
                 focus.clearFocus()
             }
-            if (sendWithA) BarAction("A", stringResource(R.string.message_send), send)
+            if (sendWithA) BarAction("A", stringResource(R.string.message_send), onClick = send)
             else BasicText(stringResource(R.string.message_send), style = sans(13.sp),
                 modifier = Modifier.tappable(send).padding(8.dp))
         }

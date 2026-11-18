@@ -20,9 +20,11 @@ adb -s "$EMU_SERIAL" shell "run-as $APP_ID sh -c 'umask 077; cat > files/bridge-
 reverse_bridge
 # Bench emulator only: avoid the first-run notification dialog hiding the two activities.
 adb -s "$EMU_SERIAL" shell pm grant "$APP_ID" android.permission.POST_NOTIFICATIONS
-adb -s "$EMU_SERIAL" shell am start -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -p "$APP_ID"
+# « am start -p » exige CATEGORY_DEFAULT, qu'un lanceur n'a pas : on résout d'abord son activité.
+launcher="$(adb -s "$EMU_SERIAL" shell cmd package resolve-activity --brief -c android.intent.category.LAUNCHER "$APP_ID" | tail -n 1 | tr -d '\r')"
+adb -s "$EMU_SERIAL" shell am start -n "$launcher"
 if [[ "${1:-}" != --no-demo ]]; then
     node "$REGIE_ROOT/scripts/emu-client.mjs" demo
     session="$(cat "$REGIE_BENCH/demo-session")"
-    adb -s "$EMU_SERIAL" shell am start -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -p "$APP_ID" --es session_id "$session"
+    adb -s "$EMU_SERIAL" shell am start -n "$launcher" --es session_id "$session"
 fi

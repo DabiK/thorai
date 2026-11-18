@@ -16,7 +16,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "app.regie"
+        applicationId = "app.thorai"
         minSdk = 33
         ndk { abiFilters += setOf("arm64-v8a", "x86_64") }
         targetSdk = 36

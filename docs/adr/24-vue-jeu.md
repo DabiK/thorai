@@ -1,4 +1,4 @@
-# ADR 21 — Vue jeu : rendu pixel sur un Canvas Compose
+# ADR 24 — Vue jeu : rendu pixel sur un Canvas Compose
 
 Statut : accepté, 18 novembre 2026 (ticket 41, épopée 40). Complète `docs/rebrand/plan-dev-jeu.md`
 et `docs/rebrand/da-jeu.md`.

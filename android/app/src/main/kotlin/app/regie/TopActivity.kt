@@ -54,8 +54,12 @@ class TopActivity : GamepadActivity() {
         applyDebugExtras(intent)
         container.start(replay = BuildConfig.DEBUG && intent.getBooleanExtra(EXTRA_FAKE_GATEWAY, false))
         container.topAlive.value = true
-        askRunCommandPermission()
-        if (!askingPermission) askNotificationPermission()
+        // Premier lancement : le parcours d'accueil demande lui-même chaque permission, expliquée (ticket 28).
+        container.offerSetup()
+        if (!container.setupPending) {
+            askRunCommandPermission()
+            if (!askingPermission) askNotificationPermission()
+        }
         openNotification(intent)
 
         setScreen(
@@ -172,12 +176,19 @@ class TopActivity : GamepadActivity() {
         if (BuildConfig.DEBUG && intent.hasExtra(EXTRA_FORCE_SINGLE_SCREEN)) {
             container.displays.forceSingleScreen(intent.getBooleanExtra(EXTRA_FORCE_SINGLE_SCREEN, false))
         }
+        // Captures du parcours d'accueil sur la console, sans accorder de permission à la place de l'utilisateur.
+        if (BuildConfig.DEBUG && intent.hasExtra(EXTRA_SETUP_STEP)) {
+            app.regie.domain.model.SetupStep.entries.firstOrNull { it.name == intent.getStringExtra(EXTRA_SETUP_STEP) }?.let(container::openSetupAt)
+        }
     }
 
     companion object {
         const val EXTRA_SESSION = "session_id"
         const val EXTRA_APPROVAL = "approval_id"
         const val EXTRA_FORCE_SINGLE_SCREEN = "force_single_screen"
+
+        /** En debug : `--es setup_step VOICE` ouvre le parcours d'accueil sur cette étape. */
+        const val EXTRA_SETUP_STEP = "setup_step"
 
         /** En debug : `--ez fake_gateway true` au premier lancement du processus branche la passerelle factice. */
         const val EXTRA_FAKE_GATEWAY = "fake_gateway"

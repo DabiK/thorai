@@ -29,10 +29,7 @@ class BottomActivity : GamepadActivity() {
                 val review by container.approvalReview.collectAsStateWithLifecycle()
                 ApprovalBottomScreen(review, { container.handleInput(GamepadInput.Pressed(it)) })
             },
-            overview = { overview, control ->
-                val console by container.consoleService.collectAsStateWithLifecycle()
-                OverviewBottomScreen(overview, control, callbacks, consoleOff = !console && !container.replaying)
-            },
+            overview = { overview, control -> OverviewBottomScreen(overview, control, callbacks) },
             session = { shown, overview ->
                 val live by container.live.collectAsStateWithLifecycle()
                 val control by container.sessionController.state.collectAsStateWithLifecycle()
