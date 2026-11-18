@@ -22,7 +22,8 @@ Demande de l'utilisateur, 18 novembre : ajouter opencode comme connecteur, à c�
 
 ## Critères d'acceptation
 
-- [x] Tests du pont et du domaine. `npm run check` et `./gradlew check` sont verts : 336 tests pont, 452 Android, typage/lint ; traces dans `artifacts/screenshots/31/`.
+- [x] Tests du pont et du domaine. `npm run check` et `./gradlew check` sont verts : 338 tests pont, 452 Android, typage/lint ; traces `revision-bridge-check.txt` et `revision-android-check.txt` dans `artifacts/screenshots/31/`.
+- [x] Les notifications ACP opencode hors configuration ne changent pas les permissions Régie : deux régressions rouges puis vertes (`config_option_update`, `current_mode_update`), édition automatique en Tout autoriser et validation conservée en Plan d'abord.
 - [ ] Sur la Thor autonome (agent dans la Debian) : attend la clé saisie par l’utilisateur. Le même parcours est prouvé sur la Thor avec le pont/agent sur le Mac et la connexion Go existante : création depuis Régie, réponse, A/B, modèle/réflexion et reprise. Pas à pas dans `artifacts/screenshots/31/essai-thor.md`.
 
 
@@ -34,3 +35,5 @@ Demande de l'utilisateur, 18 novembre : ajouter opencode comme connecteur, à c�
 - État : APK final release signé installé sans désinstallation ; pont Debian rétabli et 49 sessions conservées. Ancien Codex idle reprenable. Banc Mac et ses adapters arrêtés, reverse retiré. Aucun push/fusion/sous-agent.
 - Décisions : ADR 02/18 complétés. Go seul dans le parcours de clé, autres fournisseurs et modèles natifs ; pas d'éditeur JSON dans l'app. Étape 28 documentée, non implémentée ici.
 - Utilisateur : suivre les sept étapes d'`essai-thor.md` (saisir la clé Go dans l'app, puis essai autonome Debian, validation/refus, réglages, accès Android et reprise). Aucun blocage produit.
+- Correction de la revue indépendante : conversion des modes natifs opencode exclue dans le domaine, y compris hors transaction de configuration. Pont corrigé réinstallé dans la Debian ; release signée réinstallée sans désinstallation, 49 sessions conservées, aucun agent de travail lancé. Captures `revision-24-*`, état `revision-thor-state.txt`. L'ancien Codex au repos est reprenable.
+- Limite non bloquante conservée : URL/code d'appareil encore filtrés pour Codex dans `AuthenticationFrames.kt`. À généraliser avant l'ajout d'un autre fournisseur device-code ; Go utilise une clé, aucun nouveau fournisseur de ce type dans ce ticket.

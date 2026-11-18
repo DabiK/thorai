@@ -183,6 +183,8 @@ physiques différés restent requis même lorsqu’un ticket est marqué fait.
 
 - **18 novembre, ticket 31, relecture après 73afe73 (solo Codex)** : sélection de connexion préservée par id lors du rafraîchissement, confirmation annulée si l'agent disparaît, clé d'une ancienne action d'écran refusée pour une autre identité ; deux régressions rouges puis vertes. Fonction privée devenue inutile et espaces de traces retirés. Pont 336 + typage/lint, Android 452 + lint verts ; dernier APK release réinstallé sans nouvelle session, formulaire Go vide sur la Thor (23). Critère autonome Debian toujours décoché en attente de la clé utilisateur ; statut à fusionner maintenu. Détail `artifacts/screenshots/31/relecture.md`.
 
+- **18 novembre, ticket 31, correction de revue indépendante (solo Codex)** : notifications `config_option_update`/`current_mode_update` opencode exclues de la conversion en permissions dans le domaine ; deux régressions rouges puis vertes, Tout autoriser + Plan et Plan d'abord + Build couverts. Pont 338 tests + typage/lint, Android check vert (452 tests sans échec, résultats réutilisés), partage et consignes verts. Release signée et pont corrigé réinstallés sur Thor sans désinstallation ; 49 sessions conservées et inactives, comptes Claude/Codex inchangés, Go déconnecté et champ vide (revision-24). Aucun nouvel agent, sous-agent, clé ou reverse ; pont Debian disponible. Exécution Go autonome toujours à faire après saisie de l'utilisateur. Limite device-code Codex conservée avant ajout futur d'un autre fournisseur ; statut à fusionner.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |

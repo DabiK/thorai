@@ -1584,6 +1584,87 @@ describe('agent provided choices', () => {
 });
 
 describe('agent initiated mode changes', () => {
+  it.each(['config_option_update', 'current_mode_update'])(
+    'keeps OpenCode native agents separate from permissions on %s outside configuration',
+    async (sessionUpdate) => {
+      const opencode = new FakeAgentConnector('opencode');
+      const bridge = new Bridge({
+        connectors: [opencode],
+        events: world.events,
+        sessions: world.sessions,
+        workspace: world.workspace,
+        clock: world.clock,
+        ids: counterIds('approval'),
+        logger: world.logger,
+        shell: new WordsShellParser(),
+        shutdownGraceMs: 1,
+      });
+      bridge.start();
+      opencode.initialOptions = [
+        {
+          id: 'mode',
+          name: 'Agent',
+          category: 'mode',
+          type: 'select',
+          currentValue: 'build',
+          options: [
+            { value: 'build', name: 'Build' },
+            { value: 'plan', name: 'Plan' },
+          ],
+        },
+      ];
+      const notifyMode = (sessionId: string, currentValue: string) =>
+        opencode.send(
+          sessionId,
+          sessionUpdate === 'current_mode_update'
+            ? { sessionUpdate, currentModeId: currentValue }
+            : {
+                sessionUpdate,
+                configOptions: [{ ...opencode.initialOptions[0], currentValue }],
+              },
+        );
+      try {
+        const session = await bridge.createSession({
+          agent: 'opencode',
+          project: 'regie-demo',
+          approvalMode: 'allow-all',
+        });
+        // A user selects the native agent, then ACP repeats it after the
+        // configuration transaction has ended. It is still not a permission.
+        await bridge.configureSession(session.sessionId, { configId: 'mode', value: 'plan' });
+        notifyMode(session.sessionId, 'plan');
+        expect(bridge.listSessions()[0]).toMatchObject({
+          approvalMode: 'allow-all',
+          configOptions: [{ id: 'mode', category: 'agent', currentValue: 'plan' }],
+        });
+        const answer = opencode.ask(session.sessionId, { kind: 'edit', title: 'write' }, [
+          ALLOW_ONCE,
+          REJECT,
+        ]);
+        expect(bridge.pendingApprovals()).toEqual([]);
+        await expect(answer).resolves.toEqual({ outcome: 'selected', optionId: 'allow_once' });
+
+        await bridge.configureSession(session.sessionId, { approvalMode: 'plan' });
+        await bridge.configureSession(session.sessionId, { configId: 'mode', value: 'build' });
+        notifyMode(session.sessionId, 'build');
+        expect(bridge.listSessions()[0]).toMatchObject({
+          approvalMode: 'plan',
+          configOptions: [{ id: 'mode', category: 'agent', currentValue: 'build' }],
+        });
+        const guarded = opencode.ask(session.sessionId, { kind: 'edit', title: 'write' }, [
+          ALLOW_ONCE,
+          REJECT,
+        ]);
+        expect(bridge.pendingApprovals()).toHaveLength(1);
+        const request = bridge.pendingApprovals()[0];
+        if (!request) throw new Error('missing approval');
+        bridge.answerApproval(request.approvalId, 'cancel');
+        await expect(guarded).resolves.toEqual({ outcome: 'selected', optionId: 'cancel' });
+      } finally {
+        await bridge.shutdown();
+      }
+    },
+  );
   it('shows native permission changes and stops using the previous automatic policy', async () => {
     const s = await world.bridge.createSession({
       agent: 'claude',

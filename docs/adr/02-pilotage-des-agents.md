@@ -464,7 +464,13 @@ peuvent également intervenir, comme pour les deux autres agents.
 
 Le domaine classe le sélecteur ACP `mode` d'opencode en catégorie `agent`, nommé
 « Agent opencode ». Il reste éditable dans la table commune, séparément du niveau
-de validation. Modèles et variantes viennent de `configOptions` ; leurs identifiants
+de validation. Les notifications spontanées `current_mode_update` et
+`config_option_update`, même après la fin d'un réglage, ne convertissent jamais
+ses agents natifs en permissions Régie. Le changement inverse reste explicite :
+choisir un niveau Régie initialise le mode natif correspondant. Régressions du
+ticket 31 : Tout autoriser + Plan continue d'accepter une édition automatiquement ;
+Plan d'abord + Build continue de demander une validation.
+Modèles et variantes viennent de `configOptions` ; leurs identifiants
 `provider/model` ne sont jamais traduits en catalogue local. `opencode.json(c)`,
 MCP, plugins et consignes sont résolus nativement par opencode. `workdir` est
 reconnu comme métadonnée de commande shell ; les clés inconnues et les commandes

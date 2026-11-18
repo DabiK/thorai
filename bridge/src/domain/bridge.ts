@@ -824,6 +824,8 @@ export class Bridge {
             : undefined;
       let approvalMode = record.approvalMode;
       if (
+        // OpenCode modes select its native agent (build/plan), not permissions.
+        record.agent !== 'opencode' &&
         typeof nativeMode === 'string' &&
         nativeMode !== modeIdFor(record.agent, approvalMode, this.deps.codexSandbox)
       ) {
