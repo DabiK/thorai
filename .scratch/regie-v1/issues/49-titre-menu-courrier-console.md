@@ -63,10 +63,14 @@ Branche `ticket/49-titre-menu-courrier-console`, partie de `ticket/40-vue-jeu` (
 - Menu de pause : « Carnet », « Manette » et « Affichage » ne sont pas dans le domaine, ils sont retirés. « Courrier » et « Tout mettre en pause » sont ajoutés. Les réglages par défaut de Codex (modèle, réflexion, mode) ne sont pas exposés hors d'une session, ils ne sont pas montrés.
 - Décor des menus : le fond du titre assombri (`fond.titre`), le même pour le titre, la pause, les agents et l'ordre vocal. Il ne dépend pas du hameau du lot 45, et tous les menus gardent ainsi le même décor.
 - Agents : le QR et le code sont en bas, comme dans la maquette, et non plus en haut. Le haut liste les agents avec leur habitant (scribe, bricoleur, cartographe ; un agent inconnu prend l'habitant par défaut du moteur).
-- Logo du titre : le nom de l'app (`app_name`), pour suivre le renommage du ticket 30 sans toucher au jeu.
+- Logo du titre : « ThorAI », le nom du produit, dans une ressource du jeu (`game_title_logo`), jamais le libellé de l'app, qui vaut « ThorAI jeu » dans la build `.jeu` (test dans `MenuScreensTest`).
 - Courrier : titres et détails du domaine (« Session terminée », « L'agent te pose une question », « Session en échec », « Codex attend ta validation ») au lieu des formules de la maquette. L'oiseau propose « R1 Voir » seulement pour une validation, sur le hameau.
 - Carte volante : en haut à droite (ADR 19), pas en bas.
 - Tour : l'étiquette donne l'état de la session et non le mode. Le fil compact ne montre que les lignes du fil. Les touches sont celles de la session (→ Modifier, B Revenir, L2 Parler, Start Interrompre) ; une validation en attente met ses choix dans les touches.
+
+### Avec le parcours d'accueil (ticket 28, ADR 23)
+
+Après la fusion de main (ThorAI, `app.thorai`), le parcours d'accueil passe d'abord : `TopActivity` le propose, puis demande le titre. Le parcours est avant le menu dans `setScreen` et prend la manette avant lui dans `handleInput`. Quand il se ferme, le titre prend le relais (test `GameMenuInputTest`, « at first launch the setup comes first »). Le parcours garde son style classique : le reprendre en pixel (`SetupScreens`, 478 lignes, une dizaine d'étapes) dépasse ce lot et revient au ticket 51 ou à un lot dédié. Le raccourci « Préparer la console » reste sur l'accueil classique ; il pourra devenir une entrée du menu de pause quand le hameau du lot 45 remplacera l'accueil. L'ADR de la vue jeu est désormais `docs/adr/24-vue-jeu.md`.
 
 ### Reste
 

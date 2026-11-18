@@ -56,6 +56,24 @@ class GameMenuInputTest {
         assertFalse(container.gameMenu.value.open)
     }
 
+    @Test fun `at first launch the setup comes first, then the title takes over`() = runTest {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        app.getSharedPreferences("setup", android.content.Context.MODE_PRIVATE).edit().clear().commit()
+        val container = container()
+        container.agentAuthentication.value.takeIf { it.visible }?.let { press(container, Button.B) }
+        // Même ordre que TopActivity : le parcours d'accueil, puis le titre.
+        container.offerSetup(); container.showTitle(); runCurrent()
+        assertTrue(container.setup.state.value.visible)
+        assertEquals(MenuKind.TITLE, container.gameMenu.value.kind)
+        press(container, Button.A)
+        assertEquals(SetupStep.TERMUX, container.setup.state.value.step, "A va au parcours, pas au titre")
+        assertEquals(MenuKind.TITLE, container.gameMenu.value.kind)
+        container.setup.close(); runCurrent()
+        assertEquals(MenuKind.TITLE, container.gameMenu.value.kind, "le titre prend le relais")
+        press(container, Button.A)
+        assertFalse(container.gameMenu.value.open)
+    }
+
     @Test fun `Nouvelle session on the title opens the existing new-session flow`() = runTest {
         val container = container()
         container.showTitle()

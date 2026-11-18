@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Ticket 49 : titre, menus, agents, voix, courrier et mode console (docs/textes.md). -->
+    <!-- Le logo de l'écran titre : le nom du produit, pas le libellé de la build. -->
+    <string name="game_title_logo" translatable="false">ThorAI</string>
     <string name="game_menu_title">Menu</string>
     <string name="game_menu_continue">Continuer</string>
     <string name="game_menu_new_session">Nouvelle session</string>

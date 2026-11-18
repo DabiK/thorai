@@ -128,12 +128,12 @@ fun TitleLogo(name: String, modifier: Modifier = Modifier, sizePx: Int = 300) {
 }
 
 /**
- * L'écran titre, en haut : le hameau au lever du soleil et le logo. Sur deux écrans, le menu est en
+ * L'écran titre, en haut : le hameau au lever du soleil et le logo « ThorAI », le nom du produit
+ * (jamais le libellé de l'app, qui change selon la build, par exemple « ThorAI jeu »). Sur deux écrans, le menu est en
  * bas et le haut invite à commencer ; sur un seul écran, le menu s'affiche ici.
  */
 @Composable
 fun TitleTopScreen(
-    name: String,
     menu: GameMenu,
     overview: Overview,
     assets: GameAssets,
@@ -146,7 +146,7 @@ fun TitleTopScreen(
     val clock = Game.clock
     Box(modifier.fillMaxSize().testTag("game-title")) {
         MenuBackdrop(assets, dim = false)
-        TitleLogo(name, Modifier.align(Alignment.TopCenter).padding(top = metrics.dp(if (singleScreen) 24 else 70)), sizePx = if (singleScreen) 200 else 300)
+        TitleLogo(stringResource(R.string.game_title_logo), Modifier.align(Alignment.TopCenter).padding(top = metrics.dp(if (singleScreen) 24 else 70)), sizePx = if (singleScreen) 200 else 300)
         if (singleScreen) {
             MenuList(
                 choices(menu, overview, 0),

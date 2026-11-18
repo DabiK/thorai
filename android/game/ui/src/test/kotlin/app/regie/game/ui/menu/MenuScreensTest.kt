@@ -62,9 +62,12 @@ class MenuScreensTest {
     @Test
     @Config(qualifiers = THOR_TOP)
     fun `the title shows the hamlet at dawn, the logo and the invitation to start`() {
-        show { TitleTopScreen("ThorAI", GameMenu.title(), Samples.overview, assets, singleScreen = false) }
+        show { TitleTopScreen(GameMenu.title(), Samples.overview, assets, singleScreen = false) }
         compose.onNodeWithText("Commencer").assertIsDisplayed()
+        // Le nom du produit, seul : le contour et l'ombre du logo répètent le même texte.
         assertTrue(compose.onAllNodes(hasText("ThorAI")).fetchSemanticsNodes().isNotEmpty())
+        assertEquals(0, compose.onAllNodes(hasText("ThorAI jeu", substring = true)).fetchSemanticsNodes().size)
+        assertEquals("ThorAI", activity.getString(app.regie.game.ui.R.string.game_title_logo))
         assertTrue(assets.problems.isEmpty(), assets.problems.toString())
         Captures.save(compose, activity, "titre-haut")
     }
@@ -87,7 +90,7 @@ class MenuScreensTest {
     fun `on a single screen the title carries the menu and the quit confirmation`() {
         var cancelled = false
         show {
-            TitleTopScreen("ThorAI", GameMenu.title().press(MenuKey.UP).menu, Samples.overview, assets, singleScreen = true,
+            TitleTopScreen(GameMenu.title().press(MenuKey.UP).menu, Samples.overview, assets, singleScreen = true,
                 quit = QuitPrompt(2), callbacks = MenuCallbacks(onCancelQuit = { cancelled = true }))
         }
         compose.onNodeWithText("Continuer").assertIsDisplayed()
