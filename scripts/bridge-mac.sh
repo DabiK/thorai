@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Launch only on demand; separate state, projects and token, bound to loopback.
+# --device uses the selected adb device; default requires Regie_Thor. stop shuts down this bench.
 source "$(dirname "$0")/emu-common.sh"
 umask 077
 mkdir -p "$REGIE_BENCH/projects" "$REGIE_BENCH/state"
@@ -12,7 +13,13 @@ if [[ "${1:-}" == stop ]]; then
     node "$REGIE_ROOT/scripts/emu-client.mjs" stop
     exit
 fi
-require_regie_emulator
+bridge_device="$EMU_SERIAL"
+if [[ "${1:-}" == --device ]]; then
+    source "$REGIE_ROOT/scripts/device.sh"
+    bridge_device="$(select_adb_device)"
+else
+    require_regie_emulator
+fi
 if [[ ! -f "$REGIE_BENCH/bridge-token" ]]; then
     openssl rand -hex 32 > "$REGIE_BENCH/bridge-token"
 fi
@@ -37,6 +44,7 @@ else
     fi
     export REGIE_BRIDGE_PORT=47600 REGIE_BRIDGE_TOKEN_FILE="$REGIE_BENCH/bridge-token"
     export REGIE_BRIDGE_STATE_DIR="$REGIE_BENCH/state" REGIE_PROJECTS_DIR="$REGIE_BENCH/projects"
+    export OPENCODE_PATH="${OPENCODE_PATH:-$(command -v opencode || true)}"
     export CODEX_PATH="${CODEX_PATH:-$(command -v codex)}"
     [[ -x "$CODEX_PATH" ]] || { echo 'Codex est absent du PATH.' >&2; exit 1; }
     printf '%s\n' "$REGIE_ROOT" > "$REGIE_BENCH/bridge-root"
@@ -53,5 +61,6 @@ SPAWN
     done
     $ready || { echo "Pont indisponible : $REGIE_BENCH/bridge.log" >&2; exit 1; }
 fi
-reverse_bridge
+if [[ "$bridge_device" == "$EMU_SERIAL" ]]; then reverse_bridge
+else adb -s "$bridge_device" reverse tcp:47600 tcp:47600; fi
 echo "Pont prêt sur le Mac ; projets : $REGIE_BENCH/projects."

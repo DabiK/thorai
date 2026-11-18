@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AGENT_KINDS, APPROVAL_MODES } from '../../domain/model.ts';
+import { APPROVAL_MODES } from '../../domain/model.ts';
 
 /**
  * The messages a client sends (docs/protocole-pont.md). Every request has an `id`, echoed in
@@ -16,16 +16,25 @@ const configValues = z.record(z.string().min(1).max(200), z.string().min(1).max(
 const seq = z.number().int().min(0);
 
 export const paramsSchemas = {
+  'agents.list': z.object({}),
+  'auth.key': z.object({
+    agent: z.string().regex(/^[a-z0-9][a-z0-9_-]{0,63}$/),
+    provider: z.string().max(100),
+    key: z.string().min(1).max(4096),
+  }),
   'auth.status': z.object({}),
-  'auth.start': z.object({ agent: z.enum(AGENT_KINDS) }),
-  'auth.logout': z.object({ agent: z.enum(AGENT_KINDS) }),
-  'auth.cancel': z.object({ agent: z.enum(AGENT_KINDS) }),
+  'auth.start': z.object({ agent: z.string().regex(/^[a-z0-9][a-z0-9_-]{0,63}$/) }),
+  'auth.logout': z.object({ agent: z.string().regex(/^[a-z0-9][a-z0-9_-]{0,63}$/) }),
+  'auth.cancel': z.object({ agent: z.string().regex(/^[a-z0-9][a-z0-9_-]{0,63}$/) }),
   hello: z.object({
     since: seq.nullish(),
     journal: z.string().max(100).nullish(),
     client: z.string().max(100).optional(),
   }),
-  'agent.options': z.object({ agent: z.enum(AGENT_KINDS), configValues: configValues.optional() }),
+  'agent.options': z.object({
+    agent: z.string().regex(/^[a-z0-9][a-z0-9_-]{0,63}$/),
+    configValues: configValues.optional(),
+  }),
   'session.configure': z
     .object({
       sessionId,
@@ -45,7 +54,7 @@ export const paramsSchemas = {
     ),
   'sessions.list': z.object({}),
   'session.create': z.object({
-    agent: z.enum(AGENT_KINDS),
+    agent: z.string().regex(/^[a-z0-9][a-z0-9_-]{0,63}$/),
     project: z.string().max(200),
     newProject: z.boolean().optional(),
     configValues: configValues.optional(),

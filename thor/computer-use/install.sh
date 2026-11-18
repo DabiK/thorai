@@ -85,7 +85,7 @@ content=$(mktemp) || exit 1
 trap 'rm -f "$content"' EXIT
 printf '%s' "$consignes_b64" | base64 -d > "$content" || exit 1
 rc=0
-for target in "Claude:$HOME/.claude/CLAUDE.md" "Codex:$HOME/.codex/AGENTS.md"; do
+for target in "Claude:$HOME/.claude/CLAUDE.md" "Codex:$HOME/.codex/AGENTS.md" "opencode:$HOME/.config/opencode/AGENTS.md"; do
   if result=$(block_put "${target#*:}" "$content"); then
     echo "    ${target%%:*} : $result"
   else
@@ -165,6 +165,12 @@ else
 fi
 EOF
 } | termux_sh
+
+echo "opencode : serveur thor_android dans sa configuration globale native"
+debian_sh dev <<'EOF'
+set -euo pipefail
+/home/dev/.opencode/bin/opencode mcp add --global --env ADB_SERVER_SOCKET=localfilesystem:/home/dev/.thor-adb/server thor_android -- /home/dev/.local/bin/thor-android-mcp </dev/null
+EOF
 
 cat <<'EOF'
 

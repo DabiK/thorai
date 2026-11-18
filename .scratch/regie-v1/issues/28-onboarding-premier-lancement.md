@@ -1,6 +1,6 @@
 # 28 — Parcours d'accueil au premier lancement
 
-Statut : en attente (après 27)
+Statut : prêt
 Possède : `android/` (interface)
 
 ## Objectif

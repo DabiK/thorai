@@ -1,7 +1,7 @@
 package app.regie.domain.model
 
 /** Context frozen at R2 down, never silently retargeted while the user reviews. */
-data class VoiceCommandContext(val sessions: List<Session>, val current: SessionId?, val approval: Approval?, val projects: List<String>)
+data class VoiceCommandContext(val sessions: List<Session>, val current: SessionId?, val approval: Approval?, val projects: List<String>, val agents: List<Agent> = emptyList())
 
 /** Untrusted proposal from rules or a model. Resolved and checked by the domain. */
 data class VoiceIntent(val action: String, val target: String? = null, val agent: String? = null,

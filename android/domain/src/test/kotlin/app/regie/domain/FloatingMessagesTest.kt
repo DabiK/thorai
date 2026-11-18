@@ -159,11 +159,11 @@ class FloatingMessagesTest {
         val old = session("old", SessionStatus.IDLE, active = false, updatedAt = T0).copy(project = "console")
         val live = session("live", SessionStatus.IDLE, updatedAt = T0 - 60.seconds).copy(project = "console")
         val other = session("other", updatedAt = T0 + 60.seconds).copy(project = "atelier", agent = Agent.CLAUDE)
-        assertEquals(ConsoleLaunch.Resume(live.id), ConsoleSession.choose(listOf(old, live, other), listOf("console")))
-        assertEquals(ConsoleLaunch.Resume(old.id), ConsoleSession.choose(listOf(old, other), listOf("console")))
-        val create = ConsoleSession.choose(listOf(other), listOf("atelier")) as ConsoleLaunch.Create
+        assertEquals(ConsoleLaunch.Resume(live.id), ConsoleSession.choose(listOf(old, live, other), listOf("console"), listOf(Agent.CLAUDE, Agent.CODEX)))
+        assertEquals(ConsoleLaunch.Resume(old.id), ConsoleSession.choose(listOf(old, other), listOf("console"), listOf(Agent.CLAUDE, Agent.CODEX)))
+        val create = ConsoleSession.choose(listOf(other), listOf("atelier"), listOf(Agent.CLAUDE, Agent.CODEX)) as ConsoleLaunch.Create
         assertEquals(NewSessionDraft(Agent.CLAUDE, "console", approvalMode = "allow-all", newProject = true), create.draft)
-        val existing = ConsoleSession.choose(emptyList(), listOf("console")) as ConsoleLaunch.Create
+        val existing = ConsoleSession.choose(emptyList(), listOf("console"), listOf(Agent.CLAUDE, Agent.CODEX)) as ConsoleLaunch.Create
         assertEquals(Agent.CODEX, existing.draft.agent)
         assertEquals("allow-all", existing.draft.approvalMode)
         assertFalse(existing.draft.newProject)

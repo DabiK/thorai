@@ -92,3 +92,43 @@ it('expires and reaps a synthetic CLI process without contacting a service', asy
     await task.cancel();
   }
 });
+
+it('reads only public OpenCode Go connection metadata and delegates credential writes', async () => {
+  const calls: unknown[] = [];
+  const driver = new CliAuthentication(
+    { opencode: '/opencode' },
+    {
+      run: async (binary, args) => {
+        calls.push([binary, args]);
+        return {
+          code: 0,
+          text: JSON.stringify([
+            {
+              id: 'opencode-go',
+              connections: [{ type: 'credential', id: 'test-id', label: 'API key' }],
+            },
+          ]),
+        };
+      },
+      login: () => {
+        throw new Error('no interactive CLI');
+      },
+    },
+    {
+      save: async (...args) => {
+        calls.push(args);
+      },
+      logout: async (provider) => {
+        calls.push(['logout', provider]);
+      },
+    },
+  );
+  expect(await driver.status('opencode')).toEqual({ connected: true, account: null });
+  expect(calls[0]).toEqual(['/opencode', ['auth', 'list', '--format', 'json', '--standalone']]);
+  await driver.saveKey('opencode', 'opencode-go', 'test-only-key');
+  await driver.logout('opencode');
+  expect(calls.slice(1)).toEqual([
+    ['opencode-go', 'test-only-key'],
+    ['logout', 'opencode-go'],
+  ]);
+});

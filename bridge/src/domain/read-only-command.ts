@@ -111,6 +111,7 @@ export class ReadOnlyCommands {
 const COMMAND_INPUT_KEYS = new Set([
   'command',
   'cwd',
+  'workdir',
   'description',
   'command_description',
   'timeout',

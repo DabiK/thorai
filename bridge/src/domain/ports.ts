@@ -11,7 +11,7 @@ import type {
 } from './model.ts';
 
 /**
- * One agent (Claude or Codex), reached through its ACP adapter.
+ * One registered agent, reached through its ACP adapter.
  *
  * `connect` starts the adapter process. One process holds every session of its agent.
  */

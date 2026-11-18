@@ -8,7 +8,7 @@ import mockwebserver3.MockWebServer
 import kotlin.test.*
 
 class MistralCommandModelTest {
-    private val context = VoiceCommandContext(emptyList(), null, null, listOf("atelier"))
+    private val context = VoiceCommandContext(emptyList(), null, null, listOf("atelier"), listOf(Agent("future", "Agent futur")))
     private fun response(arguments: String, name: String = "propose_command") = buildJsonObject {
         putJsonArray("choices") { addJsonObject { put("finish_reason", "tool_calls"); putJsonObject("message") { putJsonArray("tool_calls") {
             addJsonObject { put("type", "function"); putJsonObject("function") { put("name", name); put("arguments", arguments) } }
@@ -29,6 +29,9 @@ class MistralCommandModelTest {
             assertEquals("auto", json["tool_choice"]!!.jsonPrimitive.content)
             assertEquals(1, json["tools"]!!.jsonArray.size)
             assertTrue(json["messages"].toString().contains("Fais un bilan global"))
+            val data = Json.parseToJsonElement(json["messages"]!!.jsonArray[1].jsonObject["content"]!!.jsonPrimitive.content).jsonObject
+            assertEquals("future", data["agents"]!!.jsonArray.single().jsonObject["id"]!!.jsonPrimitive.content)
+            assertFalse(json["messages"].toString().contains("claude ou codex"))
         }
     }
 

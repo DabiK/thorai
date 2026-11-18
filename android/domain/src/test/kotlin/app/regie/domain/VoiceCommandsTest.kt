@@ -14,7 +14,7 @@ class VoiceCommandsTest {
     private val two = session("two").copy(title = "Cuisine", project = "recettes")
     private val approval = Approval(ApprovalId("a"), one.id, ApprovalKind.COMMAND, "npm test", options = listOf(
         ApprovalOption("yes", ApprovalOptionKind.ALLOW_ONCE, "Oui"), ApprovalOption("no", ApprovalOptionKind.REJECT_ONCE, "Non")))
-    private val context = VoiceCommandContext(listOf(one, two), one.id, approval, listOf("atelier", "recettes"))
+    private val context = VoiceCommandContext(listOf(one, two), one.id, approval, listOf("atelier", "recettes"), agents = listOf(Agent.CLAUDE, Agent.CODEX))
     private val noModel = VoiceCommandModel { _, _ -> error("The fixed rules must recognize the corpus") }
 
     @Test fun `twenty prepared commands resolve exact identities without a model`() = runTest {
@@ -242,7 +242,7 @@ class VoiceCommandsTest {
         val interpreter = InterpretVoiceCommand(noModel)
         // No session named: the active one.
         assertEquals(VoiceCommand.Navigate(one.id), interpreter("Où en est cette session ?", context).command)
-        assertEquals("Ouvrir\u00A0: Atelier · CODEX", interpreter("Où en est Atelier ?", context).description)
+        assertEquals("Ouvrir\u00A0: Atelier · Codex", interpreter("Où en est Atelier ?", context).description)
         assertNull(interpreter("Fais le point", context.copy(current = null)).command)
         val gateway = StubGateway().apply { sessions.value = listOf(one, two) }
         val opened = mutableListOf<SessionId>()

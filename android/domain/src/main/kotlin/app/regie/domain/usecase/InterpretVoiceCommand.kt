@@ -42,7 +42,7 @@ class InterpretVoiceCommand(private val model: VoiceCommandModel) {
         Regex("(?:fais le point sur|ou en est) (?:la session )?(.+)").matchEntire(text)?.let { return VoiceIntent("summary", it.groupValues[1]) }
         Regex("(?:passe a|ouvre|va sur) (?:la session )?(.+)").matchEntire(text)?.let { return VoiceIntent("navigate", it.groupValues[1]) }
         Regex("(?:mets|met) (.+) en pause").matchEntire(text)?.let { return VoiceIntent("pause", it.groupValues[1]) }
-        Regex("(?:lance|demarre) (Claude|Codex) sur ([\\p{L}\\p{N}_.-]+)(?: pour (.+))?[.!?]?", RegexOption.IGNORE_CASE)
+        Regex("(?:lance|demarre) (.+?) sur ([\\p{L}\\p{N}_.-]+)(?: pour (.+))?[.!?]?", RegexOption.IGNORE_CASE)
             .matchEntire(original.trim().trimEnd('.', '!', '?'))?.let {
                 return VoiceIntent("launch", agent = it.groupValues[1].lowercase(Locale.ROOT), project = it.groupValues[2], instruction = it.groupValues[3].ifBlank { null })
             }
@@ -71,7 +71,7 @@ class InterpretVoiceCommand(private val model: VoiceCommandModel) {
             "navigate" -> if (intent.target == null) null else target()?.let(VoiceCommand::Navigate)
             "launch" -> {
                 if (intent.target != null) return null
-                val agent = Agent.entries.singleOrNull { it.name.equals(intent.agent, ignoreCase = true) } ?: return null
+                val agent = context.agents.singleOrNull { it.id.equals(intent.agent, ignoreCase = true) || it.label.equals(intent.agent, ignoreCase = true) } ?: return null
                 val project = if (intent.newProject) projectFolderName(intent.project.orEmpty()) ?: return null
                     else context.projects.singleOrNull { normalize(it) == normalize(intent.project.orEmpty()) } ?: return null
                 if (intent.newProject && (intent.branch != null || intent.newBranch || intent.baseBranch != null)) return null

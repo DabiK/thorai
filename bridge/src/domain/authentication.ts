@@ -1,4 +1,5 @@
-import { AGENT_KINDS, type AgentKind } from './model.ts';
+import { AGENT_LABELS, type LoginDescription, loginDescription } from './agents.ts';
+import { AGENT_KINDS, type AgentKind, BridgeError } from './model.ts';
 
 export interface LoginTask {
   readonly done: Promise<boolean>;
@@ -10,10 +11,13 @@ export interface AuthenticationDriver {
   status(agent: AgentKind): Promise<{ connected: boolean | null; account: string | null }>;
   start(challenge: (url: string, code: string) => void): LoginTask;
   logout(agent: AgentKind): Promise<void>;
+  saveKey?(agent: AgentKind, provider: string, key: string): Promise<void>;
 }
 
 export interface AuthenticationState {
   readonly agent: AgentKind;
+  readonly name?: string;
+  readonly login?: LoginDescription;
   readonly connected: boolean | null;
   readonly account: string | null;
   readonly phase:
@@ -23,7 +27,8 @@ export interface AuthenticationState {
     | 'waiting'
     | 'connected'
     | 'failed'
-    | 'manual';
+    | 'manual'
+    | 'key';
   readonly url: string | null;
   readonly code: string | null;
   readonly message: string | null;
@@ -43,18 +48,24 @@ export class Authentication {
 
   private readonly driver: AuthenticationDriver;
   private readonly acquire: (agent: AgentKind) => () => void;
+  private readonly agents: readonly AgentKind[];
   constructor(
     driver: AuthenticationDriver,
     acquire: (agent: AgentKind) => () => void = () => () => {},
+    agents: readonly AgentKind[] = AGENT_KINDS,
   ) {
     this.driver = driver;
+    this.agents = agents;
     this.acquire = acquire;
   }
 
   private state(agent: AgentKind): AuthenticationState {
+    if (!this.agents.includes(agent)) throw new BridgeError('bad_request', 'Agent inconnu.');
     return (
       this.states.get(agent) ?? {
         agent,
+        name: AGENT_LABELS[agent] ?? agent,
+        login: loginDescription(agent),
         connected: null,
         account: null,
         phase: 'unknown',
@@ -83,7 +94,7 @@ export class Authentication {
           ? 'connected'
           : status.connected === null
             ? 'unknown'
-            : ['failed', 'manual'].includes(before.phase)
+            : ['failed', 'manual', 'key'].includes(before.phase)
               ? before.phase
               : 'disconnected';
       return this.save(agent, {
@@ -108,13 +119,20 @@ export class Authentication {
   }
 
   async list(): Promise<readonly AuthenticationState[]> {
-    return Promise.all(AGENT_KINDS.map((agent) => this.status(agent)));
+    return Promise.all(this.agents.map((agent) => this.status(agent)));
   }
 
   async start(agent: AgentKind): Promise<AuthenticationState> {
     if (this.tasks.has(agent) || this.changing.has(agent) || this.stopped) return this.state(agent);
-    if (agent === 'claude')
-      return this.save(agent, { phase: 'manual', url: null, code: null, message: CLAUDE_MANUAL });
+    if (loginDescription(agent).method === 'api_key')
+      return this.save(agent, { phase: 'key', message: loginDescription(agent).help });
+    if (loginDescription(agent).method === 'manual')
+      return this.save(agent, {
+        phase: 'manual',
+        url: null,
+        code: null,
+        message: agent === 'claude' ? CLAUDE_MANUAL : loginDescription(agent).help,
+      });
     const release = this.acquire(agent);
     const attempt = Symbol();
     this.attempts.set(agent, attempt);
@@ -209,8 +227,42 @@ export class Authentication {
     return this.status(agent);
   }
 
+  async submitKey(agent: AgentKind, provider: string, key: string): Promise<AuthenticationState> {
+    const login = loginDescription(agent);
+    if (
+      !this.agents.includes(agent) ||
+      login.method !== 'api_key' ||
+      provider !== login.provider ||
+      !this.driver.saveKey ||
+      key.length < 1 ||
+      key.length > 4096 ||
+      /\s/.test(key) ||
+      [...key].some((c) => c.charCodeAt(0) < 32)
+    )
+      throw new BridgeError('bad_request', 'Clé ou fournisseur invalide.');
+    if (this.stopped || this.changing.has(agent))
+      throw new BridgeError('bad_request', 'Connexion déjà en cours.');
+    const release = this.acquire(agent);
+    this.changing.add(agent);
+    try {
+      await this.driver.saveKey(agent, provider, key);
+      this.save(agent, { phase: 'unknown', message: null });
+    } catch {
+      return this.save(agent, {
+        phase: 'failed',
+        message: 'Clé non enregistrée. Réessaie depuis Régie.',
+        connected: null,
+      });
+    } finally {
+      key = '';
+      this.changing.delete(agent);
+      release();
+    }
+    return this.status(agent);
+  }
+
   async close(): Promise<void> {
     this.stopped = true;
-    await Promise.all(AGENT_KINDS.map((agent) => this.cancel(agent)));
+    await Promise.all(this.agents.map((agent) => this.cancel(agent)));
   }
 }
