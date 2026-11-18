@@ -1,6 +1,9 @@
 # ADR 15 — Session tout-en-un
 
 Statut : accepté, 14 novembre 2026. Demande produit explicite du ticket 18.
+Complété par l'ADR 17 (ticket 22) : la table des réglages est toujours affichée en
+bas et Droite la fait passer en modification ; sur deux écrans, le résumé des réglages
+sous l'en-tête du fil disparaît ; l'heure HH:mm n'est écrite qu'une fois par minute.
 
 ## Validations et options
 

@@ -136,6 +136,8 @@ physiques différés restent requis même lorsqu’un ticket est marqué fait.
 
 - **14 novembre, ticket 21, correction de revue typographique (solo Codex)** : deux préfixes `Échec :` corrigés en U+00A0 dans le domaine, inventaire avant/après rectifié, rubrique POUR L’UTILISATEUR ajoutée avec lien vers les six étapes Thor. Deux régressions ajoutées et assertions de récupération actualisées, quatre échecs attendus avant correction ; Android 361 tests + lint verts. Thor absente : APK réinstallé, historique réel consulté sur émulateur/pont Mac, modifications et préparation d’explication en deux écrans, mode compact vérifié. Aucun agent relancé, cas d’erreur exacts couverts hors console. Pont/AVD arrêtés ; preuves `revision-*`, statut à fusionner.
 
+- **18 novembre, ticket 22 à fusionner** : fil brut sans point Régie (le pont ne demande plus de bilan, le fil masque l'ancien bloc, Y et le panneau retirés), table des réglages ACP toujours en bas, dictée en bas avec retour seul après A, accueil en liste dense (ADR 17). Android check vert, pont 307 tests verts. Thor : vrai Codex, réflexion changée depuis le bas, L2 par `sendevent` et WAV rejoués, un/deux écrans. **Le pont de la console reste à réinstaller après fusion** (`thor/bridge/install.sh`). Questions : ordre vocal « où en est » et heure du fil, dans le ticket.
+
 ## Ordre des vagues
 
 | Vague | Tickets | Commence quand |
@@ -180,6 +182,8 @@ Les tickets qui touchent `android/` passent **un par un**. Ils installent tous l
 - 13 novembre, sur les questions du ticket 03, **et cela remplace les décisions de sécurité prises plus tôt** : les agents peuvent tout piloter sur Android, les deux écrans, Régie comprise, avec la méthode la plus libre (mobilecli). Pas de validation pour ces gestes, pas de règle « vraie main » dans Régie. Les restrictions viendront plus tard, si l'utilisateur en veut (ticket 14).
 
 - 14 novembre : **pas de lecture à voix haute**. Les points et les résumés sont écrits. Le ticket 12 devient « Points écrits et notifications ».
+
+- 18 novembre (ticket 22) : **plus de point Régie**. Le fil montre ce que l'agent produit, sans résumé de fin, sans Y ni carte de synthèse ; les notifications de validation, fin et échec restent. L'écran du bas d'une session est une table de réglages ; la dictée s'affiche en bas, le haut ne change pas ; l'accueil est une liste.
 
 ## Questions en attente
 
