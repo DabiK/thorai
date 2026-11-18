@@ -1,6 +1,6 @@
 # 28 — Parcours d'accueil au premier lancement
 
-Statut : à fusionner
+Statut : fait
 Possède : `android/` (interface)
 
 ## Objectif

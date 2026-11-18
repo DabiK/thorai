@@ -1,6 +1,6 @@
 # 30 — L'app s'appelle ThorAI, et une passe de finition de l'interface
 
-Statut : à fusionner
+Statut : fait
 Possède : `android/` (interface, nom, applicationId), docs qui citent le nom
 
 ## Décisions de l'utilisateur, 18 novembre
